@@ -1,0 +1,52 @@
+# Copyright (c) 2018 David A. Randolph.
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without
+# restriction, including without limitation the rights to use,
+# copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following
+# conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+####################################################################################
+# File: test
+# Author: David Randolph
+# Date: 18 January 2018
+# Purpose: Set up test environment and execute specified unit tests.
+#          NOTE: Must be run from the directory that holds this script.
+# Usage: Run all tests:
+#            $ ./test all
+#
+#        Run test_hart.py script:
+#            $ ./test hart
+####################################################################################
+set -x
+MODULES="dactyler hart interval"
+
+cd ..
+export PYTHONPATH=$(pwd)
+cd -
+
+if [[ "$1" == 'all' ]]
+then
+    modules=$MODULES
+else
+    modules=$@
+fi
+
+for module in $modules
+do
+     ./test_${module}.py
+done
