@@ -24,8 +24,7 @@ __author__ = 'David Randolph'
 
 import numpy
 import re
-import music21
-from Dactyler import Dactyler
+from Dactyler import Dactyler, Constant
 from Corpus import Corpus
 
 
@@ -60,102 +59,12 @@ class Interval:
         return self.__str__()
 
 
-class MyNote:
-    BLACK = 1
-    WHITE = 0
-
-    def __init__(self, m21_note, prior_note=None):
-        self.m21_note = m21_note
-        self.prior_note = prior_note
-
-    def __str__(self):
-        my_str = "MIDI {0}".format(self.m21_note.midi)
-        return my_str
-
-    note_class_is_black = {
-        0: False,
-        1: True,
-        2: False,
-        3: True,
-        4: False,
-        5: False,
-        6: True,
-        7: False,
-        8: True,
-        9: False,
-        10: True,
-        11: False
-    }
-
-    @staticmethod
-    def get_note_list(m21_score):
-        prior_note = None
-        notes = []
-        for n in m21_score[1].getElementsByClass(music21.note.Note):
-            new_note = None
-
-            if not prior_note:
-                new_note = MyNote(n)
-            else:
-                new_note = MyNote(n, prior_note=prior_note)
-
-            notes.append(new_note)
-            prior_note = new_note
-        return notes
-
-    def is_black(self):
-        if not self.m21_note:
-            return False
-        return MyNote.note_class_is_black[self.m21_note.pitchClass]
-
-    def is_white(self):
-        if not self.m21_note:
-            return False
-        return not self.is_black()
-
-    def get_color(self):
-        if not self.m21_note:
-            return None
-        if self.is_black():
-            return MyNote.BLACK
-        return MyNote.WHITE
-
-    def get_prior_color(self):
-        if self.prior_note:
-            return self.prior_note.get_color()
-        return None
-
-    def get_midi(self):
-        if self.m21_note:
-            return self.m21_note.midi
-        return None
-
-    def get_prior_midi(self):
-        if self.prior_note:
-            return self.prior_note.get_midi()
-        return None
-
-    def is_ascending(self):
-        if not self.get_prior_midi() or not self.get_midi():
-            return False
-        if self.get_midi() > self.get_prior_midi():
-            return True
-        return False
-
-    def get_semitone_delta(self):
-        delta = self.m21_note.midi - self.prior_note.m21_note.midi
-        delta = -1 * delta if delta < 0 else delta
-        return delta
-
-
 class Hart(Dactyler.Dactyler):
-    BIG_NUM = 99999
+    BIG_NUM = 999
     MAX_INTERVAL_SIZE = 12
-    COST_FILE = '/Users/dave/tb2/didactyl/dd/data/tables.dat'
+    COST_FILE = '/Users/dave/tb2/didactyl/dd/data/tables_0.dat'
     # TEST_CORPUS = "/tmp/%s" % sys.argv[1]
     TEST_CORPUS = "/Users/dave/tb2/didactyl/dd/corpora/beringer/broken_chords.abc"
-    LOG_FILE_PATH = '/tmp/didactyl.log'
-    Log = open(LOG_FILE_PATH, 'a')
 
     def _define_costs(self):
         costs = {}
@@ -163,7 +72,7 @@ class Hart(Dactyler.Dactyler):
             for h_color in range(2):
                 for l_finger in range(1, 6):
                     for h_finger in range(1, 6):
-                        for s in range(1, self.max_interval_size + 1):
+                        for s in range(0, self.max_interval_size + 1):
                             # FIXME: What about 0 interval?
                             ic = Interval(l_color, h_color, l_finger, h_finger, s)
                             costs[ic] = Hart.BIG_NUM
@@ -188,31 +97,36 @@ class Hart(Dactyler.Dactyler):
                     max_interval_size = int(matches.group(1))
                 interval_size_finalized = True
 
-                for i in range(max_interval_size):
+                for i in range(max_interval_size + 1):
                     cost_re_str += "\s+(\d+)"
+                cost_re_str += "\s*$"
                 cost_re = re.compile(cost_re_str)
                 continue
 
             matches = re.search(heading_re, line)
             if matches:
-                l_color = MyNote.BLACK if matches.group(1) == 'Black' else MyNote.WHITE
-                h_color = MyNote.BLACK if matches.group(2) == 'Black' else MyNote.WHITE
+                l_color = Constant.BLACK if matches.group(1) == 'Black' else Constant.WHITE
+                h_color = Constant.BLACK if matches.group(2) == 'Black' else Constant.WHITE
                 continue
 
             matches = re.search(cost_re, line)
             if matches:
                 l_finger = matches.group(1)
                 h_finger = matches.group(2)
-                first_group_num = 2
-                for s in range(1, max_interval_size + 1):
-                    group_num = first_group_num + s
+                group_num = 3
+                for s in range(0, max_interval_size + 1):
                     cost = matches.group(group_num)
+                    # print("{0}->{1} Jump {2} Group {3} costs {4}".format(l_finger, h_finger, s, group_num, cost))
                     interval = Interval(l_color=l_color, h_color=h_color, l_finger=l_finger, h_finger=h_finger, s=s)
                     costs[interval] = int(cost)
+                    group_num += 1
+        f.close()
+        # for interval in costs:
+            # print("{0}-->{1}".format(interval, costs[interval]))
         return costs
 
     def __init__(self, cost_path=None, max_interval_size=MAX_INTERVAL_SIZE):
-        super().__init__(hands=Dactyler.Constant.HANDS_RIGHT, chords=False)
+        super().__init__(hands=Constant.HANDS_RIGHT, chords=False)
         self.cost_path = Hart.COST_FILE
         if cost_path:
             self.cost_path = cost_path
@@ -220,9 +134,9 @@ class Hart(Dactyler.Dactyler):
         self.costs = self._define_costs();
         self.scores = None
 
-    def load_corpus(self, path=None, query=None, corpus_type=Dactyler.Constant.CORPUS_ABC):
-        if corpus_type != Dactyler.Constant.CORPUS_ABC and \
-                corpus_type != Dactyler.Constant.CORPUS_ABCD:
+    def load_corpus(self, path=None, query=None, corpus_type=Constant.CORPUS_ABC):
+        if corpus_type != Constant.CORPUS_ABC and \
+                corpus_type != Constant.CORPUS_ABCD:
             raise Exception("Only ABC is currently supported")
 
         if not path:
@@ -238,7 +152,8 @@ class Hart(Dactyler.Dactyler):
 
         for score in self.scores:
             opt_cost = Hart.BIG_NUM
-            note_list = MyNote.get_note_list(score)
+            note_list = Dactyler.Note.get_note_list(score)
+
             m = len(note_list) - 1
             fs = numpy.zeros([len(note_list), 6], dtype=int)
             for n in reversed(range(1, len(note_list))):
@@ -264,7 +179,6 @@ class Hart(Dactyler.Dactyler):
                         interval = Interval(prior_color, mth_color, s, x, mth_interval)
                     else:
                         interval = Interval(mth_color, prior_color, x, s, mth_interval)
-                    print(interval)
                     cost = self.costs[interval]
                     fsx[m, s, x] = cost
                     self.squeak("{0:4d}  ".format(fsx[m, s, x]))
@@ -297,31 +211,24 @@ class Hart(Dactyler.Dactyler):
                         self.squawk("Stage {0}: color {1}->{2}, delta {3}".format(n, prior_color, nth_color, nth_interval))
                     self.squeak("{0:4d}:".format(s))
 
-                    if nth_interval != 0:
-                        for x in range(1, 6):
-                            interval = None
-                            if nth_note.is_ascending():
-                                interval = Interval(prior_color, nth_color, s, x, nth_interval)
-                            else:
-                                interval = Interval(nth_color, prior_color, x, s, nth_interval)
-                            cost = self.costs[interval]
-                            fsx[n, s, x] = cost + fs[n + 1, x]
-                            self.squeak("{0:4d}+{1:d}={2:4d}  ".format(cost, fs[n + 1, x], fsx[n, s, x]))
+                    for x in range(1, 6):
+                        if nth_note.is_ascending():
+                            interval = Interval(prior_color, nth_color, s, x, nth_interval)
+                        else:
+                            interval = Interval(nth_color, prior_color, x, s, nth_interval)
+                        cost = self.costs[interval]
+                        fsx[n, s, x] = cost + fs[n + 1, x]
+                        self.squeak("{0:4d}+{1:d}={2:4d}  ".format(cost, fs[n + 1, x], fsx[n, s, x]))
 
-                        for x in range(1, 6):
-                            if fsx[n, s, x] < fs[n, s]:
-                                fs[n, s] = fsx[n, s, x]
+                    for x in range(1, 6):
+                        if fsx[n, s, x] < fs[n, s]:
+                            fs[n, s] = fsx[n, s, x]
 
-                        num_opt[n, s] = 0
-                        for x in range(1, 6):
-                            if fsx[n, s, x] == fs[n, s]:
-                                xstar[n, s, num_opt[n, s]] = x
-                                num_opt[n, s] += 1
-                    else:
-                        self.squawk("UNCHARTED WATERS")
-                        for x in range(1, 6):
-                            fsx[n, s, x] = fsx[n + 1, s, x]
-                            fs[n, s] = fs[n + 1, s]
+                    num_opt[n, s] = 0
+                    for x in range(1, 6):
+                        if fsx[n, s, x] == fs[n, s]:
+                            xstar[n, s, num_opt[n, s]] = x
+                            num_opt[n, s] += 1
 
                     for x in range(num_opt[n, s]):
                         self.squeak(str(xstar[n, s, x]))

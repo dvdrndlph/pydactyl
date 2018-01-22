@@ -1,4 +1,5 @@
-# Copyright (c) 2018 David A. Randolph.
+__author__ = 'David Randolph'
+# Copyright (c) 2014-2018 David A. Randolph.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -20,33 +21,19 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-####################################################################################
-# File: test
-# Author: David Randolph
-# Date: 18 January 2018
-# Purpose: Set up test environment and execute specified unit tests.
-#          NOTE: Must be run from the directory that holds this script.
-# Usage: Run all tests:
-#            $ ./test all
-#
-#        Run test_hart.py script:
-#            $ ./test hart
-####################################################################################
-# set -x
-MODULES="dactyler hart interval"
 
-cd ..
-export PYTHONPATH=$(pwd)
-cd -
 
-if [[ "$1" == 'all' ]]
-then
-    modules=$MODULES
-else
-    modules=$@
-fi
+# Corpus types supported:
+CORPUS_ABC = 'abc'
+CORPUS_ABCD = 'abcD'
+CORPUS_MUSIC_XML = 'MusicXML'
+CORPUS_MIDI = 'MIDI'
 
-for module in $modules
-do
-     ./test_${module}.py
-done
+HANDS_RIGHT = 1
+HANDS_LEFT = 2
+HANDS_EITHER = 3
+HANDS_BOTH = 4
+
+BLACK = 1
+WHITE = 0
+
