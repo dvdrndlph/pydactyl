@@ -37,8 +37,12 @@ class DScore:
             meta = self.score[0]
             self.title = meta.title
         elif abc_handle:
-            combined_m21_part = abc_handle.tokenProcess()
-            self.combined_d_part = DPart(music21_score=combined_m21_part)
+            self.score = abc_handle.tokenProcess()
+            self.title = abc_handle.getTitle()
+
+            self.left_hand_d_part = None
+            self.right_hand_d_part = None
+
             ah_array = abc_handle.splitByVoice()
             voices = []
             headers = None
@@ -51,23 +55,22 @@ class DScore:
                     else:
                         headers = headers + ah
 
-            self.left_hand_d_part = None
-            self.right_hand_d_part = None
-
             if len(voices) > 2:
                 raise Exception("Too many voices")
             elif len(voices) == 2:
                 complete_rh_ah = headers + voices[0]  # First voice must be for right hand
-                print([t.src for t in complete_rh_ah.tokens])
+                # print([t.src for t in complete_rh_ah.tokens])
                 right_hand_part = complete_rh_ah.tokenProcess()
                 self.right_hand_d_part = DPart(music21_score=right_hand_part)
                 complete_lh_ah = headers + voices[1]  # Second voice must be for left hand
-                print([t.src for t in complete_lh_ah.tokens])
+                # print([t.src for t in complete_lh_ah.tokens])
                 left_hand_part = complete_lh_ah.tokenProcess()
                 self.left_hand_d_part = DPart(music21_score=left_hand_part)
 
-    def get_part_count(self):
-        return len(self.score.parts)
+    def get_voice_count(self):
+        if self.right_hand_d_part and self.left_hand_d_part:
+            return 2
+        return 1
 
 
 class DCorpus:

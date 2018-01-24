@@ -14,9 +14,9 @@ class DCorpusTest(unittest.TestCase):
         assert score_count == 38, "Bad score count"
         d_score = d_corpus.get_d_score_by_title("scales_g_minor_melodic")
         assert d_score is not None, "Bad score_by_title retrieval" 
-        part_count = d_score.get_part_count()
-        print("Part count: {0}".format(part_count))
-        assert part_count == 2, "Bad part count"
+        voice_count = d_score.get_voice_count()
+        print("Voice count: {0}".format(voice_count))
+        assert voice_count == 2, "Bad voice count"
 
 
 if __name__ == "__main__":
