@@ -25,7 +25,7 @@ __author__ = 'David Randolph'
 import numpy
 import re
 from Dactyler import Dactyler, Constant
-from Corpus import Corpus
+from DCorpus import DCorpus
 
 
 class Interval:
@@ -116,13 +116,10 @@ class Hart(Dactyler.Dactyler):
                 group_num = 3
                 for s in range(0, max_interval_size + 1):
                     cost = matches.group(group_num)
-                    # print("{0}->{1} Jump {2} Group {3} costs {4}".format(l_finger, h_finger, s, group_num, cost))
                     interval = Interval(l_color=l_color, h_color=h_color, l_finger=l_finger, h_finger=h_finger, s=s)
                     costs[interval] = int(cost)
                     group_num += 1
         f.close()
-        # for interval in costs:
-            # print("{0}-->{1}".format(interval, costs[interval]))
         return costs
 
     def __init__(self, cost_path=None, max_interval_size=MAX_INTERVAL_SIZE):
@@ -131,7 +128,7 @@ class Hart(Dactyler.Dactyler):
         if cost_path:
             self.cost_path = cost_path
         self.max_interval_size = max_interval_size
-        self.costs = self._define_costs();
+        self.costs = self._define_costs()
         self.scores = None
 
     def load_corpus(self, path=None, query=None, corpus_type=Constant.CORPUS_ABC):
@@ -140,10 +137,10 @@ class Hart(Dactyler.Dactyler):
             raise Exception("Only ABC is currently supported")
 
         if not path:
-            path = Hart.TEST_CORPUS;
+            path = Hart.TEST_CORPUS
         if query:
             raise Exception("MySQL query not implemented yet")
-        corp = Corpus.Corpus(path)
+        corp = DCorpus.DCorpus(path)
         self.scores = corp.get_score_list()
 
     def advise(self, offset=0, first_finger=None):

@@ -110,6 +110,7 @@ class Note:
         delta = -1 * delta if delta < 0 else delta
         return delta
 
+
 class Dactyler(ABC):
     """Base class for all Didactyl algorithms."""
 

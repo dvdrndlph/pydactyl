@@ -33,11 +33,12 @@
 #            $ ./test hart
 ####################################################################################
 # set -x
-MODULES="dactyler hart interval"
+MODULES="dactyler d_corpus hart interval"
 
 cd ..
 export PYTHONPATH=$(pwd)
 cd -
+export PYTHONPATH=$PYTHONPATH:$(pwd)
 
 if [[ "$1" == 'all' ]]
 then

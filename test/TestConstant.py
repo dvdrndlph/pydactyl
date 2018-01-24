@@ -1,5 +1,5 @@
 __author__ = 'David Randolph'
-# Copyright (c) 2014 David A. Randolph.
+# Copyright (c) 2018 David A. Randolph.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -22,27 +22,7 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
-import music21
-
-
-class Corpus:
-    """A corpus for the rest of us."""
-
-    def __init__(self, corpus_path):
-        self.corp = music21.converter.parse(corpus_path)
-    
-    def get_score_list(self):
-        scores = []
-        if isinstance(self.corp, music21.stream.Opus):
-            for score in self.corp:
-                meta = score[0]
-                scores.append(score)
-                # print "Title: " + meta.title
-        else:
-            score = self.corp
-            scores.append(score)
-            # meta = score[0]
-            # print("Title: {0}".format(meta.title))
-
-        return scores
-
+REPO_ROOT = "/Users/dave/tb2/didactyl"
+CORPORA_DIR = REPO_ROOT + "/dd/corpora"
+BERINGER2_DIR = CORPORA_DIR + "/beringer2"
+BERINGER2_ARPEGGIO_CORPUS = BERINGER2_DIR + "/arpeggios.abc"
