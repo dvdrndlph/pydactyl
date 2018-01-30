@@ -22,7 +22,9 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
-REPO_ROOT = "/Users/dave/tb2/didactyl"
-CORPORA_DIR = REPO_ROOT + "/dd/corpora"
+REPO_ROOT = "/Users/dave/tb2"
+CORPORA_DIR = REPO_ROOT + "/didactyl/dd/corpora"
 BERINGER2_DIR = CORPORA_DIR + "/beringer2"
 BERINGER2_ARPEGGIO_CORPUS = BERINGER2_DIR + "/arpeggios.abc"
+
+WTC_CORPUS_DIR = REPO_ROOT + '/dvdrndlph.github.io/didactyl/wtc'
