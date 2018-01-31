@@ -26,8 +26,8 @@ class DCorpusTest(unittest.TestCase):
         assert d_upper.is_monophonic() is True, "Monophonic upper part not detected"
         d_lower = d_score.get_lower()
         assert d_lower, "Bad lower DPart"
-        lower_stream = d_lower.get_stream()
-        lower_stream.show('text')
+        # lower_stream = d_lower.get_stream()
+        # lower_stream.show('text')
         assert d_lower.is_monophonic() is True, "Monophonic lower part not detected"
 
     @staticmethod
@@ -51,9 +51,9 @@ class DCorpusTest(unittest.TestCase):
         assert d_part.is_monophonic() is False, "Polyphony not detected"
         d_upper = d_score.get_upper()
         assert d_upper, "Bad upper DPart"
+        upper_stream = d_upper.get_stream()
+        upper_stream.show('text')
         assert d_upper.is_monophonic() is False, "Polyphonic upper part not detected"
-        # upper_stream = d_upper.get_stream()
-        # upper_stream.show('text')
         d_lower = d_score.get_lower()
         assert d_lower, "Bad lower DPart"
         assert d_lower.is_monophonic() is False, "Polyphonic lower part in Prelude 1 not detected"

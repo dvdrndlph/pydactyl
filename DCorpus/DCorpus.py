@@ -32,12 +32,26 @@ class DPart:
         self.stream = music21_stream
         self.segmenter = segmenter
 
+    @staticmethod
+    def stream_has_chords(music21_stream):
+        """Returns true iff chords are present in the stream and there are
+           pitches assigned to the chord. The abc importer seems to pollute
+           the stream with empty chord objects.
+        """
+        chord_list = music21_stream.flat.getElementsByClass(chord.Chord)
+        if len(chord_list) > 0:
+            for cho in chord_list:
+                if cho.pitchClassCardinality > 0:
+                    return True
+        return False
+
     def is_orderly(self):
         """Returns True iff this DPart contains no notes that start at the same offset
            as any other note.
         """
-        if self.stream.flat.getElementsByClass(chord.Chord):
+        if DPart.stream_has_chords(music21_stream=self.stream):
             return False
+
         notes = self.stream.flat.getElementsByClass(note.Note)
         for i in range(len(notes)):
             # print("{0}: {1}".format(str(notes[i].offset), str(notes[i].pitch)))
@@ -99,12 +113,8 @@ class DPart:
         """Returns True iff this DPart has no notes that sound at the
            same time as other notes.
         """
-        chord_list = self.stream.flat.getElementsByClass(chord.Chord)
-        if len(chord_list) > 0:
-            for ch in chord_list:
-                if ch.pitchClassCardinality > 0:
-                    print("I see a chord with notes in it.")
-                    return False
+        if DPart.stream_has_chords(music21_stream=self.stream):
+            return False
 
         notes = self.stream.flat.getElementsByClass(note.Note)
         for i in range(len(notes)):
