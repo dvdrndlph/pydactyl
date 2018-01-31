@@ -32,6 +32,21 @@ class DPart:
         self.stream = music21_stream
         self.segmenter = segmenter
 
+    def is_orderly(self):
+        """Returns True iff this DPart contains no notes that start at the same offset
+           as any other note.
+        """
+        if self.stream.flat.getElementsByClass(chord.Chord):
+            return False
+        notes = self.stream.flat.getElementsByClass(note.Note)
+        for i in range(len(notes)):
+            # print("{0}: {1}".format(str(notes[i].offset), str(notes[i].pitch)))
+            start = notes[i].offset
+            notes_at_offset = self.stream.flat.getElementsByOffset(offsetStart=start)
+            if len(notes_at_offset) > 1:
+                return False
+        return True
+
     def get_orderly_note_stream(self):
         """Return part as stream of notes with no notes starting at the same
            offset. Chords turned into a sequence of notes with starting points
@@ -44,39 +59,53 @@ class DPart:
            scores. We also want to approximate note durations in caase this information
            is useful for some models.
         """
+        short_dur = duration.Duration()
+        short_dur.type = '2048th'
+
         chords = self.stream.flat.getElementsByClass(chord.Chord)
         new_note_stream = stream.Score()
         for ch in chords:
             chord_offset = ch.offset
-            chord_dur_length = ch.duration.quarterLength
-            short_dur = duration.Duration()
-            short_dur.type('2048th')
             note_index = 0
             for pitch_name in ch.pitchNames:
                 new_note = note.Note(pitchName=pitch_name)
                 new_note.offset = chord_offset + note_index * short_dur.quarterLength
-                new_note_ql = chord_dur_length - note_index * short_dur.quarterLength
-                new_note_dur = duration.Duration
-                new_note_dur.quarterLength = new_note_ql
-                new_note.duration = new_note_dur
                 new_note_stream.append(new_note)
                 note_index += 1
 
         notes = self.stream.flat.getElementsByClass(note.Note)
         for old_note in notes:
             new_note_stream.append(old_note)
-        new_note_stream.show('text')
+        # new_note_stream.show('text')
+
+        notes = self.stream.flat.getElementsByClass(note.Note)
+        last_offset = 0
+        for i in range(len(notes)):
+            # print("{0}: {1}".format(str(notes[i].offset), str(notes[i].pitch)))
+            start = notes[i].offset
+            notes_at_offset = self.stream.flat.getElementsByOffset(offsetStart=start)
+            note_index = 0
+            for new_note in notes_at_offset:
+                new_offset = start + note_index * short_dur.quarterLength
+                if new_offset <= last_offset:
+                    new_offset = last_offset + short_dur.quarterLength
+                new_note.offset = new_offset
+                last_offset = new_offset
+                note_index += 1
 
         return new_note_stream
 
-        # orderly_notes = stream.Part()
-        # new_notes = self.stream.flat.getElementsByClass(note.Note)
-        # for i in range(len(new_notes)):
-            # if i == len(notes) - 1:
-
     def is_monophonic(self):
-        if self.stream.flat.getElementsByClass(chord.Chord):
-            return False
+        """Returns True iff this DPart has no notes that sound at the
+           same time as other notes.
+        """
+        chord_list = self.stream.flat.getElementsByClass(chord.Chord)
+        if len(chord_list) > 0:
+            for ch in chord_list:
+                if ch.pitchClassCardinality > 0:
+                    print("I see a chord with notes in it.")
+                    return False
+
         notes = self.stream.flat.getElementsByClass(note.Note)
         for i in range(len(notes)):
             # print("{0}: {1}".format(str(notes[i].offset), str(notes[i].pitch)))
@@ -90,6 +119,8 @@ class DPart:
                 classList=[note.Note]
             )
             if len(notes_in_range) > 1:
+                for nir in notes_in_range:
+                    print("{0} @ {1}".format(nir, start))
                 return False
         return True
 
@@ -106,7 +137,7 @@ class DScore:
         matt = re.search(reggie, abc_voice.tokens[0].src)
         if matt:
             voice_id = matt.group(1)
-            return voice_id
+            return int(voice_id)
         return None
 
     def __init__(self, music21_stream=None, abc_handle=None, voice_map=None):
@@ -138,7 +169,7 @@ class DScore:
             if len(voices) > 2 and not voice_map:
                 raise Exception("Mapping of voices to staves is required.")
             if not voice_map:
-                voice_map = { 1: Constant.STAFF_UPPER, 2: Constant.STAFF_LOWER}
+                voice_map = {1: Constant.STAFF_UPPER, 2: Constant.STAFF_LOWER}
             if len(voices) >= 2:
                 upper_ah = headers
                 lower_ah = headers
@@ -164,7 +195,7 @@ class DScore:
         return self.upper_d_part
 
     def get_lower(self):
-        return self.upper_d_part
+        return self.lower_d_part
 
     def get_stream(self):
         return self.combined_d_part.get_stream()
@@ -208,9 +239,9 @@ class DCorpus:
                 lower_voices = lower_voice_str.split()
                 staff_for_voice = {}
                 for voice in upper_voices:
-                    staff_for_voice[voice] = Constant.STAFF_UPPER
+                    staff_for_voice[int(voice)] = Constant.STAFF_UPPER
                 for voice in lower_voices:
-                    staff_for_voice[voice] = Constant.STAFF_LOWER
+                    staff_for_voice[int(voice)] = Constant.STAFF_LOWER
 
                 map_for_tune.append(staff_for_voice)
 
