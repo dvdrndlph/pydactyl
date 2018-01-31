@@ -51,8 +51,6 @@ class DCorpusTest(unittest.TestCase):
         assert d_part.is_monophonic() is False, "Polyphony not detected"
         d_upper = d_score.get_upper()
         assert d_upper, "Bad upper DPart"
-        upper_stream = d_upper.get_stream()
-        upper_stream.show('text')
         assert d_upper.is_monophonic() is False, "Polyphonic upper part not detected"
         d_lower = d_score.get_lower()
         assert d_lower, "Bad lower DPart"
@@ -68,11 +66,14 @@ class DCorpusTest(unittest.TestCase):
         title = d_score.get_title()
         print(title)
         d_upper = d_score.get_upper()
-        # disorderly_stream = d_upper.get_stream()
-        # disorderly_stream.show('text')
+        disorderly_stream = d_upper.get_stream()
+        disorderly_d_part = DPart(music21_stream=disorderly_stream)
+        assert disorderly_d_part.is_orderly() is False, "get_orderly_note_stream() or is_orderly() is broken"
+        disorderly_stream.show('text')
         orderly_stream = d_upper.get_orderly_note_stream()
         orderly_d_part = DPart(music21_stream=orderly_stream)
         assert orderly_d_part.is_orderly() is True, "get_orderly_note_stream() or is_orderly() is broken"
+        disorderly_stream.show('text')
 
 
 if __name__ == "__main__":
