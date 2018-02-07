@@ -39,7 +39,7 @@ cd ..
 export PYTHONPATH=$(pwd)
 cd -
 export PYTHONPATH=$PYTHONPATH:$(pwd)
-
+export PYTHONPATH=/Users/dave/tb2/music21:$PYTHONPATH
 if [[ "$1" == 'all' ]]
 then
     modules=$MODULES

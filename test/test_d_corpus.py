@@ -64,16 +64,23 @@ class DCorpusTest(unittest.TestCase):
         # Need to check what happens to tied notes
         d_score = d_corpus.get_d_score_by_index(1)
         title = d_score.get_title()
-        print(title)
+        # print(title)
         d_upper = d_score.get_upper()
         disorderly_stream = d_upper.get_stream()
         disorderly_d_part = DPart(music21_stream=disorderly_stream)
         assert disorderly_d_part.is_orderly() is False, "get_orderly_note_stream() or is_orderly() is broken"
-        disorderly_stream.show('text')
+        # disorderly_stream.show('text')
         orderly_stream = d_upper.get_orderly_note_stream()
         orderly_d_part = DPart(music21_stream=orderly_stream)
         assert orderly_d_part.is_orderly() is True, "get_orderly_note_stream() or is_orderly() is broken"
-        disorderly_stream.show('text')
+        # disorderly_stream.show('text')
+
+    @staticmethod
+    def test_annotated_corpus():
+        da_corpus = DCorpus()
+        da_corpus.append_from_db(client_id='695311d7e88d5f79b4945bf45d00cc77', selection_id='21');
+
+
 
 
 if __name__ == "__main__":

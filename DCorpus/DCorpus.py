@@ -21,8 +21,9 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-import sys
 import re
+import pymysql
+from io import StringIO
 from music21 import *
 from Dactyler import Constant
 
@@ -129,8 +130,8 @@ class DPart:
                 classList=[note.Note]
             )
             if len(notes_in_range) > 1:
-                for nir in notes_in_range:
-                    print("{0} @ {1}".format(nir, start))
+                # for nir in notes_in_range:
+                    # print("{0} @ {1}".format(nir, start))
                 return False
         return True
 
@@ -150,7 +151,8 @@ class DScore:
             return int(voice_id)
         return None
 
-    def __init__(self, music21_stream=None, abc_handle=None, voice_map=None):
+    def __init__(self, music21_stream=None, abc_handle=None, voice_map=None, abcd_header=None):
+        self.abcd_header = abcd_header
         if music21_stream:
             self.combined_d_part = DPart(music21_stream=music21_stream)
             self.score = music21_stream
@@ -229,18 +231,144 @@ class DScore:
         return self.title
 
 
+class AbcDAnnotation:
+    def __init__(self, abcdf=None):
+        self.__authority = None
+        self.__authority_year = None
+        self.__transcriber = None
+        self.__transcription_date = None
+        self.__abcdf = abcdf
+        self.__comments = ''
+
+    @property
+    def authority(self):
+        return self.__authority
+
+    @authority.setter
+    def authority(self, authority):
+        self.__authority = authority
+
+    @property
+    def authority_year(self):
+        return self.__authority
+
+    @authority_year.setter
+    def authority_year(self, authority_year):
+        self.__authority_year = authority_year
+
+    @property
+    def transcriber(self):
+        return self.__transcriber
+
+    @transcriber.setter
+    def transcriber(self, transcriber):
+        self.__transcriber = transcriber
+
+    @property
+    def transcription_date(self):
+        return self.__transcription_date
+
+    @transcription_date.setter
+    def transcription_date(self, transcription_date):
+        self.__transcription_date = transcription_date
+
+    @property
+    def abcdf(self):
+        return self.__abcdf
+
+    @abcdf.setter
+    def abcdf(self, abcdf):
+        self.__abcdf = abcdf
+
+    @property
+    def comments(self):
+        return self.__comments
+
+    def add_comment_line(self, comment):
+        self.__comments += comment + "\n"
+
+
+class AbcDHeader:
+    COMMENT_RE = r'^%\s*(.*)'
+    TITLE_RE = r'^% abcDidactyl v(\d)'
+    FINGERING_RE = r'% abcD fingering (\d+):\s*(.*)'
+    TERMINAL_RE = r'% abcDidactyl END'
+    AUTHORITY_RE = r'% Authority: ([^\(]+)\s*(\((\d+)\))?'
+    TRANSCRIBER_RE = r'% Transcriber: (.*)'
+    TRANSCRIPTION_DATE_RE = r'% Transcription date: ((\d\d\d\d\-\d\d\-\d\d)\s*(\d\d:\d\d:\d\d)?)'
+
+    @staticmethod
+    def is_abcD(string):
+        for line in string.splitlines():
+            matt = re.search(AbcDHeader.TITLE_RE, line)
+            if matt:
+                return True
+        return False
+
+    def __init__(self, abcd_str):
+        self.annotations = []
+
+        annotation = AbcDAnnotation()
+        in_header = False
+        for line in abcd_str.splitlines():
+            matt = re.search(AbcDHeader.TITLE_RE, line)
+            if matt:
+                in_header = True
+                self.version = matt.group(1)
+                continue
+            if not in_header:
+                continue
+            matt = re.search(AbcDHeader.TERMINAL_RE, line)
+            if matt:
+                break
+            matt = re.search(AbcDHeader.FINGERING_RE, line)
+            if matt:
+                annotation = AbcDAnnotation(abcdf=matt.group(1))
+                annotation.abcdf = matt.group(1)
+                self.annotations.append(annotation)
+                continue
+            matt = re.search(AbcDHeader.AUTHORITY_RE, line)
+            if matt:
+                annotation.authority = matt.group(1)
+                if matt.group(2):
+                    annotation.authority_year = matt.group(3)
+                continue
+            matt = re.search(AbcDHeader.TRANSCRIBER_RE, line)
+            if matt:
+                annotation.transcriber = matt.group(1)
+                continue
+            matt = re.search(AbcDHeader.TRANSCRIPTION_DATE_RE, line)
+            if matt:
+                annotation.transcription_date = matt.group(1)
+                continue
+            matt = re.search(AbcDHeader.COMMENT_RE, line)
+            if matt:
+                annotation.add_comment_line(matt.group(1))
+
+
 class DCorpus:
     """A corpus for the rest of us."""
 
     @staticmethod
-    def _get_score_staff_assignments(abc_file_path):
+    def file_to_string(file_path):
+        string = ''
+        file = open(file_path, "r")
+        for line in file:
+            string += line
+        file.close()
+        return string
+
+    @staticmethod
+    def _get_score_staff_assignments(abc_file_path=None, abc_content=None):
         """Return an array of hashes mapping voices to their associated
            staves. There should be one hash for each tune in the abc file.
         """
+        if abc_file_path:
+            abc_content = DCorpus.file_to_string(abc_file_path)
+
         map_for_tune = []
-        file = open(abc_file_path, "r")
         reggie = r'^%%score\s*{\s*\(([\d\s]+)\)\s*\|\s*\(([\d\s]+)\)\s*}'
-        for line in file:
+        for line in abc_content.splitlines():
             matt = re.search(reggie, line)
             if matt:
                 upper_voice_str = matt.group(1)
@@ -255,16 +383,43 @@ class DCorpus:
 
                 map_for_tune.append(staff_for_voice)
 
-        file.close()
         return map_for_tune
 
-    def append(self, corpus_path, corpus_type=Constant.CORPUS_ABC):
-        if corpus_type == Constant.CORPUS_ABC:
-            staff_assignments = DCorpus._get_score_staff_assignments(corpus_path)
+    @staticmethod
+    def get_abcd_header(corpus_path=None, corpus_str=None):
+        if corpus_path:
+            corpus_str = DCorpus.file_to_string(file_path=corpus_path)
+        if AbcDHeader.is_abcD(corpus_str):
+            hdr = AbcDHeader(abcd_str=corpus_str)
+            return hdr
+        return None
+
+    def get_corpus_type(corpus_path=None, corpus_str=None):
+        if corpus_path:
+            corpus_str = DCorpus.file_to_string(file_path=corpus_path)
+        if AbcDHeader.is_abcD(corpus_str):
+            return Constant.CORPUS_ABCD
+        else:
+            return Constant.CORPUS_ABC
+        # FIXME: Support MIDI, xml, and mxl
+
+    def append(self, corpus_path=None, corpus_str=None, corpus_type=Constant.CORPUS_ABC):
+        if corpus_type in [Constant.CORPUS_ABC, Constant.CORPUS_ABCD]:
             abc_file = abcFormat.ABCFile()
-            abc_file.open(filename=corpus_path)
-            abc_handle = abc_file.read()
-            abc_file.close()
+            if corpus_path:
+                staff_assignments = DCorpus._get_score_staff_assignments(abc_file_path=corpus_path)
+                abc_file.open(filename=corpus_path)
+                abc_handle = abc_file.read()
+                abc_file.close()
+            elif corpus_str:
+                staff_assignments = DCorpus._get_score_staff_assignments(abc_content=corpus_str)
+                # file_like = StringIO()
+                # file_like.write(corpus_str)
+                # abc_file.openFileLike(fileLike=file_like)
+                abc_handle = abc_file.readstr(corpus_str)
+            else:
+                return False
+
             ah_for_id = abc_handle.splitByReferenceNumber()
             if len(staff_assignments) > 0 and len(staff_assignments) != len(ah_for_id):
                 # We must know how to map all voices to a staff. Either all scores (tunes)
@@ -276,12 +431,15 @@ class DCorpus:
                 #    %%score { ( 1 ) | ( 2 ) }
                 raise Exception("All abc scores in corpus must have %%score staff assignments or none should.")
 
+            abcd_header = DCorpus.get_abcd_header(corpus_path=corpus_path, corpus_str=corpus_str)
+
             score_index = 0
             for score_id in ah_for_id:
                 if len(staff_assignments) > 0:
-                    d_score = DScore(abc_handle=ah_for_id[score_id], voice_map=staff_assignments[score_index])
+                    d_score = DScore(abc_handle=ah_for_id[score_id], abcd_header=abcd_header,
+                                     voice_map=staff_assignments[score_index])
                 else:
-                    d_score = DScore(abc_handle=ah_for_id[score_id])
+                    d_score = DScore(abc_handle=ah_for_id[score_id], abcd_header=abcd_header)
                 self.d_scores.append(d_score)
                 score_index += 1
         else:
@@ -296,9 +454,14 @@ class DCorpus:
                 self.d_scores.append(d_score)
 
     def __init__(self, corpus_path=None, corpus_type=Constant.CORPUS_ABC):
+        self.conn = None
         self.d_scores = []
         if corpus_path:
             self.append(corpus_path=corpus_path, corpus_type=corpus_type)
+
+    def __del__(self):
+        if self.conn:
+            self.conn.close()
 
     def get_score_count(self):
         return len(self.d_scores)
@@ -319,4 +482,34 @@ class DCorpus:
         for d_score in self.d_scores:
             titles.append(d_score.title)
         return titles
+
+    def db_connect(self, host='127.0.0.1', port=3306, user='didactyl', passwd='', db='diii2'):
+        self.conn = pymysql.connect(host=host, port=port, user=user, passwd=passwd, db=db)
+        return self.conn
+
+    def append_from_db(self, host='127.0.0.1', port=3306, user='didactyl', passwd='', db='diii2',
+                       query=None, client_id=None, selection_id=None):
+        if not query and (not client_id or not selection_id):
+            raise Exception("Query not specified.")
+
+        if not self.conn:
+            self.db_connect(host=host, port=port, user=user, passwd=passwd, db=db)
+
+        curs = self.conn.cursor()
+
+        if not query:
+            query = """
+                select abcD
+                  from annotation
+                 where clientId = '{0}'
+                   and selectionId = '{1}'""".format(client_id, selection_id)
+        curs.execute(query)
+        # print(curs.description)
+
+        for row in curs:
+            abc_content = row[0]
+            corpus_type = DCorpus.get_corpus_type(corpus_str=abc_content)
+            self.append(corpus_str=abc_content, corpus_type=corpus_type)
+
+        curs.close()
 
