@@ -1,5 +1,5 @@
 __author__ = 'David Randolph'
-# Copyright (c) 2014 David A. Randolph.
+# Copyright (c) 2014-2018 David A. Randolph.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -228,11 +228,25 @@ class DScore:
     def abcd_header(self):
         return self._abcd_header
 
+    def fingering(self, index=0, id=1):
+        if self._abcd_header:
+            return self._abcd_header.fingering(index=index)
+        return None
+
+    def upper_fingering(self, index=0, id=1):
+        if self._abcd_header:
+            return self._abcd_header.upper_fingering(index=index)
+        return None
+
+    def lower_fingering(self, index=0, id=1):
+        if self._abcd_header:
+            return self._abcd_header.lower_fingering(index=index)
+        return None
+
     def title(self):
         return self._title
 
-
-class AbcDAnnotation:
+class ABCDAnnotation:
     def __init__(self, abcdf=None):
         self.__authority = None
         self.__authority_year = None
@@ -297,16 +311,16 @@ class AbcDAnnotation:
     def add_comment_line(self, comment):
         self.__comments += comment + "\n"
 
-    def abcdf_upper(self):
+    def upper_abcdf(self):
         (upper, lower) = self.abcdf.split('@')
         return upper
 
-    def abcdf_lower(self):
+    def lower_abcdf(self):
         (upper, lower) = self.abcdf.split('@')
         return lower
 
 
-class AbcDHeader:
+class ABCDHeader:
     COMMENT_RE = r'^%\s*(.*)'
     TITLE_RE = r'^% abcDidactyl v(\d)'
     FINGERING_RE = r'% abcD fingering (\d+):\s*(.*)'
@@ -318,73 +332,94 @@ class AbcDHeader:
     @staticmethod
     def is_abcD(string):
         for line in string.splitlines():
-            matt = re.search(AbcDHeader.TITLE_RE, line)
+            matt = re.search(ABCDHeader.TITLE_RE, line)
             if matt:
                 return True
         return False
 
     def __init__(self, abcd_str):
-        self.annotations = []
+        self._annotations = []
 
-        annotation = AbcDAnnotation()
+        annotation = ABCDAnnotation()
         in_header = False
         for line in abcd_str.splitlines():
-            matt = re.search(AbcDHeader.TITLE_RE, line)
+            matt = re.search(ABCDHeader.TITLE_RE, line)
             if matt:
                 in_header = True
-                self.version = matt.group(1)
+                self._version = matt.group(1)
                 continue
             if not in_header:
                 continue
-            matt = re.search(AbcDHeader.TERMINAL_RE, line)
+            matt = re.search(ABCDHeader.TERMINAL_RE, line)
             if matt:
                 break
-            matt = re.search(AbcDHeader.FINGERING_RE, line)
+            matt = re.search(ABCDHeader.FINGERING_RE, line)
             if matt:
-                annotation = AbcDAnnotation(abcdf=matt.group(2))
+                annotation = ABCDAnnotation(abcdf=matt.group(2))
                 annotation.abcdf_id = matt.group(1)
-                self.annotations.append(annotation)
+                self._annotations.append(annotation)
                 continue
-            matt = re.search(AbcDHeader.AUTHORITY_RE, line)
+            matt = re.search(ABCDHeader.AUTHORITY_RE, line)
             if matt:
                 annotation.authority = matt.group(1)
                 if matt.group(2):
                     annotation.authority_year = matt.group(3)
                 continue
-            matt = re.search(AbcDHeader.TRANSCRIBER_RE, line)
+            matt = re.search(ABCDHeader.TRANSCRIBER_RE, line)
             if matt:
                 annotation.transcriber = matt.group(1)
                 continue
-            matt = re.search(AbcDHeader.TRANSCRIPTION_DATE_RE, line)
+            matt = re.search(ABCDHeader.TRANSCRIPTION_DATE_RE, line)
             if matt:
                 annotation.transcription_date = matt.group(1)
                 continue
-            matt = re.search(AbcDHeader.COMMENT_RE, line)
+            matt = re.search(ABCDHeader.COMMENT_RE, line)
             if matt:
                 annotation.add_comment_line(matt.group(1))
 
     def annotation_count(self):
-        return len(self.annotations)
+        return len(self._annotations)
 
-    def annotation(self, index=0):
+    def annotation_by_id(self, id=1):
+        for annotation in self._annotations:
+            if annotation.abcdf_id == id:
+                return annotation
+        return None
+
+    def annotation(self, index=0, id=1):
+        if id is not None:
+            return self.annotation_by_id(id)
+
         if index >= self.annotation_count():
             return None
-        return self.annotations[index]
+        return self._annotations[index]
 
-    def fingering(self, index=0):
+    def fingering(self, index=0, id=1):
+        if id is not None:
+            annotation = self.annotation_by_id(id)
+            if annotation:
+                return annotation.abcdf()
         if index >= self.annotation_count():
             return None
-        return self.annotations[index].abcdf
+        return self._annotations[index].abcdf
 
-    def fingering_upper(self, index=0):
+    def upper_fingering(self, index=0, id=1):
+        if id is not None:
+            annotation = self.annotation_by_id(id)
+            if annotation:
+                return annotation.upper_abcdf()
         if index >= self.annotation_count():
             return None
-        return self.annotations[index].abcdf_upper()
+        return self._annotations[index].upper_abcdf()
 
-    def fingering_lower(self, index=0):
+    def lower_fingering(self, index=0, id=1):
+        if id is not None:
+            annotation = self.annotation_by_id(id)
+            if annotation:
+                return annotation.lower_abcdf()
         if index >= self.annotation_count():
             return None
-        return self.annotations[index].abcdf_lower()
+        return self._annotations[index].lower_abcdf()
 
 
 class DCorpus:
@@ -430,8 +465,8 @@ class DCorpus:
     def abcd_header(corpus_path=None, corpus_str=None):
         if corpus_path:
             corpus_str = DCorpus.file_to_string(file_path=corpus_path)
-        if AbcDHeader.is_abcD(corpus_str):
-            hdr = AbcDHeader(abcd_str=corpus_str)
+        if ABCDHeader.is_abcD(corpus_str):
+            hdr = ABCDHeader(abcd_str=corpus_str)
             return hdr
         return None
 
@@ -439,7 +474,7 @@ class DCorpus:
     def corpus_type(corpus_path=None, corpus_str=None):
         if corpus_path:
             corpus_str = DCorpus.file_to_string(file_path=corpus_path)
-        if AbcDHeader.is_abcD(corpus_str):
+        if ABCDHeader.is_abcD(corpus_str):
             return Constant.CORPUS_ABCD
         else:
             return Constant.CORPUS_ABC

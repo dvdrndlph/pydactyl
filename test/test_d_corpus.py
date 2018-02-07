@@ -1,5 +1,27 @@
 #!/usr/bin/env python3
-
+__author__ = 'David Randolph'
+# Copyright (c) 2018 David A. Randolph.
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without
+# restriction, including without limitation the rights to use,
+# copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following
+# conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
 from music21 import *
 import re
 import unittest
@@ -65,7 +87,6 @@ class DCorpusTest(unittest.TestCase):
         d_score = d_corpus.d_score_by_index(1)
         # print(title)
         d_upper = d_score.upper()
-        print(d_upper)
         disorderly_stream = d_upper.as_stream()
         disorderly_d_part = DPart(music21_stream=disorderly_stream)
         assert disorderly_d_part.is_orderly() is False, "orderly_note_stream() or is_orderly() is broken"
@@ -90,13 +111,22 @@ class DCorpusTest(unittest.TestCase):
         at_re = re.compile('@')
         assert finger_re.search(fingering), "Bad fingering"
         assert at_re.search(fingering), "Bad fingering"
-        upper_fingering = annotation.fingering_upper()
+        upper_fingering = annotation.upper_fingering()
         assert finger_re.search(upper_fingering), "Bad upper fingering"
         assert not at_re.search(upper_fingering), "Bad upper fingering"
-        lower_fingering = annotation.fingering_lower()
+        lower_fingering = annotation.lower_fingering()
         assert finger_re.search(lower_fingering), "Bad upper fingering"
         assert not at_re.search(lower_fingering), "Bad upper fingering"
         assert lower_fingering != upper_fingering, "Bad split of fingerings"
+        fingering_by_index = da_score.fingering(index=0)
+        fingering_by_id = da_score.fingering(id=1)
+        assert fingering_by_index == fingering_by_id, "Bad DSCore::fingering"
+        upper_fingering_by_index = da_score.upper_fingering(index=0)
+        upper_fingering_by_id = da_score.upper_fingering(id=1)
+        assert upper_fingering_by_index == upper_fingering_by_id, "Bad DSCore::upper_fingering"
+        lower_fingering_by_index = da_score.lower_fingering(index=0)
+        lower_fingering_by_id = da_score.lower_fingering(id=1)
+        assert lower_fingering_by_index == lower_fingering_by_id, "Bad DSCore::lower_fingering"
 
 if __name__ == "__main__":
     unittest.main()  # run all tests
