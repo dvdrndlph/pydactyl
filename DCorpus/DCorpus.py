@@ -23,15 +23,14 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 import re
 import pymysql
-from io import StringIO
 from music21 import *
 from Dactyler import Constant
 
 
 class DPart:
     def __init__(self, music21_stream, segmenter=None):
-        self.stream = music21_stream
-        self.segmenter = segmenter
+        self._stream = music21_stream
+        self._segmenter = segmenter
 
     @staticmethod
     def stream_has_chords(music21_stream):
@@ -50,19 +49,19 @@ class DPart:
         """Returns True iff this DPart contains no notes that start at the same offset
            as any other note.
         """
-        if DPart.stream_has_chords(music21_stream=self.stream):
+        if DPart.stream_has_chords(music21_stream=self._stream):
             return False
 
-        notes = self.stream.flat.getElementsByClass(note.Note)
+        notes = self._stream.flat.getElementsByClass(note.Note)
         for i in range(len(notes)):
             # print("{0}: {1}".format(str(notes[i].offset), str(notes[i].pitch)))
             start = notes[i].offset
-            notes_at_offset = self.stream.flat.getElementsByOffset(offsetStart=start)
+            notes_at_offset = self._stream.flat.getElementsByOffset(offsetStart=start)
             if len(notes_at_offset) > 1:
                 return False
         return True
 
-    def get_orderly_note_stream(self):
+    def orderly_note_stream(self):
         """Return part as stream of notes with no notes starting at the same
            offset. Chords turned into a sequence of notes with starting points
            separated by the shortest duration (a 2048th note) ordered from
@@ -77,7 +76,7 @@ class DPart:
         short_dur = duration.Duration()
         short_dur.type = '2048th'
 
-        chords = self.stream.flat.getElementsByClass(chord.Chord)
+        chords = self._stream.flat.getElementsByClass(chord.Chord)
         new_note_stream = stream.Score()
         for ch in chords:
             chord_offset = ch.offset
@@ -88,17 +87,16 @@ class DPart:
                 new_note_stream.append(new_note)
                 note_index += 1
 
-        notes = self.stream.flat.getElementsByClass(note.Note)
+        notes = self._stream.flat.getElementsByClass(note.Note)
         for old_note in notes:
             new_note_stream.append(old_note)
-        # new_note_stream.show('text')
 
-        notes = self.stream.flat.getElementsByClass(note.Note)
+        notes = self._stream.flat.getElementsByClass(note.Note)
         last_offset = 0
         for i in range(len(notes)):
             # print("{0}: {1}".format(str(notes[i].offset), str(notes[i].pitch)))
             start = notes[i].offset
-            notes_at_offset = self.stream.flat.getElementsByOffset(offsetStart=start)
+            notes_at_offset = self._stream.flat.getElementsByOffset(offsetStart=start)
             note_index = 0
             for new_note in notes_at_offset:
                 new_offset = start + note_index * short_dur.quarterLength
@@ -114,15 +112,15 @@ class DPart:
         """Returns True iff this DPart has no notes that sound at the
            same time as other notes.
         """
-        if DPart.stream_has_chords(music21_stream=self.stream):
+        if DPart.stream_has_chords(music21_stream=self._stream):
             return False
 
-        notes = self.stream.flat.getElementsByClass(note.Note)
+        notes = self._stream.flat.getElementsByClass(note.Note)
         for i in range(len(notes)):
             # print("{0}: {1}".format(str(notes[i].offset), str(notes[i].pitch)))
             start = notes[i].offset
             end = start + notes[i].duration.quarterLength
-            notes_in_range = self.stream.flat.getElementsByOffset(
+            notes_in_range = self._stream.flat.getElementsByOffset(
                 offsetStart=start, offsetEnd=end,
                 includeEndBoundary=False,
                 mustBeginInSpan=False,
@@ -135,15 +133,15 @@ class DPart:
                 return False
         return True
 
-    def get_stream(self, orderly=False):
+    def as_stream(self, orderly=False):
         if orderly:
-            return self.get_orderly_note_stream()
-        return self.stream
+            return self.orderly_note_stream()
+        return self._stream
 
 
 class DScore:
     @staticmethod
-    def _get_voice_id(abc_voice):
+    def _voice_id(abc_voice):
         reggie = r'^V:\s*(\d+)'
         matt = re.search(reggie, abc_voice.tokens[0].src)
         if matt:
@@ -152,19 +150,19 @@ class DScore:
         return None
 
     def __init__(self, music21_stream=None, abc_handle=None, voice_map=None, abcd_header=None):
-        self.abcd_header = abcd_header
+        self._abcd_header = abcd_header
         if music21_stream:
-            self.combined_d_part = DPart(music21_stream=music21_stream)
-            self.score = music21_stream
-            meta = self.score[0]
-            self.title = meta.title
+            self._combined_d_part = DPart(music21_stream=music21_stream)
+            self._score = music21_stream
+            meta = self._score[0]
+            self._title = meta.title
         elif abc_handle:
-            self.title = abc_handle.getTitle()
+            self._title = abc_handle.getTitle()
             music21_stream = abcFormat.translate.abcToStreamScore(abc_handle)
-            self.combined_d_part = DPart(music21_stream=music21_stream)
+            self._combined_d_part = DPart(music21_stream=music21_stream)
 
-            self.lower_d_part = None
-            self.upper_d_part = None
+            self._lower_d_part = None
+            self._upper_d_part = None
 
             ah_array = abc_handle.splitByVoice()
             voices = []
@@ -186,49 +184,52 @@ class DScore:
                 upper_ah = headers
                 lower_ah = headers
                 for voice in voices:
-                    voice_id = DScore._get_voice_id(voice)
+                    voice_id = DScore._voice_id(voice)
                     if voice_map[voice_id] == Constant.STAFF_UPPER:
                         upper_ah = upper_ah + voice
                     else:
                         lower_ah = lower_ah + voice
 
                 upper_stream = abcFormat.translate.abcToStreamScore(upper_ah)
-                self.upper_d_part = DPart(music21_stream=upper_stream)
+                self._upper_d_part = DPart(music21_stream=upper_stream)
                 lower_stream = abcFormat.translate.abcToStreamScore(lower_ah)
-                self.lower_d_part = DPart(music21_stream=lower_stream)
+                self._lower_d_part = DPart(music21_stream=lower_stream)
 
     def is_monophonic(self):
-        return self.combined_d_part.is_monophonic()
+        return self._combined_d_part.is_monophonic()
 
     def get(self):
-        return self.combined_d_part
+        return self._combined_d_part
 
-    def get_upper(self):
-        return self.upper_d_part
+    def upper(self):
+        return self._upper_d_part
 
-    def get_lower(self):
-        return self.lower_d_part
+    def lower(self):
+        return self._lower_d_part
 
-    def get_stream(self):
-        return self.combined_d_part.get_stream()
+    def stream(self):
+        return self._combined_d_part.stream()
 
-    def get_upper_stream(self):
-        if self.upper_d_part:
-            return self.upper_d_part.get_stream()
+    def upper_stream(self):
+        if self._upper_d_part:
+            return self._upper_d_part.stream()
         return None
 
-    def get_lower_stream(self):
-        if self.lower_d_part:
-            return self.lower_d_part.get_stream()
+    def lower_stream(self):
+        if self._lower_d_part:
+            return self._lower_d_part.stream()
         return None
 
-    def get_part_count(self):
-        if self.upper_d_part and self.lower_d_part:
+    def part_count(self):
+        if self._upper_d_part and self._lower_d_part:
             return 2
         return 1
 
-    def get_title(self):
-        return self.title
+    def abcd_header(self):
+        return self._abcd_header
+
+    def title(self):
+        return self._title
 
 
 class AbcDAnnotation:
@@ -238,6 +239,7 @@ class AbcDAnnotation:
         self.__transcriber = None
         self.__transcription_date = None
         self.__abcdf = abcdf
+        self.__abcdf_id = None
         self.__comments = ''
 
     @property
@@ -281,11 +283,27 @@ class AbcDAnnotation:
         self.__abcdf = abcdf
 
     @property
+    def abcdf_id(self):
+        return self.__abcdf
+
+    @abcdf_id.setter
+    def abcdf_id(self, abcdf_id):
+        self.__abcdf_id = abcdf_id
+
+    @property
     def comments(self):
         return self.__comments
 
     def add_comment_line(self, comment):
         self.__comments += comment + "\n"
+
+    def abcdf_upper(self):
+        (upper, lower) = self.abcdf.split('@')
+        return upper
+
+    def abcdf_lower(self):
+        (upper, lower) = self.abcdf.split('@')
+        return lower
 
 
 class AbcDHeader:
@@ -323,8 +341,8 @@ class AbcDHeader:
                 break
             matt = re.search(AbcDHeader.FINGERING_RE, line)
             if matt:
-                annotation = AbcDAnnotation(abcdf=matt.group(1))
-                annotation.abcdf = matt.group(1)
+                annotation = AbcDAnnotation(abcdf=matt.group(2))
+                annotation.abcdf_id = matt.group(1)
                 self.annotations.append(annotation)
                 continue
             matt = re.search(AbcDHeader.AUTHORITY_RE, line)
@@ -345,6 +363,29 @@ class AbcDHeader:
             if matt:
                 annotation.add_comment_line(matt.group(1))
 
+    def annotation_count(self):
+        return len(self.annotations)
+
+    def annotation(self, index=0):
+        if index >= self.annotation_count():
+            return None
+        return self.annotations[index]
+
+    def fingering(self, index=0):
+        if index >= self.annotation_count():
+            return None
+        return self.annotations[index].abcdf
+
+    def fingering_upper(self, index=0):
+        if index >= self.annotation_count():
+            return None
+        return self.annotations[index].abcdf_upper()
+
+    def fingering_lower(self, index=0):
+        if index >= self.annotation_count():
+            return None
+        return self.annotations[index].abcdf_lower()
+
 
 class DCorpus:
     """A corpus for the rest of us."""
@@ -359,7 +400,7 @@ class DCorpus:
         return string
 
     @staticmethod
-    def _get_score_staff_assignments(abc_file_path=None, abc_content=None):
+    def _score_staff_assignments(abc_file_path=None, abc_content=None):
         """Return an array of hashes mapping voices to their associated
            staves. There should be one hash for each tune in the abc file.
         """
@@ -386,7 +427,7 @@ class DCorpus:
         return map_for_tune
 
     @staticmethod
-    def get_abcd_header(corpus_path=None, corpus_str=None):
+    def abcd_header(corpus_path=None, corpus_str=None):
         if corpus_path:
             corpus_str = DCorpus.file_to_string(file_path=corpus_path)
         if AbcDHeader.is_abcD(corpus_str):
@@ -394,7 +435,8 @@ class DCorpus:
             return hdr
         return None
 
-    def get_corpus_type(corpus_path=None, corpus_str=None):
+    @staticmethod
+    def corpus_type(corpus_path=None, corpus_str=None):
         if corpus_path:
             corpus_str = DCorpus.file_to_string(file_path=corpus_path)
         if AbcDHeader.is_abcD(corpus_str):
@@ -407,15 +449,12 @@ class DCorpus:
         if corpus_type in [Constant.CORPUS_ABC, Constant.CORPUS_ABCD]:
             abc_file = abcFormat.ABCFile()
             if corpus_path:
-                staff_assignments = DCorpus._get_score_staff_assignments(abc_file_path=corpus_path)
+                staff_assignments = DCorpus._score_staff_assignments(abc_file_path=corpus_path)
                 abc_file.open(filename=corpus_path)
                 abc_handle = abc_file.read()
                 abc_file.close()
             elif corpus_str:
-                staff_assignments = DCorpus._get_score_staff_assignments(abc_content=corpus_str)
-                # file_like = StringIO()
-                # file_like.write(corpus_str)
-                # abc_file.openFileLike(fileLike=file_like)
+                staff_assignments = DCorpus._score_staff_assignments(abc_content=corpus_str)
                 abc_handle = abc_file.readstr(corpus_str)
             else:
                 return False
@@ -431,7 +470,7 @@ class DCorpus:
                 #    %%score { ( 1 ) | ( 2 ) }
                 raise Exception("All abc scores in corpus must have %%score staff assignments or none should.")
 
-            abcd_header = DCorpus.get_abcd_header(corpus_path=corpus_path, corpus_str=corpus_str)
+            abcd_header = DCorpus.abcd_header(corpus_path=corpus_path, corpus_str=corpus_str)
 
             score_index = 0
             for score_id in ah_for_id:
@@ -440,62 +479,62 @@ class DCorpus:
                                      voice_map=staff_assignments[score_index])
                 else:
                     d_score = DScore(abc_handle=ah_for_id[score_id], abcd_header=abcd_header)
-                self.d_scores.append(d_score)
+                self._d_scores.append(d_score)
                 score_index += 1
         else:
             corp = converter.parse(corpus_path)
             if isinstance(corpus, stream.Opus):
                 for score in corp:
                     d_score = DScore(music21_stream=score)
-                    self.d_scores.append(d_score)
+                    self._d_scores.append(d_score)
             else:
                 score = corp
                 d_score = DScore(music21_stream=score)
-                self.d_scores.append(d_score)
+                self._d_scores.append(d_score)
 
     def __init__(self, corpus_path=None, corpus_type=Constant.CORPUS_ABC):
-        self.conn = None
-        self.d_scores = []
+        self._conn = None
+        self._d_scores = []
         if corpus_path:
             self.append(corpus_path=corpus_path, corpus_type=corpus_type)
 
     def __del__(self):
-        if self.conn:
-            self.conn.close()
+        if self._conn:
+            self._conn.close()
 
-    def get_score_count(self):
-        return len(self.d_scores)
+    def score_count(self):
+        return len(self._d_scores)
 
-    def get_d_score_by_title(self, title):
-        for d_score in self.d_scores:
-            if d_score.title == title:
+    def d_score_by_title(self, title):
+        for d_score in self._d_scores:
+            if d_score.title() == title:
                 return d_score
         return None
 
-    def get_d_score_by_index(self, index):
-        if index < len(self.d_scores):
-            return self.d_scores[index]
+    def d_score_by_index(self, index):
+        if index < len(self._d_scores):
+            return self._d_scores[index]
         return None
 
-    def get_titles(self):
+    def titles(self):
         titles = []
-        for d_score in self.d_scores:
+        for d_score in self._d_scores:
             titles.append(d_score.title)
         return titles
 
     def db_connect(self, host='127.0.0.1', port=3306, user='didactyl', passwd='', db='diii2'):
-        self.conn = pymysql.connect(host=host, port=port, user=user, passwd=passwd, db=db)
-        return self.conn
+        self._conn = pymysql.connect(host=host, port=port, user=user, passwd=passwd, db=db)
+        return self._conn
 
     def append_from_db(self, host='127.0.0.1', port=3306, user='didactyl', passwd='', db='diii2',
                        query=None, client_id=None, selection_id=None):
         if not query and (not client_id or not selection_id):
             raise Exception("Query not specified.")
 
-        if not self.conn:
+        if not self._conn:
             self.db_connect(host=host, port=port, user=user, passwd=passwd, db=db)
 
-        curs = self.conn.cursor()
+        curs = self._conn.cursor()
 
         if not query:
             query = """
@@ -508,7 +547,7 @@ class DCorpus:
 
         for row in curs:
             abc_content = row[0]
-            corpus_type = DCorpus.get_corpus_type(corpus_str=abc_content)
+            corpus_type = DCorpus.corpus_type(corpus_str=abc_content)
             self.append(corpus_str=abc_content, corpus_type=corpus_type)
 
         curs.close()
