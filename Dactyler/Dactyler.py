@@ -25,13 +25,14 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 import music21
 from Dactyler import Constant
+from DCorpus import DCorpus
 import os
 
 
 class Note:
     def __init__(self, m21_note, prior_note=None):
-        self.m21_note = m21_note
-        self.prior_note = prior_note
+        self._m21_note = m21_note
+        self._prior_note = prior_note
 
     def __str__(self):
         my_str = "MIDI {0}".format(self.m21_note.midi)
@@ -53,7 +54,7 @@ class Note:
     }
 
     @staticmethod
-    def get_note_list(m21_score):
+    def note_list(m21_score):
         prior_note = None
         notes = []
         for n in m21_score[1].getElementsByClass(music21.note.Note):
@@ -67,46 +68,46 @@ class Note:
         return notes
 
     def is_black(self):
-        if not self.m21_note:
+        if not self._m21_note:
             return False
-        return Note.note_class_is_black[self.m21_note.pitch.pitchClass]
+        return Note.note_class_is_black[self._m21_note.pitch.pitchClass]
 
     def is_white(self):
-        if not self.m21_note:
+        if not self._m21_note:
             return False
         return not self.is_black()
 
-    def get_color(self):
-        if not self.m21_note:
+    def color(self):
+        if not self._m21_note:
             return None
         if self.is_black():
             return Constant.BLACK
         return Constant.WHITE
 
-    def get_prior_color(self):
-        if self.prior_note:
-            return self.prior_note.get_color()
+    def prior_color(self):
+        if self._prior_note:
+            return self._prior_note.color()
         return None
 
-    def get_midi(self):
-        if self.m21_note:
-            return self.m21_note.pitch.midi
+    def midi(self):
+        if self._m21_note:
+            return self._m21_note.pitch.midi
         return None
 
-    def get_prior_midi(self):
-        if self.prior_note:
-            return self.prior_note.get_midi()
+    def prior_midi(self):
+        if self._prior_note:
+            return self._prior_note.midi()
         return None
 
     def is_ascending(self):
-        if not self.get_prior_midi() or not self.get_midi():
+        if not self.prior_midi() or not self.midi():
             return False
-        if self.get_midi() > self.get_prior_midi():
+        if self.midi() > self.prior_midi():
             return True
         return False
 
-    def get_semitone_delta(self):
-        delta = self.m21_note.pitch.midi - self.prior_note.m21_note.pitch.midi
+    def semitone_delta(self):
+        delta = self._m21_note.pitch.midi - self._prior_note.m21_note.pitch.midi
         delta = -1 * delta if delta < 0 else delta
         return delta
 
@@ -119,24 +120,25 @@ class Dactyler(ABC):
     DELETE_LOG = True
 
     def __init__(self, hands=Constant.HANDS_RIGHT, chords=False):
-        self.hands = hands
-        self.chords = chords
+        self._d_corpus = None
+        self._hands = hands
+        self._chords = chords
         timestamp = datetime.now().isoformat()
-        self.log_file_path = '/tmp/dactyler_' + self.__class__.__name__ + '_' + timestamp + '.log'
-        self.log = open(self.log_file_path, 'a')
+        self._log_file_path = '/tmp/dactyler_' + self.__class__.__name__ + '_' + timestamp + '.log'
+        self._log = open(self._log_file_path, 'a')
 
     def __del__(self):
-        self.log.close()
+        self._log.close()
         if Dactyler.DELETE_LOG:
-            os.remove(self.log_file_path)
+            os.remove(self._log_file_path)
 
     def squawk(self, msg):
-        self.log.write(str(msg) + "\n")
+        self._log.write(str(msg) + "\n")
         if Dactyler.SQUAWK_OUT_LOUD:
             print(str(msg) + "\n")
 
     def squeak(self, msg):
-        self.log.write(str(msg))
+        self._log.write(str(msg))
         if Dactyler.SQUAWK_OUT_LOUD:
             print(str(msg))
 
@@ -144,9 +146,25 @@ class Dactyler(ABC):
     def advise(self, offset=0, first_finger=None):
         return
 
-    def load_fingerings(self, path=None, query=None):
-        return
+    def load_corpus(self, d_corpus=None, path=None):
+        if d_corpus:
+            self._d_corpus = d_corpus
+        elif path:
+            self._d_corpus = DCorpus.DCorpus(path)
+        else:
+            raise Exception("No corpus specified for Dactyler.")
 
-    def load_corpus(self, path=None, query=None, corpus_type=Constant.CORPUS_ABC):
-        return
+    def evaluate_hamming(self):
+        print("Hamming")
 
+    def evaluate_natural(self):
+        print("Au natural")
+
+    def evaluate_pivot(self):
+        print("Pivot")
+
+    def evaluate_pivot(self):
+        print("Pivot")
+
+    def evaluate_reentry(self):
+        print("Re-enter the Twilight Zone")

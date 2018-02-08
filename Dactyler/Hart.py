@@ -30,29 +30,45 @@ from DCorpus import DCorpus
 
 class Interval:
     def __init__(self, l_color, h_color, l_finger, h_finger, s):
-        self.l_color = int(l_color)
-        self.h_color = int(h_color)
-        self.l_finger = int(l_finger)
-        self.h_finger = int(h_finger)
-        self.s = int(s)
+        self._l_color = int(l_color)
+        self._h_color = int(h_color)
+        self._l_finger = int(l_finger)
+        self._h_finger = int(h_finger)
+        self._s = int(s)
+
+    def l_color(self):
+        return self._l_color
+
+    def h_color(self):
+        return self._h_color
+
+    def l_finger(self):
+        return self._l_finger
+
+    def h_finger(self):
+        return self._h_finger
+
+    def s(self):
+        return self._s
 
     def __hash__(self):
-        val = self.h_finger + 10*self.l_finger + 100*self.h_color + 1000*self.l_color + 10000*self.s
+        val = self._h_finger + 10*self._l_finger + 100*self._h_color + 1000*self._l_color + 10000*self._s
         return val
 
     def __eq__(self, other):
-        if self.l_color == other.l_color and self.h_color == other.h_color and self.l_finger == other.l_finger and\
-                self.h_finger == other.h_finger and self.s == other.s:
+        if self.l_color() == other.l_color() and self.h_color() == other.h_color() and \
+                self.l_finger() == other.l_finger() and self.h_finger() == other.h_finger() and \
+                self.s() == other.s():
             return True
         return False
 
     def __str__(self):
         my_str = "finger: {0}->{1}, color: {2}->{3}, interval: {4}"
-        my_str = my_str.format(str(self.l_finger),
-                               str(self.h_finger),
-                               str(self.l_color),
-                               str(self.h_color),
-                               str(self.s))
+        my_str = my_str.format(str(self._l_finger),
+                               str(self._h_finger),
+                               str(self._l_color),
+                               str(self._h_color),
+                               str(self._s))
         return my_str
 
     def __repr__(self):
@@ -63,8 +79,6 @@ class Hart(Dactyler.Dactyler):
     BIG_NUM = 999
     MAX_INTERVAL_SIZE = 12
     COST_FILE = '/Users/dave/tb2/didactyl/dd/data/tables_0.dat'
-    # TEST_CORPUS = "/tmp/%s" % sys.argv[1]
-    TEST_CORPUS = "/Users/dave/tb2/didactyl/dd/corpora/beringer/broken_chords.abc"
 
     def _define_costs(self):
         costs = {}
@@ -72,13 +86,13 @@ class Hart(Dactyler.Dactyler):
             for h_color in range(2):
                 for l_finger in range(1, 6):
                     for h_finger in range(1, 6):
-                        for s in range(0, self.max_interval_size + 1):
+                        for s in range(0, self._max_interval_size + 1):
                             # FIXME: What about 0 interval?
                             ic = Interval(l_color, h_color, l_finger, h_finger, s)
                             costs[ic] = Hart.BIG_NUM
 
         interval_size_finalized = False
-        max_interval_size = self.max_interval_size
+        max_interval_size = self._max_interval_size
         max_interval_re = re.compile(r"^Max_Interval:\s+(\d+)")
         heading_re = re.compile(r"^([^_]+)_to_([^_]+)")
         cost_re_str = "^(\d)\s+(\d)"
@@ -88,7 +102,7 @@ class Hart(Dactyler.Dactyler):
         l_finger = None
         h_finger = None
 
-        f = open(self.cost_path, 'r')
+        f = open(self._cost_path, 'r')
         for line in f:
             line = line.rstrip()
             if not interval_size_finalized:
@@ -124,32 +138,31 @@ class Hart(Dactyler.Dactyler):
 
     def __init__(self, cost_path=None, max_interval_size=MAX_INTERVAL_SIZE):
         super().__init__(hands=Constant.HANDS_RIGHT, chords=False)
-        self.cost_path = Hart.COST_FILE
+        self._cost_path = Hart.COST_FILE
         if cost_path:
-            self.cost_path = cost_path
-        self.max_interval_size = max_interval_size
-        self.costs = self._define_costs()
-        self.scores = None
-
-    def load_corpus(self, path=None, query=None, corpus_type=Constant.CORPUS_ABC):
-        if corpus_type != Constant.CORPUS_ABC and \
-                corpus_type != Constant.CORPUS_ABCD:
-            raise Exception("Only ABC is currently supported")
-
-        if not path:
-            path = Hart.TEST_CORPUS
-        if query:
-            raise Exception("MySQL query not implemented yet")
-        corp = DCorpus.DCorpus(path)
-        self.scores = corp.get_score_list()
+            self._cost_path = cost_path
+        self._max_interval_size = max_interval_size
+        self._costs = self._define_costs()
 
     def advise(self, offset=0, first_finger=None):
         if offset or first_finger:
             raise Exception("Offset start not implemented yet")
 
-        for score in self.scores:
+        d_scores = self._d_corpus.d_score_list()
+        for d_score in d_scores:
+            if d_score.part_count() == 1:
+                d_part = d_score.as_part()
+            else:
+                # FIXME: We should only need to invert the cost structure and do some
+                # other minor fiddling to support (segregated) left hand fingerings.
+                # For now, we only support right hand fingerings, which we assume
+                # are in the upper staff.
+                d_part = d_score.upper_part()
+
+            m21_stream = d_part.orderly_note_stream()
+
             opt_cost = Hart.BIG_NUM
-            note_list = Dactyler.Note.get_note_list(score)
+            note_list = Dactyler.Note.note_list(m21_stream)
 
             m = len(note_list) - 1
             fs = numpy.zeros([len(note_list), 6], dtype=int)
@@ -163,20 +176,19 @@ class Hart(Dactyler.Dactyler):
 
             # Stage m
             mth_note = note_list[m]
-            mth_color = mth_note.get_color()
-            prior_color = mth_note.get_prior_color()
-            mth_interval = mth_note.get_semitone_delta()
+            mth_color = mth_note.color()
+            prior_color = mth_note.prior_color()
+            mth_interval = mth_note.semitone_delta()
             for s in range(1, 6):
                 if s == 1:
                     self.squawk("Stage {0}: color {1}->{2}, delta {3}".format(m, prior_color, mth_color, mth_interval))
                 self.squeak("{0:4d}:".format(s))
                 for x in range(1, 6):
-                    interval = None
                     if mth_note.is_ascending():
                         interval = Interval(prior_color, mth_color, s, x, mth_interval)
                     else:
                         interval = Interval(mth_color, prior_color, x, s, mth_interval)
-                    cost = self.costs[interval]
+                    cost = self._costs[interval]
                     fsx[m, s, x] = cost
                     self.squeak("{0:4d}  ".format(fsx[m, s, x]))
 
@@ -200,9 +212,9 @@ class Hart(Dactyler.Dactyler):
             # Stages m-1 through 1
             for n in reversed(range(1, m)):
                 nth_note = note_list[n]
-                nth_color = nth_note.get_color()
-                prior_color = nth_note.get_prior_color()
-                nth_interval = nth_note.get_semitone_delta()
+                nth_color = nth_note.color()
+                prior_color = nth_note.prior_color()
+                nth_interval = nth_note.semitone_delta()
                 for s in range(1, 6):
                     if s == 1:
                         self.squawk("Stage {0}: color {1}->{2}, delta {3}".format(n, prior_color, nth_color, nth_interval))
@@ -213,7 +225,7 @@ class Hart(Dactyler.Dactyler):
                             interval = Interval(prior_color, nth_color, s, x, nth_interval)
                         else:
                             interval = Interval(nth_color, prior_color, x, s, nth_interval)
-                        cost = self.costs[interval]
+                        cost = self._costs[interval]
                         fsx[n, s, x] = cost + fs[n + 1, x]
                         self.squeak("{0:4d}+{1:d}={2:4d}  ".format(cost, fs[n + 1, x], fsx[n, s, x]))
 
@@ -249,6 +261,6 @@ class Hart(Dactyler.Dactyler):
             # print format(opt_cost)
             # print fingers
 
-            title = score[0].title
+            title = d_score.title()
 
             print('{ "title" : "' + title + '", "optimal_fingering": "' + str(fingers) + '" }')

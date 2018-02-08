@@ -28,3 +28,7 @@ BERINGER2_DIR = CORPORA_DIR + "/beringer2"
 BERINGER2_ARPEGGIO_CORPUS = BERINGER2_DIR + "/arpeggios.abc"
 
 WTC_CORPUS_DIR = REPO_ROOT + '/dvdrndlph.github.io/didactyl/wtc'
+
+# Right hand only, sans annotation.
+BERINGER_DIR = CORPORA_DIR + "/beringer"
+BERINGER_BC_CORPUS = BERINGER_DIR + "/broken_chords.abc"

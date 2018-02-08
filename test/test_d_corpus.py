@@ -41,13 +41,13 @@ class DCorpusTest(unittest.TestCase):
         assert d_score is not None, "Bad score_by_title retrieval" 
         part_count = d_score.part_count()
         assert part_count == 2, "Bad part count"
-        d_part = d_score.get()
+        d_part = d_score.as_d_part()
         assert d_part is not None, "Bad DPart retrieval"
         assert d_part.is_monophonic() is False, "Polyphony not detected"
-        d_upper = d_score.upper()
+        d_upper = d_score.upper_d_part()
         assert d_upper, "Bad upper DPart"
         assert d_upper.is_monophonic() is True, "Monophonic upper part not detected"
-        d_lower = d_score.lower()
+        d_lower = d_score.lower_d_part()
         assert d_lower, "Bad lower DPart"
         # lower_stream = d_lower.stream()
         # lower_stream.show('text')
@@ -68,13 +68,13 @@ class DCorpusTest(unittest.TestCase):
         assert d_score.title() == 'Prelude 1 (BWV 846)', "Bad title retrieval"
         part_count = d_score.part_count()
         assert part_count == 2, "Bad part count"
-        d_part = d_score.get()
+        d_part = d_score.as_d_part()
         assert d_part is not None, "Bad DPart retrieval"
         assert d_part.is_monophonic() is False, "Polyphony not detected"
-        d_upper = d_score.upper()
+        d_upper = d_score.upper_d_part()
         assert d_upper, "Bad upper DPart"
         assert d_upper.is_monophonic() is False, "Polyphonic upper part not detected"
-        d_lower = d_score.lower()
+        d_lower = d_score.lower_d_part()
         assert d_lower, "Bad lower DPart"
         assert d_lower.is_monophonic() is False, "Polyphonic lower part in Prelude 1 not detected"
         assert d_lower.is_orderly() is False, "Lower part in Prelude 1 is not orderly"
@@ -86,8 +86,8 @@ class DCorpusTest(unittest.TestCase):
         # Need to check what happens to tied notes
         d_score = d_corpus.d_score_by_index(1)
         # print(title)
-        d_upper = d_score.upper()
-        disorderly_stream = d_upper.as_stream()
+        d_upper = d_score.upper_d_part()
+        disorderly_stream = d_upper.stream()
         disorderly_d_part = DPart(music21_stream=disorderly_stream)
         assert disorderly_d_part.is_orderly() is False, "orderly_note_stream() or is_orderly() is broken"
         # disorderly_stream.show('text')

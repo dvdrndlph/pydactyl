@@ -23,8 +23,51 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 import re
 import pymysql
+from abc import ABC, abstractmethod
 from music21 import *
 from Dactyler import Constant
+
+
+class DValuation:
+    def __init__(self, gold_standard_abcdf, test_abcdf):
+        self._gold_abcdf = gold_standard_abcdf
+        self._test_abcdf = test_abcdf
+
+    @abstractmethod
+    def measure(self):
+        pass
+
+
+class DHammingValuation(DValuation):
+    def __init__(self, gold_standard_abcdf, test_abcdf):
+        super().__init__(gold_standard_abcdf, test_abcdf)
+
+    def measure(self):
+        pass
+
+
+class DNaturalValuation(DValuation):
+    def __init__(self, gold_standard_abcdf, test_abcdf):
+        super().__init__(gold_standard_abcdf, test_abcdf)
+
+    def measure(self):
+        pass
+
+
+class DPivotValuation(DValuation):
+    def __init__(self, gold_standard_abcdf, test_abcdf):
+        super().__init__(gold_standard_abcdf, test_abcdf)
+
+    def measure(self):
+        pass
+
+
+class DReEntryValuation(DValuation):
+    def __init__(self, gold_standard_abcdf, test_abcdf):
+        super().__init__(gold_standard_abcdf, test_abcdf)
+
+    def measure(self):
+        pass
 
 
 class DPart:
@@ -133,9 +176,7 @@ class DPart:
                 return False
         return True
 
-    def as_stream(self, orderly=False):
-        if orderly:
-            return self.orderly_note_stream()
+    def stream(self):
         return self._stream
 
 
@@ -198,13 +239,13 @@ class DScore:
     def is_monophonic(self):
         return self._combined_d_part.is_monophonic()
 
-    def get(self):
+    def as_d_part(self):
         return self._combined_d_part
 
-    def upper(self):
+    def upper_d_part(self):
         return self._upper_d_part
 
-    def lower(self):
+    def lower_d_part(self):
         return self._lower_d_part
 
     def stream(self):
@@ -228,6 +269,17 @@ class DScore:
     def abcd_header(self):
         return self._abcd_header
 
+    def is_annotated(self):
+        if self._abcd_header:
+            return True
+        return False
+
+    def is_fully_annotated(self):
+        if not self.is_annotated():
+            return False
+        # FIXME: We need to parse the abcDF to do this accurately.
+        return True
+
     def fingering(self, index=0, id=1):
         if self._abcd_header:
             return self._abcd_header.fingering(index=index)
@@ -245,6 +297,7 @@ class DScore:
 
     def title(self):
         return self._title
+
 
 class ABCDAnnotation:
     def __init__(self, abcdf=None):
@@ -556,6 +609,9 @@ class DCorpus:
         for d_score in self._d_scores:
             titles.append(d_score.title)
         return titles
+
+    def d_score_list(self):
+        return self._d_scores
 
     def db_connect(self, host='127.0.0.1', port=3306, user='didactyl', passwd='', db='diii2'):
         self._conn = pymysql.connect(host=host, port=port, user=user, passwd=passwd, db=db)
