@@ -347,75 +347,58 @@ class ABCDFAnnotation:
         return ABCDFAnnotation.ast_for_abcdf(lower_abcdf)
 
     def __init__(self, abcdf=None):
-        self.__authority = None
-        self.__authority_year = None
-        self.__transcriber = None
-        self.__transcription_date = None
-        self.__abcdf = abcdf
-        self.__abcdf_id = None
-        self.__comments = ''
+        self._authority = None
+        self._authority_year = None
+        self._transcriber = None
+        self._transcription_date = None
+        self._abcdf = abcdf
+        self._abcdf_id = None
+        self._comments = ''
 
-    @property
-    def authority(self):
-        return self.__authority
+    def authority(self, authority=None):
+        if authority:
+            self._authority = authority
+        return self._authority
 
-    @authority.setter
-    def authority(self, authority):
-        self.__authority = authority
+    def authority_year(self, authority_year=None):
+        if authority_year:
+            self._authority_year = authority_year
+        return self._authority
 
-    @property
-    def authority_year(self):
-        return self.__authority
+    def transcriber(self, transcriber=None):
+        if transcriber:
+            self._transcriber = transcriber
+        return self._transcriber
 
-    @authority_year.setter
-    def authority_year(self, authority_year):
-        self.__authority_year = authority_year
+    def transcription_date(self, transcription_date=None):
+        if transcription_date:
+            self._transcription_date = transcription_date
+        return self._transcription_date
 
-    @property
-    def transcriber(self):
-        return self.__transcriber
+    def abcdf(self, abcdf=None):
+        if abcdf:
+            self._abcdf = abcdf
+        return self._abcdf
 
-    @transcriber.setter
-    def transcriber(self, transcriber):
-        self.__transcriber = transcriber
+    def abcdf_id(self, abcdf_id=None):
+        if abcdf_id:
+            self._abcdf_id = abcdf_id
+        return self._abcdf_id
 
-    @property
-    def transcription_date(self):
-        return self.__transcription_date
-
-    @transcription_date.setter
-    def transcription_date(self, transcription_date):
-        self.__transcription_date = transcription_date
-
-    @property
-    def abcdf(self):
-        return self.__abcdf
-
-    @abcdf.setter
-    def abcdf(self, abcdf):
-        self.__abcdf = abcdf
-
-    @property
-    def abcdf_id(self):
-        return self.__abcdf
-
-    @abcdf_id.setter
-    def abcdf_id(self, abcdf_id):
-        self.__abcdf_id = abcdf_id
-
-    @property
-    def comments(self):
-        return self.__comments
+    def comments(self, comments=None):
+        if comments:
+            self._comments = comments
+        return self._comments
 
     def add_comment_line(self, comment):
-        self.__comments += comment + "\n"
+        self._comments += comment + "\n"
 
     def upper_abcdf(self):
-        (upper, lower) = self.abcdf.split('@')
+        (upper, lower) = self.abcdf().split('@')
         return upper
 
     def lower_abcdf(self):
-        (upper, lower) = self.abcdf.split('@')
+        (upper, lower) = self.abcdf().split('@')
         return lower
 
 
@@ -455,45 +438,48 @@ class ABCDHeader:
             matt = re.search(ABCDHeader.FINGERING_RE, line)
             if matt:
                 annotation = ABCDFAnnotation(abcdf=matt.group(2))
-                annotation.abcdf_id = matt.group(1)
+                annotation.abcdf_id(matt.group(1))
                 self._annotations.append(annotation)
                 continue
             matt = re.search(ABCDHeader.AUTHORITY_RE, line)
             if matt:
-                annotation.authority = matt.group(1)
+                annotation.authority(matt.group(1))
                 if matt.group(2):
-                    annotation.authority_year = matt.group(3)
+                    annotation.authority_year(matt.group(3))
                 continue
             matt = re.search(ABCDHeader.TRANSCRIBER_RE, line)
             if matt:
-                annotation.transcriber = matt.group(1)
+                annotation.transcriber(matt.group(1))
                 continue
             matt = re.search(ABCDHeader.TRANSCRIPTION_DATE_RE, line)
             if matt:
-                annotation.transcription_date = matt.group(1)
+                annotation.transcription_date(matt.group(1))
                 continue
             matt = re.search(ABCDHeader.COMMENT_RE, line)
             if matt:
                 annotation.add_comment_line(matt.group(1))
+
+    def version(self):
+        return self._version
 
     def annotation_count(self):
         return len(self._annotations)
 
     def annotation_by_id(self, identifier=1):
         for annotation in self._annotations:
-            if annotation.abcdf_id == identifier:
+            abcdf_id = annotation.abcdf_id()
+            if str(abcdf_id) == str(identifier):
                 return annotation
         return None
 
-    def annotation(self, index=0, identifier=1):
-        if id is not None:
+    def annotation(self, index=0, identifier=None):
+        if identifier is not None:
             return self.annotation_by_id(identifier)
-
         if index >= self.annotation_count():
             return None
         return self._annotations[index]
 
-    def fingering(self, index=0, identifier=1):
+    def fingering(self, index=0, identifier=None):
         if identifier is not None:
             annotation = self.annotation_by_id(identifier)
             if annotation:
@@ -502,7 +488,7 @@ class ABCDHeader:
             return None
         return self._annotations[index].abcdf
 
-    def upper_fingering(self, index=0, identifier=1):
+    def upper_fingering(self, index=0, identifier=None):
         if identifier is not None:
             annotation = self.annotation_by_id(identifier)
             if annotation:
@@ -511,7 +497,7 @@ class ABCDHeader:
             return None
         return self._annotations[index].upper_abcdf()
 
-    def lower_fingering(self, index=0, identifier=1):
+    def lower_fingering(self, index=0, identifier=None):
         if identifier is not None:
             annotation = self.annotation_by_id(identifier)
             if annotation:

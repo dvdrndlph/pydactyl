@@ -42,17 +42,23 @@ A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|:
 CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA GFED:|C4|]
 """
 
-    FINGERING_1_UPPER = "12312341231234543213214321321&21234123123412321432132143212&12312341231234543213214321321"
-    FINGERING_1_TRANS_DATE = "2016-09-13 17:24:43"
-    FINGERING_2_AUTHORITY = "Beringer and Dunhill"
-    FINGERING_2_AUTHORITY_YEAR = "1900"
-    FINGERING_3_LOWER = "54321321432132123123412312345&54321321432132123123412312345&32132143213214341231234123121"
     @staticmethod
     def test_hdr_parse():
+        FINGERING_1_UPPER = "12312341231234543213214321321&21234123123412321432132143212&12312341231234543213214321321"
+        FINGERING_1_TRANS_DATE = "2016-09-13 17:24:43"
+        FINGERING_2_AUTHORITY = "Beringer and Dunhill"
+        FINGERING_2_AUTHORITY_YEAR = "1900"
+        FINGERING_3_LOWER = "54321321432132123123412312345&54321321432132123123412312345&32132143213214341231234123121"
         hdr = ABCDHeader(abcd_str=ABCDHeaderTest.MULTI_ANNOTATION_ABCD)
         annot_count = hdr.annotation_count()
         assert annot_count == 3, "Bad annotation count"
-
+        f1_upper = hdr.upper_fingering(identifier="1")
+        assert f1_upper == FINGERING_1_UPPER, "Bad upper fingering for annotation 1 by id"
+        f1_upper = hdr.upper_fingering(index=0)
+        assert f1_upper == FINGERING_1_UPPER, "Bad upper fingering for annotation 1 by index"
+        f1_annot = hdr.annotation_by_id(identifier=1)
+        f1_trans_date = f1_annot.transcription_date()
+        assert f1_trans_date == FINGERING_1_TRANS_DATE, "Bad transcription date"
 
 if __name__ == "__main__":
     unittest.main()  # run all tests
