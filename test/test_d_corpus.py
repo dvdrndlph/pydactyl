@@ -26,7 +26,7 @@ from music21 import *
 import re
 import unittest
 import TestConstant
-from DCorpus.DCorpus import DPart, DScore, DCorpus
+from DCorpus.DCorpus import DPart, DScore, DCorpus, ABCDFAnnotation
 
 BERINGER2_SCALE_CORPUS = TestConstant.BERINGER2_DIR + "/scales.abc"
 
@@ -119,14 +119,17 @@ class DCorpusTest(unittest.TestCase):
         assert not at_re.search(lower_fingering), "Bad upper fingering"
         assert lower_fingering != upper_fingering, "Bad split of fingerings"
         fingering_by_index = da_score.fingering(index=0)
-        fingering_by_id = da_score.fingering(id=1)
+        fingering_by_id = da_score.fingering(identifier=1)
         assert fingering_by_index == fingering_by_id, "Bad DSCore::fingering"
         upper_fingering_by_index = da_score.upper_fingering(index=0)
-        upper_fingering_by_id = da_score.upper_fingering(id=1)
+        upper_fingering_by_id = da_score.upper_fingering(identifier=1)
         assert upper_fingering_by_index == upper_fingering_by_id, "Bad DSCore::upper_fingering"
         lower_fingering_by_index = da_score.lower_fingering(index=0)
-        lower_fingering_by_id = da_score.lower_fingering(id=1)
+        lower_fingering_by_id = da_score.lower_fingering(identifier=1)
         assert lower_fingering_by_index == lower_fingering_by_id, "Bad DSCore::lower_fingering"
+        # ABCDFAnnotation.ast_for_abcdf(lower_fingering_by_id)
+        # ABCDFAnnotation.ast_for_abcdf(fingering_by_id)
+
 
 if __name__ == "__main__":
     unittest.main()  # run all tests

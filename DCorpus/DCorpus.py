@@ -23,15 +23,17 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 import re
 import pymysql
+import pprint
+from tatsu import parse
 from abc import ABC, abstractmethod
 from music21 import *
 from Dactyler import Constant
 
 
 class DValuation:
-    def __init__(self, gold_standard_abcdf, test_abcdf):
-        self._gold_abcdf = gold_standard_abcdf
-        self._test_abcdf = test_abcdf
+    def __init__(self, gold_annotation, test_annotation):
+        self._gold = gold_annotation
+        self._test = test_annotation
 
     @abstractmethod
     def measure(self):
@@ -39,32 +41,32 @@ class DValuation:
 
 
 class DHammingValuation(DValuation):
-    def __init__(self, gold_standard_abcdf, test_abcdf):
-        super().__init__(gold_standard_abcdf, test_abcdf)
+    def __init__(self, gold_annotation, test_annotation):
+        super().__init__(gold_annotation, test_annotation)
 
     def measure(self):
         pass
 
 
 class DNaturalValuation(DValuation):
-    def __init__(self, gold_standard_abcdf, test_abcdf):
-        super().__init__(gold_standard_abcdf, test_abcdf)
+    def __init__(self, gold_annotation, test_annotation):
+        super().__init__(gold_annotation, test_annotation)
 
     def measure(self):
         pass
 
 
 class DPivotValuation(DValuation):
-    def __init__(self, gold_standard_abcdf, test_abcdf):
-        super().__init__(gold_standard_abcdf, test_abcdf)
+    def __init__(self, gold_annotation, test_annotation):
+        super().__init__(gold_annotation, test_annotation)
 
     def measure(self):
         pass
 
 
 class DReEntryValuation(DValuation):
-    def __init__(self, gold_standard_abcdf, test_abcdf):
-        super().__init__(gold_standard_abcdf, test_abcdf)
+    def __init__(self, gold_annotation, test_annotation):
+        super().__init__(gold_annotation, test_annotation)
 
     def measure(self):
         pass
@@ -280,17 +282,17 @@ class DScore:
         # FIXME: We need to parse the abcDF to do this accurately.
         return True
 
-    def fingering(self, index=0, id=1):
+    def fingering(self, index=0, identifier=1):
         if self._abcd_header:
             return self._abcd_header.fingering(index=index)
         return None
 
-    def upper_fingering(self, index=0, id=1):
+    def upper_fingering(self, index=0, identifier=1):
         if self._abcd_header:
             return self._abcd_header.upper_fingering(index=index)
         return None
 
-    def lower_fingering(self, index=0, id=1):
+    def lower_fingering(self, index=0, identifier=1):
         if self._abcd_header:
             return self._abcd_header.lower_fingering(index=index)
         return None
@@ -299,7 +301,51 @@ class DScore:
         return self._title
 
 
-class ABCDAnnotation:
+class ABCDFAnnotation:
+    GRAMMAR = """
+        @@grammar::Calc
+        
+        sequence = upper:staff ['@' lower:staff] ;
+        
+        staff = line '&' staff | line | {} ;
+        line = {score_fingering}* ;
+        
+        score_fingering = orn:ornamental ["/" alt_orn:ornamental]
+        | pf:pedaled_fingering ['/' alt_pf:pedaled_fingering]
+        | p:pedaling ['/' alt_p:pedaling]
+        ;
+         
+        ornamental = ornaments:('(' {pedaled_fingering}+ ')') ;
+        
+        pedaled_fingering = soft:[soft] fingering:fingering damper:[damper] ;
+        pedaling = soft:{soft}+ 'x' damper:{damper}+ ;
+        
+        fingering = strike:finger ['-' release:finger] ;
+        finger = hand:[hand] digit:digit ;
+        
+        damper = '_' | '^' ;
+        soft = 'p' | 'f' ;
+        hand = '<' | '>' ;
+        digit = '1' | '2' | '3' | '4' | '5' ;
+    """
+
+    @staticmethod
+    def ast_for_abcdf(abcdf):
+        ast = parse(ABCDFAnnotation.GRAMMAR, abcdf)
+        pprint.pprint(ast, indent=1)
+        return ast
+
+    def parse(self):
+        return ABCDFAnnotation.ast_for_abcdf(self.abcdf)
+
+    def parse_upper(self):
+        upper_abcdf = self.upper_abcdf()
+        return ABCDFAnnotation.ast_for_abcdf(upper_abcdf)
+
+    def parse_lower(self):
+        lower_abcdf = self.upper_abcdf()
+        return ABCDFAnnotation.ast_for_abcdf(lower_abcdf)
+
     def __init__(self, abcdf=None):
         self.__authority = None
         self.__authority_year = None
@@ -393,7 +439,7 @@ class ABCDHeader:
     def __init__(self, abcd_str):
         self._annotations = []
 
-        annotation = ABCDAnnotation()
+        annotation = ABCDFAnnotation()
         in_header = False
         for line in abcd_str.splitlines():
             matt = re.search(ABCDHeader.TITLE_RE, line)
@@ -408,7 +454,7 @@ class ABCDHeader:
                 break
             matt = re.search(ABCDHeader.FINGERING_RE, line)
             if matt:
-                annotation = ABCDAnnotation(abcdf=matt.group(2))
+                annotation = ABCDFAnnotation(abcdf=matt.group(2))
                 annotation.abcdf_id = matt.group(1)
                 self._annotations.append(annotation)
                 continue
@@ -433,41 +479,41 @@ class ABCDHeader:
     def annotation_count(self):
         return len(self._annotations)
 
-    def annotation_by_id(self, id=1):
+    def annotation_by_id(self, identifier=1):
         for annotation in self._annotations:
-            if annotation.abcdf_id == id:
+            if annotation.abcdf_id == identifier:
                 return annotation
         return None
 
-    def annotation(self, index=0, id=1):
+    def annotation(self, index=0, identifier=1):
         if id is not None:
-            return self.annotation_by_id(id)
+            return self.annotation_by_id(identifier)
 
         if index >= self.annotation_count():
             return None
         return self._annotations[index]
 
-    def fingering(self, index=0, id=1):
-        if id is not None:
-            annotation = self.annotation_by_id(id)
+    def fingering(self, index=0, identifier=1):
+        if identifier is not None:
+            annotation = self.annotation_by_id(identifier)
             if annotation:
                 return annotation.abcdf()
         if index >= self.annotation_count():
             return None
         return self._annotations[index].abcdf
 
-    def upper_fingering(self, index=0, id=1):
-        if id is not None:
-            annotation = self.annotation_by_id(id)
+    def upper_fingering(self, index=0, identifier=1):
+        if identifier is not None:
+            annotation = self.annotation_by_id(identifier)
             if annotation:
                 return annotation.upper_abcdf()
         if index >= self.annotation_count():
             return None
         return self._annotations[index].upper_abcdf()
 
-    def lower_fingering(self, index=0, id=1):
-        if id is not None:
-            annotation = self.annotation_by_id(id)
+    def lower_fingering(self, index=0, identifier=1):
+        if identifier is not None:
+            annotation = self.annotation_by_id(identifier)
             if annotation:
                 return annotation.lower_abcdf()
         if index >= self.annotation_count():
