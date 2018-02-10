@@ -33,7 +33,8 @@
 #            $ ./test hart
 ####################################################################################
 # set -x
-MODULES="dactyler d_corpus hart interval"
+# MODULES="dactyler d_corpus hart interval"
+MODULES="abcd_header d_corpus"
 
 cd ..
 export PYTHONPATH=$(pwd)

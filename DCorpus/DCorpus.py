@@ -540,7 +540,7 @@ class ABCDHeader:
                 return annotation.abcdf()
         if index >= self.annotation_count():
             return None
-        return self._annotations[index].abcdf
+        return self._annotations[index].abcdf()
 
     def upper_fingering(self, index=0, identifier=None):
         if identifier is not None:
