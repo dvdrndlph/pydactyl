@@ -25,6 +25,7 @@ import re
 import pymysql
 import pprint
 from tatsu import parse
+from tatsu.model import ModelBuilderSemantics
 from abc import ABC, abstractmethod
 from music21 import *
 from Dactyler import Constant
@@ -307,7 +308,7 @@ class ABCDFAnnotation:
         
         sequence = upper:staff ['@' lower:staff] ;
         
-        staff = line '&' staff | line | {} ;
+        staff = '&'.{line};
         line = {score_fingering}* ;
         
         score_fingering = orn:ornamental ["/" alt_orn:ornamental]
@@ -332,11 +333,12 @@ class ABCDFAnnotation:
     @staticmethod
     def ast_for_abcdf(abcdf):
         ast = parse(ABCDFAnnotation.GRAMMAR, abcdf)
-        pprint.pprint(ast, indent=1)
+        # print(abcdf)
+        # pprint.pprint(ast, indent=1)
         return ast
 
     def parse(self):
-        return ABCDFAnnotation.ast_for_abcdf(self.abcdf)
+        return ABCDFAnnotation.ast_for_abcdf(self._abcdf)
 
     def parse_upper(self):
         upper_abcdf = self.upper_abcdf()
@@ -345,6 +347,23 @@ class ABCDFAnnotation:
     def parse_lower(self):
         lower_abcdf = self.upper_abcdf()
         return ABCDFAnnotation.ast_for_abcdf(lower_abcdf)
+
+    def pedaled_fingering_count(self, staff="both"):
+        ast = self.parse()
+        count = 0
+        if staff == "upper" or staff == "both":
+            lines = ast.upper
+            for line in lines:
+                if line == '&':
+                    continue
+                for pedaled_fingering in line:
+                    count += 1
+        if staff == "lower" or staff == "both":
+            lines = ast.lower
+            for line in lines:
+                for pedaled_fingering in line:
+                    count += 1
+        return count
 
     def __init__(self, abcdf=None):
         self._authority = None
@@ -363,7 +382,7 @@ class ABCDFAnnotation:
     def authority_year(self, authority_year=None):
         if authority_year:
             self._authority_year = authority_year
-        return self._authority
+        return self._authority_year
 
     def transcriber(self, transcriber=None):
         if transcriber:
@@ -388,7 +407,7 @@ class ABCDFAnnotation:
     def comments(self, comments=None):
         if comments:
             self._comments = comments
-        return self._comments
+        return self._comments.rstrip()
 
     def add_comment_line(self, comment):
         self._comments += comment + "\n"
@@ -404,12 +423,12 @@ class ABCDFAnnotation:
 
 class ABCDHeader:
     COMMENT_RE = r'^%\s*(.*)'
-    TITLE_RE = r'^% abcDidactyl v(\d)'
-    FINGERING_RE = r'% abcD fingering (\d+):\s*(.*)'
-    TERMINAL_RE = r'% abcDidactyl END'
-    AUTHORITY_RE = r'% Authority: ([^\(]+)\s*(\((\d+)\))?'
-    TRANSCRIBER_RE = r'% Transcriber: (.*)'
-    TRANSCRIPTION_DATE_RE = r'% Transcription date: ((\d\d\d\d\-\d\d\-\d\d)\s*(\d\d:\d\d:\d\d)?)'
+    TITLE_RE = r'^%\s*abcDidactyl v(\d+)'
+    FINGERING_RE = r'^%\s*abcD fingering (\d+):\s*(.*)'
+    TERMINAL_RE = r'^%\s*abcDidactyl END'
+    AUTHORITY_RE = r'^%\s*Authority:\s*([^\(]+)\s*(\((\d+)\))?'
+    TRANSCRIBER_RE = r'^%\s*Transcriber:\s*(.*)'
+    TRANSCRIPTION_DATE_RE = r'^%\s*Transcription date:\s*((\d\d\d\d\-\d\d\-\d\d)\s*(\d\d:\d\d:\d\d)?)'
 
     @staticmethod
     def is_abcD(string):
@@ -438,22 +457,22 @@ class ABCDHeader:
             matt = re.search(ABCDHeader.FINGERING_RE, line)
             if matt:
                 annotation = ABCDFAnnotation(abcdf=matt.group(2))
-                annotation.abcdf_id(matt.group(1))
+                annotation.abcdf_id(matt.group(1).rstrip())
                 self._annotations.append(annotation)
                 continue
             matt = re.search(ABCDHeader.AUTHORITY_RE, line)
             if matt:
-                annotation.authority(matt.group(1))
+                annotation.authority(matt.group(1).rstrip())
                 if matt.group(2):
                     annotation.authority_year(matt.group(3))
                 continue
             matt = re.search(ABCDHeader.TRANSCRIBER_RE, line)
             if matt:
-                annotation.transcriber(matt.group(1))
+                annotation.transcriber(matt.group(1).rstrip())
                 continue
             matt = re.search(ABCDHeader.TRANSCRIPTION_DATE_RE, line)
             if matt:
-                annotation.transcription_date(matt.group(1))
+                annotation.transcription_date(matt.group(1).rstrip())
                 continue
             matt = re.search(ABCDHeader.COMMENT_RE, line)
             if matt:
