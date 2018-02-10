@@ -279,22 +279,57 @@ class DScore:
     def is_fully_annotated(self):
         if not self.is_annotated():
             return False
-        # FIXME: We need to parse the abcDF to do this accurately.
+        upper = self.upper_d_part()
+        lower = self.lower_d_part()
+        combo = self.as_d_part()
+        if upper:
+            upper_note_count = len(upper.orderly_note_stream())
+            lower_note_count = len(lower.orderly_note_stream())
+            for annot in self._abcd_header.annotations():
+                upper_sf_count = annot.score_fingering_count(staff="upper")
+                if upper_sf_count != upper_note_count:
+                    return False
+                lower_sf_count = annot.score_fingering_count(staff="lower")
+                if lower_sf_count != lower_note_count:
+                    return False
+        else:
+            note_count = len(combo.orderly_note_stream())
+            for annot in self._abcd_header.annotations():
+                sf_count = annot.score_fingering_count(staff="both")
+                if sf_count != note_count:
+                    return False
         return True
 
-    def fingering(self, index=0, identifier=1):
-        if self._abcd_header:
-            return self._abcd_header.fingering(index=index)
+    def fingering(self, index=0, identifier=None, staff="both"):
+        if not self._abcd_header:
+            return None
+
+        if staff == "both":
+            if identifier:
+                return self._abcd_header.fingering(identifier=identifier)
+            else:
+                return self._abcd_header.fingering(index=index)
+        elif staff == "upper":
+            return self.upper_fingering(index=index, identifier=identifier)
+        elif staff == "lower":
+            return self.lower_fingering(index=index, identifier=identifier)
+
         return None
 
-    def upper_fingering(self, index=0, identifier=1):
+    def upper_fingering(self, index=0, identifier=None):
         if self._abcd_header:
-            return self._abcd_header.upper_fingering(index=index)
+            if identifier:
+                return self._abcd_header.upper_fingering(identifier=identifier)
+            else:
+                return self._abcd_header.upper_fingering(index=index)
         return None
 
-    def lower_fingering(self, index=0, identifier=1):
+    def lower_fingering(self, index=0, identifier=None):
         if self._abcd_header:
-            return self._abcd_header.lower_fingering(index=index)
+            if identifier:
+                return self._abcd_header.lower_fingering(identifier=identifier)
+            else:
+                return self._abcd_header.lower_fingering(index=index)
         return None
 
     def title(self):
@@ -347,7 +382,7 @@ class ABCDFAnnotation:
         lower_abcdf = self.upper_abcdf()
         return ABCDFAnnotation.ast_for_abcdf(lower_abcdf)
 
-    def pedaled_fingering_count(self, staff="both"):
+    def score_fingering_count(self, staff="both"):
         ast = self.parse()
         count = 0
         # Each staff is parsed into an array of lines. Each
@@ -519,6 +554,9 @@ class ABCDHeader:
     def annotation_count(self):
         return len(self._annotations)
 
+    def annotations(self):
+        return self._annotations
+
     def annotation_by_id(self, identifier=1):
         for annotation in self._annotations:
             abcdf_id = annotation.abcdf_id()
@@ -533,20 +571,31 @@ class ABCDHeader:
             return None
         return self._annotations[index]
 
-    def fingering(self, index=0, identifier=None):
-        if identifier is not None:
-            annotation = self.annotation_by_id(identifier)
-            if annotation:
-                return annotation.abcdf()
-        if index >= self.annotation_count():
-            return None
-        return self._annotations[index].abcdf()
+    def fingering(self, index=0, identifier=None, staff="both"):
+        if staff == "both":
+            if identifier is not None:
+                annotation = self.annotation_by_id(identifier)
+                if annotation:
+                    return annotation.abcdf()
+                else:
+                    return None
+            if index >= self.annotation_count():
+                return None
+            return self._annotations[index].abcdf()
+        elif staff == "upper":
+            return self.upper_fingering(index=index, identifier=identifier)
+        elif staff == "lower":
+            return self.lower_fingering(index=index, identifier=identifier)
+
+        return None
 
     def upper_fingering(self, index=0, identifier=None):
         if identifier is not None:
             annotation = self.annotation_by_id(identifier)
             if annotation:
                 return annotation.upper_abcdf()
+            else:
+                return None
         if index >= self.annotation_count():
             return None
         return self._annotations[index].upper_abcdf()
@@ -556,6 +605,8 @@ class ABCDHeader:
             annotation = self.annotation_by_id(identifier)
             if annotation:
                 return annotation.lower_abcdf()
+            else:
+                return None
         if index >= self.annotation_count():
             return None
         return self._annotations[index].lower_abcdf()

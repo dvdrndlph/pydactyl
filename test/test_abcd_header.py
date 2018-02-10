@@ -84,7 +84,7 @@ This is another comment line."""
         f3_annot = hdr.annotation(identifier=3)
         f3_ast = f3_annot.parse()
         assert f3_ast.upper, "Failed parse"
-        parsed_fingering_count = f3_annot.pedaled_fingering_count(staff="lower")
+        parsed_fingering_count = f3_annot.score_fingering_count(staff="lower")
         assert parsed_fingering_count == fingering_count, "Bad lower fingering count"
         segregated_digits = f3_annot.segregated_strike_digits(staff="lower")
         assert clean_fingering == segregated_digits, "Bad segregated lower digits"
