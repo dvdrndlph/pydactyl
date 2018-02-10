@@ -25,7 +25,6 @@ import re
 import pymysql
 import pprint
 from tatsu import parse
-from tatsu.model import ModelBuilderSemantics
 from abc import ABC, abstractmethod
 from music21 import *
 from Dactyler import Constant
@@ -351,19 +350,55 @@ class ABCDFAnnotation:
     def pedaled_fingering_count(self, staff="both"):
         ast = self.parse()
         count = 0
+        # Each staff is parsed into an array of lines. Each
+        # line is an array of "score fingerings," or note
+        # fingerings with all the trimmings.
         if staff == "upper" or staff == "both":
             lines = ast.upper
             for line in lines:
-                if line == '&':
-                    continue
-                for pedaled_fingering in line:
+                for score_fingering in line:
                     count += 1
         if staff == "lower" or staff == "both":
             lines = ast.lower
             for line in lines:
-                for pedaled_fingering in line:
+                for score_fingering in line:
                     count += 1
         return count
+
+    def segregated_strike_digits(self, staff="upper", hand=None):
+        """
+        :return: String of digits (1-5), assuming all fingerings are
+                 are for the specified hand (">" or right for the
+                 upper staff by default).
+
+                 Returns None if any fingerings for the other hand
+                 are detected.
+        """
+        if staff not in ("upper", "lower"):
+            raise Exception("Invalid input: staff must be 'upper' or 'lower'.")
+
+        if not hand:
+            hand = ">"
+            if staff == "lower":
+                hand = "<"
+
+        digits = []
+        ast = self.parse()
+        if staff == "upper":
+            lines = ast.upper
+        else:
+            lines = ast.lower
+
+        for line in lines:
+            for score_fingering in line:
+                strike = score_fingering.pf.fingering.strike
+                current_hand = strike.hand
+                digit = strike.digit
+                if current_hand and current_hand != hand:
+                    return None
+                digits.append(digit)
+        digit_str = "".join(digits)
+        return digit_str
 
     def __init__(self, abcdf=None):
         self._authority = None

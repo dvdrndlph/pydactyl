@@ -12,7 +12,7 @@ class ABCDHeaderTest(unittest.TestCase):
 % Transcriber: David Randolph
 % Transcription date: 2016-09-13 17:24:43
 % These are complete fingerings, with any gaps filled in.
-% abcD fingering 2: 12312341231234543213214321321&21234123123412321432132143212&12312341231234543213214321321@54321321432132123123412312345&54321321432132123123412312345&32132143213214341231234123121
+% abcD fingering 2: 123<12341231234543213214321321&21234123123412321432132143212&12312341231234543213214321321@>543213214321321231234>12312345&54321321432132123123412312345&32132143213214341231234123121
 % Authority:  Beringer and Dunhill (1492)
 % Transcriber: David Randolph
 % Transcription date: 2016-09-13 17:27:28
@@ -80,14 +80,27 @@ This is another comment line."""
     def test_abcdf_annotation():
         hdr = ABCDHeader(abcd_str=ABCDHeaderTest.MULTI_ANNOTATION_ABCD)
         clean_fingering = ABCDHeaderTest.FINGERING_3_LOWER.replace('&', '')
-        print(clean_fingering)
         fingering_count = len(clean_fingering)
         f3_annot = hdr.annotation(identifier=3)
         f3_ast = f3_annot.parse()
-        pprint.pprint(f3_ast)
+        assert f3_ast.upper, "Failed parse"
         parsed_fingering_count = f3_annot.pedaled_fingering_count(staff="lower")
-        print("Real: {0}, Parsed: {1}".format(fingering_count, parsed_fingering_count))
         assert parsed_fingering_count == fingering_count, "Bad lower fingering count"
+        segregated_digits = f3_annot.segregated_strike_digits(staff="lower")
+        assert clean_fingering == segregated_digits, "Bad segregated lower digits"
+        f1_annot = hdr.annotation(identifier=1)
+        clean_fingering = ABCDHeaderTest.FINGERING_1_UPPER.replace('&', '')
+        segregated_digits = f1_annot.segregated_strike_digits(staff="upper")
+        assert clean_fingering == segregated_digits, "Bad segregated upper digits"
+        f2_annot = hdr.annotation(identifier=2)
+        none_digits = f2_annot.segregated_strike_digits(staff="upper")
+        assert none_digits is None, "Unsegregated digits not detected"
+        opposite_digits = f2_annot.segregated_strike_digits(staff="lower", hand=">")
+        lower_abcdf = f2_annot.lower_abcdf()
+        clean_fingering = lower_abcdf.replace('>', '')
+        clean_fingering = clean_fingering.replace('&', '')
+        assert clean_fingering == opposite_digits, "Bad opposite segregated digits"
+
 
 if __name__ == "__main__":
     unittest.main()  # run all tests
