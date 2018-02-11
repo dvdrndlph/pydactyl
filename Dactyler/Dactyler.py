@@ -29,10 +29,16 @@ from DCorpus import DCorpus
 import os
 
 
-class Note:
+class DNote:
     def __init__(self, m21_note, prior_note=None):
         self._m21_note = m21_note
         self._prior_note = prior_note
+
+    def m21_note(self):
+        return self._m21_note
+
+    def prior_note(self):
+        return self._prior_note
 
     def __str__(self):
         my_str = "MIDI {0}".format(self.m21_note.midi)
@@ -57,11 +63,11 @@ class Note:
     def note_list(m21_score):
         prior_note = None
         notes = []
-        for n in m21_score[1].getElementsByClass(music21.note.Note):
+        for n in m21_score.getElementsByClass(music21.note.Note):
             if not prior_note:
-                new_note = Note(n)
+                new_note = DNote(n)
             else:
-                new_note = Note(n, prior_note=prior_note)
+                new_note = DNote(n, prior_note=prior_note)
 
             notes.append(new_note)
             prior_note = new_note
@@ -70,7 +76,7 @@ class Note:
     def is_black(self):
         if not self._m21_note:
             return False
-        return Note.note_class_is_black[self._m21_note.pitch.pitchClass]
+        return DNote.note_class_is_black[self._m21_note.pitch.pitchClass]
 
     def is_white(self):
         if not self._m21_note:
@@ -107,7 +113,7 @@ class Note:
         return False
 
     def semitone_delta(self):
-        delta = self._m21_note.pitch.midi - self._prior_note.m21_note.pitch.midi
+        delta = self.midi() - self.prior_midi()
         delta = -1 * delta if delta < 0 else delta
         return delta
 

@@ -157,12 +157,12 @@ class Hart(Dactyler.Dactyler):
                 # other minor fiddling to support (segregated) left hand fingerings.
                 # For now, we only support right hand fingerings, which we assume
                 # are in the upper staff.
-                d_part = d_score.upper_part()
+                d_part = d_score.upper_d_part()
 
             m21_stream = d_part.orderly_note_stream()
 
             opt_cost = Hart.BIG_NUM
-            note_list = Dactyler.Note.note_list(m21_stream)
+            note_list = Dactyler.DNote.note_list(m21_stream)
 
             m = len(note_list) - 1
             fs = numpy.zeros([len(note_list), 6], dtype=int)
@@ -263,4 +263,6 @@ class Hart(Dactyler.Dactyler):
 
             title = d_score.title()
 
-            print('{ "title" : "' + title + '", "optimal_fingering": "' + str(fingers) + '" }')
+            # print('{ "title" : "' + title + '", "optimal_fingering": "' + str(fingers) + '" }')
+            abcdf = ">" + "".join(fingers)
+            return abcdf

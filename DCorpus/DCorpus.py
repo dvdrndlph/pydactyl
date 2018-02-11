@@ -670,20 +670,37 @@ class DCorpus:
             return Constant.CORPUS_ABC
         # FIXME: Support MIDI, xml, and mxl
 
-    def append(self, corpus_path=None, corpus_str=None, corpus_type=Constant.CORPUS_ABC):
-        if corpus_type in [Constant.CORPUS_ABC, Constant.CORPUS_ABCD]:
-            abc_file = abcFormat.ABCFile()
-            if corpus_path:
+    def append(self, corpus_path=None, corpus_str=None):
+        if corpus_path:
+            corpus_type = DCorpus.corpus_type(corpus_path=corpus_path)
+            if corpus_type in [Constant.CORPUS_ABC, Constant.CORPUS_ABCD]:
+                abc_file = abcFormat.ABCFile()
                 staff_assignments = DCorpus._score_staff_assignments(abc_file_path=corpus_path)
                 abc_file.open(filename=corpus_path)
                 abc_handle = abc_file.read()
                 abc_file.close()
-            elif corpus_str:
+            else:
+                corp = converter.parse(corpus_path)
+                if isinstance(corpus, stream.Opus):
+                    for score in corp:
+                        d_score = DScore(music21_stream=score)
+                        self._d_scores.append(d_score)
+                else:
+                    score = corp
+                    d_score = DScore(music21_stream=score)
+                    self._d_scores.append(d_score)
+        elif corpus_str:
+            corpus_type = DCorpus.corpus_type(corpus_str=corpus_str)
+            if corpus_type in [Constant.CORPUS_ABC, Constant.CORPUS_ABCD]:
+                abc_file = abcFormat.ABCFile()
                 staff_assignments = DCorpus._score_staff_assignments(abc_content=corpus_str)
                 abc_handle = abc_file.readstr(corpus_str)
             else:
-                return False
+                raise Exception("Unsupported corpus type.")
+        else:
+            return False
 
+        if corpus_type in [Constant.CORPUS_ABC, Constant.CORPUS_ABCD]:
             ah_for_id = abc_handle.splitByReferenceNumber()
             if len(staff_assignments) > 0 and len(staff_assignments) != len(ah_for_id):
                 # We must know how to map all voices to a staff. Either all scores (tunes)
@@ -706,22 +723,15 @@ class DCorpus:
                     d_score = DScore(abc_handle=ah_for_id[score_id], abcd_header=abcd_header)
                 self._d_scores.append(d_score)
                 score_index += 1
-        else:
-            corp = converter.parse(corpus_path)
-            if isinstance(corpus, stream.Opus):
-                for score in corp:
-                    d_score = DScore(music21_stream=score)
-                    self._d_scores.append(d_score)
-            else:
-                score = corp
-                d_score = DScore(music21_stream=score)
-                self._d_scores.append(d_score)
 
-    def __init__(self, corpus_path=None, corpus_type=Constant.CORPUS_ABC):
+    def __init__(self, corpus_path=None, corpus_str=None):
         self._conn = None
         self._d_scores = []
         if corpus_path:
-            self.append(corpus_path=corpus_path, corpus_type=corpus_type)
+            self.append(corpus_path=corpus_path)
+        if corpus_str:
+            self.append(corpus_str=corpus_str)
+
 
     def __del__(self):
         if self._conn:
