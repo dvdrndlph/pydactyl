@@ -41,7 +41,7 @@ class DCorpusTest(unittest.TestCase):
         assert d_score is not None, "Bad score_by_title retrieval" 
         part_count = d_score.part_count()
         assert part_count == 2, "Bad part count"
-        d_part = d_score.as_d_part()
+        d_part = d_score.combined_d_part()
         assert d_part is not None, "Bad DPart retrieval"
         assert d_part.is_monophonic() is False, "Polyphony not detected"
         d_upper = d_score.upper_d_part()
@@ -68,7 +68,7 @@ class DCorpusTest(unittest.TestCase):
         assert d_score.title() == 'Prelude 1 (BWV 846)', "Bad title retrieval"
         part_count = d_score.part_count()
         assert part_count == 2, "Bad part count"
-        d_part = d_score.as_d_part()
+        d_part = d_score.combined_d_part()
         assert d_part is not None, "Bad DPart retrieval"
         assert d_part.is_monophonic() is False, "Polyphony not detected"
         d_upper = d_score.upper_d_part()

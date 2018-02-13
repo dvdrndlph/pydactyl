@@ -50,5 +50,9 @@ fi
 
 for module in $modules
 do
-     ./test_${module}.py
+    ./test_${module}.py
+    if [[ $? != 0 ]]
+    then
+        exit 1
+    fi 
 done

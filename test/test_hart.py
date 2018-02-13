@@ -48,26 +48,26 @@ CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA
         left_re = re.compile('^<\d+$')
         assert left_re.match(lh_advice), "Bad left-hand, lower-staff advice"
         combo_advice = hart.advise(staff="both")
-        note_count = hart.score_note_count()
-        print("NOTE COUNT: {0}".format(note_count))
+        # note_count = hart.score_note_count()
+        # print("NOTE COUNT: {0}".format(note_count))
         clean_combo_advice = re.sub('[><&]', '',  combo_advice)
-        print("TEST: " + clean_combo_advice)
+        # print("TEST: " + clean_combo_advice)
         d_score = d_corpus.d_score_by_index(index=0)
         gold_fingering = d_score.fingering(index=0)
         clean_gold_fingering = re.sub('[><&]', '',  gold_fingering)
-        print("GOLD: " + clean_gold_fingering)
+        # print("GOLD: " + clean_gold_fingering)
 
         combo_re = re.compile('^>\d+@<\d+$')
         assert combo_re.match(combo_advice), "Bad combined advice"
         hamming_evaluations = hart.evaluate_strike_distance(method="hamming", staff="both")
-        for he in hamming_evaluations:
-            print(he)
+        # for he in hamming_evaluations:
+            # print(he)
         assert hamming_evaluations[0] > 0, "Undetected Hamming costs"
         assert hamming_evaluations[0] > 0, "Undetected Hamming costs"
         assert hamming_evaluations[1] == 0, "Bad fish in barrel"
         natural_evaluations = hart.evaluate_strike_distance(method="natural", staff="both")
-        for he in natural_evaluations:
-            print(he)
+        # for he in natural_evaluations:
+            # print(he)
         assert natural_evaluations[0] > 0, "Undetected Hamming costs"
         assert natural_evaluations[0] > 0, "Undetected Hamming costs"
         assert natural_evaluations[1] == 0, "Bad fish in barrel"

@@ -615,12 +615,10 @@ class DCorpus:
                  where clientId = '{0}'
                    and selectionId = '{1}'""".format(client_id, selection_id)
         curs.execute(query)
-        # print(curs.description)
 
         for row in curs:
             abc_content = row[0]
-            corpus_type = DCorpus.corpus_type(corpus_str=abc_content)
-            self.append(corpus_str=abc_content, corpus_type=corpus_type)
+            self.append(corpus_str=abc_content)
 
         curs.close()
 
