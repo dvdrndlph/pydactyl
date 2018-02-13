@@ -2,7 +2,7 @@
 
 import unittest
 import pprint
-from DCorpus.DCorpus import ABCDHeader, ABCDFAnnotation
+from DCorpus.DCorpus import ABCDHeader
 
 
 class ABCDHeaderTest(unittest.TestCase):
@@ -77,7 +77,7 @@ This is another comment line."""
         assert f3_annot.comments() == ABCDHeaderTest.FINGERING_3_COMMENTS, "Bad comments"
 
     @staticmethod
-    def test_abcdf_annotation():
+    def test_d_annotation():
         hdr = ABCDHeader(abcd_str=ABCDHeaderTest.MULTI_ANNOTATION_ABCD)
         clean_fingering = ABCDHeaderTest.FINGERING_3_LOWER.replace('&', '')
         fingering_count = len(clean_fingering)

@@ -26,6 +26,7 @@ from datetime import datetime
 import music21
 from Dactyler import Constant
 from DCorpus import DCorpus
+from DCorpus.DAnnotation import DAnnotation
 import os
 
 
@@ -149,7 +150,7 @@ class Dactyler(ABC):
             print(str(msg))
 
     @abstractmethod
-    def advise(self, offset=0, first_finger=None):
+    def advise(self, score_index=0, staff="upper", offset=0, first_finger=None):
         return
 
     def load_corpus(self, d_corpus=None, path=None):
@@ -160,17 +161,71 @@ class Dactyler(ABC):
         else:
             raise Exception("No corpus specified for Dactyler.")
 
-    def evaluate_hamming(self):
-        print("Hamming")
+    @staticmethod
+    def strike_distance_cost(gold_hand, gold_digit, test_hand, test_digit, method="hamming"):
+        if method == "hamming":
+            if test_digit != gold_digit or test_hand != gold_hand:
+                return 1
+            else:
+                return 0
+        if method == "natural":
+            one = str(gold_hand) + str(gold_digit)
+            other = str(test_hand) + str(test_digit)
+            cost = Constant.NATURAL_EDIT_DISTANCES[(one, other)]
+            return cost
 
-    def evaluate_natural(self):
-        print("Au natural")
+    def score_note_count(self, score_index=0, staff="both"):
+        d_score = self._d_corpus.d_score_by_index(score_index)
+        note_count = d_score.note_count(staff=staff)
+        return note_count
 
-    def evaluate_pivot(self):
-        print("Pivot")
+    def evaluate_strike_distance(self, method="hamming", score_index=0, staff="upper"):
+        d_score = self._d_corpus.d_score_by_index(score_index)
+        if not d_score.is_fully_annotated():
+            raise Exception("Only fully annotated scores can be evaluated.")
 
-    def evaluate_pivot(self):
-        print("Pivot")
+        if staff == "both":
+            staves = ['upper', 'lower']
+        else:
+            staves = [staff]
 
-    def evaluate_reentry(self):
+        test_abcdf = self.advise(score_index=score_index, staff=staff)
+        test_annot = DAnnotation(abcdf=test_abcdf)
+        hdr = d_score.abcd_header()
+        hamming_scores = []
+        for gold_annot in hdr.annotations():
+            hamming_score = 0
+            for staff in staves:
+                current_gold_hand = ">" if staff == "upper" else "<"
+                current_test_hand = ">" if staff == "upper" else "<"
+
+                test_sf_count = test_annot.score_fingering_count(staff=staff)
+                gold_sf_count = gold_annot.score_fingering_count(staff=staff)
+
+                if test_sf_count != gold_sf_count:
+                    raise Exception("Length mismatch: {0} v. {1}".format(test_sf_count, gold_sf_count))
+                for i in range(gold_sf_count):
+                    gold_sf = gold_annot.score_fingering_at_index(index=i, staff=staff)
+                    gold_strike = gold_sf.pf.fingering.strike
+                    gold_hand = gold_strike.hand if gold_strike.hand else current_gold_hand
+                    gold_digit = gold_strike.digit
+
+                    test_sf = test_annot.score_fingering_at_index(index=i, staff=staff)
+                    test_strike = test_sf.pf.fingering.strike
+                    test_hand = test_strike.hand if test_strike.hand else current_test_hand
+                    test_digit = test_strike.digit
+
+                    current_gold_hand = gold_hand
+                    current_test_hand = test_hand
+
+                    hamming_score += Dactyler.strike_distance_cost(method=method,
+                                                                   gold_hand=gold_hand,
+                                                                   gold_digit=gold_digit,
+                                                                   test_hand=test_hand,
+                                                                   test_digit=test_digit)
+            hamming_scores.append(hamming_score)
+
+        return hamming_scores
+
+    def evaluate_reentry(self, score_index=0, staff="upper"):
         print("Re-enter the Twilight Zone")

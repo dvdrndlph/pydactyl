@@ -23,53 +23,10 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 import re
 import pymysql
-import pprint
-from tatsu import parse
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from music21 import *
 from Dactyler import Constant
-
-
-class DValuation:
-    def __init__(self, gold_annotation, test_annotation):
-        self._gold = gold_annotation
-        self._test = test_annotation
-
-    @abstractmethod
-    def measure(self):
-        pass
-
-
-class DHammingValuation(DValuation):
-    def __init__(self, gold_annotation, test_annotation):
-        super().__init__(gold_annotation, test_annotation)
-
-    def measure(self):
-        pass
-
-
-class DNaturalValuation(DValuation):
-    def __init__(self, gold_annotation, test_annotation):
-        super().__init__(gold_annotation, test_annotation)
-
-    def measure(self):
-        pass
-
-
-class DPivotValuation(DValuation):
-    def __init__(self, gold_annotation, test_annotation):
-        super().__init__(gold_annotation, test_annotation)
-
-    def measure(self):
-        pass
-
-
-class DReEntryValuation(DValuation):
-    def __init__(self, gold_annotation, test_annotation):
-        super().__init__(gold_annotation, test_annotation)
-
-    def measure(self):
-        pass
+from DCorpus.DAnnotation import DAnnotation
 
 
 class DPart:
@@ -241,7 +198,15 @@ class DScore:
     def is_monophonic(self):
         return self._combined_d_part.is_monophonic()
 
-    def as_d_part(self):
+    def d_part(self, staff):
+        if staff == "upper":
+            return self.upper_d_part()
+        elif staff == "lower":
+            return self.lower_d_part()
+        elif staff == "both":
+            return self.combined_d_part()
+
+    def combined_d_part(self):
         return self._combined_d_part
 
     def upper_d_part(self):
@@ -276,12 +241,28 @@ class DScore:
             return True
         return False
 
+    def note_count(self, staff="both"):
+        upper = self.upper_d_part()
+        lower = self.lower_d_part()
+        combo = self.combined_d_part()
+        note_count = 0
+        if staff == 'upper' and upper:
+            note_count = len(upper.orderly_note_stream())
+        if staff == 'lower' and lower:
+            note_count = len(lower.orderly_note_stream())
+        if staff == 'both' and combo:
+            note_count = len(combo.orderly_note_stream())
+        return note_count
+
     def is_fully_annotated(self):
+        """
+        :return: True iff a strike digit is assigned to every note in the score.
+        """
         if not self.is_annotated():
             return False
         upper = self.upper_d_part()
         lower = self.lower_d_part()
-        combo = self.as_d_part()
+        combo = self.combined_d_part()
         if upper:
             upper_note_count = len(upper.orderly_note_stream())
             lower_note_count = len(lower.orderly_note_stream())
@@ -289,9 +270,17 @@ class DScore:
                 upper_sf_count = annot.score_fingering_count(staff="upper")
                 if upper_sf_count != upper_note_count:
                     return False
+                for i in range(upper_sf_count):
+                    strike_digit = annot.strike_digit_at_index(index=i, staff="upper")
+                    if not strike_digit or strike_digit == 'x':
+                        return False
                 lower_sf_count = annot.score_fingering_count(staff="lower")
                 if lower_sf_count != lower_note_count:
                     return False
+                for i in range(lower_sf_count):
+                    strike_digit = annot.strike_digit_at_index(index=i, staff="lower")
+                    if not strike_digit or strike_digit == 'x':
+                        return False
         else:
             note_count = len(combo.orderly_note_stream())
             for annot in self._abcd_header.annotations():
@@ -336,161 +325,6 @@ class DScore:
         return self._title
 
 
-class ABCDFAnnotation:
-    GRAMMAR = """
-        @@grammar::Calc
-        
-        sequence = upper:staff ['@' lower:staff] ;
-        
-        staff = '&'.{line};
-        line = {score_fingering}* ;
-        
-        score_fingering = orn:ornamental ["/" alt_orn:ornamental]
-        | pf:pedaled_fingering ['/' alt_pf:pedaled_fingering]
-        | p:pedaling ['/' alt_p:pedaling]
-        ;
-         
-        ornamental = ornaments:('(' {pedaled_fingering}+ ')') ;
-        
-        pedaled_fingering = soft:[soft] fingering:fingering damper:[damper] ;
-        pedaling = soft:{soft}+ 'x' damper:{damper}+ ;
-        
-        fingering = strike:finger ['-' release:finger] ;
-        finger = hand:[hand] digit:digit ;
-        
-        damper = '_' | '^' ;
-        soft = 'p' | 'f' ;
-        hand = '<' | '>' ;
-        digit = '1' | '2' | '3' | '4' | '5' ;
-    """
-
-    @staticmethod
-    def ast_for_abcdf(abcdf):
-        ast = parse(ABCDFAnnotation.GRAMMAR, abcdf)
-        # print(abcdf)
-        # pprint.pprint(ast, indent=1)
-        return ast
-
-    def parse(self):
-        return ABCDFAnnotation.ast_for_abcdf(self._abcdf)
-
-    def parse_upper(self):
-        upper_abcdf = self.upper_abcdf()
-        return ABCDFAnnotation.ast_for_abcdf(upper_abcdf)
-
-    def parse_lower(self):
-        lower_abcdf = self.upper_abcdf()
-        return ABCDFAnnotation.ast_for_abcdf(lower_abcdf)
-
-    def score_fingering_count(self, staff="both"):
-        ast = self.parse()
-        count = 0
-        # Each staff is parsed into an array of lines. Each
-        # line is an array of "score fingerings," or note
-        # fingerings with all the trimmings.
-        if staff == "upper" or staff == "both":
-            lines = ast.upper
-            for line in lines:
-                for score_fingering in line:
-                    count += 1
-        if staff == "lower" or staff == "both":
-            lines = ast.lower
-            for line in lines:
-                for score_fingering in line:
-                    count += 1
-        return count
-
-    def segregated_strike_digits(self, staff="upper", hand=None):
-        """
-        :return: String of digits (1-5), assuming all fingerings are
-                 are for the specified hand (">" or right for the
-                 upper staff by default).
-
-                 Returns None if any fingerings for the other hand
-                 are detected.
-        """
-        if staff not in ("upper", "lower"):
-            raise Exception("Invalid input: staff must be 'upper' or 'lower'.")
-
-        if not hand:
-            hand = ">"
-            if staff == "lower":
-                hand = "<"
-
-        digits = []
-        ast = self.parse()
-        if staff == "upper":
-            lines = ast.upper
-        else:
-            lines = ast.lower
-
-        for line in lines:
-            for score_fingering in line:
-                strike = score_fingering.pf.fingering.strike
-                current_hand = strike.hand
-                digit = strike.digit
-                if current_hand and current_hand != hand:
-                    return None
-                digits.append(digit)
-        digit_str = "".join(digits)
-        return digit_str
-
-    def __init__(self, abcdf=None):
-        self._authority = None
-        self._authority_year = None
-        self._transcriber = None
-        self._transcription_date = None
-        self._abcdf = abcdf
-        self._abcdf_id = None
-        self._comments = ''
-
-    def authority(self, authority=None):
-        if authority:
-            self._authority = authority
-        return self._authority
-
-    def authority_year(self, authority_year=None):
-        if authority_year:
-            self._authority_year = authority_year
-        return self._authority_year
-
-    def transcriber(self, transcriber=None):
-        if transcriber:
-            self._transcriber = transcriber
-        return self._transcriber
-
-    def transcription_date(self, transcription_date=None):
-        if transcription_date:
-            self._transcription_date = transcription_date
-        return self._transcription_date
-
-    def abcdf(self, abcdf=None):
-        if abcdf:
-            self._abcdf = abcdf
-        return self._abcdf
-
-    def abcdf_id(self, abcdf_id=None):
-        if abcdf_id:
-            self._abcdf_id = abcdf_id
-        return self._abcdf_id
-
-    def comments(self, comments=None):
-        if comments:
-            self._comments = comments
-        return self._comments.rstrip()
-
-    def add_comment_line(self, comment):
-        self._comments += comment + "\n"
-
-    def upper_abcdf(self):
-        (upper, lower) = self.abcdf().split('@')
-        return upper
-
-    def lower_abcdf(self):
-        (upper, lower) = self.abcdf().split('@')
-        return lower
-
-
 class ABCDHeader:
     COMMENT_RE = r'^%\s*(.*)'
     TITLE_RE = r'^%\s*abcDidactyl v(\d+)'
@@ -501,7 +335,7 @@ class ABCDHeader:
     TRANSCRIPTION_DATE_RE = r'^%\s*Transcription date:\s*((\d\d\d\d\-\d\d\-\d\d)\s*(\d\d:\d\d:\d\d)?)'
 
     @staticmethod
-    def is_abcD(string):
+    def is_abcd(string):
         for line in string.splitlines():
             matt = re.search(ABCDHeader.TITLE_RE, line)
             if matt:
@@ -511,7 +345,7 @@ class ABCDHeader:
     def __init__(self, abcd_str):
         self._annotations = []
 
-        annotation = ABCDFAnnotation()
+        annotation = DAnnotation()
         in_header = False
         for line in abcd_str.splitlines():
             matt = re.search(ABCDHeader.TITLE_RE, line)
@@ -526,7 +360,7 @@ class ABCDHeader:
                 break
             matt = re.search(ABCDHeader.FINGERING_RE, line)
             if matt:
-                annotation = ABCDFAnnotation(abcdf=matt.group(2))
+                annotation = DAnnotation(abcdf=matt.group(2))
                 annotation.abcdf_id(matt.group(1).rstrip())
                 self._annotations.append(annotation)
                 continue
@@ -655,7 +489,7 @@ class DCorpus:
     def abcd_header(corpus_path=None, corpus_str=None):
         if corpus_path:
             corpus_str = DCorpus.file_to_string(file_path=corpus_path)
-        if ABCDHeader.is_abcD(corpus_str):
+        if ABCDHeader.is_abcd(corpus_str):
             hdr = ABCDHeader(abcd_str=corpus_str)
             return hdr
         return None
@@ -664,7 +498,7 @@ class DCorpus:
     def corpus_type(corpus_path=None, corpus_str=None):
         if corpus_path:
             corpus_str = DCorpus.file_to_string(file_path=corpus_path)
-        if ABCDHeader.is_abcD(corpus_str):
+        if ABCDHeader.is_abcd(corpus_str):
             return Constant.CORPUS_ABCD
         else:
             return Constant.CORPUS_ABC

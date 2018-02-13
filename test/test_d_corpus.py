@@ -26,7 +26,7 @@ from music21 import *
 import re
 import unittest
 import TestConstant
-from DCorpus.DCorpus import DPart, DScore, DCorpus, ABCDFAnnotation
+from DCorpus.DCorpus import DPart, DScore, DCorpus, DAnnotation
 
 BERINGER2_SCALE_CORPUS = TestConstant.BERINGER2_DIR + "/scales.abc"
 

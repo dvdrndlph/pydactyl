@@ -25,7 +25,6 @@ __author__ = 'David Randolph'
 import numpy
 import re
 from Dactyler import Dactyler, Constant
-from DCorpus import DCorpus
 
 
 class Interval:
@@ -144,125 +143,141 @@ class Hart(Dactyler.Dactyler):
         self._max_interval_size = max_interval_size
         self._costs = self._define_costs()
 
-    def advise(self, offset=0, first_finger=None):
+    def advise(self, score_index=0, staff="upper", offset=0, first_finger=None):
+        if staff == "both":
+            upper_advice = self.advise(score_index=score_index, staff="upper")
+            lower_advice = self.advise(score_index=score_index, staff="lower")
+            abcdf = upper_advice + "@" + lower_advice
+            return abcdf
+
+        if staff != "upper" and staff != "lower":
+            raise Exception("Segregated advice is only dispensed one staff at a time.")
         if offset or first_finger:
-            raise Exception("Offset start not implemented yet")
+            raise Exception("Offset start not implemented yet.")
 
         d_scores = self._d_corpus.d_score_list()
-        for d_score in d_scores:
-            if d_score.part_count() == 1:
-                d_part = d_score.as_part()
-            else:
-                # FIXME: We should only need to invert the cost structure and do some
-                # other minor fiddling to support (segregated) left hand fingerings.
-                # For now, we only support right hand fingerings, which we assume
-                # are in the upper staff.
-                d_part = d_score.upper_d_part()
+        if score_index >= len(d_scores):
+            raise Exception("Score index out of range")
 
-            m21_stream = d_part.orderly_note_stream()
+        d_score = d_scores[score_index]
+        if d_score.part_count() == 1:
+            d_part = d_score.as_part()
+        else:
+            # We support (segregated) left hand fingerings. By segregated, we
+            # mean the right hand is dedicated to the upper staff, and the
+            # left hand is dedicated to the lower staff.
+            d_part = d_score.d_part(staff=staff)
 
-            opt_cost = Hart.BIG_NUM
-            note_list = Dactyler.DNote.note_list(m21_stream)
+        m21_stream = d_part.orderly_note_stream()
 
-            m = len(note_list) - 1
-            fs = numpy.zeros([len(note_list), 6], dtype=int)
-            for n in reversed(range(1, len(note_list))):
+        opt_cost = Hart.BIG_NUM
+        note_list = Dactyler.DNote.note_list(m21_stream)
+
+        m = len(note_list) - 1
+        fs = numpy.zeros([len(note_list), 6], dtype=int)
+        for n in reversed(range(1, len(note_list))):
                 for s in range(1, 6):
                     fs[n, s] = Hart.BIG_NUM
 
-            fsx = numpy.zeros([len(note_list), 6, 6], dtype=int)
-            num_opt = numpy.zeros([len(note_list), 6], dtype=int)
-            xstar = numpy.zeros([len(note_list), 6, 5], dtype=int)
+        fsx = numpy.zeros([len(note_list), 6, 6], dtype=int)
+        num_opt = numpy.zeros([len(note_list), 6], dtype=int)
+        xstar = numpy.zeros([len(note_list), 6, 5], dtype=int)
 
-            # Stage m
-            mth_note = note_list[m]
-            mth_color = mth_note.color()
-            prior_color = mth_note.prior_color()
-            mth_interval = mth_note.semitone_delta()
+        # Stage m
+        mth_note = note_list[m]
+        mth_color = mth_note.color()
+        prior_color = mth_note.prior_color()
+        mth_interval = mth_note.semitone_delta()
+        for s in range(1, 6):
+            if s == 1:
+                self.squawk("Stage {0}: color {1}->{2}, delta {3}".format(m, prior_color, mth_color, mth_interval))
+            self.squeak("{0:4d}:".format(s))
+            for x in range(1, 6):
+                if (staff == "upper" and mth_note.is_ascending()) or \
+                        (staff == "lower" and not mth_note.is_ascending):
+                    interval = Interval(prior_color, mth_color, s, x, mth_interval)
+                else:
+                    interval = Interval(mth_color, prior_color, x, s, mth_interval)
+                cost = self._costs[interval]
+                fsx[m, s, x] = cost
+                self.squeak("{0:4d}  ".format(fsx[m, s, x]))
+
+            for x in range(1, 6):
+                if fsx[m, s, x] < fs[m, s]:
+                    fs[m, s] = fsx[m, s, x]
+
+            num_opt[m, s] = 0
+            for x in range(1, 6):
+                if fsx[m, s, x] == fs[m, s]:
+                    xstar[m, s, num_opt[m, s]] = x
+                    num_opt[m, s] += 1
+
+            for x in range(num_opt[m, s]):
+                self.squeak(str(xstar[m, s, x]))
+                if x < num_opt[m, s] - 1:
+                    self.squeak(",")
+                else:
+                    self.squawk("")
+
+        # Stages m-1 through 1
+        for n in reversed(range(1, m)):
+            nth_note = note_list[n]
+            nth_color = nth_note.color()
+            prior_color = nth_note.prior_color()
+            nth_interval = nth_note.semitone_delta()
             for s in range(1, 6):
                 if s == 1:
-                    self.squawk("Stage {0}: color {1}->{2}, delta {3}".format(m, prior_color, mth_color, mth_interval))
+                    self.squawk("Stage {0}: color {1}->{2}, delta {3}".format(n, prior_color, nth_color, nth_interval))
                 self.squeak("{0:4d}:".format(s))
+
                 for x in range(1, 6):
-                    if mth_note.is_ascending():
-                        interval = Interval(prior_color, mth_color, s, x, mth_interval)
+                    if (staff == "upper" and nth_note.is_ascending()) or \
+                            (staff == "lower" and not nth_note.is_ascending):
+                        interval = Interval(prior_color, nth_color, s, x, nth_interval)
                     else:
-                        interval = Interval(mth_color, prior_color, x, s, mth_interval)
+                        interval = Interval(nth_color, prior_color, x, s, nth_interval)
                     cost = self._costs[interval]
-                    fsx[m, s, x] = cost
-                    self.squeak("{0:4d}  ".format(fsx[m, s, x]))
+                    fsx[n, s, x] = cost + fs[n + 1, x]
+                    self.squeak("{0:4d}+{1:d}={2:4d}  ".format(cost, fs[n + 1, x], fsx[n, s, x]))
 
                 for x in range(1, 6):
-                    if fsx[m, s, x] < fs[m, s]:
-                        fs[m, s] = fsx[m, s, x]
+                    if fsx[n, s, x] < fs[n, s]:
+                        fs[n, s] = fsx[n, s, x]
 
-                num_opt[m, s] = 0
+                num_opt[n, s] = 0
                 for x in range(1, 6):
-                    if fsx[m, s, x] == fs[m, s]:
-                        xstar[m, s, num_opt[m, s]] = x
-                        num_opt[m, s] += 1
+                    if fsx[n, s, x] == fs[n, s]:
+                        xstar[n, s, num_opt[n, s]] = x
+                        num_opt[n, s] += 1
 
-                for x in range(num_opt[m, s]):
-                    self.squeak(str(xstar[m, s, x]))
-                    if x < num_opt[m, s] - 1:
+                for x in range(num_opt[n, s]):
+                    self.squeak(str(xstar[n, s, x]))
+                    if x < num_opt[n, s] - 1:
                         self.squeak(",")
                     else:
-                        self.squawk("")
+                        self.squeak("\n")
 
-            # Stages m-1 through 1
-            for n in reversed(range(1, m)):
-                nth_note = note_list[n]
-                nth_color = nth_note.color()
-                prior_color = nth_note.prior_color()
-                nth_interval = nth_note.semitone_delta()
-                for s in range(1, 6):
-                    if s == 1:
-                        self.squawk("Stage {0}: color {1}->{2}, delta {3}".format(n, prior_color, nth_color, nth_interval))
-                    self.squeak("{0:4d}:".format(s))
+        fingers = [0]
+        for s in range(1, 6):
+            if fs[1, s] < opt_cost:
+                opt_cost = fs[1, s]
+                fingers[0] = s
+        for n in range(1, m + 1):
+            fingers.append(xstar[n, fingers[n - 1], 0])
 
-                    for x in range(1, 6):
-                        if nth_note.is_ascending():
-                            interval = Interval(prior_color, nth_color, s, x, nth_interval)
-                        else:
-                            interval = Interval(nth_color, prior_color, x, s, nth_interval)
-                        cost = self._costs[interval]
-                        fsx[n, s, x] = cost + fs[n + 1, x]
-                        self.squeak("{0:4d}+{1:d}={2:4d}  ".format(cost, fs[n + 1, x], fsx[n, s, x]))
-
-                    for x in range(1, 6):
-                        if fsx[n, s, x] < fs[n, s]:
-                            fs[n, s] = fsx[n, s, x]
-
-                    num_opt[n, s] = 0
-                    for x in range(1, 6):
-                        if fsx[n, s, x] == fs[n, s]:
-                            xstar[n, s, num_opt[n, s]] = x
-                            num_opt[n, s] += 1
-
-                    for x in range(num_opt[n, s]):
-                        self.squeak(str(xstar[n, s, x]))
-                        if x < num_opt[n, s] - 1:
-                            self.squeak(",")
-                        else:
-                            self.squeak("\n")
-
-            fingers = [0]
-            for s in range(1, 6):
-                if fs[1, s] < opt_cost:
-                    opt_cost = fs[1, s]
-                    fingers[0] = s
-            for n in range(1, m + 1):
-                fingers.append(xstar[n, fingers[n - 1], 0])
-
-            self.squawk("The optimal cost is {0}".format(opt_cost))
-            self.squawk("Here is an optimal fingering:")
-            self.squawk(fingers)
+        self.squawk("The optimal cost is {0}".format(opt_cost))
+        self.squawk("Here is an optimal fingering:")
+        self.squawk(fingers)
     
-            # print format(opt_cost)
-            # print fingers
+        # print format(opt_cost)
+        # print fingers
+        # title = d_score.title()
+        # print('{ "title" : "' + title + '", "optimal_fingering": "' + str(fingers) + '" }')
 
-            title = d_score.title()
+        if staff == "upper":
+            abcdf = ">"
+        else:
+            abcdf = "<"
 
-            # print('{ "title" : "' + title + '", "optimal_fingering": "' + str(fingers) + '" }')
-            abcdf = ">" + "".join(fingers)
-            return abcdf
+        abcdf += "".join(str(f) for f in fingers)
+        return abcdf
