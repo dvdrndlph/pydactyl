@@ -168,10 +168,14 @@ class Dactyler(ABC):
                 return 1
             else:
                 return 0
+
+        one = str(gold_hand) + str(gold_digit)
+        other = str(test_hand) + str(test_digit)
         if method == "natural":
-            one = str(gold_hand) + str(gold_digit)
-            other = str(test_hand) + str(test_digit)
             cost = Constant.NATURAL_EDIT_DISTANCES[(one, other)]
+            return cost
+        if method == "pivot":
+            cost = Constant.PIVOT_EDIT_DISTANCES[(one, other)]
             return cost
 
     def score_note_count(self, score_index=0, staff="both"):

@@ -64,13 +64,21 @@ CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA
             # print(he)
         assert hamming_evaluations[0] > 0, "Undetected Hamming costs"
         assert hamming_evaluations[0] > 0, "Undetected Hamming costs"
-        assert hamming_evaluations[1] == 0, "Bad fish in barrel"
+        assert hamming_evaluations[1] == 0, "Bad fish in Hamming barrel"
+
         natural_evaluations = hart.evaluate_strike_distance(method="natural", staff="both")
         # for he in natural_evaluations:
             # print(he)
-        assert natural_evaluations[0] > 0, "Undetected Hamming costs"
-        assert natural_evaluations[0] > 0, "Undetected Hamming costs"
-        assert natural_evaluations[1] == 0, "Bad fish in barrel"
+        assert natural_evaluations[0] > 0, "Undetected natural costs"
+        assert natural_evaluations[0] > 0, "Undetected natural costs"
+        assert natural_evaluations[1] == 0, "Bad fish in natural barrel"
+
+        pivot_evaluations = hart.evaluate_strike_distance(method="pivot", staff="both")
+        # for he in pivot_evaluations:
+            # print(he)
+        assert pivot_evaluations[0] > 0, "Undetected pivot costs"
+        assert pivot_evaluations[0] > 0, "Undetected pivot costs"
+        assert pivot_evaluations[1] == 0, "Bad fish in pivot barrel"
 
 
 if __name__ == "__main__":
