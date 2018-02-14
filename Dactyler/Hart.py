@@ -143,7 +143,7 @@ class Hart(Dactyler.Dactyler):
         self._max_interval_size = max_interval_size
         self._costs = self._define_costs()
 
-    def advise(self, score_index=0, staff="upper", offset=0, first_finger=None):
+    def advise(self, score_index=0, staff="upper", offset=0, first_finger=None, last_finger=None):
         if staff == "both":
             upper_advice = self.advise(score_index=score_index, staff="upper")
             lower_advice = self.advise(score_index=score_index, staff="lower")
@@ -152,8 +152,6 @@ class Hart(Dactyler.Dactyler):
 
         if staff != "upper" and staff != "lower":
             raise Exception("Segregated advice is only dispensed one staff at a time.")
-        if offset or first_finger:
-            raise Exception("Offset start not implemented yet.")
 
         d_scores = self._d_corpus.d_score_list()
         if score_index >= len(d_scores):
@@ -172,12 +170,13 @@ class Hart(Dactyler.Dactyler):
 
         opt_cost = Hart.BIG_NUM
         note_list = Dactyler.DNote.note_list(m21_stream)
+        note_list[0:offset] = []
 
         m = len(note_list) - 1
         fs = numpy.zeros([len(note_list), 6], dtype=int)
         for n in reversed(range(1, len(note_list))):
-                for s in range(1, 6):
-                    fs[n, s] = Hart.BIG_NUM
+            for s in range(1, 6):
+                fs[n, s] = Hart.BIG_NUM
 
         fsx = numpy.zeros([len(note_list), 6, 6], dtype=int)
         num_opt = numpy.zeros([len(note_list), 6], dtype=int)
@@ -193,12 +192,15 @@ class Hart(Dactyler.Dactyler):
                 self.squawk("Stage {0}: color {1}->{2}, delta {3}".format(m, prior_color, mth_color, mth_interval))
             self.squeak("{0:4d}:".format(s))
             for x in range(1, 6):
-                if (staff == "upper" and mth_note.is_ascending()) or \
-                        (staff == "lower" and not mth_note.is_ascending):
+                if (staff == "upper" and mth_note.is_ascending()) or (staff == "lower" and not mth_note.is_ascending):
                     interval = Interval(prior_color, mth_color, s, x, mth_interval)
                 else:
                     interval = Interval(mth_color, prior_color, x, s, mth_interval)
                 cost = self._costs[interval]
+                if last_finger and x != last_finger:
+                    # Last digit in fingering sequence is constrained, so we force all paths to
+                    # lead to it by blowing up all of the paths leading away from it.
+                    cost = Hart.BIG_NUM
                 fsx[m, s, x] = cost
                 self.squeak("{0:4d}  ".format(fsx[m, s, x]))
 
@@ -219,7 +221,8 @@ class Hart(Dactyler.Dactyler):
                 else:
                     self.squawk("")
 
-        # Stages m-1 through 1
+        # Stages m-1 through 1, or m-1 to offset+1
+        start_index = 1
         for n in reversed(range(1, m)):
             nth_note = note_list[n]
             nth_color = nth_note.color()
@@ -237,6 +240,10 @@ class Hart(Dactyler.Dactyler):
                     else:
                         interval = Interval(nth_color, prior_color, x, s, nth_interval)
                     cost = self._costs[interval]
+                    if first_finger and n == start_index and s != first_finger:
+                        # First digit in fingering sequence is constrained, so we force all paths to
+                        # start from it by blowing up all of the paths starting with another digit.
+                        cost = Hart.BIG_NUM
                     fsx[n, s, x] = cost + fs[n + 1, x]
                     self.squeak("{0:4d}+{1:d}={2:4d}  ".format(cost, fs[n + 1, x], fsx[n, s, x]))
 

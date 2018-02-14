@@ -142,15 +142,15 @@ class Dactyler(ABC):
     def squawk(self, msg):
         self._log.write(str(msg) + "\n")
         if Dactyler.SQUAWK_OUT_LOUD:
-            print(str(msg) + "\n")
+            print(str(msg))
 
     def squeak(self, msg):
         self._log.write(str(msg))
         if Dactyler.SQUAWK_OUT_LOUD:
-            print(str(msg))
+            print(str(msg), end="")
 
     @abstractmethod
-    def advise(self, score_index=0, staff="upper", offset=0, first_finger=None):
+    def advise(self, score_index=0, staff="upper", offset=0, first_finger=None, last_finger=None):
         return
 
     def load_corpus(self, d_corpus=None, path=None):

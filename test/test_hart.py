@@ -42,14 +42,19 @@ CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA
         d_corpus = DCorpus(corpus_str=HartTest.A_MAJ_SCALE)
         hart.load_corpus(d_corpus=d_corpus)
         rh_advice = hart.advise()
+        full_advice_len = len(rh_advice)
         right_re = re.compile('^>\d+$')
         assert right_re.match(rh_advice), "Bad right-hand, upper-staff advice"
+        rh_advice = hart.advise(staff="upper", offset=10, first_finger=5, last_finger=5)
+        ff_re = re.compile('^>5\d+5$')
+        assert ff_re.match(rh_advice), "Bad first and last finger constraints"
+        short_advice_len = len(rh_advice)
+        assert full_advice_len - 10 == short_advice_len, "Bad offset for advise call"
+
         lh_advice = hart.advise(staff="lower")
         left_re = re.compile('^<\d+$')
         assert left_re.match(lh_advice), "Bad left-hand, lower-staff advice"
         combo_advice = hart.advise(staff="both")
-        # note_count = hart.score_note_count()
-        # print("NOTE COUNT: {0}".format(note_count))
         clean_combo_advice = re.sub('[><&]', '',  combo_advice)
         # print("TEST: " + clean_combo_advice)
         d_score = d_corpus.d_score_by_index(index=0)
@@ -79,6 +84,9 @@ CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA
         assert pivot_evaluations[0] > 0, "Undetected pivot costs"
         assert pivot_evaluations[0] > 0, "Undetected pivot costs"
         assert pivot_evaluations[1] == 0, "Bad fish in pivot barrel"
+
+        note_count = hart.score_note_count()
+        # print("NOTE COUNT: {0}".format(note_count))
 
 
 if __name__ == "__main__":
