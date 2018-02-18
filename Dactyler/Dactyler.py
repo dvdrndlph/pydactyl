@@ -150,7 +150,7 @@ class Dactyler(ABC):
             print(str(msg), end="")
 
     @abstractmethod
-    def advise(self, score_index=0, staff="upper", offset=0, first_finger=None, last_finger=None):
+    def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None):
         return
 
     def load_corpus(self, d_corpus=None, path=None):
@@ -183,6 +183,56 @@ class Dactyler(ABC):
         note_count = d_score.note_count(staff=staff)
         return note_count
 
+    @staticmethod
+    def _distance_and_loc(method, staff, test_annot, gold_annot, gold_offset=0, zero_cost=False):
+        current_gold_hand = ">" if staff == "upper" else "<"
+        current_test_hand = ">" if staff == "upper" else "<"
+
+        test_sf_count = test_annot.score_fingering_count(staff=staff)
+        gold_sf_count = gold_annot.score_fingering_count(staff=staff)
+
+        adjusted_gold_sf_count = gold_sf_count - gold_offset
+        if test_sf_count != adjusted_gold_sf_count:
+            raise Exception("Length mismatch: test: {0} gold: {1}".format(test_sf_count, adjusted_gold_sf_count))
+
+        score = 0
+        i = None
+        gold_digit = None
+        for i in range(test_sf_count):
+            gold_i = i + gold_offset
+            gold_sf = gold_annot.score_fingering_at_index(index=gold_i, staff=staff)
+            gold_strike = gold_sf.pf.fingering.strike
+            gold_hand = gold_strike.hand if gold_strike.hand else current_gold_hand
+            gold_digit = gold_strike.digit
+
+            test_sf = test_annot.score_fingering_at_index(index=i, staff=staff)
+            test_strike = test_sf.pf.fingering.strike
+            test_hand = test_strike.hand if test_strike.hand else current_test_hand
+            test_digit = test_strike.digit
+
+            # print("test {0} v. gold {1} loc {2} v. {3}".format(test_digit,
+                                                               # gold_digit,
+                                                               # i,
+                                                               # gold_i))
+            current_gold_hand = gold_hand
+            current_test_hand = test_hand
+
+            cost = Dactyler.strike_distance_cost(method=method,
+                                                 gold_hand=gold_hand,
+                                                 gold_digit=gold_digit,
+                                                 test_hand=test_hand,
+                                                 test_digit=test_digit)
+            if zero_cost and cost:
+                return cost, gold_i, gold_digit
+            score += cost
+
+        return score, i, gold_digit
+
+    def _eval_strike_distance(self, method, staff, test_annot, gold_annot):
+        (cost, location, gold_digit) = Dactyler._distance_and_loc(method=method, staff=staff,
+                                                                  test_annot=test_annot, gold_annot=gold_annot)
+        return cost
+
     def evaluate_strike_distance(self, method="hamming", score_index=0, staff="upper"):
         d_score = self._d_corpus.d_score_by_index(score_index)
         if not d_score.is_fully_annotated():
@@ -196,40 +246,69 @@ class Dactyler(ABC):
         test_abcdf = self.advise(score_index=score_index, staff=staff)
         test_annot = DAnnotation(abcdf=test_abcdf)
         hdr = d_score.abcd_header()
-        hamming_scores = []
+        scores = []
         for gold_annot in hdr.annotations():
-            hamming_score = 0
+            score = 0
             for staff in staves:
-                current_gold_hand = ">" if staff == "upper" else "<"
-                current_test_hand = ">" if staff == "upper" else "<"
+                score += self._eval_strike_distance(method=method, staff=staff,
+                                                    test_annot=test_annot, gold_annot=gold_annot)
+            scores.append(score)
 
-                test_sf_count = test_annot.score_fingering_count(staff=staff)
-                gold_sf_count = gold_annot.score_fingering_count(staff=staff)
+        return scores
 
-                if test_sf_count != gold_sf_count:
-                    raise Exception("Length mismatch: {0} v. {1}".format(test_sf_count, gold_sf_count))
-                for i in range(gold_sf_count):
-                    gold_sf = gold_annot.score_fingering_at_index(index=i, staff=staff)
-                    gold_strike = gold_sf.pf.fingering.strike
-                    gold_hand = gold_strike.hand if gold_strike.hand else current_gold_hand
-                    gold_digit = gold_strike.digit
+    def evaluate_strike_reentry(self, method="hamming", score_index=0, staff="upper", gold_indices=[]):
+        d_score = self._d_corpus.d_score_by_index(score_index)
+        if not d_score.is_fully_annotated():
+            raise Exception("Only fully annotated scores can be evaluated.")
 
-                    test_sf = test_annot.score_fingering_at_index(index=i, staff=staff)
-                    test_strike = test_sf.pf.fingering.strike
-                    test_hand = test_strike.hand if test_strike.hand else current_test_hand
-                    test_digit = test_strike.digit
+        if staff == "both":
+            staves = ['upper', 'lower']
+        else:
+            staves = [staff]
 
-                    current_gold_hand = gold_hand
-                    current_test_hand = test_hand
+        hdr = d_score.abcd_header()
+        scores = {"upper": [], "lower": []}
+        for staff in staves:
+            score = 0
+            current_gold_index = 0
+            for gold_annot in hdr.annotations():
+                if len(gold_indices) > 0 and current_gold_index not in gold_indices:
+                    current_gold_index += 1
+                    continue
+                current_gold_index += 1
 
-                    hamming_score += Dactyler.strike_distance_cost(method=method,
-                                                                   gold_hand=gold_hand,
-                                                                   gold_digit=gold_digit,
-                                                                   test_hand=test_hand,
-                                                                   test_digit=test_digit)
-            hamming_scores.append(hamming_score)
+                test_abcdf = self.advise(score_index=score_index, staff=staff)
+                print("COMPLETE ADVICE: {0}".format(test_abcdf))
+                if staff == 'upper':
+                    test_abcdf += '@'
+                else:
+                    test_abcdf = '@' + str(test_abcdf)
+                test_annot = DAnnotation(abcdf=test_abcdf)
+                (cost, loc, gold_digit) = self._distance_and_loc(zero_cost=True, method=method, staff=staff,
+                                                                 test_annot=test_annot, gold_annot=gold_annot)
+                score += cost
+                print("GOLD: {0} staff for {1}".format(staff, gold_annot.abcdf(staff=staff, flat=True)))
+                print("TEST: {0} staff for {1}".format(staff, test_abcdf))
+                print("SCORE: {0} COST: {1} LOC: {2}".format(score, cost, loc))
 
-        return hamming_scores
+                while cost > 0:
+                    test_abcdf = self.advise(score_index=score_index, staff=staff,
+                                             offset=loc, first_digit=gold_digit)
+                    print("TRUNCATED ADVICE: {0}".format(test_abcdf))
+                    if staff == 'upper':
+                        test_abcdf += '@'
+                    else:
+                        test_abcdf = '@' + str(test_abcdf)
+                    test_annot = DAnnotation(abcdf=test_abcdf)
+                    (cost, loc, gold_digit) = self._distance_and_loc(zero_cost=True, gold_offset=loc,
+                                                                     method=method, staff=staff,
+                                                                     test_annot=test_annot, gold_annot=gold_annot)
+                    score += cost
+                    print("     score: {0} cost: {1} loc: {2}".format(score, cost, loc))
 
-    def evaluate_reentry(self, score_index=0, staff="upper"):
-        print("Re-enter the Twilight Zone")
+                scores[staff].append(score)
+
+        total_scores = []
+        for i in range(len(scores['upper'])):
+            total_scores.append(scores['upper'][i] + scores['lower'][i])
+        return total_scores

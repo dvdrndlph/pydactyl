@@ -95,11 +95,12 @@ class DAnnotation:
         # line is an array of "score fingerings," or note
         # fingerings with all the trimmings.
         if staff == "upper" or staff == "both":
-            lines = ast.upper
+            lines = ast['upper']
             for line in lines:
                 count += len(line)
         if staff == "lower" or staff == "both":
-            lines = ast.lower
+            # print(self.abcdf())
+            lines = ast['lower']
             for line in lines:
                 count += len(line)
         return count
@@ -171,11 +172,34 @@ class DAnnotation:
             self._transcription_date = transcription_date
         return self._transcription_date
 
-    def abcdf(self, abcdf=None):
+    @staticmethod
+    def _flatten(abcdf):
+        flattened = abcdf.replace("&", "")
+        return flattened
+
+    def abcdf(self, abcdf=None, staff=None, flat=False):
         if abcdf:
             self._abcdf = abcdf
             self._ast = DAnnotation.ast_for_abcdf(abcdf)
+        if staff == "upper":
+            return self.upper_abcdf(flat=flat)
+        elif staff == "lower":
+            return self.lower_abcdf(flat=flat)
+        if flat:
+            return DAnnotation._flatten(self._abcdf)
         return self._abcdf
+
+    def upper_abcdf(self, flat=False):
+        (upper, lower) = self.abcdf().split('@')
+        if flat:
+            return DAnnotation._flatten(upper)
+        return upper
+
+    def lower_abcdf(self, flat=False):
+        (upper, lower) = self.abcdf().split('@')
+        if flat:
+            return DAnnotation._flatten(lower)
+        return lower
 
     def abcdf_id(self, abcdf_id=None):
         if abcdf_id:
@@ -189,11 +213,3 @@ class DAnnotation:
 
     def add_comment_line(self, comment):
         self._comments += comment + "\n"
-
-    def upper_abcdf(self):
-        (upper, lower) = self.abcdf().split('@')
-        return upper
-
-    def lower_abcdf(self):
-        (upper, lower) = self.abcdf().split('@')
-        return lower

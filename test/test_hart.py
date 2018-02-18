@@ -41,15 +41,31 @@ CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA
         hart = Hart()
         d_corpus = DCorpus(corpus_str=HartTest.A_MAJ_SCALE)
         hart.load_corpus(d_corpus=d_corpus)
-        rh_advice = hart.advise()
-        full_advice_len = len(rh_advice)
-        right_re = re.compile('^>\d+$')
-        assert right_re.match(rh_advice), "Bad right-hand, upper-staff advice"
-        rh_advice = hart.advise(staff="upper", offset=10, first_finger=5, last_finger=5)
+        # complete_rh_advice = hart.advise(staff="upper")
+        # complete_rh_advice_len = len(complete_rh_advice)
+        # right_re = re.compile('^>\d+$')
+        # assert right_re.match(complete_rh_advice), "Bad right-hand, upper-staff advice"
+        rh_advice = hart.advise(staff="upper", offset=3, first_digit=1)
+        short_advice_len = len(rh_advice)
+        # assert complete_rh_advice_len - 3 == short_advice_len, "Bad offset for advise() call"
+        ff_re = re.compile('^>1\d+$')
+        assert ff_re.match(rh_advice), "Bad first finger constraint"
+
+        # print("COMPLETE  ADVICE: {0}".format(complete_rh_advice))
+        print("TRUNCATED ADVICE: {0}".format(rh_advice))
+
+        reentry_hamming_evals = hart.evaluate_strike_reentry(method="hamming", staff="upper", gold_indices=[0])
+        for rhe in reentry_hamming_evals:
+            print(rhe)
+        # assert reentry_hamming_evals[0] > 0, "Undetected Hamming reentry costs"
+        assert reentry_hamming_evals[0] == 0, "Bad fish in Hamming reentry barrel"
+        assert 1 == 2, "Basta!"
+
+        rh_advice = hart.advise(staff="upper", offset=10, first_digit=5, last_digit=5)
+        short_advice_len = len(rh_advice)
+        assert full_advice_len - 10 == short_advice_len, "Bad offset for advise() call"
         ff_re = re.compile('^>5\d+5$')
         assert ff_re.match(rh_advice), "Bad first and last finger constraints"
-        short_advice_len = len(rh_advice)
-        assert full_advice_len - 10 == short_advice_len, "Bad offset for advise call"
 
         lh_advice = hart.advise(staff="lower")
         left_re = re.compile('^<\d+$')
@@ -68,13 +84,11 @@ CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA
         # for he in hamming_evaluations:
             # print(he)
         assert hamming_evaluations[0] > 0, "Undetected Hamming costs"
-        assert hamming_evaluations[0] > 0, "Undetected Hamming costs"
         assert hamming_evaluations[1] == 0, "Bad fish in Hamming barrel"
 
         natural_evaluations = hart.evaluate_strike_distance(method="natural", staff="both")
         # for he in natural_evaluations:
             # print(he)
-        assert natural_evaluations[0] > 0, "Undetected natural costs"
         assert natural_evaluations[0] > 0, "Undetected natural costs"
         assert natural_evaluations[1] == 0, "Bad fish in natural barrel"
 
@@ -82,11 +96,13 @@ CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA
         # for he in pivot_evaluations:
             # print(he)
         assert pivot_evaluations[0] > 0, "Undetected pivot costs"
-        assert pivot_evaluations[0] > 0, "Undetected pivot costs"
         assert pivot_evaluations[1] == 0, "Bad fish in pivot barrel"
 
-        note_count = hart.score_note_count()
-        # print("NOTE COUNT: {0}".format(note_count))
+        reentry_hamming_evals = hart.evaluate_strike_reentry(method="hamming", staff="both")
+        for rhe in reentry_hamming_evals:
+            print(rhe)
+        assert reentry_hamming_evals[0] > 0, "Undetected Hamming reentry costs"
+        assert reentry_hamming_evals[1] == 0, "Bad fish in Hamming reentry barrel"
 
 
 if __name__ == "__main__":

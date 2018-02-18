@@ -143,7 +143,9 @@ class Hart(Dactyler.Dactyler):
         self._max_interval_size = max_interval_size
         self._costs = self._define_costs()
 
-    def advise(self, score_index=0, staff="upper", offset=0, first_finger=None, last_finger=None):
+    def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None):
+        print("score_index:{0} staff:{1} offset:{2} first_digit:{3} last_digit:{4}".format(
+            score_index, staff, offset, first_digit, last_digit))
         if staff == "both":
             upper_advice = self.advise(score_index=score_index, staff="upper")
             lower_advice = self.advise(score_index=score_index, staff="lower")
@@ -171,6 +173,9 @@ class Hart(Dactyler.Dactyler):
         opt_cost = Hart.BIG_NUM
         note_list = Dactyler.DNote.note_list(m21_stream)
         note_list[0:offset] = []
+        for knot in note_list:
+            print("{0} ".format(knot.midi()), end="")
+        print("")
 
         m = len(note_list) - 1
         fs = numpy.zeros([len(note_list), 6], dtype=int)
@@ -197,7 +202,7 @@ class Hart(Dactyler.Dactyler):
                 else:
                     interval = Interval(mth_color, prior_color, x, s, mth_interval)
                 cost = self._costs[interval]
-                if last_finger and x != last_finger:
+                if last_digit and x != last_digit:
                     # Last digit in fingering sequence is constrained, so we force all paths to
                     # lead to it by blowing up all of the paths leading away from it.
                     cost = Hart.BIG_NUM
@@ -221,7 +226,7 @@ class Hart(Dactyler.Dactyler):
                 else:
                     self.squawk("")
 
-        # Stages m-1 through 1, or m-1 to offset+1
+        # Stages m-1 through 1
         start_index = 1
         for n in reversed(range(1, m)):
             nth_note = note_list[n]
@@ -240,7 +245,7 @@ class Hart(Dactyler.Dactyler):
                     else:
                         interval = Interval(nth_color, prior_color, x, s, nth_interval)
                     cost = self._costs[interval]
-                    if first_finger and n == start_index and s != first_finger:
+                    if first_digit and n == start_index and s != first_digit:
                         # First digit in fingering sequence is constrained, so we force all paths to
                         # start from it by blowing up all of the paths starting with another digit.
                         cost = Hart.BIG_NUM
