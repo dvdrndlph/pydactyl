@@ -262,6 +262,9 @@ class Hart(Dactyler.Dactyler):
                         xstar[n, s, num_opt[n, s]] = x
                         num_opt[n, s] += 1
 
+                if num_opt[n, s] == 0:
+                    self.squawk("")
+
                 for x in range(num_opt[n, s]):
                     self.squeak(str(xstar[n, s, x]))
                     if x < num_opt[n, s] - 1:
@@ -271,8 +274,9 @@ class Hart(Dactyler.Dactyler):
 
         fingers = [0]
         for s in range(1, 6):
-            if fs[1, s] < opt_cost:
-                opt_cost = fs[1, s]
+            fs_cost = fs[1, s]
+            if fs_cost < opt_cost:
+                opt_cost = fs_cost
                 fingers[0] = s
         for n in range(1, m + 1):
             fingers.append(xstar[n, fingers[n - 1], 0])
@@ -281,11 +285,6 @@ class Hart(Dactyler.Dactyler):
         self.squawk("Here is an optimal fingering:")
         self.squawk(fingers)
     
-        # print format(opt_cost)
-        # print fingers
-        # title = d_score.title()
-        # print('{ "title" : "' + title + '", "optimal_fingering": "' + str(fingers) + '" }')
-
         if staff == "upper":
             abcdf = ">"
         else:

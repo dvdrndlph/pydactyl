@@ -203,12 +203,12 @@ class Dactyler(ABC):
             gold_sf = gold_annot.score_fingering_at_index(index=gold_i, staff=staff)
             gold_strike = gold_sf.pf.fingering.strike
             gold_hand = gold_strike.hand if gold_strike.hand else current_gold_hand
-            gold_digit = gold_strike.digit
+            gold_digit = int(gold_strike.digit)
 
             test_sf = test_annot.score_fingering_at_index(index=i, staff=staff)
             test_strike = test_sf.pf.fingering.strike
             test_hand = test_strike.hand if test_strike.hand else current_test_hand
-            test_digit = test_strike.digit
+            test_digit = int(test_strike.digit)
 
             # print("test {0} v. gold {1} loc {2} v. {3}".format(test_digit,
                                                                # gold_digit,
@@ -294,6 +294,7 @@ class Dactyler(ABC):
                 while cost > 0:
                     test_abcdf = self.advise(score_index=score_index, staff=staff,
                                              offset=loc, first_digit=gold_digit)
+                    print("GOLD: {0} staff for {1}".format(staff, gold_annot.abcdf(staff=staff, flat=True)))
                     print("TRUNCATED ADVICE: {0}".format(test_abcdf))
                     if staff == 'upper':
                         test_abcdf += '@'
@@ -309,6 +310,15 @@ class Dactyler(ABC):
                 scores[staff].append(score)
 
         total_scores = []
-        for i in range(len(scores['upper'])):
-            total_scores.append(scores['upper'][i] + scores['lower'][i])
+        if len(scores['upper']) > 0:
+            for i in range(len(scores['upper'])):
+                total_scores.append(scores['upper'][i])
+                if len(scores['lower']) > 0:
+                    total_scores[i] += scores['lower'][i]
+        elif len(scores['lower']) > 0:
+            for i in range(len(scores['lower'])):
+                total_scores.append(scores['lower'][i])
+        else:
+            raise Exception("No scores found.")
+
         return total_scores
