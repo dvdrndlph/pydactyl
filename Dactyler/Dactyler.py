@@ -149,6 +149,29 @@ class Dactyler(ABC):
         if Dactyler.SQUAWK_OUT_LOUD:
             print(str(msg), end="")
 
+    @staticmethod
+    def one_note_advice(d_note, staff="upper", first_digit=None, last_digit=None):
+        if staff != "upper" and staff != "lower":
+            raise Exception("One note advice not available for {0} staff.".format(staff))
+        if first_digit and last_digit and first_digit != last_digit:
+            raise Exception("Ambiguous digit constraint: {0} and {1}".format(first_digit, last_digit))
+
+        if staff == "upper":
+            advice = ">"
+        else:
+            advice = "<"
+
+        digit = "1"
+        if first_digit:
+            digit = str(first_digit)
+        elif last_digit:
+            digit = last_digit
+        elif d_note.is_black():
+            digit = "2"
+        advice += digit
+
+        return advice
+
     @abstractmethod
     def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None):
         return
@@ -269,12 +292,13 @@ class Dactyler(ABC):
         hdr = d_score.abcd_header()
         scores = {"upper": [], "lower": []}
         for staff in staves:
-            score = 0
             current_gold_index = 0
             for gold_annot in hdr.annotations():
+                score = 0
                 if len(gold_indices) > 0 and current_gold_index not in gold_indices:
                     current_gold_index += 1
                     continue
+                print("DO GI: {0}".format(current_gold_index))
                 current_gold_index += 1
 
                 test_abcdf = self.advise(score_index=score_index, staff=staff)

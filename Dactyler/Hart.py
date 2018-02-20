@@ -144,24 +144,24 @@ class Hart(Dactyler.Dactyler):
         self._costs = self._define_costs()
 
     def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None):
-        print("score_index:{0} staff:{1} offset:{2} first_digit:{3} last_digit:{4}".format(
-            score_index, staff, offset, first_digit, last_digit))
-        if staff == "both":
-            upper_advice = self.advise(score_index=score_index, staff="upper")
-            lower_advice = self.advise(score_index=score_index, staff="lower")
-            abcdf = upper_advice + "@" + lower_advice
-            return abcdf
-
-        if staff != "upper" and staff != "lower":
-            raise Exception("Segregated advice is only dispensed one staff at a time.")
-
         d_scores = self._d_corpus.d_score_list()
         if score_index >= len(d_scores):
             raise Exception("Score index out of range")
 
         d_score = d_scores[score_index]
+        if staff == "both":
+            upper_advice = self.advise(score_index=score_index, staff="upper")
+            abcdf = upper_advice + "@"
+            if d_score.part_count() > 1:
+                lower_advice = self.advise(score_index=score_index, staff="lower")
+                abcdf += lower_advice
+            return abcdf
+
+        if staff != "upper" and staff != "lower":
+            raise Exception("Segregated advice is only dispensed one staff at a time.")
+
         if d_score.part_count() == 1:
-            d_part = d_score.as_part()
+            d_part = d_score.combined_d_part()
         else:
             # We support (segregated) left hand fingerings. By segregated, we
             # mean the right hand is dedicated to the upper staff, and the
@@ -176,6 +176,10 @@ class Hart(Dactyler.Dactyler):
         for knot in note_list:
             print("{0} ".format(knot.midi()), end="")
         print("")
+
+        if len(note_list) == 1:
+            return Dactyler.Dactyler.one_note_advice(note_list[0], staff=staff,
+                                                     first_digit=first_digit, last_digit=last_digit)
 
         m = len(note_list) - 1
         fs = numpy.zeros([len(note_list), 6], dtype=int)
@@ -192,7 +196,10 @@ class Hart(Dactyler.Dactyler):
         mth_color = mth_note.color()
         prior_color = mth_note.prior_color()
         mth_interval = mth_note.semitone_delta()
-        for s in range(1, 6):
+        penultimate_digit_options = range(1, 6)
+        if first_digit and len(note_list) == 2:
+            penultimate_digit_options = [first_digit]
+        for s in penultimate_digit_options:
             if s == 1:
                 self.squawk("Stage {0}: color {1}->{2}, delta {3}".format(m, prior_color, mth_color, mth_interval))
             self.squeak("{0:4d}:".format(s))
