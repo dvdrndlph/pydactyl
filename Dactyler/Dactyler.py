@@ -197,9 +197,11 @@ class Dactyler(ABC):
         if method == "natural":
             cost = Constant.NATURAL_EDIT_DISTANCES[(one, other)]
             return cost
-        if method == "pivot":
+        elif method == "pivot":
             cost = Constant.PIVOT_EDIT_DISTANCES[(one, other)]
             return cost
+        else:
+            raise Exception("Unsupported method: {0}".format(method))
 
     def score_note_count(self, score_index=0, staff="both"):
         d_score = self._d_corpus.d_score_by_index(score_index)

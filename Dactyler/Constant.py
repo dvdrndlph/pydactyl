@@ -40,7 +40,7 @@ WHITE = 0
 STAFF_UPPER = 0
 STAFF_LOWER = 1
 
-NATURAL_EDIT_DISTANCES = {
+PIVOT_EDIT_DISTANCES = {
     ('<5', '<5'): 0,
     ('<5', '<4'): 1,
     ('<5', '<3'): 2,
@@ -152,7 +152,7 @@ NATURAL_EDIT_DISTANCES = {
     ('>5', '>5'): 0
 }
 
-PIVOT_EDIT_DISTANCES = {
+NATURAL_EDIT_DISTANCES = {
     ('<5', '<5'): 0,
     ('<5', '<4'): 1,
     ('<5', '<3'): 2,

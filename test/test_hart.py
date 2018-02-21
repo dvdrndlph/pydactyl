@@ -244,10 +244,9 @@ CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA
             print("RPE:{0}".format(rpe))
         assert reentry_pivot_evals[0] > 0, "Undetected pivot reentry costs"
         assert reentry_pivot_evals[1] == 0, "Bad fish in pivot reentry barrel"
-        # Surprisingly, the following fails:
-        # pivot_score = reentry_pivot_evals[0]
-        # print("{0} > {1}".format(pivot_score, natural_score))
-        # assert natural_score < pivot_score, "Reentry: Natural >= Pivot"
+        pivot_score = reentry_pivot_evals[0]
+        print("{0} > {1}".format(pivot_score, natural_score))
+        assert natural_score < pivot_score, "Reentry: Natural >= Pivot"
 
 if __name__ == "__main__":
     unittest.main()  # run all tests
