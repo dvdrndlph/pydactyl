@@ -110,6 +110,18 @@ class DPart:
 
         return new_note_stream
 
+    def pitch_range(self):
+        note_stream = self.orderly_note_stream()
+        low = None
+        high = None
+        for knot in note_stream:
+            pit = knot.pitch.midi
+            if not low or pit < low:
+                low = pit
+            if not high or pit > high:
+                high = pit
+        return low, high
+
     def is_monophonic(self):
         """Returns True iff this DPart has no notes that sound at the
            same time as other notes.
@@ -217,6 +229,9 @@ class DScore:
 
     def stream(self):
         return self._combined_d_part.stream()
+
+    def pitch_range(self):
+        return self._combined_d_part.pitch_range()
 
     def upper_stream(self):
         if self._upper_d_part:
@@ -557,6 +572,17 @@ class DCorpus:
                     d_score = DScore(abc_handle=ah_for_id[score_id], abcd_header=abcd_header)
                 self._d_scores.append(d_score)
                 score_index += 1
+
+    def pitch_range(self):
+        overall_low = None
+        overall_high = None
+        for score in self._d_scores:
+            low, high = score.pitch_range()
+            if overall_low is None or low < overall_low:
+                overall_low = low
+            if overall_high is None or high > overall_high:
+                overall_high = high
+        return overall_low, overall_high
 
     def __init__(self, corpus_path=None, corpus_str=None):
         self._conn = None

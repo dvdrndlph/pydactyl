@@ -1,3 +1,4 @@
 {
+  "test_d_corpus.py": true,
   "test_hart.py::HartTest::test_hart": true
 }

@@ -126,10 +126,8 @@ class Dactyler(ABC):
     SQUAWK_OUT_LOUD = False
     DELETE_LOG = True
 
-    def __init__(self, hands=Constant.HANDS_RIGHT, chords=False):
+    def __init__(self):
         self._d_corpus = None
-        self._hands = hands
-        self._chords = chords
         timestamp = datetime.now().isoformat()
         self._log_file_path = '/tmp/dactyler_' + self.__class__.__name__ + '_' + timestamp + '.log'
         self._log = open(self._log_file_path, 'a')
@@ -348,3 +346,17 @@ class Dactyler(ABC):
             raise Exception("No scores found.")
 
         return total_scores
+
+
+class TrainedDactyler(Dactyler):
+    def __init__(self):
+        super().__init__()
+
+    @abstractmethod
+    def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None):
+        return
+
+    @abstractmethod
+    def train(self, d_corpus):
+        return
+

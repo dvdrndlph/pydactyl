@@ -35,13 +35,21 @@ class DCorpusTest(unittest.TestCase):
     @staticmethod
     def test_abc_2part_mono():
         d_corpus = DCorpus(corpus_path=BERINGER2_SCALE_CORPUS)
+        lo, hi = d_corpus.pitch_range()
+        assert lo < hi, "Bad DCorpus pitch range"
         score_count = d_corpus.score_count()
         assert score_count == 38, "Bad score count"
         d_score = d_corpus.d_score_by_title("scales_g_minor_melodic")
-        assert d_score is not None, "Bad score_by_title retrieval" 
+        assert d_score is not None, "Bad score_by_title retrieval"
+        lo, hi = d_score.pitch_range()
+        assert lo < hi, "Bad DScore pitch range"
         part_count = d_score.part_count()
         assert part_count == 2, "Bad part count"
         d_part = d_score.combined_d_part()
+        part_lo, part_hi = d_part.pitch_range()
+        assert part_lo < part_hi, "Bad DPart pitch range"
+        assert part_lo == lo, "Bad low pitch found"
+        assert part_hi == hi, "Bad high pitch found"
         assert d_part is not None, "Bad DPart retrieval"
         assert d_part.is_monophonic() is False, "Polyphony not detected"
         d_upper = d_score.upper_d_part()

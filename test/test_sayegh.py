@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 import re
 import unittest
-from Dactyler.Hart import Hart
+from Dactyler.Sayegh import Sayegh
 from DCorpus.DCorpus import DCorpus
-from DCorpus.DAnnotation import DAnnotation
 
 
-class HartTest(unittest.TestCase):
+class SayeghTest(unittest.TestCase):
     ONE_NOTE = """% abcDidactyl v5
 % abcD fingering 1: 1@
 % Authority: Foo Bar (1968)

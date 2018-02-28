@@ -34,7 +34,7 @@
 ####################################################################################
 # set -x
 # MODULES="dactyler d_corpus hart interval"
-MODULES="abcd_header d_corpus hart"
+MODULES="abcd_header d_corpus hart sayegh"
 
 cd ..
 export PYTHONPATH=$(pwd)

@@ -136,7 +136,7 @@ class Hart(Dactyler.Dactyler):
         return costs
 
     def __init__(self, cost_path=None, max_interval_size=MAX_INTERVAL_SIZE):
-        super().__init__(hands=Constant.HANDS_RIGHT, chords=False)
+        super().__init__()
         self._cost_path = Hart.COST_FILE
         if cost_path:
             self._cost_path = cost_path
