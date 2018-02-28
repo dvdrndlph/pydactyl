@@ -30,11 +30,49 @@ from Dactyler import Dactyler, Constant
 
 class Sayegh(Dactyler.TrainedDactyler):
 
-    def __init__(self, cost_path=None, max_interval_size=MAX_INTERVAL_SIZE):
-        super().__init__(hands=Constant.HANDS_RIGHT, chords=False)
+    def __init__(self):
+        super().__init__()
 
-    def train(self, d_corpus):
-        return
+    def train(self, d_corpus, staff="both", annotation_indices=[]):
+        if staff == "both":
+            staves = ["upper", "lower"]
+        elif staff == "upper":
+            staves = ["upper"]
+        elif staff == "lower":
+            staves = ["lower"]
+        else:
+            raise Exception("Bad staff specification")
+
+        lo, hi = d_corpus.pitch_range()
+        score_count = d_corpus.score_count()
+        for i in range(score_count):
+            d_score = d_corpus.d_score_by_index(i)
+            if d_score.is_fully_annotated(indices=annotation_indices):
+                hdr = d_score.abcd_header()
+                annot_index = 0
+                prior_midi = None
+                prior_digit = None
+                for annot in hdr.annotations():
+                    if len(annotation_indices) > 0 and annot_index not in annotation_indices:
+                        continue
+                    annot_index += 1
+                    for stave in staves:
+                        handed_digits = annot.handed_strike_digits(staff=stave)
+                        stave_notes = d_score.orderly_note_stream(staff=stave)
+                        if len(handed_digits) != len(stave_notes):
+                            raise Exception("Strike digit mismatch in {0}: {1} notes and {2} digits".format(
+                                d_score.title(), len(stave_notes), len(handed_digits)))
+                        sf_count = annot.score_fingering_count(staff=stave)
+                        for j in range(sf_count):
+                            current_midi = stave_notes[j].pitch.midi
+                            current_digit = handed_digits[j]
+                            if prior_midi is None:
+                                prior_midi = current_midi
+                                prior_digit = current_digit
+                                continue
+                            print("{0} {1} --> {2} {3}".format(prior_midi, prior_digit, current_midi, current_digit))
+                            prior_midi = current_midi
+                            prior_digit = current_digit
 
     def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None):
         d_scores = self._d_corpus.d_score_list()

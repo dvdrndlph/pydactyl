@@ -23,6 +23,7 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 import re
 import pymysql
+import os
 from abc import abstractmethod
 from music21 import *
 from Dactyler import Constant
@@ -227,7 +228,11 @@ class DScore:
     def lower_d_part(self):
         return self._lower_d_part
 
-    def stream(self):
+    def stream(self, staff="both"):
+        if staff == "upper":
+            return self.upper_stream()
+        elif staff == "lower":
+            return self.lower_stream()
         return self._combined_d_part.stream()
 
     def pitch_range(self):
@@ -238,9 +243,26 @@ class DScore:
             return self._upper_d_part.stream()
         return None
 
+    def orderly_note_stream(self, staff="both"):
+        if staff == "upper":
+            return self.upper_orderly_note_stream()
+        elif staff == "lower":
+            return self.lower_orderly_note_stream()
+        return self._combined_d_part.orderly_note_stream()
+
+    def upper_orderly_note_stream(self):
+        if self._upper_d_part:
+            return self._upper_d_part.orderly_note_stream()
+        return None
+
     def lower_stream(self):
         if self._lower_d_part:
             return self._lower_d_part.stream()
+        return None
+
+    def lower_orderly_note_stream(self):
+        if self._lower_d_part:
+            return self._lower_d_part.orderly_note_stream()
         return None
 
     def part_count(self):
@@ -269,7 +291,7 @@ class DScore:
             note_count = len(combo.orderly_note_stream())
         return note_count
 
-    def is_fully_annotated(self):
+    def is_fully_annotated(self, indices=[]):
         """
         :return: True iff a strike digit is assigned to every note in the score.
         """
@@ -278,10 +300,14 @@ class DScore:
         upper = self.upper_d_part()
         lower = self.lower_d_part()
         combo = self.combined_d_part()
+        annot_index = 0
         if upper:
             upper_note_count = len(upper.orderly_note_stream())
             lower_note_count = len(lower.orderly_note_stream())
             for annot in self._abcd_header.annotations():
+                if indices and annot_index not in indices:
+                    continue
+                annot_index += 1
                 upper_sf_count = annot.score_fingering_count(staff="upper")
                 if upper_sf_count != upper_note_count:
                     return False
@@ -299,41 +325,43 @@ class DScore:
         else:
             note_count = len(combo.orderly_note_stream())
             for annot in self._abcd_header.annotations():
+                if annotation_index is not None and annot_index != annotation_index:
+                    continue
                 sf_count = annot.score_fingering_count(staff="both")
                 if sf_count != note_count:
                     return False
         return True
 
-    def fingering(self, index=0, identifier=None, staff="both"):
+    def abcdf(self, index=0, identifier=None, staff="both"):
         if not self._abcd_header:
             return None
 
         if staff == "both":
             if identifier:
-                return self._abcd_header.fingering(identifier=identifier)
+                return self._abcd_header.abcdf(identifier=identifier)
             else:
-                return self._abcd_header.fingering(index=index)
+                return self._abcd_header.abcdf(index=index)
         elif staff == "upper":
-            return self.upper_fingering(index=index, identifier=identifier)
+            return self.upper_abcdf(index=index, identifier=identifier)
         elif staff == "lower":
-            return self.lower_fingering(index=index, identifier=identifier)
+            return self.lower_abcdf(index=index, identifier=identifier)
 
         return None
 
-    def upper_fingering(self, index=0, identifier=None):
+    def upper_abcdf(self, index=0, identifier=None):
         if self._abcd_header:
             if identifier:
-                return self._abcd_header.upper_fingering(identifier=identifier)
+                return self._abcd_header.upper_abcdf(identifier=identifier)
             else:
-                return self._abcd_header.upper_fingering(index=index)
+                return self._abcd_header.upper_abcdf(index=index)
         return None
 
-    def lower_fingering(self, index=0, identifier=None):
+    def lower_abcdf(self, index=0, identifier=None):
         if self._abcd_header:
             if identifier:
-                return self._abcd_header.lower_fingering(identifier=identifier)
+                return self._abcd_header.lower_abcdf(identifier=identifier)
             else:
-                return self._abcd_header.lower_fingering(index=index)
+                return self._abcd_header.lower_abcdf(index=index)
         return None
 
     def title(self):
@@ -420,7 +448,7 @@ class ABCDHeader:
             return None
         return self._annotations[index]
 
-    def fingering(self, index=0, identifier=None, staff="both"):
+    def abcdf(self, index=0, identifier=None, staff="both"):
         if staff == "both":
             if identifier is not None:
                 annotation = self.annotation_by_id(identifier)
@@ -432,13 +460,13 @@ class ABCDHeader:
                 return None
             return self._annotations[index].abcdf()
         elif staff == "upper":
-            return self.upper_fingering(index=index, identifier=identifier)
+            return self.upper_abcdf(index=index, identifier=identifier)
         elif staff == "lower":
-            return self.lower_fingering(index=index, identifier=identifier)
+            return self.lower_abcdf(index=index, identifier=identifier)
 
         return None
 
-    def upper_fingering(self, index=0, identifier=None):
+    def upper_abcdf(self, index=0, identifier=None):
         if identifier is not None:
             annotation = self.annotation_by_id(identifier)
             if annotation:
@@ -449,7 +477,7 @@ class ABCDHeader:
             return None
         return self._annotations[index].upper_abcdf()
 
-    def lower_fingering(self, index=0, identifier=None):
+    def lower_abcdf(self, index=0, identifier=None):
         if identifier is not None:
             annotation = self.annotation_by_id(identifier)
             if annotation:
@@ -518,6 +546,11 @@ class DCorpus:
         else:
             return Constant.CORPUS_ABC
         # FIXME: Support MIDI, xml, and mxl
+
+    def append_dir(self, corpus_dir):
+        for file_name in os.listdir(corpus_dir):
+            file_path = corpus_dir + "/" + file_name
+            self.append(corpus_path=file_path)
 
     def append(self, corpus_path=None, corpus_str=None):
         if corpus_path:

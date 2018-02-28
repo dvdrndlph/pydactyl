@@ -2,7 +2,8 @@
 import re
 import unittest
 from Dactyler.Sayegh import Sayegh
-from DCorpus.DCorpus import DCorpus
+from DCorpus.DCorpus import DPart, DScore, DCorpus
+import TestConstant
 
 
 class SayeghTest(unittest.TestCase):
@@ -113,6 +114,16 @@ L:1/16
 A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|:
 A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|:
 CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA GFED:|C4|]
+"""
+    @staticmethod
+    def test_training():
+        sayegh = Sayegh()
+        d_corpus = DCorpus()
+        # d_corpus.append_dir(corpus_dir=TestConstant.BERINGER2_ANNOTATED_ARPEGGIO_DIR)
+        # d_corpus.append_dir(corpus_dir=TestConstant.BERINGER2_ANNOTATED_SCALE_DIR)
+        d_corpus.append_dir(corpus_dir=TestConstant.BERINGER2_ANNOTATED_BROKEN_CHORD_DIR)
+        sayegh.train(d_corpus, annotation_indices=[0])
+
 """
     @staticmethod
     def test_hart_edges():
@@ -245,6 +256,7 @@ CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA
         pivot_score = reentry_pivot_evals[0]
         print("{0} > {1}".format(pivot_score, natural_score))
         assert natural_score < pivot_score, "Reentry: Natural >= Pivot"
+"""
 
 if __name__ == "__main__":
     unittest.main()  # run all tests

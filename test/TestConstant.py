@@ -26,6 +26,9 @@ REPO_ROOT = "/Users/dave/tb2"
 CORPORA_DIR = REPO_ROOT + "/didactyl/dd/corpora"
 BERINGER2_DIR = CORPORA_DIR + "/beringer2"
 BERINGER2_ARPEGGIO_CORPUS = BERINGER2_DIR + "/arpeggios.abc"
+BERINGER2_ANNOTATED_ARPEGGIO_DIR = BERINGER2_DIR + "/arpeggios"
+BERINGER2_ANNOTATED_BROKEN_CHORD_DIR = BERINGER2_DIR + "/broken_chords"
+BERINGER2_ANNOTATED_SCALE_DIR = BERINGER2_DIR + "/scales"
 
 WTC_CORPUS_DIR = REPO_ROOT + '/dvdrndlph.github.io/didactyl/wtc'
 

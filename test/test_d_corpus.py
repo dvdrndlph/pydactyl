@@ -114,29 +114,45 @@ class DCorpusTest(unittest.TestCase):
         da_score = da_corpus.d_score_by_title(da_title)
         assert da_title == da_score.title(), "Bad fetch by title"
         annotation = da_score.abcd_header()
-        fingering = annotation.fingering()
+        abcdf = annotation.abcdf()
         finger_re = re.compile('[12345]+')
         at_re = re.compile('@')
-        assert finger_re.search(fingering), "Bad fingering"
-        assert at_re.search(fingering), "Bad fingering"
-        upper_fingering = annotation.upper_fingering()
-        assert finger_re.search(upper_fingering), "Bad upper fingering"
-        assert not at_re.search(upper_fingering), "Bad upper fingering"
-        lower_fingering = annotation.lower_fingering()
-        assert finger_re.search(lower_fingering), "Bad upper fingering"
-        assert not at_re.search(lower_fingering), "Bad upper fingering"
-        assert lower_fingering != upper_fingering, "Bad split of fingerings"
-        fingering_by_index = da_score.fingering(index=0)
-        fingering_by_id = da_score.fingering(identifier=1)
-        assert fingering_by_index == fingering_by_id, "Bad DSCore::fingering"
-        upper_fingering_by_index = da_score.upper_fingering(index=0)
-        upper_fingering_by_id = da_score.upper_fingering(identifier=1)
-        assert upper_fingering_by_index == upper_fingering_by_id, "Bad DSCore::upper_fingering"
-        lower_fingering_by_index = da_score.lower_fingering(index=0)
-        lower_fingering_by_id = da_score.lower_fingering(identifier=1)
-        assert lower_fingering_by_index == lower_fingering_by_id, "Bad DSCore::lower_fingering"
-        # ABCDFAnnotation.ast_for_abcdf(lower_fingering_by_id)
-        # ABCDFAnnotation.ast_for_abcdf(fingering_by_id)
+        assert finger_re.search(abcdf), "Bad abcdf"
+        assert at_re.search(abcdf), "Bad abcdf"
+        upper_abcdf = annotation.upper_abcdf()
+        assert finger_re.search(upper_abcdf), "Bad upper abcdf"
+        assert not at_re.search(upper_abcdf), "Bad upper abcdf"
+        lower_abcdf = annotation.lower_abcdf()
+        assert finger_re.search(lower_abcdf), "Bad upper abcdf"
+        assert not at_re.search(lower_abcdf), "Bad upper abcdf"
+        assert lower_abcdf != upper_abcdf, "Bad split of abcdf"
+        abcdf_by_index = da_score.abcdf(index=0)
+        abcdf_by_id = da_score.abcdf(identifier=1)
+        assert abcdf_by_index == abcdf_by_id, "Bad DSCore::abcdf"
+        upper_abcdf_by_index = da_score.upper_abcdf(index=0)
+        upper_abcdf_by_id = da_score.upper_abcdf(identifier=1)
+        assert upper_abcdf_by_index == upper_abcdf_by_id, "Bad DSCore::upper_abcdf"
+        lower_abcdf_by_index = da_score.lower_abcdf(index=0)
+        lower_abcdf_by_id = da_score.lower_abcdf(identifier=1)
+        assert lower_abcdf_by_index == lower_abcdf_by_id, "Bad DSCore::lower_abcdf"
+        # ABCDFAnnotation.ast_for_abcdf(lower_abcdf_by_id)
+        # ABCDFAnnotation.ast_for_abcdf(abcdf_by_id)
+
+    @staticmethod
+    def test_append_dir():
+        d_corpus = DCorpus()
+        d_corpus.append_dir(corpus_dir=TestConstant.BERINGER2_ANNOTATED_ARPEGGIO_DIR)
+        # d_corpus.append_dir(corpus_dir=TestConstant.BERINGER2_ANNOTATED_SCALE_DIR)
+        d_corpus.append_dir(corpus_dir=TestConstant.BERINGER2_ANNOTATED_BROKEN_CHORD_DIR)
+        score_count = d_corpus.score_count()
+        print(score_count)
+        # assert score_count == 48, "Bad score count"
+        assert score_count > 48, "Bad score count"
+        for i in range(score_count):
+            d_score = d_corpus.d_score_by_index(i)
+            assert d_score.title() is not None, "Missing title at {0}".format(i)
+            print(d_score.title())
+            assert d_score.is_fully_annotated(annotation_index=0), "Missing annotation 1 in {0}".format(d_score.title())
 
 
 if __name__ == "__main__":

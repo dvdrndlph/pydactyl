@@ -140,6 +140,36 @@ class DAnnotation:
         digit_str = "".join(digits)
         return digit_str
 
+    def handed_strike_digits(self, staff="upper"):
+        """
+        :return: Array of string, each of which is either "x" or is
+                 composed of a hand ("<" or ">") identifief and a digit (1-5).
+
+                 Returns None if any fingerings for the other hand
+                 are detected.
+        """
+        if staff not in ("upper", "lower"):
+            raise Exception("Invalid input: staff must be 'upper' or 'lower'.")
+
+        ast = self.parse()
+        if staff == "upper":
+            lines = ast.upper
+            hand = ">"
+        else:
+            lines = ast.lower
+            hand = "<"
+
+        handed_digits = []
+        for line in lines:
+            for score_fingering in line:
+                strike = score_fingering.pf.fingering.strike
+                if strike.hand and strike.hand != hand:
+                    hand = strike.hand
+                digit = strike.digit
+                handed_digit = hand + str(digit)
+                handed_digits.append(handed_digit)
+        return handed_digits
+
     def __init__(self, abcdf=None):
         self._authority = None
         self._authority_year = None

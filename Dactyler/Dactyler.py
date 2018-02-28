@@ -357,6 +357,6 @@ class TrainedDactyler(Dactyler):
         return
 
     @abstractmethod
-    def train(self, d_corpus):
+    def train(self, d_corpus, staff="both", annotation_indices=[]):
         return
 
