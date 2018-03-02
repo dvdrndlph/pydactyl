@@ -22,6 +22,7 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 from abc import ABC, abstractmethod
+import pickle
 from datetime import datetime
 import music21
 from Dactyler import Constant
@@ -351,12 +352,38 @@ class Dactyler(ABC):
 class TrainedDactyler(Dactyler):
     def __init__(self):
         super().__init__()
+        self._training = {}
 
     @abstractmethod
     def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None):
         return
 
     @abstractmethod
-    def train(self, d_corpus, staff="both", annotation_indices=[]):
+    def train(self, d_corpus, staff="both", segmenter=None, annotation_indices=[]):
         return
+
+    def retain(self, pickle_path=None, to_db=False):
+        if pickle_path:
+            with open(pickle_path, 'wb') as pickle_file:
+                pickle.dump(self._training, pickle_file, pickle.HIGHEST_PROTOCOL)
+        elif to_db:
+            raise Exception("Retaining pickled file to database not yet supported.")
+        else:
+            raise Exception("No retention destination specified.")
+
+    def recall(self, pickle_path=None, pickle_db_id=None):
+        if pickle_path:
+            with open(pickle_path, 'rb') as pickle_file:
+                self._training = pickle.load(pickle_file)
+        elif pickle_db_id:
+            raise Exception("Recalling pickled training from database not yet supported.")
+        else:
+            raise Exception("No source specified from which to recall training.")
+
+    def training(self):
+        return self._training
+
+    def demonstrate(self):
+        for k in self._training:
+            print(k, ': ', self._training[k])
 

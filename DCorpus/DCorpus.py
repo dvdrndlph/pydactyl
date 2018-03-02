@@ -64,6 +64,11 @@ class DPart:
                 return False
         return True
 
+    def orderly_note_stream_segments(self):
+        if not self._segmenter:
+            return [self.orderly_note_stream()]
+        raise Exception("Automatic segmentation not yet implemented.")
+
     def orderly_note_stream(self):
         """Return part as stream of notes with no notes starting at the same
            offset. Chords turned into a sequence of notes with starting points
@@ -162,17 +167,17 @@ class DScore:
             return int(voice_id)
         return None
 
-    def __init__(self, music21_stream=None, abc_handle=None, voice_map=None, abcd_header=None):
+    def __init__(self, music21_stream=None, segmenter=None, abc_handle=None, voice_map=None, abcd_header=None):
         self._abcd_header = abcd_header
         if music21_stream:
-            self._combined_d_part = DPart(music21_stream=music21_stream)
+            self._combined_d_part = DPart(music21_stream=music21_stream, segmenter=segmenter)
             self._score = music21_stream
             meta = self._score[0]
             self._title = meta.title
         elif abc_handle:
             self._title = abc_handle.getTitle()
             music21_stream = abcFormat.translate.abcToStreamScore(abc_handle)
-            self._combined_d_part = DPart(music21_stream=music21_stream)
+            self._combined_d_part = DPart(music21_stream=music21_stream, segmenter=segmenter)
 
             self._lower_d_part = None
             self._upper_d_part = None
@@ -204,9 +209,9 @@ class DScore:
                         lower_ah = lower_ah + voice
 
                 upper_stream = abcFormat.translate.abcToStreamScore(upper_ah)
-                self._upper_d_part = DPart(music21_stream=upper_stream)
+                self._upper_d_part = DPart(music21_stream=upper_stream, segmenter=segmenter)
                 lower_stream = abcFormat.translate.abcToStreamScore(lower_ah)
-                self._lower_d_part = DPart(music21_stream=lower_stream)
+                self._lower_d_part = DPart(music21_stream=lower_stream, segmenter=segmenter)
 
     def is_monophonic(self):
         return self._combined_d_part.is_monophonic()
@@ -241,6 +246,23 @@ class DScore:
     def upper_stream(self):
         if self._upper_d_part:
             return self._upper_d_part.stream()
+        return None
+
+    def orderly_note_stream_segments(self, staff="both"):
+        if staff == "upper":
+            return self.upper_orderly_note_stream_segments()
+        elif staff == "lower":
+            return self.lower_orderly_note_stream_segments()
+        return self._combined_d_part.orderly_note_stream_segments()
+
+    def upper_orderly_note_stream_segments(self):
+        if self._upper_d_part:
+            return self._upper_d_part.orderly_note_stream_segments()
+        return None
+
+    def lower_orderly_note_stream_segments(self):
+        if self._lower_d_part:
+            return self._lower_d_part.orderly_note_stream_segments()
         return None
 
     def orderly_note_stream(self, staff="both"):

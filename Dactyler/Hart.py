@@ -21,6 +21,14 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
+""" Implements and enhances method described in the following paper:
+
+        M. Hart, R. Bosch, and E. Tsai, “Finding Optimal Piano Fingerings,”
+            UMAP J., vol. 21, no. 2, pp. 167–177, 2000.
+            
+    We enhance the method to handle repeated pitches, two staffs,
+    and segregated two-hand fingering.
+"""
 
 import numpy
 import re
