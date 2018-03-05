@@ -57,10 +57,10 @@ This is another comment line."""
         hdr = ABCDHeader(abcd_str=ABCDHeaderTest.MULTI_ANNOTATION_ABCD)
         annot_count = hdr.annotation_count()
         assert annot_count == 3, "Bad annotation count"
-        f1_upper = hdr.upper_fingering(identifier="1")
-        assert f1_upper == ABCDHeaderTest.FINGERING_1_UPPER, "Bad upper fingering for annotation 1 by id"
-        f1_upper = hdr.upper_fingering(index=0)
-        assert f1_upper == ABCDHeaderTest.FINGERING_1_UPPER, "Bad upper fingering for annotation 1 by index"
+        f1_upper = hdr.upper_abcdf(identifier="1")
+        assert f1_upper == ABCDHeaderTest.FINGERING_1_UPPER, "Bad upper abcdf for annotation 1 by id"
+        f1_upper = hdr.upper_abcdf(index=0)
+        assert f1_upper == ABCDHeaderTest.FINGERING_1_UPPER, "Bad upper abcdf for annotation 1 by index"
         f1_annot = hdr.annotation_by_id(identifier=1)
         assert f1_annot.comments() == ABCDHeaderTest.FINGERING_1_COMMENTS, "Bad comments"
         f1_trans_date = f1_annot.transcription_date()
@@ -71,8 +71,8 @@ This is another comment line."""
         f2_annot = hdr.annotation(index=1)
         f2_authority_year = f2_annot.authority_year()
         assert f2_authority_year == ABCDHeaderTest.FINGERING_2_AUTHORITY_YEAR, "Bad authority year"
-        assert hdr.lower_fingering(identifier=3) == ABCDHeaderTest.FINGERING_3_LOWER, "Bad lower fingering by id"
-        assert hdr.lower_fingering(index=2) == ABCDHeaderTest.FINGERING_3_LOWER, "Bad lower fingering by index"
+        assert hdr.lower_abcdf(identifier=3) == ABCDHeaderTest.FINGERING_3_LOWER, "Bad lower abcdf by id"
+        assert hdr.lower_abcdf(index=2) == ABCDHeaderTest.FINGERING_3_LOWER, "Bad lower abcdf by index"
         f3_annot = hdr.annotation(identifier=3)
         assert f3_annot.comments() == ABCDHeaderTest.FINGERING_3_COMMENTS, "Bad comments"
 
@@ -84,6 +84,7 @@ This is another comment line."""
         f3_annot = hdr.annotation(identifier=3)
         f3_ast = f3_annot.parse()
         assert f3_ast.upper, "Failed parse"
+        f3_ast._closed = False
         parsed_fingering_count = f3_annot.score_fingering_count(staff="lower")
         assert parsed_fingering_count == fingering_count, "Bad lower fingering count"
         segregated_digits = f3_annot.segregated_strike_digits(staff="lower")

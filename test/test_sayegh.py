@@ -118,14 +118,22 @@ CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA
     @staticmethod
     def test_training():
         sayegh = Sayegh()
-        sayegh.recall(pickle_path="/tmp/sayegh.pickle")
-        sayegh.demonstrate()
+        # sayegh.demonstrate()
         # d_corpus = DCorpus()
         # d_corpus.append_dir(corpus_dir=TestConstant.BERINGER2_ANNOTATED_ARPEGGIO_DIR)
         # d_corpus.append_dir(corpus_dir=TestConstant.BERINGER2_ANNOTATED_SCALE_DIR)
         # d_corpus.append_dir(corpus_dir=TestConstant.BERINGER2_ANNOTATED_BROKEN_CHORD_DIR)
         # sayegh.train(d_corpus, annotation_indices=[0])
         # sayegh.retain(pickle_path="/tmp/sayegh.pickle")
+        sayegh.recall(pickle_path="/tmp/sayegh.pickle")
+        d_corpus = DCorpus(corpus_str=SayeghTest.A_MAJ_SCALE)
+        sayegh.load_corpus(d_corpus=d_corpus)
+        upper_advice = sayegh.advise(staff="upper")
+        print(upper_advice)
+        lower_advice = sayegh.advise(staff="lower")
+        print(lower_advice)
+        both_advice = sayegh.advise(staff="both")
+        print(both_advice)
 
 """
     @staticmethod

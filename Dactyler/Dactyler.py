@@ -138,6 +138,20 @@ class Dactyler(ABC):
         if Dactyler.DELETE_LOG:
             os.remove(self._log_file_path)
 
+    @staticmethod
+    def combine_abcdf_segments(segments):
+        abcdf = ''
+        current_hand = None
+        for seg in segments:
+            for ch in seg:
+                if ch == "<" or ch == ">":
+                    if ch != current_hand:
+                        abcdf += ch
+                        current_hand = ch
+                else:
+                    abcdf += ch
+        return abcdf
+
     def squawk(self, msg):
         self._log.write(str(msg) + "\n")
         if Dactyler.SQUAWK_OUT_LOUD:
@@ -172,7 +186,7 @@ class Dactyler(ABC):
         return advice
 
     @abstractmethod
-    def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None):
+    def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None, top=None):
         return
 
     def load_corpus(self, d_corpus=None, path=None):
@@ -355,7 +369,7 @@ class TrainedDactyler(Dactyler):
         self._training = {}
 
     @abstractmethod
-    def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None):
+    def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None, top=None):
         return
 
     @abstractmethod
