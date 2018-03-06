@@ -23,6 +23,7 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 from abc import ABC, abstractmethod
 import pickle
+import re
 from datetime import datetime
 import music21
 from Dactyler import Constant
@@ -151,6 +152,21 @@ class Dactyler(ABC):
                 else:
                     abcdf += ch
         return abcdf
+
+    @staticmethod
+    def hand_digit(digit, staff):
+        if digit is None:
+            return None
+
+        handed_re = re.compile('^[<>]\d$')
+        if handed_re.match(str(digit)):
+            return digit
+
+        staff_prefix = ">"
+        if staff == "lower":
+            staff_prefix = "<"
+        handed_digit = staff_prefix + str(digit)
+        return handed_digit
 
     def squawk(self, msg):
         self._log.write(str(msg) + "\n")

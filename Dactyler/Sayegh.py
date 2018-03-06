@@ -31,6 +31,7 @@ __author__ = 'David Randolph'
 """
 
 import networkx as nx
+import re
 import copy
 from Dactyler import Dactyler, Constant
 
@@ -139,7 +140,8 @@ class Sayegh(Dactyler.TrainedDactyler):
                         self._learn_from_example(transition_counts=transition_counts,
                                                  fingered_counts=fingered_counts)
 
-    def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None):
+    def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None, top=None):
+        print("STAFF: {0} FIRST: {1} LAST: {2}".format(staff, first_digit, last_digit))
         d_scores = self._d_corpus.d_score_list()
         if score_index >= len(d_scores):
             raise Exception("Score index out of range")
@@ -156,6 +158,11 @@ class Sayegh(Dactyler.TrainedDactyler):
         if staff != "upper" and staff != "lower":
             raise Exception("Segregated advice is only dispensed one staff at a time.")
 
+        handed_first_digit = Dactyler.Dactyler.hand_digit(digit=first_digit, staff=staff)
+        print("First digit: {0} Handed first digit: {1}".format(first_digit, handed_first_digit))
+        handed_last_digit = Dactyler.Dactyler.hand_digit(digit=last_digit, staff=staff)
+        print("Last digit: {0} Handed last digit: {1}".format(last_digit, handed_last_digit))
+
         if d_score.part_count() == 1:
             d_part = d_score.combined_d_part()
         else:
@@ -164,43 +171,50 @@ class Sayegh(Dactyler.TrainedDactyler):
             # left hand is dedicated to the lower staff.
             d_part = d_score.d_part(staff=staff)
 
-        segments = d_part.orderly_note_stream_segments()
+        segments = d_part.orderly_note_stream_segments(offset=offset)
         advice_segments = []
         segment_index = 0
+        last_segment_index = len(segments) - 1
         for segment in segments:
             if len(segment) == 1:
-                seg_first_digit = None
-                seg_last_digit = None
-                if segment_index == 0:
-                    seg_first_digit = first_digit
-                if segment_index == len(segments) - 1:
-                    seg_last_digit = last_digit
-                advice = Dactyler.Dactyler.one_note_advice(segments[0], staff=staff,
-                                                           first_digit=seg_first_digit,
-                                                           last_digit=seg_last_digit)
+                d_note = Dactyler.DNote(segment[0])
+                advice = Dactyler.Dactyler.one_note_advice(d_note, staff=staff,
+                                                           first_digit=handed_first_digit,
+                                                           last_digit=handed_last_digit)
                 advice_segments.append(advice)
                 continue
 
             g = nx.MultiDiGraph()
-            g.add_node(0, midi=None, handed_digit=None)
-            prior_slice_node_data = dict()
-            prior_slice_node_data[0] = None
+            if handed_first_digit:
+                g.add_node(0, midi=segment[0].pitch.midi, handed_digit=handed_first_digit)
+            else:
+                g.add_node(0, midi=None, handed_digit=None)
+            prior_slice_node_ids = list()
+            prior_slice_node_ids.append(0)
+            last_note_in_segment_index = len(segment) - 1
+            note_in_segment_index = 0
             node_id = 1
             for note in segment:
                 path_exists = False
-                slice_node_data = dict()
+                slice_node_ids = list()
                 for hand in ('>', '<'):
                     for digit in range(1, 6):
                         handed_digit = hand + str(digit)
+                        if segment_index == 0 and note_in_segment_index == 0 and handed_first_digit:
+                            continue
+                        if segment_index == last_segment_index and \
+                           note_in_segment_index == last_note_in_segment_index and handed_last_digit:
+                            continue
                         g.add_node(node_id, midi=note.pitch.midi, handed_digit=handed_digit)
-                        slice_node_data[node_id] = {"midi": note.pitch.midi, "handed_digit": handed_digit}
-                        if 0 in prior_slice_node_data:
+                        slice_node_ids.append(node_id)
+                        if 0 in prior_slice_node_ids:
                             g.add_edge(0, node_id, weight=1)
                             path_exists = True
                         else:
-                            for prior_node_id in prior_slice_node_data:
-                                prior_midi = prior_slice_node_data[prior_node_id]["midi"]
-                                prior_hd = prior_slice_node_data[prior_node_id]["handed_digit"]
+                            for prior_node_id in prior_slice_node_ids:
+                                prior_node = g.nodes[prior_node_id]
+                                prior_midi = prior_node["midi"]
+                                prior_hd = prior_node["handed_digit"]
                                 weight_key = (prior_midi, prior_hd, note.pitch.midi, handed_digit)
                                 # We will be searching for the shortest path over DAG, so the
                                 # weights of favorable steps must be made small (negative).
@@ -210,14 +224,21 @@ class Sayegh(Dactyler.TrainedDactyler):
                                     g.add_edge(prior_node_id, node_id, weight=weight)
                                     path_exists = True
                         node_id += 1
-                if not path_exists:
+                if len(segment) > 2 and not path_exists:
                     raise Exception("Model insufficiently trained to find solution. Train more or try smoothing.")
-                prior_slice_node_data = copy.copy(slice_node_data)
-                segment_index += 1
-            g.add_node(node_id, midi=None, handed_digit=None)
-            for prior_node_id in prior_slice_node_data:
+                if len(slice_node_ids) > 0:
+                    prior_slice_node_ids = copy.copy(slice_node_ids)
+                note_in_segment_index += 1
+
+            if segment_index == last_segment_index and handed_last_digit:
+                g.add_node(node_id, midi=segment[last_note_in_segment_index].pitch.midi, handed_digit=handed_last_digit)
+            else:
+                g.add_node(node_id, midi=None, handed_digit=None)
+            for prior_node_id in prior_slice_node_ids:
                 g.add_edge(prior_node_id, node_id, weight=1)
 
+            if len(segment) == 2:
+                print(g.edges())
             path = nx.shortest_path(g, source=0, target=node_id, weight="weight")
             segment_abcdf = ''
             for node_id in path:
@@ -225,6 +246,7 @@ class Sayegh(Dactyler.TrainedDactyler):
                 if node["handed_digit"]:
                     segment_abcdf += node["handed_digit"]
             advice_segments.append(segment_abcdf)
+            segment_index += 1
 
         abcdf = Dactyler.Dactyler.combine_abcdf_segments(advice_segments)
         return abcdf

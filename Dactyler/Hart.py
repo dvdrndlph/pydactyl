@@ -176,11 +176,11 @@ class Hart(Dactyler.Dactyler):
             # left hand is dedicated to the lower staff.
             d_part = d_score.d_part(staff=staff)
 
-        m21_stream = d_part.orderly_note_stream()
+        m21_stream = d_part.orderly_note_stream(offset=offset)
 
         opt_cost = Hart.BIG_NUM
         note_list = Dactyler.DNote.note_list(m21_stream)
-        note_list[0:offset] = []
+        # note_list[0:offset] = []
         for knot in note_list:
             print("{0} ".format(knot.midi()), end="")
         print("")

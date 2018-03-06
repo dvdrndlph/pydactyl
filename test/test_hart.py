@@ -186,7 +186,7 @@ CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA
         clean_combo_advice = re.sub('[><&]', '',  combo_advice)
         # print("TEST: " + clean_combo_advice)
         d_score = d_corpus.d_score_by_index(index=0)
-        gold_fingering = d_score.fingering(index=0)
+        gold_fingering = d_score.abcdf(index=0)
         clean_gold_fingering = re.sub('[><&]', '',  gold_fingering)
         # print("GOLD: " + clean_gold_fingering)
 

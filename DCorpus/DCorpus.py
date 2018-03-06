@@ -64,12 +64,12 @@ class DPart:
                 return False
         return True
 
-    def orderly_note_stream_segments(self):
+    def orderly_note_stream_segments(self, offset=0):
         if not self._segmenter:
-            return [self.orderly_note_stream()]
+            return [self.orderly_note_stream(offset=offset)]
         raise Exception("Automatic segmentation not yet implemented.")
 
-    def orderly_note_stream(self):
+    def orderly_note_stream(self, offset=0):
         """Return part as stream of notes with no notes starting at the same
            offset. Chords turned into a sequence of notes with starting points
            separated by the shortest duration (a 2048th note) ordered from
@@ -78,8 +78,8 @@ class DPart:
            The goal here is to provide an orderly sequence of notes that can be
            processed by Dactylers that only support monophonic streams. They can
            ignore the stacking of notes and at least take a stab at more complex
-           scores. We also want to approximate note durations in caase this information
-           is useful for some models.
+           scores (i.e., ones with chords). We also want to approximate note durations
+           in case this information is useful for some models.
         """
         short_dur = duration.Duration()
         short_dur.type = '2048th'
@@ -99,22 +99,18 @@ class DPart:
         for old_note in notes:
             new_note_stream.append(old_note)
 
-        notes = self._stream.flat.getElementsByClass(note.Note)
-        last_offset = 0
-        for i in range(len(notes)):
-            # print("{0}: {1}".format(str(notes[i].offset), str(notes[i].pitch)))
-            start = notes[i].offset
-            notes_at_offset = self._stream.flat.getElementsByOffset(offsetStart=start)
-            note_index = 0
-            for new_note in notes_at_offset:
-                new_offset = start + note_index * short_dur.quarterLength
-                if new_offset <= last_offset:
-                    new_offset = last_offset + short_dur.quarterLength
-                new_note.offset = new_offset
-                last_offset = new_offset
-                note_index += 1
+        if not offset:
+            return new_note_stream
 
-        return new_note_stream
+        offset_note_stream = stream.Score()
+        index = 0
+        for knot in new_note_stream:
+            if index < offset:
+                index += 1
+                continue
+            offset_note_stream.append(knot)
+
+        return offset_note_stream
 
     def pitch_range(self):
         note_stream = self.orderly_note_stream()
