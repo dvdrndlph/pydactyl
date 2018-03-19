@@ -33,52 +33,66 @@ __author__ = 'David Randolph'
 import networkx as nx
 import re
 import copy
-from Dactyler import Dactyler, Constant
+from Dactyler import Dactyler as D
 
 
-class Sayegh(Dactyler.TrainedDactyler):
+class Sayegh(D.TrainedDactyler):
 
     def __init__(self, smoother=None):
         super().__init__()
-        self._training = {} # W' in the Sayegh paper.
+        self._training = dict()  # W' in the Sayegh paper.
         self._smoother = smoother
 
-    def _learn_from_example(self, transition_counts, fingered_counts):
-        for (midi_1, digit_1, midi_2, digit_2) in fingered_counts:
-            fingered_count = fingered_counts[(midi_1, digit_1, midi_2, digit_2)]
+    @staticmethod
+    def _learn_from_example(staff, transition_counts, fingered_counts, training):
+        for (midi_1, midi_2, digit_1, digit_2) in fingered_counts:
+            fingered_count = fingered_counts[(midi_1, midi_2, digit_1, digit_2)]
             transition_count = transition_counts[(midi_1, midi_2)]
-            self._training[(midi_1, digit_1, midi_2, digit_2)] += fingered_count / transition_count;
+            training[(midi_1, midi_2, digit_1, digit_2)] += fingered_count / transition_count;
 
-    def smoother(self, method=None):
-        if method is None:
-            return self._smoother
-        else:
-            self._smoother = method
+    def _paths(self, staff):
+        path_exists = dict()
+        for (from_midi, to_midi, from_finger, to_finger) in self._training[staff]:
+            weight = self._training[staff][(from_midi, to_midi, from_finger, to_finger)]
+            if weight > 0:
+                path_exists[(from_midi, to_midi)] = True
+        return path_exists
 
     def smooth(self):
-        if self._smoother:
-            raise Exception("Smoothing not yet available.")
+        """
+            For "uniform" smoothing, we "smooth" by finding all note transitions which are not
+            represented in the training data and giving all fingering transitions a uniform
+            non-zero weight.
+        """
+        for staff in ('upper', 'lower'):
+            existing_paths = self._paths(staff=staff)
+            if self._smoother in "uniform":
+                for (from_midi, to_midi, from_finger, to_finger) in self._training[staff]:
+                    if (from_midi, to_midi) in existing_paths:
+                        continue
+                self._training[staff][(from_midi, to_midi, from_finger, to_finger)] = 0.0001
 
-    def train(self, d_corpus, staff="both", segmenter=None, annotation_indices=[]):
+    def train(self, d_corpus, staff="both", segregate=True, segmenter=None, annotation_indices=[]):
+        if not segregate:
+            raise Exception("Desegregated (integrated) fingering not supported.")
+
         if staff == "both":
-            staves = ["upper", "lower"]
-        elif staff == "upper":
-            staves = ["upper"]
-        elif staff == "lower":
-            staves = ["lower"]
-        else:
-            raise Exception("Bad staff specification")
+            self.train(d_corpus, staff="upper", segmenter=segmenter, annotation_indices=annotation_indices)
+            self.train(d_corpus, staff="lower", segmenter=segmenter, annotation_indices=annotation_indices)
+            return
 
-        lo, hi = d_corpus.pitch_range()
+        training = dict()
+        lo, hi = d_corpus.pitch_range(staff=staff)
+        hand = ">"
+        if staff == "lower":
+            hand = "<"
         for from_midi in range(lo, hi + 1):
-            for from_hand in ('>', '<'):
-                for from_digit in range(1, 6):
-                    from_finger = from_hand + str(from_digit)
-                    for to_midi in range(lo, hi + 1):
-                        for to_hand in ('>', '<'):
-                            for to_digit in range(1, 6):
-                                to_finger = to_hand + str(to_digit)
-                                self._training[(from_midi, from_finger, to_midi, to_finger)] = 0
+            for from_digit in range(1, 6):
+                from_finger = hand + str(from_digit)
+                for to_midi in range(lo, hi + 1):
+                    for to_digit in range(1, 6):
+                        to_finger = hand + str(to_digit)
+                        training[(from_midi, to_midi, from_finger, to_finger)] = 0
 
         score_count = d_corpus.score_count()
         for i in range(score_count):
@@ -92,59 +106,63 @@ class Sayegh(Dactyler.TrainedDactyler):
                         continue
                     annot_index += 1
 
-                    for stave in staves:
-                        print("Staff {0}".format(stave))
-                        prior_midi = None
-                        prior_digit = None
-                        transition_counts = {}
-                        fingered_counts = {}
-                        handed_digits = annot.handed_strike_digits(staff=stave)
-                        stave_notes = d_score.orderly_note_stream(staff=stave)
-                        stave_segments = d_score.orderly_note_stream_segments(staff=stave)
-                        if len(handed_digits) != len(stave_notes):
-                            raise Exception("Strike digit mismatch in {0}: {1} notes and {2} digits".format(
-                                d_score.title(), len(stave_notes), len(handed_digits)))
+                    prior_midi = None
+                    prior_digit = None
+                    transition_counts = {}
+                    fingered_counts = {}
+                    handed_digits = annot.handed_strike_digits(staff=staff)
+                    stave_notes = d_score.orderly_note_stream(staff=staff)
+                    stave_segments = d_score.orderly_note_stream_segments(staff=staff)
+                    if len(handed_digits) != len(stave_notes):
+                        raise Exception("Strike digit mismatch in {0}: {1} notes and {2} digits".format(
+                            d_score.title(), len(stave_notes), len(handed_digits)))
 
-                        sf_count = annot.score_fingering_count(staff=stave)
-                        segment_index = 0
-                        note_index = 0
-                        segment = stave_segments[segment_index]
-                        for j in range(sf_count):
-                            if note_index == len(segment):
-                                self._learn_from_example(transition_counts=transition_counts,
-                                                         fingered_counts=fingered_counts)
-                                segment_index += 1
-                                note_index = 0
-                            current_note = stave_segments[segment_index][note_index]
-                            current_midi = current_note.pitch.midi
-                            current_digit = handed_digits[j]
-                            if prior_midi is None:
-                                prior_midi = current_midi
-                                prior_digit = current_digit
-                                note_index += 1
-                                continue
-                            print("{0} {1} --> {2} {3}".format(prior_midi, prior_digit, current_midi, current_digit))
-                            if (prior_midi, current_midi) in transition_counts:
-                                transition_counts[(prior_midi, current_midi)] += 1
-                            else:
-                                transition_counts[(prior_midi, current_midi)] = 1
-                            if (prior_midi, prior_digit, current_midi, current_digit) in fingered_counts:
-                                fingered_counts[(prior_midi, prior_digit, current_midi, current_digit)] += 1
-                            else:
-                                fingered_counts[(prior_midi, prior_digit, current_midi, current_digit)] = 1
-
+                    sf_count = annot.score_fingering_count(staff=staff)
+                    segment_index = 0
+                    note_index = 0
+                    segment = stave_segments[segment_index]
+                    for j in range(sf_count):
+                        if note_index == len(segment):
+                            Sayegh._learn_from_example(staff=staff,
+                                                       transition_counts=transition_counts,
+                                                       fingered_counts=fingered_counts,
+                                                       training=training)
+                            segment_index += 1
+                            note_index = 0
+                        current_note = stave_segments[segment_index][note_index]
+                        current_midi = current_note.pitch.midi
+                        current_digit = handed_digits[j]
+                        if prior_midi is None:
                             prior_midi = current_midi
                             prior_digit = current_digit
                             note_index += 1
+                            continue
+                        print("{0} {1} --> {2} {3}".format(prior_midi, prior_digit, current_midi, current_digit))
+                        if (prior_midi, current_midi) in transition_counts:
+                            transition_counts[(prior_midi, current_midi)] += 1
+                        else:
+                            transition_counts[(prior_midi, current_midi)] = 1
+                        if (prior_midi, prior_digit, current_midi, current_digit) in fingered_counts:
+                            fingered_counts[(prior_midi, current_midi, prior_digit, current_digit)] += 1
+                        else:
+                            fingered_counts[(prior_midi, current_midi, prior_digit, current_digit)] = 1
 
-                        self._learn_from_example(transition_counts=transition_counts,
-                                                 fingered_counts=fingered_counts)
+                        prior_midi = current_midi
+                        prior_digit = current_digit
+                        note_index += 1
+
+                    Sayegh._learn_from_example(staff=staff,
+                                               transition_counts=transition_counts,
+                                               fingered_counts=fingered_counts,
+                                               training=training)
+
 
     def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None, top=None):
         print("STAFF: {0} FIRST: {1} LAST: {2}".format(staff, first_digit, last_digit))
         d_scores = self._d_corpus.d_score_list()
         if score_index >= len(d_scores):
             raise Exception("Score index out of range")
+
 
         d_score = d_scores[score_index]
         if staff == "both":
@@ -158,9 +176,9 @@ class Sayegh(Dactyler.TrainedDactyler):
         if staff != "upper" and staff != "lower":
             raise Exception("Segregated advice is only dispensed one staff at a time.")
 
-        handed_first_digit = Dactyler.Dactyler.hand_digit(digit=first_digit, staff=staff)
+        handed_first_digit = D.Dactyler.hand_digit(digit=first_digit, staff=staff)
         print("First digit: {0} Handed first digit: {1}".format(first_digit, handed_first_digit))
-        handed_last_digit = Dactyler.Dactyler.hand_digit(digit=last_digit, staff=staff)
+        handed_last_digit = D.Dactyler.hand_digit(digit=last_digit, staff=staff)
         print("Last digit: {0} Handed last digit: {1}".format(last_digit, handed_last_digit))
 
         if d_score.part_count() == 1:
@@ -171,74 +189,74 @@ class Sayegh(Dactyler.TrainedDactyler):
             # left hand is dedicated to the lower staff.
             d_part = d_score.d_part(staff=staff)
 
+        lo, hi = d_part.pitch_range()
+        print("Pitches {0} to {1}".format(lo, hi))
+
+        hand = ">"
+        if staff == "lower":
+            hand = "<"
+
         segments = d_part.orderly_note_stream_segments(offset=offset)
         advice_segments = []
         segment_index = 0
         last_segment_index = len(segments) - 1
         for segment in segments:
             if len(segment) == 1:
-                d_note = Dactyler.DNote(segment[0])
-                advice = Dactyler.Dactyler.one_note_advice(d_note, staff=staff,
-                                                           first_digit=handed_first_digit,
-                                                           last_digit=handed_last_digit)
+                d_note = D.DNote(segment[0])
+                advice = D.Dactyler.one_note_advice(d_note, staff=staff,
+                                                    first_digit=handed_first_digit,
+                                                    last_digit=handed_last_digit)
                 advice_segments.append(advice)
                 continue
 
             g = nx.MultiDiGraph()
-            if handed_first_digit:
-                g.add_node(0, midi=segment[0].pitch.midi, handed_digit=handed_first_digit)
-            else:
-                g.add_node(0, midi=None, handed_digit=None)
+            g.add_node(0, midi=None, handed_digit=None)
             prior_slice_node_ids = list()
             prior_slice_node_ids.append(0)
             last_note_in_segment_index = len(segment) - 1
             note_in_segment_index = 0
             node_id = 1
+            on_last_prefingered_note = False
             for note in segment:
-                path_exists = False
+                on_first_prefingered_note = False
                 slice_node_ids = list()
-                for hand in ('>', '<'):
-                    for digit in range(1, 6):
-                        handed_digit = hand + str(digit)
-                        if segment_index == 0 and note_in_segment_index == 0 and handed_first_digit:
-                            continue
-                        if segment_index == last_segment_index and \
-                           note_in_segment_index == last_note_in_segment_index and handed_last_digit:
-                            continue
-                        g.add_node(node_id, midi=note.pitch.midi, handed_digit=handed_digit)
-                        slice_node_ids.append(node_id)
-                        if 0 in prior_slice_node_ids:
-                            g.add_edge(0, node_id, weight=1)
-                            path_exists = True
-                        else:
-                            for prior_node_id in prior_slice_node_ids:
-                                prior_node = g.nodes[prior_node_id]
-                                prior_midi = prior_node["midi"]
-                                prior_hd = prior_node["handed_digit"]
-                                weight_key = (prior_midi, prior_hd, note.pitch.midi, handed_digit)
-                                # We will be searching for the shortest path over DAG, so the
-                                # weights of favorable steps must be made small (negative).
-                                weight = -1 * self._training[weight_key]
-                                if weight < 0:
-                                    # print("Weight for {0}: {1}".format(weight_key, weight))
-                                    g.add_edge(prior_node_id, node_id, weight=weight)
-                                    path_exists = True
-                        node_id += 1
-                if len(segment) > 2 and not path_exists:
-                    raise Exception("Model insufficiently trained to find solution. Train more or try smoothing.")
+
+                if segment_index == 0 and note_in_segment_index == 0 and handed_first_digit:
+                    on_first_prefingered_note = True
+
+                if segment_index == last_segment_index and \
+                        note_in_segment_index == last_note_in_segment_index and handed_last_digit:
+                    on_last_prefingered_note = True
+
+                for digit in range(1, 6):
+                    handed_digit = hand + str(digit)
+                    if on_last_prefingered_note and handed_digit != handed_last_digit:
+                        continue
+                    if on_first_prefingered_note and handed_digit != handed_first_digit:
+                        continue
+                    g.add_node(node_id, midi=note.pitch.midi, handed_digit=handed_digit)
+                    slice_node_ids.append(node_id)
+                    if 0 in prior_slice_node_ids:
+                        g.add_edge(0, node_id, weight=-1)
+                    else:
+                        for prior_node_id in prior_slice_node_ids:
+                            prior_node = g.nodes[prior_node_id]
+                            prior_midi = prior_node["midi"]
+                            prior_hd = prior_node["handed_digit"]
+                            weight_key = (prior_midi, note.pitch.midi, prior_hd, handed_digit)
+                            # We will be searching for the shortest path over DAG, so the
+                            # weights of favorable steps must be made small (negative).
+                            weight = -1 * self._training[staff][weight_key]
+                            g.add_edge(prior_node_id, node_id, weight=weight)
+                    node_id += 1
                 if len(slice_node_ids) > 0:
                     prior_slice_node_ids = copy.copy(slice_node_ids)
                 note_in_segment_index += 1
 
-            if segment_index == last_segment_index and handed_last_digit:
-                g.add_node(node_id, midi=segment[last_note_in_segment_index].pitch.midi, handed_digit=handed_last_digit)
-            else:
-                g.add_node(node_id, midi=None, handed_digit=None)
+            g.add_node(node_id, midi=None, handed_digit=None)
             for prior_node_id in prior_slice_node_ids:
-                g.add_edge(prior_node_id, node_id, weight=1)
+                g.add_edge(prior_node_id, node_id, weight=-1)
 
-            if len(segment) == 2:
-                print(g.edges())
             path = nx.shortest_path(g, source=0, target=node_id, weight="weight")
             segment_abcdf = ''
             for node_id in path:
@@ -248,5 +266,5 @@ class Sayegh(Dactyler.TrainedDactyler):
             advice_segments.append(segment_abcdf)
             segment_index += 1
 
-        abcdf = Dactyler.Dactyler.combine_abcdf_segments(advice_segments)
+        abcdf = D.Dactyler.combine_abcdf_segments(advice_segments)
         return abcdf

@@ -236,7 +236,11 @@ class DScore:
             return self.lower_stream()
         return self._combined_d_part.stream()
 
-    def pitch_range(self):
+    def pitch_range(self, staff="both"):
+        if staff == "upper":
+            return self._upper_d_part.pitch_range()
+        if staff == "lower":
+            return self._lower_d_part.pitch_range()
         return self._combined_d_part.pitch_range()
 
     def upper_stream(self):
@@ -624,11 +628,11 @@ class DCorpus:
                 self._d_scores.append(d_score)
                 score_index += 1
 
-    def pitch_range(self):
+    def pitch_range(self, staff="both"):
         overall_low = None
         overall_high = None
         for score in self._d_scores:
-            low, high = score.pitch_range()
+            low, high = score.pitch_range(staff=staff)
             if overall_low is None or low < overall_low:
                 overall_low = low
             if overall_high is None or high > overall_high:

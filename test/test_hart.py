@@ -3,7 +3,7 @@ import re
 import unittest
 from Dactyler.Hart import Hart
 from DCorpus.DCorpus import DCorpus
-from DCorpus.DAnnotation import DAnnotation
+import TestConstant
 
 
 class HartTest(unittest.TestCase):
@@ -118,7 +118,7 @@ CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA
     @staticmethod
     def test_hart_edges():
         hart = Hart()
-        d_corpus = DCorpus(corpus_str=HartTest.ONE_NOTE)
+        d_corpus = DCorpus(corpus_str=TestConstant.ONE_NOTE)
         hart.load_corpus(d_corpus=d_corpus)
         upper_rh_advice = hart.advise(staff="upper")
         right_re = re.compile('^>\d$')
@@ -128,7 +128,7 @@ CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA
         assert both_re.match(both_advice), "Bad one-note, segregated, both-staff advice"
 
         hart = Hart()
-        d_corpus = DCorpus(corpus_str=HartTest.ONE_BLACK_NOTE_PER_STAFF)
+        d_corpus = DCorpus(corpus_str=TestConstant.ONE_BLACK_NOTE_PER_STAFF)
         hart.load_corpus(d_corpus=d_corpus)
         upper_advice = hart.advise(staff="upper")
         right_re = re.compile('^>2$')
@@ -144,7 +144,7 @@ CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA
         assert lower_re.match(lower_advice), "Bad preset black-note, both-staff advice"
 
         hart = Hart()
-        d_corpus = DCorpus(corpus_str=HartTest.TWO_WHITE_NOTES_PER_STAFF)
+        d_corpus = DCorpus(corpus_str=TestConstant.TWO_WHITE_NOTES_PER_STAFF)
         hart.load_corpus(d_corpus=d_corpus)
         upper_advice = hart.advise(staff="upper")
         print(upper_advice)
@@ -161,7 +161,7 @@ CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA
     @staticmethod
     def test_distance_metrics():
         hart = Hart()
-        d_corpus = DCorpus(corpus_str=HartTest.A_MAJ_SCALE)
+        d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE)
         hart.load_corpus(d_corpus=d_corpus)
         complete_rh_advice = hart.advise(staff="upper")
         complete_rh_advice_len = len(complete_rh_advice)
@@ -213,7 +213,7 @@ CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA
     @staticmethod
     def test_reentry():
         hart = Hart()
-        d_corpus = DCorpus(corpus_str=HartTest.A_MAJ_SCALE)
+        d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE)
         hart.load_corpus(d_corpus=d_corpus)
 
         reentry_hamming_evals = hart.evaluate_strike_reentry(method="hamming", staff="upper", gold_indices=[0, 1])

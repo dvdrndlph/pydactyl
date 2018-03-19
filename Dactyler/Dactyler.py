@@ -168,6 +168,15 @@ class Dactyler(ABC):
         handed_digit = staff_prefix + str(digit)
         return handed_digit
 
+    @staticmethod
+    def digit_hand(handed_digit):
+        handed_re = re.compile('^([<>]{1})\d$')
+        mat = handed_re.match(str(handed_digit))
+        hand = mat.group(1)
+        if hand != "<" and hand != ">":
+            raise Exception("Ill-formed handed digit: {0}".format(handed_digit))
+        return hand
+
     def squawk(self, msg):
         self._log.write(str(msg) + "\n")
         if Dactyler.SQUAWK_OUT_LOUD:
@@ -382,6 +391,7 @@ class Dactyler(ABC):
 class TrainedDactyler(Dactyler):
     def __init__(self):
         super().__init__()
+        self._smoother = None
         self._training = {}
 
     @abstractmethod
@@ -389,7 +399,7 @@ class TrainedDactyler(Dactyler):
         return
 
     @abstractmethod
-    def train(self, d_corpus, staff="both", segmenter=None, annotation_indices=[]):
+    def train(self, d_corpus, staff="both", segregate=True, segmenter=None, annotation_indices=[]):
         return
 
     def retain(self, pickle_path=None, to_db=False):
@@ -416,4 +426,14 @@ class TrainedDactyler(Dactyler):
     def demonstrate(self):
         for k in self._training:
             print(k, ': ', self._training[k])
+
+    def smoother(self, method=None):
+        if method is None:
+            return self._smoother
+        else:
+            self._smoother = method
+
+    @abstractmethod
+    def smooth(self):
+        return
 
