@@ -74,7 +74,6 @@ class SayeghTest(unittest.TestCase):
         d_corpus = DCorpus(corpus_str=TestConstant.TWO_WHITE_NOTES_PER_STAFF)
         sayegh.load_corpus(d_corpus=d_corpus)
         upper_advice = sayegh.advise(staff="upper")
-        print("Upper advice: {0}".format(upper_advice))
         right_re = re.compile('^>\d\d$')
         assert right_re.match(upper_advice), "Bad two white-note, upper-staff advice"
         upper_advice = sayegh.advise(staff="upper", first_digit=3, last_digit=2)
@@ -115,7 +114,6 @@ class SayeghTest(unittest.TestCase):
         short_advice_len = len(rh_advice)
         assert complete_rh_advice_len - 3 == short_advice_len, "Bad offset for advise() call"
         ff_re = re.compile('^>4\d+$')
-        # print(rh_advice)
         assert ff_re.match(rh_advice), "Bad first finger constraint"
 
         rh_advice = sayegh.advise(staff="upper", offset=10, first_digit=5, last_digit=5)
@@ -128,13 +126,10 @@ class SayeghTest(unittest.TestCase):
         left_re = re.compile('^<\d+$')
         assert left_re.match(lh_advice), "Bad left-hand, lower-staff advice"
         combo_advice = sayegh.advise(staff="both")
-        print("COMBO ADVICE: " + combo_advice)
         clean_combo_advice = re.sub('[><&]', '',  combo_advice)
-        # print("TEST: " + clean_combo_advice)
         d_score = d_corpus.d_score_by_index(index=0)
         gold_fingering = d_score.abcdf(index=0)
         clean_gold_fingering = re.sub('[><&]', '',  gold_fingering)
-        # print("GOLD: " + clean_gold_fingering)
 
         combo_re = re.compile('^>\d+@<\d+$')
         assert combo_re.match(combo_advice), "Bad combined advice"
@@ -164,34 +159,32 @@ class SayeghTest(unittest.TestCase):
         sayegh.load_corpus(d_corpus=d_corpus)
 
         reentry_hamming_evals = sayegh.evaluate_strike_reentry(method="hamming", staff="upper", gold_indices=[0, 2])
-        for rhe in reentry_hamming_evals:
-            print("RHE:{0}".format(rhe))
+        # for rhe in reentry_hamming_evals:
+            # print("RHE:{0}".format(rhe))
         assert reentry_hamming_evals[0] > 0, "Undetected Hamming reentry costs"
         assert reentry_hamming_evals[1] == 0, "Bad fish in Hamming reentry barrel"
 
         reentry_hamming_evals = sayegh.evaluate_strike_reentry(method="hamming", staff="both")
-        for rhe in reentry_hamming_evals:
-            print("RHE:{0}".format(rhe))
+        # for rhe in reentry_hamming_evals:
+            # print("RHE:{0}".format(rhe))
         assert reentry_hamming_evals[0] > 0, "Undetected Hamming reentry costs (both staves)"
         assert reentry_hamming_evals[2] == 0, "Bad fish in Hamming reentry barrel (both staves)"
         hamming_score = reentry_hamming_evals[0]
 
         reentry_natural_evals = sayegh.evaluate_strike_reentry(method="natural", staff="both")
-        for rne in reentry_natural_evals:
-            print("RNE:{0}".format(rne))
+        # for rne in reentry_natural_evals:
+            # print("RNE:{0}".format(rne))
         assert reentry_natural_evals[0] > 0, "Undetected natural reentry costs (both staves)"
         assert reentry_natural_evals[2] == 0, "Bad fish in natural reentry barrel (both staves)"
         natural_score = reentry_natural_evals[0]
-        print("{0} > {1}".format(natural_score, hamming_score))
         assert natural_score > hamming_score, "Reentry: Natural <= Hamming"
 
         reentry_pivot_evals = sayegh.evaluate_strike_reentry(method="pivot", staff="both")
-        for rpe in reentry_pivot_evals:
-            print("RPE:{0}".format(rpe))
+        # for rpe in reentry_pivot_evals:
+            # print("RPE:{0}".format(rpe))
         assert reentry_pivot_evals[0] > 0, "Undetected pivot reentry costs (both staves)"
         assert reentry_pivot_evals[2] == 0, "Bad fish in pivot reentry barrel (both staves)"
         pivot_score = reentry_pivot_evals[0]
-        print("{0} > {1}".format(pivot_score, natural_score))
         assert natural_score < pivot_score, "Reentry: Natural >= Pivot"
 
 

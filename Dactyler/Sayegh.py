@@ -97,7 +97,7 @@ class Sayegh(D.TrainedDactyler):
         score_count = d_corpus.score_count()
         for i in range(score_count):
             d_score = d_corpus.d_score_by_index(i)
-            print("Training from {0} score".format(d_score.title()))
+            self.squawk("Training from {0} score".format(d_score.title()))
             if d_score.is_fully_annotated(indices=annotation_indices):
                 hdr = d_score.abcd_header()
                 annot_index = 0
@@ -137,7 +137,7 @@ class Sayegh(D.TrainedDactyler):
                             prior_digit = current_digit
                             note_index += 1
                             continue
-                        print("{0} {1} --> {2} {3}".format(prior_midi, prior_digit, current_midi, current_digit))
+                        self.squawk("{0} {1} --> {2} {3}".format(prior_midi, prior_digit, current_midi, current_digit))
                         if (prior_midi, current_midi) in transition_counts:
                             transition_counts[(prior_midi, current_midi)] += 1
                         else:
@@ -158,7 +158,7 @@ class Sayegh(D.TrainedDactyler):
 
 
     def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None, top=None):
-        print("STAFF: {0} FIRST: {1} LAST: {2}".format(staff, first_digit, last_digit))
+        self.squawk("STAFF: {0} FIRST: {1} LAST: {2}".format(staff, first_digit, last_digit))
         d_scores = self._d_corpus.d_score_list()
         if score_index >= len(d_scores):
             raise Exception("Score index out of range")
@@ -177,9 +177,9 @@ class Sayegh(D.TrainedDactyler):
             raise Exception("Segregated advice is only dispensed one staff at a time.")
 
         handed_first_digit = D.Dactyler.hand_digit(digit=first_digit, staff=staff)
-        print("First digit: {0} Handed first digit: {1}".format(first_digit, handed_first_digit))
+        self.squawk("First digit: {0} Handed first digit: {1}".format(first_digit, handed_first_digit))
         handed_last_digit = D.Dactyler.hand_digit(digit=last_digit, staff=staff)
-        print("Last digit: {0} Handed last digit: {1}".format(last_digit, handed_last_digit))
+        self.squawk("Last digit: {0} Handed last digit: {1}".format(last_digit, handed_last_digit))
 
         if d_score.part_count() == 1:
             d_part = d_score.combined_d_part()
@@ -190,7 +190,7 @@ class Sayegh(D.TrainedDactyler):
             d_part = d_score.d_part(staff=staff)
 
         lo, hi = d_part.pitch_range()
-        print("Pitches {0} to {1}".format(lo, hi))
+        self.squawk("Pitches {0} to {1}".format(lo, hi))
 
         hand = ">"
         if staff == "lower":

@@ -273,10 +273,6 @@ class Dactyler(ABC):
             test_hand = test_strike.hand if test_strike.hand else current_test_hand
             test_digit = int(test_strike.digit)
 
-            # print("test {0} v. gold {1} loc {2} v. {3}".format(test_digit,
-                                                               # gold_digit,
-                                                               # i,
-                                                               # gold_i))
             current_gold_hand = gold_hand
             current_test_hand = test_hand
 
@@ -338,11 +334,10 @@ class Dactyler(ABC):
                 if len(gold_indices) > 0 and current_gold_index not in gold_indices:
                     current_gold_index += 1
                     continue
-                print("DO GI: {0}".format(current_gold_index))
                 current_gold_index += 1
 
                 test_abcdf = self.advise(score_index=score_index, staff=staff)
-                print("COMPLETE ADVICE: {0}".format(test_abcdf))
+                self.squawk("COMPLETE ADVICE: {0}".format(test_abcdf))
                 if staff == 'upper':
                     test_abcdf += '@'
                 else:
@@ -351,15 +346,15 @@ class Dactyler(ABC):
                 (cost, loc, gold_digit) = self._distance_and_loc(zero_cost=True, method=method, staff=staff,
                                                                  test_annot=test_annot, gold_annot=gold_annot)
                 score += cost
-                print("GOLD: {0} staff for {1}".format(staff, gold_annot.abcdf(staff=staff, flat=True)))
-                print("TEST: {0} staff for {1}".format(staff, test_abcdf))
-                print("SCORE: {0} COST: {1} LOC: {2}".format(score, cost, loc))
+                self.squawk("GOLD: {0} staff for {1}".format(staff, gold_annot.abcdf(staff=staff, flat=True)))
+                self.squawk("TEST: {0} staff for {1}".format(staff, test_abcdf))
+                self.squawk("SCORE: {0} COST: {1} LOC: {2}".format(score, cost, loc))
 
                 while cost > 0:
                     test_abcdf = self.advise(score_index=score_index, staff=staff,
                                              offset=loc, first_digit=gold_digit)
-                    print("GOLD: {0} staff for {1}".format(staff, gold_annot.abcdf(staff=staff, flat=True)))
-                    print("TRUNCATED ADVICE: {0}".format(test_abcdf))
+                    self.squawk("GOLD: {0} staff for {1}".format(staff, gold_annot.abcdf(staff=staff, flat=True)))
+                    self.squawk("TRUNCATED ADVICE: {0}".format(test_abcdf))
                     if staff == 'upper':
                         test_abcdf += '@'
                     else:
@@ -369,7 +364,7 @@ class Dactyler(ABC):
                                                                      method=method, staff=staff,
                                                                      test_annot=test_annot, gold_annot=gold_annot)
                     score += cost
-                    print("     score: {0} cost: {1} loc: {2}".format(score, cost, loc))
+                    self.squawk("     score: {0} cost: {1} loc: {2}".format(score, cost, loc))
 
                 scores[staff].append(score)
 

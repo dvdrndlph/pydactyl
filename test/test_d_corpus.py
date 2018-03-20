@@ -93,7 +93,6 @@ class DCorpusTest(unittest.TestCase):
 
         # Need to check what happens to tied notes
         d_score = d_corpus.d_score_by_index(1)
-        # print(title)
         d_upper = d_score.upper_d_part()
         disorderly_stream = d_upper.stream()
         disorderly_d_part = DPart(music21_stream=disorderly_stream)
@@ -145,14 +144,11 @@ class DCorpusTest(unittest.TestCase):
         # d_corpus.append_dir(corpus_dir=TestConstant.BERINGER2_ANNOTATED_SCALE_DIR)
         d_corpus.append_dir(corpus_dir=TestConstant.BERINGER2_ANNOTATED_BROKEN_CHORD_DIR)
         score_count = d_corpus.score_count()
-        print(score_count)
-        # assert score_count == 48, "Bad score count"
         assert score_count > 48, "Bad score count"
         for i in range(score_count):
             d_score = d_corpus.d_score_by_index(i)
             assert d_score.title() is not None, "Missing title at {0}".format(i)
-            print(d_score.title())
-            assert d_score.is_fully_annotated(annotation_index=0), "Missing annotation 1 in {0}".format(d_score.title())
+            assert d_score.is_fully_annotated(indices=[0]), "Missing annotation 1 in {0}".format(d_score.title())
 
 
 if __name__ == "__main__":
