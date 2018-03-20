@@ -217,10 +217,17 @@ class Hart(Dactyler.Dactyler):
                 else:
                     interval = Interval(mth_color, prior_color, x, s, mth_interval)
                 cost = self._costs[interval]
-                if last_digit and x != last_digit:
+                if last_digit:
                     # Last digit in fingering sequence is constrained, so we force all paths to
-                    # lead to it by blowing up all of the paths leading away from it.
-                    cost = Hart.BIG_NUM
+                    # lead to it by making other paths look less attractive. But we retain preference
+                    # for arcs with known reasonable (non-"infinite") costs.
+                    if x == last_digit:
+                        if cost == Hart.BIG_NUM:
+                            cost -= 1  # Prefer these arcs over any that lead to the wrong place
+                        # Prefer plausible arcs (those with non-"infinite" cost) according to their costs.
+                    else:
+                        cost = Hart.BIG_NUM  # Paths leading to the wrong last digit are "infinitely" expensive.
+
                 fsx[m, s, x] = cost
                 self.squeak("{0:4d}  ".format(fsx[m, s, x]))
 

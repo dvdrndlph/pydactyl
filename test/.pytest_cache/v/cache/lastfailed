@@ -1,5 +1,6 @@
 {
   "test_d_corpus.py": true,
+  "test_hart.py::HartTest::test_distance_metrics": true,
   "test_hart.py::HartTest::test_hart": true,
   "test_sayegh.py::SayeghTest": true,
   "test_sayegh.py::SayeghTest::test_distance_metrics": true
