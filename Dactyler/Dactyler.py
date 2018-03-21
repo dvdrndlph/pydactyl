@@ -211,8 +211,62 @@ class Dactyler(ABC):
         return advice
 
     @abstractmethod
+    def segment_advise(self, segment, staff, offset, handed_first_digit, handed_last_digit, top=None):
+        pass
+
     def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None, top=None):
-        return
+        d_scores = self._d_corpus.d_score_list()
+        if score_index >= len(d_scores):
+            raise Exception("Score index out of range")
+
+        d_score = d_scores[score_index]
+        if staff == "both":
+            if offset or first_digit or last_digit:
+                raise Exception("Ambiguous use to offset and/or first/last digit for both staves.")
+            upper_advice = self.advise(score_index=score_index, staff="upper")
+            abcdf = upper_advice + "@"
+            if d_score.part_count() > 1:
+                lower_advice = self.advise(score_index=score_index, staff="lower")
+                abcdf += lower_advice
+            return abcdf
+
+        if staff != "upper" and staff != "lower":
+            raise Exception("Segregated advice is only dispensed one staff at a time.")
+
+        handed_first_digit = Dactyler.hand_digit(digit=first_digit, staff=staff)
+        handed_last_digit = Dactyler.hand_digit(digit=last_digit, staff=staff)
+
+        if d_score.part_count() == 1:
+            d_part = d_score.combined_d_part()
+        else:
+            # We support (segregated) left hand fingerings. By segregated, we
+            # mean the right hand is dedicated to the upper staff, and the
+            # left hand is dedicated to the lower staff.
+                d_part = d_score.d_part(staff=staff)
+
+        segments = d_part.orderly_note_stream_segments(offset=offset)
+        segment_index = 0
+        last_segment_index = len(segments) - 1
+        advice_segments = []
+        for segment in segments:
+            segment_offset = 0
+            segment_handed_first = None
+            segment_handed_last = None
+            if segment_index == 0:
+                segment_offset = offset
+                segment_handed_first = handed_first_digit
+            if segment_index == last_segment_index:
+                segment_handed_last = handed_last_digit
+
+            segment_advice = self.segment_advise(segment=segment, staff=staff,
+                                                 offset=segment_offset,
+                                                 handed_first_digit=segment_handed_first,
+                                                 handed_last_digit=segment_handed_last, top=top)
+            advice_segments.append(segment_advice)
+            segment_index += 1
+
+        abcdf = Dactyler.combine_abcdf_segments(advice_segments)
+        return abcdf
 
     def load_corpus(self, d_corpus=None, path=None):
         if d_corpus:
@@ -390,8 +444,8 @@ class TrainedDactyler(Dactyler):
         self._training = {}
 
     @abstractmethod
-    def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None, top=None):
-        return
+    def segment_advise(self, segment, staff, offset, handed_first_digit, handed_last_digit, top=None):
+        pass
 
     @abstractmethod
     def train(self, d_corpus, staff="both", segregate=True, segmenter=None, annotation_indices=[]):

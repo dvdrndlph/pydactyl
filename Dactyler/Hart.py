@@ -32,7 +32,7 @@ __author__ = 'David Randolph'
 
 import numpy
 import re
-from Dactyler import Dactyler, Constant
+from Dactyler import Constant, Dactyler as D
 
 
 class Interval:
@@ -82,7 +82,7 @@ class Interval:
         return self.__str__()
 
 
-class Hart(Dactyler.Dactyler):
+class Hart(D.Dactyler):
     BIG_NUM = 999
     MAX_INTERVAL_SIZE = 12
     COST_FILE = '/Users/dave/tb2/didactyl/dd/data/tables_0.dat'
@@ -151,49 +151,31 @@ class Hart(Dactyler.Dactyler):
         self._max_interval_size = max_interval_size
         self._costs = self._define_costs()
 
-    def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None):
-        d_scores = self._d_corpus.d_score_list()
-        if score_index >= len(d_scores):
-            raise Exception("Score index out of range")
+    def segment_advise(self, segment, staff, offset, handed_first_digit, handed_last_digit, top=None):
+        opt_cost = Hart.BIG_NUM
 
-        d_score = d_scores[score_index]
-        if staff == "both":
-            upper_advice = self.advise(score_index=score_index, staff="upper")
-            abcdf = upper_advice + "@"
-            if d_score.part_count() > 1:
-                lower_advice = self.advise(score_index=score_index, staff="lower")
-                abcdf += lower_advice
+        abcdf = ""
+
+        first_digit = int(handed_first_digit[1:]) if handed_first_digit else None
+        last_digit = int(handed_last_digit[1:]) if handed_last_digit else None
+
+        segment_note_count = len(segment)
+        note_list = D.DNote.note_list(segment)
+        if len(segment) == 1:
+            abcdf = D.Dactyler.one_note_advice(note_list[0], staff=staff,
+                                                first_digit=handed_first_digit,
+                                                last_digit=handed_last_digit)
             return abcdf
 
-        if staff != "upper" and staff != "lower":
-            raise Exception("Segregated advice is only dispensed one staff at a time.")
-
-        if d_score.part_count() == 1:
-            d_part = d_score.combined_d_part()
-        else:
-            # We support (segregated) left hand fingerings. By segregated, we
-            # mean the right hand is dedicated to the upper staff, and the
-            # left hand is dedicated to the lower staff.
-            d_part = d_score.d_part(staff=staff)
-
-        m21_stream = d_part.orderly_note_stream(offset=offset)
-
-        opt_cost = Hart.BIG_NUM
-        note_list = Dactyler.DNote.note_list(m21_stream)
-
-        if len(note_list) == 1:
-            return Dactyler.Dactyler.one_note_advice(note_list[0], staff=staff,
-                                                     first_digit=first_digit, last_digit=last_digit)
-
-        m = len(note_list) - 1
-        fs = numpy.zeros([len(note_list), 6], dtype=int)
-        for n in reversed(range(1, len(note_list))):
+        m = segment_note_count - 1
+        fs = numpy.zeros([segment_note_count, 6], dtype=int)
+        for n in reversed(range(1, segment_note_count)):
             for s in range(1, 6):
                 fs[n, s] = Hart.BIG_NUM
 
-        fsx = numpy.zeros([len(note_list), 6, 6], dtype=int)
-        num_opt = numpy.zeros([len(note_list), 6], dtype=int)
-        xstar = numpy.zeros([len(note_list), 6, 5], dtype=int)
+        fsx = numpy.zeros([segment_note_count, 6, 6], dtype=int)
+        num_opt = numpy.zeros([segment_note_count, 6], dtype=int)
+        xstar = numpy.zeros([segment_note_count, 6, 5], dtype=int)
 
         # Stage m
         mth_note = note_list[m]
@@ -201,7 +183,7 @@ class Hart(Dactyler.Dactyler):
         prior_color = mth_note.prior_color()
         mth_interval = mth_note.semitone_delta()
         penultimate_digit_options = range(1, 6)
-        if first_digit and len(note_list) == 2:
+        if first_digit and segment_note_count == 2:
             penultimate_digit_options = [first_digit]
         for s in penultimate_digit_options:
             if s == 1:
@@ -271,7 +253,8 @@ class Hart(Dactyler.Dactyler):
                         if s == first_digit:
                             if cost == Hart.BIG_NUM:
                                 cost -= 1  # Prefer these arcs over any that come from the wrong place
-                            # Prefer plausible arcs (those with non-"infinite" cost) according to their costs.
+                                # Otherwise, prefer plausible arcs (those with non-"infinite" cost)
+                                # according to their costs.
                         else:
                             cost = Hart.BIG_NUM  # Paths leading to the wrong last digit are "infinitely" expensive.
                     fsx[n, s, x] = cost + fs[n + 1, x]
@@ -309,11 +292,9 @@ class Hart(Dactyler.Dactyler):
         self.squawk("The optimal cost is {0}".format(opt_cost))
         self.squawk("Here is an optimal fingering:")
         self.squawk(fingers)
-    
-        if staff == "upper":
-            abcdf = ">"
-        else:
-            abcdf = "<"
 
-        abcdf += "".join(str(f) for f in fingers)
+        hand = ">"
+        if staff == "lower":
+            hand = "<"
+        abcdf = hand + "".join(str(f) for f in fingers)
         return abcdf

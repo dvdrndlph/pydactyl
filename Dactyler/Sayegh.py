@@ -156,113 +156,69 @@ class Sayegh(D.TrainedDactyler):
                                                fingered_counts=fingered_counts,
                                                training=training)
 
-    def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None, top=None):
-        self.squawk("STAFF: {0} FIRST: {1} LAST: {2}".format(staff, first_digit, last_digit))
-        d_scores = self._d_corpus.d_score_list()
-        if score_index >= len(d_scores):
-            raise Exception("Score index out of range")
-
-        d_score = d_scores[score_index]
-        if staff == "both":
-            upper_advice = self.advise(score_index=score_index, staff="upper")
-            abcdf = upper_advice + "@"
-            if d_score.part_count() > 1:
-                lower_advice = self.advise(score_index=score_index, staff="lower")
-                abcdf += lower_advice
+    def segment_advise(self, segment, staff, offset, handed_first_digit, handed_last_digit, top=None):
+        if len(segment) == 1:
+            note_list = D.DNote.note_list(segment)
+            abcdf = D.Dactyler.one_note_advice(note_list[0], staff=staff,
+                                               first_digit=handed_first_digit,
+                                               last_digit=handed_last_digit)
             return abcdf
-
-        if staff != "upper" and staff != "lower":
-            raise Exception("Segregated advice is only dispensed one staff at a time.")
-
-        handed_first_digit = D.Dactyler.hand_digit(digit=first_digit, staff=staff)
-        self.squawk("First digit: {0} Handed first digit: {1}".format(first_digit, handed_first_digit))
-        handed_last_digit = D.Dactyler.hand_digit(digit=last_digit, staff=staff)
-        self.squawk("Last digit: {0} Handed last digit: {1}".format(last_digit, handed_last_digit))
-
-        if d_score.part_count() == 1:
-            d_part = d_score.combined_d_part()
-        else:
-            # We support (segregated) left hand fingerings. By segregated, we
-            # mean the right hand is dedicated to the upper staff, and the
-            # left hand is dedicated to the lower staff.
-            d_part = d_score.d_part(staff=staff)
-
-        lo, hi = d_part.pitch_range()
-        self.squawk("Pitches {0} to {1}".format(lo, hi))
 
         hand = ">"
         if staff == "lower":
             hand = "<"
 
-        segments = d_part.orderly_note_stream_segments(offset=offset)
-        advice_segments = []
-        segment_index = 0
-        last_segment_index = len(segments) - 1
-        for segment in segments:
-            if len(segment) == 1:
-                d_note = D.DNote(segment[0])
-                advice = D.Dactyler.one_note_advice(d_note, staff=staff,
-                                                    first_digit=handed_first_digit,
-                                                    last_digit=handed_last_digit)
-                advice_segments.append(advice)
-                continue
+        g = nx.MultiDiGraph()
+        g.add_node(0, midi=None, handed_digit=None)
+        prior_slice_node_ids = list()
+        prior_slice_node_ids.append(0)
+        last_note_in_segment_index = len(segment) - 1
+        note_in_segment_index = 0
+        node_id = 1
+        on_last_prefingered_note = False
+        for note in segment:
+            on_first_prefingered_note = False
+            slice_node_ids = list()
 
-            g = nx.MultiDiGraph()
-            g.add_node(0, midi=None, handed_digit=None)
-            prior_slice_node_ids = list()
-            prior_slice_node_ids.append(0)
-            last_note_in_segment_index = len(segment) - 1
-            note_in_segment_index = 0
-            node_id = 1
-            on_last_prefingered_note = False
-            for note in segment:
-                on_first_prefingered_note = False
-                slice_node_ids = list()
+            if note_in_segment_index == 0 and handed_first_digit:
+                on_first_prefingered_note = True
 
-                if segment_index == 0 and note_in_segment_index == 0 and handed_first_digit:
-                    on_first_prefingered_note = True
+            if note_in_segment_index == last_note_in_segment_index and handed_last_digit:
+                on_last_prefingered_note = True
 
-                if segment_index == last_segment_index and \
-                        note_in_segment_index == last_note_in_segment_index and handed_last_digit:
-                    on_last_prefingered_note = True
+            for digit in range(1, 6):
+                handed_digit = hand + str(digit)
+                if on_last_prefingered_note and handed_digit != handed_last_digit:
+                    continue
+                if on_first_prefingered_note and handed_digit != handed_first_digit:
+                    continue
+                g.add_node(node_id, midi=note.pitch.midi, handed_digit=handed_digit)
+                slice_node_ids.append(node_id)
+                if 0 in prior_slice_node_ids:
+                    g.add_edge(0, node_id, weight=-1)
+                else:
+                    for prior_node_id in prior_slice_node_ids:
+                        prior_node = g.nodes[prior_node_id]
+                        prior_midi = prior_node["midi"]
+                        prior_hd = prior_node["handed_digit"]
+                        weight_key = (prior_midi, note.pitch.midi, prior_hd, handed_digit)
+                        # We will be searching for the shortest path over DAG, so the
+                        # weights of favorable steps must be made small (negative).
+                        weight = -1 * self._training[staff][weight_key]
+                        g.add_edge(prior_node_id, node_id, weight=weight)
+                node_id += 1
+            if len(slice_node_ids) > 0:
+                prior_slice_node_ids = copy.copy(slice_node_ids)
+            note_in_segment_index += 1
 
-                for digit in range(1, 6):
-                    handed_digit = hand + str(digit)
-                    if on_last_prefingered_note and handed_digit != handed_last_digit:
-                        continue
-                    if on_first_prefingered_note and handed_digit != handed_first_digit:
-                        continue
-                    g.add_node(node_id, midi=note.pitch.midi, handed_digit=handed_digit)
-                    slice_node_ids.append(node_id)
-                    if 0 in prior_slice_node_ids:
-                        g.add_edge(0, node_id, weight=-1)
-                    else:
-                        for prior_node_id in prior_slice_node_ids:
-                            prior_node = g.nodes[prior_node_id]
-                            prior_midi = prior_node["midi"]
-                            prior_hd = prior_node["handed_digit"]
-                            weight_key = (prior_midi, note.pitch.midi, prior_hd, handed_digit)
-                            # We will be searching for the shortest path over DAG, so the
-                            # weights of favorable steps must be made small (negative).
-                            weight = -1 * self._training[staff][weight_key]
-                            g.add_edge(prior_node_id, node_id, weight=weight)
-                    node_id += 1
-                if len(slice_node_ids) > 0:
-                    prior_slice_node_ids = copy.copy(slice_node_ids)
-                note_in_segment_index += 1
+        g.add_node(node_id, midi=None, handed_digit=None)
+        for prior_node_id in prior_slice_node_ids:
+            g.add_edge(prior_node_id, node_id, weight=-1)
 
-            g.add_node(node_id, midi=None, handed_digit=None)
-            for prior_node_id in prior_slice_node_ids:
-                g.add_edge(prior_node_id, node_id, weight=-1)
-
-            path = nx.shortest_path(g, source=0, target=node_id, weight="weight")
-            segment_abcdf = ''
-            for node_id in path:
-                node = g.nodes[node_id]
-                if node["handed_digit"]:
-                    segment_abcdf += node["handed_digit"]
-            advice_segments.append(segment_abcdf)
-            segment_index += 1
-
-        abcdf = D.Dactyler.combine_abcdf_segments(advice_segments)
-        return abcdf
+        path = nx.shortest_path(g, source=0, target=node_id, weight="weight")
+        segment_abcdf = ''
+        for node_id in path:
+            node = g.nodes[node_id]
+            if node["handed_digit"]:
+                segment_abcdf += node["handed_digit"]
+        return segment_abcdf
