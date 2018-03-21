@@ -220,7 +220,8 @@ class Hart(Dactyler.Dactyler):
                     if x == last_digit:
                         if cost == Hart.BIG_NUM:
                             cost -= 1  # Prefer these arcs over any that lead to the wrong place
-                        # Prefer plausible arcs (those with non-"infinite" cost) according to their costs.
+                        # Otherwise, prefer plausible arcs (those with non-"infinite" cost) according
+                        # to their costs.
                     else:
                         cost = Hart.BIG_NUM  # Paths leading to the wrong last digit are "infinitely" expensive.
 
@@ -263,10 +264,16 @@ class Hart(Dactyler.Dactyler):
                     else:
                         interval = Interval(nth_color, prior_color, x, s, nth_interval)
                     cost = self._costs[interval]
-                    if first_digit and n == start_index and s != first_digit:
-                        # First digit in fingering sequence is constrained, so we force all paths to
-                        # start from it by blowing up all of the paths starting with another digit.
-                        cost = Hart.BIG_NUM
+                    # First digit in fingering sequence is constrained, so we force all paths to
+                    # start from it by making other paths look less attractive. But we retain preference
+                    # for arcs with known reasonable (non-"infinite") costs.
+                    if first_digit and n == start_index:
+                        if s == first_digit:
+                            if cost == Hart.BIG_NUM:
+                                cost -= 1  # Prefer these arcs over any that come from the wrong place
+                            # Prefer plausible arcs (those with non-"infinite" cost) according to their costs.
+                        else:
+                            cost = Hart.BIG_NUM  # Paths leading to the wrong last digit are "infinitely" expensive.
                     fsx[n, s, x] = cost + fs[n + 1, x]
                     self.squeak("{0:4d}+{1:d}={2:4d}  ".format(cost, fs[n + 1, x], fsx[n, s, x]))
 

@@ -156,13 +156,11 @@ class Sayegh(D.TrainedDactyler):
                                                fingered_counts=fingered_counts,
                                                training=training)
 
-
     def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None, top=None):
         self.squawk("STAFF: {0} FIRST: {1} LAST: {2}".format(staff, first_digit, last_digit))
         d_scores = self._d_corpus.d_score_list()
         if score_index >= len(d_scores):
             raise Exception("Score index out of range")
-
 
         d_score = d_scores[score_index]
         if staff == "both":
