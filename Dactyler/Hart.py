@@ -162,7 +162,7 @@ class Hart(D.Dactyler):
         segment_note_count = len(segment)
         note_list = D.DNote.note_list(segment)
         if len(segment) == 1:
-            abcdf = D.Dactyler.one_note_advice(note_list[0], staff=staff,
+            abcdf = D.Dactyler.one_note_advise(note_list[0], staff=staff,
                                                 first_digit=handed_first_digit,
                                                 last_digit=handed_last_digit)
             return abcdf

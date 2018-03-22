@@ -313,7 +313,32 @@ class DScore:
             note_count = len(combo.orderly_note_stream())
         return note_count
 
-    def is_fully_annotated(self, indices=[]):
+    def _is_fully_annotated(self, staff="both", indices=[]):
+        if not self.is_annotated():
+            return False
+        if staff == "upper":
+            d_part = self.upper_d_part()
+        elif staff == "lower":
+            d_part = self.lower_d_part()
+        else:
+            raise Exception("Specific staff must be specified.")
+
+        note_count = len(d_part.orderly_note_stream())
+        annot_index = 0
+        for annot in self._abcd_header.annotations():
+            if indices and annot_index not in indices:
+                continue
+            sf_count = annot.score_fingering_count(staff=staff)
+            if sf_count != note_count:
+                return False
+            for i in range(sf_count):
+                strike_digit = annot.strike_digit_at_index(index=i, staff=staff)
+                if not strike_digit or strike_digit == 'x':
+                    return False
+            annot_index += 1
+        return True
+
+    def is_fully_annotated(self, staff="both", indices=[]):
         """
         :return: True iff a strike digit is assigned to every note in the score.
         """
@@ -322,36 +347,24 @@ class DScore:
         upper = self.upper_d_part()
         lower = self.lower_d_part()
         combo = self.combined_d_part()
-        annot_index = 0
+
+        if (upper and staff == "upper") or (lower and staff == "lower"):
+            return self.staff_is_fully_annotated(staff=staff, indices=indices)
+
         if upper:
-            upper_note_count = len(upper.orderly_note_stream())
-            lower_note_count = len(lower.orderly_note_stream())
-            for annot in self._abcd_header.annotations():
-                if indices and annot_index not in indices:
-                    continue
-                annot_index += 1
-                upper_sf_count = annot.score_fingering_count(staff="upper")
-                if upper_sf_count != upper_note_count:
-                    return False
-                for i in range(upper_sf_count):
-                    strike_digit = annot.strike_digit_at_index(index=i, staff="upper")
-                    if not strike_digit or strike_digit == 'x':
-                        return False
-                lower_sf_count = annot.score_fingering_count(staff="lower")
-                if lower_sf_count != lower_note_count:
-                    return False
-                for i in range(lower_sf_count):
-                    strike_digit = annot.strike_digit_at_index(index=i, staff="lower")
-                    if not strike_digit or strike_digit == 'x':
-                        return False
-        else:
-            note_count = len(combo.orderly_note_stream())
-            for annot in self._abcd_header.annotations():
-                if annotation_index is not None and annot_index != annotation_index:
-                    continue
-                sf_count = annot.score_fingering_count(staff="both")
-                if sf_count != note_count:
-                    return False
+            is_upper_good = self._is_fully_annotated(staff="upper", indices=indices)
+            is_lower_good = self._is_fully_annotated(staff="lower", indices=indices)
+            is_good = is_upper_good and is_lower_good
+            return is_good
+
+        annot_index = 0
+        note_count = len(combo.orderly_note_stream())
+        for annot in self._abcd_header.annotations():
+            if indices and annot_index not in indices:
+                continue
+            sf_count = annot.score_fingering_count(staff="both")
+            if sf_count != note_count:
+                return False
         return True
 
     def abcdf(self, index=0, identifier=None, staff="both"):

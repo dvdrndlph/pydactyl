@@ -188,7 +188,7 @@ class Dactyler(ABC):
             print(str(msg), end="")
 
     @staticmethod
-    def one_note_advice(d_note, staff="upper", first_digit=None, last_digit=None):
+    def one_note_advise(d_note, staff="upper", first_digit=None, last_digit=None):
         if staff != "upper" and staff != "lower":
             raise Exception("One note advice not available for {0} staff.".format(staff))
         if first_digit and last_digit and first_digit != last_digit:
@@ -436,7 +436,28 @@ class Dactyler(ABC):
 
         return total_scores
 
+    def evaluate_pivot_alignment(self, score_index=0, staff="upper"):
+        d_score = self._d_corpus.d_score_by_index(score_index)
+        if not d_score.is_fully_annotated():
+            raise Exception("Only fully annotated scores can be evaluated.")
 
+        if staff == "both":
+            staves = ['upper', 'lower']
+        else:
+            staves = [staff]
+
+        test_abcdf = self.advise(score_index=score_index, staff=staff)
+        test_annot = DAnnotation(abcdf=test_abcdf)
+        hdr = d_score.abcd_header()
+        scores = []
+        for gold_annot in hdr.annotations():
+            score = 0
+            for staff in staves:
+                score += self._eval_strike_distance(method=method, staff=staff,
+                                                    test_annot=test_annot, gold_annot=gold_annot)
+            scores.append(score)
+
+        return scores
 class TrainedDactyler(Dactyler):
     def __init__(self):
         super().__init__()
