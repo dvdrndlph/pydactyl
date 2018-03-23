@@ -32,7 +32,9 @@ __author__ = 'David Randolph'
 
 import numpy
 import re
-from Dactyler import Constant, Dactyler as D
+from didactyl.dactyler import Constant
+from . import Dactyler as D
+from didactyl.dcorpus.DNote import DNote
 
 
 class Interval:
@@ -160,7 +162,7 @@ class Hart(D.Dactyler):
         last_digit = int(handed_last_digit[1:]) if handed_last_digit else None
 
         segment_note_count = len(segment)
-        note_list = D.DNote.note_list(segment)
+        note_list = DNote.note_list(segment)
         if len(segment) == 1:
             abcdf = D.Dactyler.one_note_advise(note_list[0], staff=staff,
                                                 first_digit=handed_first_digit,

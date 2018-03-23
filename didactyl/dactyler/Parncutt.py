@@ -22,10 +22,7 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
-import numpy
-import networkx
-import re
-from Dactyler import Dactyler, Constant
+from .Dactyler import Dactyler
 
 
 class Parncutt(Dactyler.Dactyler):

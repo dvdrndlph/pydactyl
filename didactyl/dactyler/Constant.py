@@ -23,7 +23,7 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 
 
-# DCorpus types supported:
+# dcorpus types supported:
 CORPUS_ABC = 'abc'
 CORPUS_ABCD = 'abcD'
 CORPUS_MUSIC_XML = 'MusicXML'

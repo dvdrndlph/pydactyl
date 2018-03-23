@@ -22,11 +22,11 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-from music21 import *
 import re
 import unittest
 import TestConstant
-from DCorpus.DCorpus import DPart, DScore, DCorpus, DAnnotation
+from didactyl.dcorpus.DCorpus import DCorpus
+from didactyl.dcorpus.DPart import DPart
 
 BERINGER2_SCALE_CORPUS = TestConstant.BERINGER2_DIR + "/scales.abc"
 
@@ -36,7 +36,7 @@ class DCorpusTest(unittest.TestCase):
     def test_abc_2part_mono():
         d_corpus = DCorpus(corpus_path=BERINGER2_SCALE_CORPUS)
         lo, hi = d_corpus.pitch_range()
-        assert lo < hi, "Bad DCorpus pitch range"
+        assert lo < hi, "Bad dcorpus pitch range"
         score_count = d_corpus.score_count()
         assert score_count == 38, "Bad score count"
         d_score = d_corpus.d_score_by_title("scales_g_minor_melodic")

@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
 import unittest
-import pprint
-from DCorpus.DCorpus import ABCDHeader
+from didactyl.dcorpus.ABCDHeader import ABCDHeader
 
 
 class ABCDHeaderTest(unittest.TestCase):

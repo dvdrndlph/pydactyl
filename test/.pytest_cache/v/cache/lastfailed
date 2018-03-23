@@ -1,5 +1,8 @@
 {
-  "test_d_corpus.py": true,
+  "test_d_corpus.py::DCorpusTest::test_abc_2part_chords": true,
+  "test_d_corpus.py::DCorpusTest::test_abc_2part_mono": true,
+  "test_d_corpus.py::DCorpusTest::test_annotated_corpus": true,
+  "test_d_corpus.py::DCorpusTest::test_append_dir": true,
   "test_hart.py::HartTest::test_distance_metrics": true,
   "test_hart.py::HartTest::test_hart": true,
   "test_sayegh.py::SayeghTest::test_distance_metrics": true,

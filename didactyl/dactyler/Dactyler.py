@@ -25,104 +25,14 @@ from abc import ABC, abstractmethod
 import pickle
 import re
 from datetime import datetime
-import music21
-from Dactyler import Constant
-from DCorpus import DCorpus
-from DCorpus.DAnnotation import DAnnotation
+from didactyl.dactyler import Constant
+from didactyl.dcorpus.DCorpus import DCorpus
+from didactyl.dcorpus.DAnnotation import DAnnotation
 import os
 
 
-class DNote:
-    def __init__(self, m21_note, prior_note=None):
-        self._m21_note = m21_note
-        self._prior_note = prior_note
-
-    def m21_note(self):
-        return self._m21_note
-
-    def prior_note(self):
-        return self._prior_note
-
-    def __str__(self):
-        my_str = "MIDI {0}".format(self.m21_note.midi)
-        return my_str
-
-    note_class_is_black = {
-        0: False,
-        1: True,
-        2: False,
-        3: True,
-        4: False,
-        5: False,
-        6: True,
-        7: False,
-        8: True,
-        9: False,
-        10: True,
-        11: False
-    }
-
-    @staticmethod
-    def note_list(m21_score):
-        prior_note = None
-        notes = []
-        for n in m21_score.getElementsByClass(music21.note.Note):
-            if not prior_note:
-                new_note = DNote(n)
-            else:
-                new_note = DNote(n, prior_note=prior_note)
-
-            notes.append(new_note)
-            prior_note = new_note
-        return notes
-
-    def is_black(self):
-        if not self._m21_note:
-            return False
-        return DNote.note_class_is_black[self._m21_note.pitch.pitchClass]
-
-    def is_white(self):
-        if not self._m21_note:
-            return False
-        return not self.is_black()
-
-    def color(self):
-        if not self._m21_note:
-            return None
-        if self.is_black():
-            return Constant.BLACK
-        return Constant.WHITE
-
-    def prior_color(self):
-        if self._prior_note:
-            return self._prior_note.color()
-        return None
-
-    def midi(self):
-        if self._m21_note:
-            return self._m21_note.pitch.midi
-        return None
-
-    def prior_midi(self):
-        if self._prior_note:
-            return self._prior_note.midi()
-        return None
-
-    def is_ascending(self):
-        if not self.prior_midi() or not self.midi():
-            return False
-        if self.midi() > self.prior_midi():
-            return True
-        return False
-
-    def semitone_delta(self):
-        delta = self.midi() - self.prior_midi()
-        delta = -1 * delta if delta < 0 else delta
-        return delta
-
-
 class Dactyler(ABC):
-    """Base class for all Didactyl algorithms."""
+    """Base class for all src algorithms."""
 
     # FIXME: The log should be timestamped and for the specific algorithm being used.
     SQUAWK_OUT_LOUD = False
@@ -274,7 +184,7 @@ class Dactyler(ABC):
         elif path:
             self._d_corpus = DCorpus.DCorpus(path)
         else:
-            raise Exception("No corpus specified for Dactyler.")
+            raise Exception("No corpus specified for dactyler.")
 
     @staticmethod
     def strike_distance_cost(gold_hand, gold_digit, test_hand, test_digit, method="hamming"):
@@ -453,6 +363,9 @@ class Dactyler(ABC):
         for gold_annot in hdr.annotations():
             score = 0
             for staff in staves:
+                note_index = 0
+                d_part = d_score.d_part(staff=staff)
+                note_stream = d_part.orderly_note_stream(staff=staff)
                 score += self._eval_strike_distance(method=method, staff=staff,
                                                     test_annot=test_annot, gold_annot=gold_annot)
             scores.append(score)

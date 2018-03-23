@@ -31,9 +31,9 @@ __author__ = 'David Randolph'
 """
 
 import networkx as nx
-import re
 import copy
-from Dactyler import Dactyler as D
+from . import Dactyler as D
+from didactyl.dcorpus.DNote import DNote
 
 
 class Sayegh(D.TrainedDactyler):
@@ -158,7 +158,7 @@ class Sayegh(D.TrainedDactyler):
 
     def segment_advise(self, segment, staff, offset, handed_first_digit, handed_last_digit, top=None):
         if len(segment) == 1:
-            note_list = D.DNote.note_list(segment)
+            note_list = DNote.note_list(segment)
             abcdf = D.Dactyler.one_note_advise(note_list[0], staff=staff,
                                                first_digit=handed_first_digit,
                                                last_digit=handed_last_digit)

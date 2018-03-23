@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import re
 import unittest
-from Dactyler.Hart import Hart
-from DCorpus.DCorpus import DCorpus
+from didactyl.dactyler.Hart import Hart
+from didactyl.dcorpus.DCorpus import DCorpus
 import TestConstant
 
 
