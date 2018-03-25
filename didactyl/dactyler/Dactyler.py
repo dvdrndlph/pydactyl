@@ -27,6 +27,7 @@ import re
 from datetime import datetime
 from didactyl.dactyler import Constant
 from didactyl.dcorpus.DCorpus import DCorpus
+from didactyl.dcorpus.DNote import AnnotatedDNote
 from didactyl.dcorpus.DAnnotation import DAnnotation
 import os
 
@@ -256,7 +257,7 @@ class Dactyler(ABC):
                                                                   test_annot=test_annot, gold_annot=gold_annot)
         return cost
 
-    def evaluate_strike_distance(self, method="hamming", score_index=0, staff="upper"):
+    def evaluate_strike_distance(self, method="hamming", score_index=0, staff="upper", gold_indices=[]):
         d_score = self._d_corpus.d_score_by_index(score_index)
         if not d_score.is_fully_annotated():
             raise Exception("Only fully annotated scores can be evaluated.")
@@ -270,12 +271,17 @@ class Dactyler(ABC):
         test_annot = DAnnotation(abcdf=test_abcdf)
         hdr = d_score.abcd_header()
         scores = []
+        gold_index = 0
         for gold_annot in hdr.annotations():
+            if gold_indices and gold_index not in gold_indices:
+                gold_index += 1
+                continue
             score = 0
             for staff in staves:
                 score += self._eval_strike_distance(method=method, staff=staff,
                                                     test_annot=test_annot, gold_annot=gold_annot)
             scores.append(score)
+            gold_index += 1
 
         return scores
 
@@ -346,7 +352,46 @@ class Dactyler(ABC):
 
         return total_scores
 
-    def evaluate_pivot_alignment(self, score_index=0, staff="upper"):
+    @staticmethod
+    def _pivot_flags(staff, d_notes, annot):
+        current_hand = ">" if staff == "upper" else "<"
+
+        sf_count = annot.score_fingering_count(staff=staff)
+
+        pivot_flags = list()
+        prior_ad_note = None
+        for i in range(sf_count):
+            d_note = d_notes[i]
+            sf = annot.score_fingering_at_index(index=i, staff=staff)
+            strike = sf.pf.fingering.strike
+            hand = strike.hand if strike.hand else current_hand
+            digit = int(strike.digit)
+            ad_note = AnnotatedDNote(m21_note=d_note.m21_note(),
+                                     prior_note=prior_ad_note,
+                                     strike_hand=hand,
+                                     strike_digit=digit)
+
+            if ad_note.is_pivot():
+                pivot_flags.append(True)
+            else:
+                pivot_flags.append(False)
+            prior_ad_note = ad_note
+            current_hand = hand
+
+        return pivot_flags
+
+    @staticmethod
+    def _pivot_alignment_score(gold_pivot_flags, test_pivot_flags, cost=1):
+        if len(gold_pivot_flags) != len(test_pivot_flags):
+            raise Exception("Mismatched pivot flag lists.")
+
+        score = 0
+        for i in range(len(gold_pivot_flags)):
+            if gold_pivot_flags[i] != test_pivot_flags[i]:
+                score += cost
+        return score
+
+    def evaluate_pivot_alignment(self, score_index=0, staff="upper", gold_indices=[]):
         d_score = self._d_corpus.d_score_by_index(score_index)
         if not d_score.is_fully_annotated():
             raise Exception("Only fully annotated scores can be evaluated.")
@@ -360,17 +405,25 @@ class Dactyler(ABC):
         test_annot = DAnnotation(abcdf=test_abcdf)
         hdr = d_score.abcd_header()
         scores = []
+        gold_index = 0
         for gold_annot in hdr.annotations():
+            if gold_indices and gold_index not in gold_indices:
+                gold_index += 1
+                continue
             score = 0
             for staff in staves:
-                note_index = 0
                 d_part = d_score.d_part(staff=staff)
-                note_stream = d_part.orderly_note_stream(staff=staff)
-                score += self._eval_strike_distance(method=method, staff=staff,
-                                                    test_annot=test_annot, gold_annot=gold_annot)
+                d_notes = d_part.orderly_d_notes()
+                test_pivot_flags = Dactyler._pivot_flags(staff=staff, d_notes=d_notes, annot=test_annot)
+                gold_pivot_flags = Dactyler._pivot_flags(staff=staff, d_notes=d_notes, annot=gold_annot)
+                staff_score = self._pivot_alignment_score(gold_pivot_flags=gold_pivot_flags, test_pivot_flags=test_pivot_flags)
+                score += staff_score
             scores.append(score)
+            gold_index += 1
 
         return scores
+
+
 class TrainedDactyler(Dactyler):
     def __init__(self):
         super().__init__()

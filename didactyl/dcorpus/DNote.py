@@ -108,7 +108,61 @@ class DNote:
             return True
         return False
 
+    def is_descending(self):
+        if not self.prior_midi() or not self.midi():
+            return False
+        if self.midi() < self.prior_midi():
+            return True
+        return False
+
+    def is_repeating(self):
+        if not self.prior_midi() or not self.midi():
+            return False
+        if self.midi() == self.prior_midi():
+            return True
+        return False
+
     def semitone_delta(self):
         delta = self.midi() - self.prior_midi()
         delta = -1 * delta if delta < 0 else delta
         return delta
+
+
+class AnnotatedDNote(DNote):
+    def __init__(self, m21_note, prior_note, strike_hand=None, strike_digit=None):
+        super().__init__(m21_note=m21_note, prior_note=prior_note)
+        self._strike_hand = strike_hand
+        self._strike_digit = strike_digit
+
+    def strike_hand(self):
+        return self._strike_hand
+
+    def strike_digit(self):
+        return self._strike_digit
+
+    def is_pivot(self):
+        prior_ad_note = self.prior_note()
+        if prior_ad_note is None:
+            return False
+
+        if prior_ad_note.strike_hand() != self.strike_hand():
+            return False  # Pivots are one-handed maneuvers
+
+        hand = prior_ad_note.strike_hand()
+
+        if hand == ">":
+            if self.strike_digit() == 1 and prior_ad_note.strike_digit() != 1 and \
+                    not self.is_descending():
+                return True
+            if prior_ad_note.strike_digit() == 1 and self.strike_digit() != 1 and \
+                    not self.is_ascending():
+                return True
+        else:
+            if self.strike_digit() == 1 and prior_ad_note.strike_digit() != 1 and \
+                    not self.is_ascending():
+                return True
+            if prior_ad_note.strike_digit() == 1 and self.strike_digit() != 1 and \
+                    not self.is_descending():
+                return True
+
+        return False
