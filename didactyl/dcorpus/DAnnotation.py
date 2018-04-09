@@ -49,7 +49,7 @@ class DAnnotation:
         damper = '_' | '^' ;
         soft = 'p' | 'f' ;
         hand = '<' | '>' ;
-        digit = '1' | '2' | '3' | '4' | '5' ;
+        digit = '1' | '2' | '3' | '4' | '5' | 'x' ;
     """
 
     @staticmethod
@@ -89,17 +89,18 @@ class DAnnotation:
         return DAnnotation.ast_for_abcdf(lower_abcdf)
 
     def score_fingering_count(self, staff="both"):
+        print(staff + ":::" + self.abcdf() + "\n")
         ast = self.parse()
+        print(ast)
         count = 0
         # Each staff is parsed into an array of lines. Each
         # line is an array of "score fingerings," or note
         # fingerings with all the trimmings.
-        if staff == "upper" or staff == "both":
+        if 'upper' in ast and (staff == "upper" or staff == "both"):
             lines = ast['upper']
             for line in lines:
                 count += len(line)
-        if staff == "lower" or staff == "both":
-            # print(self.abcdf())
+        if 'lower' in ast and (staff == "lower" or staff == "both"):
             lines = ast['lower']
             for line in lines:
                 count += len(line)

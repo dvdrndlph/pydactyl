@@ -140,6 +140,7 @@ class Sayegh(D.TrainedDactyler):
                                                transition_counts=transition_counts,
                                                fingered_counts=fingered_counts,
                                                training=training)
+        self._training[staff] = training
 
     def generate_segment_advice(self, segment, staff, offset, handed_first_digit, handed_last_digit, k=None):
         """
