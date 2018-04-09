@@ -38,10 +38,9 @@ from didactyl.dcorpus.DNote import DNote
 
 class Sayegh(D.TrainedDactyler):
 
-    def __init__(self, smoother=None):
+    def __init__(self):
         super().__init__()
         self._training = dict()  # W' in the Sayegh paper.
-        self._smoother = smoother
 
     @staticmethod
     def _learn_from_example(staff, transition_counts, fingered_counts, training):
@@ -57,20 +56,6 @@ class Sayegh(D.TrainedDactyler):
             if weight > 0:
                 path_exists[(from_midi, to_midi)] = True
         return path_exists
-
-    def smooth(self):
-        """
-            For "uniform" smoothing, we "smooth" by finding all note transitions which are not
-            represented in the training data and giving all fingering transitions a uniform
-            non-zero weight.
-        """
-        for staff in ('upper', 'lower'):
-            existing_paths = self._paths(staff=staff)
-            if self._smoother in "uniform":
-                for (from_midi, to_midi, from_finger, to_finger) in self._training[staff]:
-                    if (from_midi, to_midi) in existing_paths:
-                        continue
-                self._training[staff][(from_midi, to_midi, from_finger, to_finger)] = 0.0001
 
     def train(self, d_corpus, staff="both", segregate=True, segmenter=None, annotation_indices=[]):
         if not segregate:
@@ -156,13 +141,25 @@ class Sayegh(D.TrainedDactyler):
                                                fingered_counts=fingered_counts,
                                                training=training)
 
-    def segment_advise(self, segment, staff, offset, handed_first_digit, handed_last_digit, top=None):
+    def generate_segment_advice(self, segment, staff, offset, handed_first_digit, handed_last_digit, k=None):
+        """
+        Generate a set of k ranked fingering suggestions for the given segment.
+        :param segment: The segment to work with, as a music21 score object.
+        :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
+        :param offset: The zero-based index to begin the returned advice.
+        :param handed_first_digit: Constrain the solution to begin with this finger.
+        :param handed_last_digit: Constrain the solution to end with this finger.
+        :param k: The number of advice segments to return. The actual number returned may be less,
+        but will be no more, than this number.
+        :return: suggestions, costs: Two lists are returned. The first contains suggested fingering
+        solutions as abcDF strings. The second list contains the respective costs of each suggestion.
+        """
         if len(segment) == 1:
             note_list = DNote.note_list(segment)
             abcdf = D.Dactyler.one_note_advise(note_list[0], staff=staff,
                                                first_digit=handed_first_digit,
                                                last_digit=handed_last_digit)
-            return abcdf
+            return [abcdf], [0]
 
         hand = ">"
         if staff == "lower":
@@ -215,10 +212,12 @@ class Sayegh(D.TrainedDactyler):
         for prior_node_id in prior_slice_node_ids:
             g.add_edge(prior_node_id, node_id, weight=-1)
 
-        path = nx.shortest_path(g, source=0, target=node_id, weight="weight")
-        segment_abcdf = ''
-        for node_id in path:
-            node = g.nodes[node_id]
-            if node["handed_digit"]:
-                segment_abcdf += node["handed_digit"]
-        return segment_abcdf
+        # path = nx.shortest_path(g, source=0, target=node_id, weight="weight")
+        # segment_abcdf = ''
+        # for node_id in path:
+            # node = g.nodes[node_id]
+            # if node["handed_digit"]:
+                # segment_abcdf += node["handed_digit"]
+        # return segment_abcdf
+
+        return D.Dactyler.standard_graph_advise(g=g, target_id=node_id, k=k)

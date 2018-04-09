@@ -112,6 +112,10 @@ class DPart:
         note_list = DNote.note_list(m21_stream)
         return note_list
 
+    def length(self, offset=0):
+        note_list = self.orderly_d_notes(offset=offset)
+        return len(note_list)
+
     def pitch_range(self):
         note_stream = self.orderly_note_stream()
         low = None

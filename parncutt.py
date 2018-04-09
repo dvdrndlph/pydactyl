@@ -25,7 +25,7 @@ __author__ = 'David Randolph'
 import music21
 import util
 from nltk import corpus
-# from node import GraphNode
+from .node import GraphNode
 import networkx as nx
 import copy
 import matplotlib.pyplot as plt
@@ -152,21 +152,20 @@ class FingeredNoteNode(GraphNode):
             tab_str += "\t"
 
         if self.is_end():
-            print tab_str + " END"
+            print(tab_str + " END")
             return
 
         if self.is_start():
-            print tab_str + " START" +\
-                " Kids: " + str(len(self.next_nodes))
+            print(tab_str + " START" + " Kids: " + str(len(self.next_nodes)))
             tab_count += 1
             for node in self.next_nodes:
                 node.dump(tab_count)
             return
 
-        print tab_str +\
-            " MIDI: " + str(self.fingered_note.get_midi()) +\
-            " Finger: " + str(self.fingered_note.get_finger()) +\
-            " Kids: " + str(len(self.next_nodes))
+        print(tab_str +
+            " MIDI: " + str(self.fingered_note.get_midi()) +
+            " Finger: " + str(self.fingered_note.get_finger()) +
+            " Kids: " + str(len(self.next_nodes)))
         tab_count += 1
 
         if recurse:
@@ -224,27 +223,27 @@ class FingeredNoteNode(GraphNode):
         max_prac = finger_span[(self.get_finger(), next_node.get_finger())]['MaxPrac']
         min_prac = finger_span[(self.get_finger(), next_node.get_finger())]['MinPrac']
         if min_prac <= required_span <= max_prac:
-            print "Good {0}->{1} trans: {2} (between {3} and {4})".format(self.get_finger(),
-                                                                         next_node.get_finger(),
-                                                                         required_span,
-                                                                         min_prac,
-                                                                         max_prac)
+            print("Good {0}->{1} trans: {2} (between {3} and {4})".format(self.get_finger(),
+                                                                          next_node.get_finger(),
+                                                                          required_span,
+                                                                          min_prac,
+                                                                          max_prac))
             return True
 
-        print "BAD {0}->{1} trans: {2} (between {3} and {4})".format(self.get_finger(),
-                                                                    next_node.get_finger(),
-                                                                    required_span,
-                                                                    min_prac,
-                                                                    max_prac)
+        print("BAD {0}->{1} trans: {2} (between {3} and {4})".format(self.get_finger(),
+                                                                     next_node.get_finger(),
+                                                                     required_span,
+                                                                     min_prac,
+                                                                     max_prac))
         return False
 
     @staticmethod
     def build_from_score(score):
-        print score
+        print(score)
         start_node = FingeredNoteNode(terminal=GraphNode.START)
         parent_nodes = [start_node]
         for n in score[1].getElementsByClass(music21.note.Note):
-            print str(n.midi)
+            print(str(n.midi))
             trellis_nodes = []
             is_in_next_column = {}
             for f in (THUMB, INDEX, MIDDLE, RING, LITTLE):
@@ -321,7 +320,7 @@ class TrigramNode(GraphNode):
 
         self.cost = 0
         self.cost = self.calculate_node_cost()
-        print self
+        print(self)
 
     def __str__(self):
         finger_1 = self.note_1.get_finger() if self.note_1.get_finger() else '-'
@@ -361,7 +360,7 @@ class TrigramNode(GraphNode):
         for i in range(tab_count):
             tab_str += "  "
         str = "%s%s Note: %s Kids: %s" % (tab_str, self.get_display_key(), midi, len(self.next_nodes))
-        print str
+        print(str)
 
         tab_count += 1
 
@@ -385,21 +384,6 @@ class TrigramNode(GraphNode):
         nx_graph = nx.DiGraph()
         self.add_to_nx_graph(nx_graph)
         return nx_graph
-
-    def add_to_yen_graph(self, yen_graph, trigram_node_from=None):
-        # time.sleep(1)
-        if trigram_node_from:
-            yen_node_from = trigram_node_from.get_hashable_key()
-            yen_node_to = self.get_hashable_key()
-            yen_graph.add_edge(yen_node_from, yen_node_to, cost=self.cost)
-
-        for node in self.next_nodes:
-            node.add_to_yen_graph(yen_graph, trigram_node_from=self)
-
-    def get_yen_graph(self):
-        yen_graph = YenKSP.DiGraph()
-        self.add_to_yen_graph(yen_graph)
-        return yen_graph
 
     def calculate_node_cost(self):
         if self.is_start() or self.is_end():
@@ -563,21 +547,21 @@ class TrigramNode(GraphNode):
             if trigram_layer_index < len(trigram_layers) and trigram_key in trigram_layers[trigram_layer_index]:
                 trigram_node = trigram_layers[trigram_layer_index][trigram_key]
                 nodes_in_layer = len(trigram_layers[trigram_layer_index])
-                print "INDEX: %s(%s) REUSE node: %s" % (trigram_layer_index, nodes_in_layer, trigram_key)
+                print("INDEX: %s(%s) REUSE node: %s" % (trigram_layer_index, nodes_in_layer, trigram_key))
             else:
                 trigram_node = TrigramNode(note_1, note_2, note_3, layer_index=trigram_layer_index)
                 if trigram_layer_index < len(trigram_layers):
                     trigram_layers[trigram_layer_index][trigram_key] = trigram_node
                     nodes_in_layer = len(trigram_layers[trigram_layer_index])
-                    print "INDEX: %s(%s) NEW  node: %s" % (trigram_layer_index, nodes_in_layer, trigram_key)
+                    print("INDEX: %s(%s) NEW  node: %s" % (trigram_layer_index, nodes_in_layer, trigram_key))
                 else:
                     trigram_layers.append({trigram_key: trigram_node})
                     nodes_in_layer = len(trigram_layers[trigram_layer_index])
-                    print "INDEX: %s(%s) NEW  node: %s on new layer" % (trigram_layer_index, nodes_in_layer, trigram_key)
+                    print("INDEX: %s(%s) NEW  node: %s on new layer" % (trigram_layer_index, nodes_in_layer, trigram_key))
             self.connect_to(trigram_node)
 
         if fnn.next_nodes:
-            # print "KIDS: %s" % len(fnn.next_nodes)
+            # print("KIDS: %s" % len(fnn.next_nodes))
             for kid in fnn.next_nodes:
                 trigram_node.build(kid, fnn_path, trigram_layers, trigram_layer_index)
         elif not self.is_start():
@@ -587,16 +571,16 @@ class TrigramNode(GraphNode):
             if trigram_layer_index < len(trigram_layers) and terminal_key in trigram_layers[trigram_layer_index]:
                 terminal_node = trigram_layers[trigram_layer_index][terminal_key]
                 nodes_in_layer = len(trigram_layers[trigram_layer_index])
-                print "INDEX: %s(%s) REUSE node: %s" % (trigram_layer_index, nodes_in_layer, terminal_key)
+                print("INDEX: %s(%s) REUSE node: %s" % (trigram_layer_index, nodes_in_layer, terminal_key))
             else:
                 if trigram_layer_index < len(trigram_layers):
                     trigram_layers[trigram_layer_index][terminal_key] = terminal_node
                     nodes_in_layer = len(trigram_layers[trigram_layer_index])
-                    print "INDEX: %s(%s) Reuse node: %s" % (trigram_layer_index, nodes_in_layer, terminal_key)
+                    print("INDEX: %s(%s) Reuse node: %s" % (trigram_layer_index, nodes_in_layer, terminal_key))
                 else:
                     trigram_layers.append({terminal_key: terminal_node})
                     nodes_in_layer = len(trigram_layers[trigram_layer_index])
-                    print "INDEX: %s(%s) NEW   node: %s on new layer" % (trigram_layer_index, nodes_in_layer, terminal_key)
+                    print("INDEX: %s(%s) NEW   node: %s on new layer" % (trigram_layer_index, nodes_in_layer, terminal_key))
             trigram_node.connect_to(terminal_node)
 
     @staticmethod
@@ -630,59 +614,59 @@ class TrigramNode(GraphNode):
         A.append(answer)
         B = []
 
-        print "NODES: %s EDGES: %s" % (len(graph.nodes()), len(graph.edges()))
+        print("NODES: %s EDGES: %s" % (len(graph.nodes()), len(graph.edges())))
         cost_pattern = re.compile('.*=(\d+)$')
         for k in range(1, K):
             end_index = len(A[k - 1]) - 1
             for i in range(0, end_index):
-                print "k: %s i: %s end: %s" % (k, i, end_index)
+                print("k: %s i: %s end: %s" % (k, i, end_index))
                 spur_node = A[k - 1][i]
                 root_path = A[k - 1][0:i + 1]
-                print "Spur: " + spur_node
-                print "Path: " + str(root_path)
+                print("Spur: " + spur_node)
+                print("Path: " + str(root_path))
 
                 paths_removed = []
                 nodes_removed = []
                 # pprint.pprint(A)
                 for path in A:
-                    if cmp(root_path, path[0:i + 1]) == 0:
+                    if root_path == path[0:i + 1]:
                         from_node = path[i]
                         to_node = path[i + 1]
-                        print "Remove edge: %s -> %s" % (from_node, to_node)
+                        print("Remove edge: %s -> %s" % (from_node, to_node))
                         if not (from_node, to_node) in paths_removed:
                             paths_removed.append((from_node, to_node))
                             graph.remove_edge(from_node, to_node)
 
                 for node in root_path:
                     if not node == spur_node:
-                        print "Remove node: %s" % node
+                        print("Remove node: %s" % node)
                         graph.remove_node(node)
                         nodes_removed.append(node)
 
-                print "NODES: %s EDGES: %s" % (len(graph.nodes()), len(graph.edges()))
+                print("NODES: %s EDGES: %s" % (len(graph.nodes()), len(graph.edges())))
                 print(graph.edges())
                 try:
                     spur_path = nx.shortest_path(graph, spur_node, sink, 'cost')
                     total_path = root_path + spur_path[1:]
-                    print "Root path: %s Spur path: %s" % (root_path, spur_path)
-                    print "Total path: %s" % total_path
+                    print("Root path: %s Spur path: %s" % (root_path, spur_path))
+                    print("Total path: %s" % total_path)
                     B.append(total_path)
                 except nx.NetworkXNoPath as e:
-                    print "Ain't got no t-bone: {0}".format(e.message)
+                    print("Ain't got no t-bone: {0}".format(e.message))
 
                 # FIXME: The surgical approach commented out does not work, as
                 # links are blasted when nodes are removed. We need to save more state
                 # to be able to recover. For now, we just restore from a copy of the graph.
                 # Restore edges and nodes removed previously
                 # for node in nodes_removed:
-                    # print "Add node: %s" % node
+                    # print("Add node: %s" % node)
                     # graph.add_node(node)
                 # for path in paths_removed:
-                    # print "Add edge: %s -> %s" % path
+                    # print("Add edge: %s -> %s" % path)
                     # cost_search = re.search('.*=(\d+)$', path[1])
                     # cost = cost_search.group(1)
                     # graph.add_edge(path[0], path[1], cost=cost)
-                # print "NODES: %s EDGES: %s" % (len(graph.nodes()), len(graph.edges()))
+                # print("NODES: %s EDGES: %s" % (len(graph.nodes()), len(graph.edges())))
                 # print(graph.edges())
                 graph = copy.deepcopy(graph_copy)
 
@@ -696,7 +680,7 @@ class TrigramNode(GraphNode):
         nx_graph = self.get_nx_graph()
         # nx.draw(nx_graph)
         # plt.show()
-        # print str(TrigramNode.end_node)
+        # print(str(TrigramNode.end_node))
 
         start_key = self.get_hashable_key()
         end_key = TrigramNode.end_node.get_hashable_key()

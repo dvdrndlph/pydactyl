@@ -170,17 +170,18 @@ class DAnnotation:
                 handed_digits.append(handed_digit)
         return handed_digits
 
-    def __init__(self, abcdf=None):
-        self._authority = None
-        self._authority_year = None
-        self._transcriber = None
-        self._transcription_date = None
+    def __init__(self, abcdf=None, authority=None, authority_year=None, transcriber=None,
+                 transcription_date=None, abcdf_id=None, comments=''):
+        self._authority = authority
+        self._authority_year = authority_year
+        self._transcriber = transcriber
+        self._transcription_date = transcription_date
         self._ast = None
         self._abcdf = None
         if abcdf:
             self.abcdf(abcdf)
-        self._abcdf_id = None
-        self._comments = ''
+        self._abcdf_id = abcdf_id
+        self._comments = comments
 
     def authority(self, authority=None):
         if authority:

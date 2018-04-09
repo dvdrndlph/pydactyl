@@ -1,0 +1,1427 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.14: http://docutils.sourceforge.net/" />
+<title>Dactyler.py</title>
+<style type="text/css">
+
+/*
+:Author: David Goodger (goodger@python.org)
+:Id: $Id: html4css1.css 7952 2016-07-26 18:15:59Z milde $
+:Copyright: This stylesheet has been placed in the public domain.
+
+Default cascading style sheet for the HTML output of Docutils.
+
+See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+customize this style sheet.
+*/
+
+/* used to remove borders from tables and images */
+.borderless, table.borderless td, table.borderless th {
+  border: 0 }
+
+table.borderless td, table.borderless th {
+  /* Override padding for "table.docutils td" with "! important".
+     The right padding separates the table cells. */
+  padding: 0 0.5em 0 0 ! important }
+
+.first {
+  /* Override more specific margin styles with "! important". */
+  margin-top: 0 ! important }
+
+.last, .with-subtitle {
+  margin-bottom: 0 ! important }
+
+.hidden {
+  display: none }
+
+.subscript {
+  vertical-align: sub;
+  font-size: smaller }
+
+.superscript {
+  vertical-align: super;
+  font-size: smaller }
+
+a.toc-backref {
+  text-decoration: none ;
+  color: black }
+
+blockquote.epigraph {
+  margin: 2em 5em ; }
+
+dl.docutils dd {
+  margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
+
+/* Uncomment (and remove this text!) to get bold-faced definition list terms
+dl.docutils dt {
+  font-weight: bold }
+*/
+
+div.abstract {
+  margin: 2em 5em }
+
+div.abstract p.topic-title {
+  font-weight: bold ;
+  text-align: center }
+
+div.admonition, div.attention, div.caution, div.danger, div.error,
+div.hint, div.important, div.note, div.tip, div.warning {
+  margin: 2em ;
+  border: medium outset ;
+  padding: 1em }
+
+div.admonition p.admonition-title, div.hint p.admonition-title,
+div.important p.admonition-title, div.note p.admonition-title,
+div.tip p.admonition-title {
+  font-weight: bold ;
+  font-family: sans-serif }
+
+div.attention p.admonition-title, div.caution p.admonition-title,
+div.danger p.admonition-title, div.error p.admonition-title,
+div.warning p.admonition-title, .code .error {
+  color: red ;
+  font-weight: bold ;
+  font-family: sans-serif }
+
+/* Uncomment (and remove this text!) to get reduced vertical space in
+   compound paragraphs.
+div.compound .compound-first, div.compound .compound-middle {
+  margin-bottom: 0.5em }
+
+div.compound .compound-last, div.compound .compound-middle {
+  margin-top: 0.5em }
+*/
+
+div.dedication {
+  margin: 2em 5em ;
+  text-align: center ;
+  font-style: italic }
+
+div.dedication p.topic-title {
+  font-weight: bold ;
+  font-style: normal }
+
+div.figure {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+div.footer, div.header {
+  clear: both;
+  font-size: smaller }
+
+div.line-block {
+  display: block ;
+  margin-top: 1em ;
+  margin-bottom: 1em }
+
+div.line-block div.line-block {
+  margin-top: 0 ;
+  margin-bottom: 0 ;
+  margin-left: 1.5em }
+
+div.sidebar {
+  margin: 0 0 0.5em 1em ;
+  border: medium outset ;
+  padding: 1em ;
+  background-color: #ffffee ;
+  width: 40% ;
+  float: right ;
+  clear: right }
+
+div.sidebar p.rubric {
+  font-family: sans-serif ;
+  font-size: medium }
+
+div.system-messages {
+  margin: 5em }
+
+div.system-messages h1 {
+  color: red }
+
+div.system-message {
+  border: medium outset ;
+  padding: 1em }
+
+div.system-message p.system-message-title {
+  color: red ;
+  font-weight: bold }
+
+div.topic {
+  margin: 2em }
+
+h1.section-subtitle, h2.section-subtitle, h3.section-subtitle,
+h4.section-subtitle, h5.section-subtitle, h6.section-subtitle {
+  margin-top: 0.4em }
+
+h1.title {
+  text-align: center }
+
+h2.subtitle {
+  text-align: center }
+
+hr.docutils {
+  width: 75% }
+
+img.align-left, .figure.align-left, object.align-left, table.align-left {
+  clear: left ;
+  float: left ;
+  margin-right: 1em }
+
+img.align-right, .figure.align-right, object.align-right, table.align-right {
+  clear: right ;
+  float: right ;
+  margin-left: 1em }
+
+img.align-center, .figure.align-center, object.align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+table.align-center {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.align-left {
+  text-align: left }
+
+.align-center {
+  clear: both ;
+  text-align: center }
+
+.align-right {
+  text-align: right }
+
+/* reset inner alignment in figures */
+div.align-right {
+  text-align: inherit }
+
+/* div.align-center * { */
+/*   text-align: left } */
+
+.align-top    {
+  vertical-align: top }
+
+.align-middle {
+  vertical-align: middle }
+
+.align-bottom {
+  vertical-align: bottom }
+
+ol.simple, ul.simple {
+  margin-bottom: 1em }
+
+ol.arabic {
+  list-style: decimal }
+
+ol.loweralpha {
+  list-style: lower-alpha }
+
+ol.upperalpha {
+  list-style: upper-alpha }
+
+ol.lowerroman {
+  list-style: lower-roman }
+
+ol.upperroman {
+  list-style: upper-roman }
+
+p.attribution {
+  text-align: right ;
+  margin-left: 50% }
+
+p.caption {
+  font-style: italic }
+
+p.credits {
+  font-style: italic ;
+  font-size: smaller }
+
+p.label {
+  white-space: nowrap }
+
+p.rubric {
+  font-weight: bold ;
+  font-size: larger ;
+  color: maroon ;
+  text-align: center }
+
+p.sidebar-title {
+  font-family: sans-serif ;
+  font-weight: bold ;
+  font-size: larger }
+
+p.sidebar-subtitle {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+p.topic-title {
+  font-weight: bold }
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font: inherit }
+
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+pre.code .ln { color: grey; } /* line numbers */
+pre.code, code { background-color: #eeeeee }
+pre.code .comment, code .comment { color: #5C6576 }
+pre.code .keyword, code .keyword { color: #3B0D06; font-weight: bold }
+pre.code .literal.string, code .literal.string { color: #0C5404 }
+pre.code .name.builtin, code .name.builtin { color: #352B84 }
+pre.code .deleted, code .deleted { background-color: #DEB0A1}
+pre.code .inserted, code .inserted { background-color: #A3D289}
+
+span.classifier {
+  font-family: sans-serif ;
+  font-style: oblique }
+
+span.classifier-delimiter {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+span.interpreted {
+  font-family: sans-serif }
+
+span.option {
+  white-space: nowrap }
+
+span.pre {
+  white-space: pre }
+
+span.problematic {
+  color: red }
+
+span.section-subtitle {
+  /* font-size relative to parent (h1..h6 element) */
+  font-size: 80% }
+
+table.citation {
+  border-left: solid 1px gray;
+  margin-left: 1px }
+
+table.docinfo {
+  margin: 2em 4em }
+
+table.docutils {
+  margin-top: 0.5em ;
+  margin-bottom: 0.5em }
+
+table.footnote {
+  border-left: solid 1px black;
+  margin-left: 1px }
+
+table.docutils td, table.docutils th,
+table.docinfo td, table.docinfo th {
+  padding-left: 0.5em ;
+  padding-right: 0.5em ;
+  vertical-align: top }
+
+table.docutils th.field-name, table.docinfo th.docinfo-name {
+  font-weight: bold ;
+  text-align: left ;
+  white-space: nowrap ;
+  padding-left: 0 }
+
+/* "booktabs" style (no vertical lines) */
+table.docutils.booktabs {
+  border: 0px;
+  border-top: 2px solid;
+  border-bottom: 2px solid;
+  border-collapse: collapse;
+}
+table.docutils.booktabs * {
+  border: 0px;
+}
+table.docutils.booktabs th {
+  border-bottom: thin solid;
+  text-align: left;
+}
+
+h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
+h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
+  font-size: 100% }
+
+ul.auto-toc {
+  list-style-type: none }
+
+</style>
+</head>
+<body>
+<div class="document">
+
+
+<p>__author__ = 'David Randolph'
+# Copyright (c) 2014-2018 David A. Randolph.
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the &quot;Software&quot;), to deal in the Software without
+# restriction, including without limitation the rights to use,
+# copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following
+# conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+from abc import ABC, abstractmethod
+import pickle
+import re
+import networkx as nx
+from itertools import islice
+from datetime import datetime
+from didactyl.dactyler import Constant
+from didactyl.dcorpus.DCorpus import DCorpus
+from didactyl.dcorpus.DNote import AnnotatedDNote
+from didactyl.dcorpus.DAnnotation import DAnnotation
+import os</p>
+<dl class="docutils">
+<dt>class Dactyler(ABC):</dt>
+<dd><p class="first">&quot;&quot;&quot;Base class for all fingering algorithms.&quot;&quot;&quot;</p>
+<p># FIXME: The log should be timestamped and for the specific algorithm being used.
+SQUAWK_OUT_LOUD = False
+DELETE_LOG = True</p>
+<dl class="docutils">
+<dt>def __init__(self):</dt>
+<dd>self._d_corpus = None
+timestamp = datetime.now().isoformat()
+self._log_file_path = '/tmp/<a href="#id1"><span class="problematic" id="id2">dactyler_</span></a>' + self.__class__.__name__ + '_' + timestamp + '.log'
+self._log = open(self._log_file_path, 'a')</dd>
+<dt>def __del__(self):</dt>
+<dd><p class="first">self._log.close()
+if Dactyler.DELETE_LOG:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 53)</p>
+Unexpected indentation.</div>
+<blockquote class="last">
+os.remove(self._log_file_path)</blockquote>
+</dd>
+</dl>
+<p>&#64;staticmethod
+def combine_abcdf_segments(segments):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 57)</p>
+Unexpected indentation.</div>
+<blockquote>
+<p>&quot;&quot;&quot;
+Combine the array of abcDF strings into a single, simplified abcDF string.
+&quot;&quot;&quot;
+abcdf = ''
+current_hand = None
+for seg in segments:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 63)</p>
+Unexpected indentation.</div>
+<blockquote>
+<dl class="docutils">
+<dt>for ch in seg:</dt>
+<dd><dl class="first last docutils">
+<dt>if ch == &quot;&lt;&quot; or ch == &quot;&gt;&quot;:</dt>
+<dd><dl class="first last docutils">
+<dt>if ch != current_hand:</dt>
+<dd>abcdf += ch
+current_hand = ch</dd>
+</dl>
+</dd>
+<dt>else:</dt>
+<dd>abcdf += ch</dd>
+</dl>
+</dd>
+</dl>
+</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 70)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<p>return abcdf</p>
+</blockquote>
+<dl class="docutils">
+<dt>def combine_segments_by_costs(self, suggestions_for_segment, costs_for_segment, segment_lengths, k=1):</dt>
+<dd>&quot;&quot;&quot;
+Given a list of fingering suggestions for an ordered list of fragments in an entire score,
+combine them in the k-best ways.
+:param suggestions_for_segment: A list of lists of suggested fingerings for each segment.
+:param costs_for_segment: A corresponding list of lists of costs for each suggestion.
+:param segment_lengths: A corresponding list of lists of the lengths of each segment. Used to
+normalize the contribution of a segment's contribution to the total cost.
+:param k: The number of advice segments to return. The actual number returned may be less,
+but will be no more, than this number.
+:return: suggestions, costs: Two lists are returned. The first contains suggested fingering
+solutions as abcDF strings. The second list contains the respective costs of each suggestion.
+&quot;&quot;&quot;
+return list(), list()</dd>
+</dl>
+<p>&#64;staticmethod
+def hand_digit(digit, staff):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 89)</p>
+Unexpected indentation.</div>
+<blockquote>
+<p>&quot;&quot;&quot;
+Determine the handed digit for the input digit string.
+If the string already has an assigned digit, just return it.
+Otherwise assign the default hand for the specified staff.
+:return: The abcDF hand digit (&quot;&gt;2&quot; or &quot;&lt;3&quot;).
+&quot;&quot;&quot;
+if digit is None:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 96)</p>
+Unexpected indentation.</div>
+<blockquote>
+return None</blockquote>
+<p>handed_re = re.compile('^[&lt;&gt;]d$')
+if handed_re.match(str(digit)):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 100)</p>
+Unexpected indentation.</div>
+<blockquote>
+return digit</blockquote>
+<p>staff_prefix = &quot;&gt;&quot;
+if staff == &quot;lower&quot;:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 104)</p>
+Unexpected indentation.</div>
+<blockquote>
+staff_prefix = &quot;&lt;&quot;</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 105)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<p>handed_digit = staff_prefix + str(digit)
+return handed_digit</p>
+</blockquote>
+<p>&#64;staticmethod
+def digit_hand(handed_digit):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 110)</p>
+Unexpected indentation.</div>
+<blockquote>
+<p>&quot;&quot;&quot;
+Determine the hand specified in the handed digit.
+:return: The abcDF hand specifier (&quot;&gt;&quot; or &quot;&lt;&quot;).
+&quot;&quot;&quot;
+handed_re = re.compile('^([&lt;&gt;]{1})d$')
+mat = handed_re.match(str(handed_digit))
+hand = mat.group(1)
+if hand != &quot;&lt;&quot; and hand != &quot;&gt;&quot;:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 118)</p>
+Unexpected indentation.</div>
+<blockquote>
+raise Exception(&quot;Ill-formed handed digit: {0}&quot;.format(handed_digit))</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 119)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<p>return hand</p>
+</blockquote>
+<dl class="docutils">
+<dt>def squawk(self, msg):</dt>
+<dd><p class="first">self._log.write(str(msg) + &quot;n&quot;)
+if Dactyler.SQUAWK_OUT_LOUD:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 124)</p>
+Unexpected indentation.</div>
+<blockquote class="last">
+print(str(msg))</blockquote>
+</dd>
+<dt>def squeak(self, msg):</dt>
+<dd><p class="first">self._log.write(str(msg))
+if Dactyler.SQUAWK_OUT_LOUD:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 129)</p>
+Unexpected indentation.</div>
+<blockquote class="last">
+print(str(msg), end=&quot;&quot;)</blockquote>
+</dd>
+</dl>
+<p>&#64;staticmethod
+def one_note_advise(d_note, staff=&quot;upper&quot;, first_digit=None, last_digit=None):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 133)</p>
+Unexpected indentation.</div>
+<blockquote>
+<p>&quot;&quot;&quot;
+Dispense advice for the degenerate case where we have only one note to consider in isolation.
+Unless otherwise constrained, we prefer the thumb for a white key and an index finger
+for a black key.
+:param d_note: The note to consider.
+:param staff: The staff containing the note.
+:param first_digit: The digit to use is constrained to be this.
+:param last_digit: The digit is constrained to be this.
+:return: Advice in the form of a handed digit (e.g., &quot;&gt;2&quot;).
+&quot;&quot;&quot;
+if staff != &quot;upper&quot; and staff != &quot;lower&quot;:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 144)</p>
+Unexpected indentation.</div>
+<blockquote>
+raise Exception(&quot;One note advice not available for {0} staff.&quot;.format(staff))</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 145)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<dl class="docutils">
+<dt>if first_digit and last_digit and first_digit != last_digit:</dt>
+<dd>raise Exception(&quot;Ambiguous digit constraint: {0} and {1}&quot;.format(first_digit, last_digit))</dd>
+<dt>if staff == &quot;upper&quot;:</dt>
+<dd>advice = &quot;&gt;&quot;</dd>
+<dt>else:</dt>
+<dd>advice = &quot;&lt;&quot;</dd>
+</dl>
+<p>digit = &quot;1&quot;
+if first_digit:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 155)</p>
+Unexpected indentation.</div>
+<blockquote>
+digit = str(first_digit)</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 156)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<dl class="docutils">
+<dt>elif last_digit:</dt>
+<dd>digit = last_digit</dd>
+<dt>elif d_note.is_black():</dt>
+<dd>digit = &quot;2&quot;</dd>
+</dl>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 160)</p>
+Definition list ends without a blank line; unexpected unindent.</div>
+<p>advice += digit</p>
+<p>return advice</p>
+</blockquote>
+<p>&#64;abstractmethod
+def segment_advise(self, segment, staff, offset, handed_first_digit, handed_last_digit, k=1):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 166)</p>
+Unexpected indentation.</div>
+<blockquote>
+&quot;&quot;&quot;
+Abstract method must be implemented by derived classes to return a k-element array of
+two-element tuples in order of preference.
+:param segment: The segment to work with, as a music21 score object.
+:param staff: The staff (one of &quot;upper&quot; or &quot;lower&quot;) from which the segment was derived.
+:param offset: The zero-based index to begin the returned advice.
+:param handed_first_digit: Constrain the solution to begin with this finger.
+:param handed_last_digit: Constrain the solution to end with this finger.
+:param k: The number of advice segments to return. The actual number returned may be less,
+but will be no more, than this number.
+:return: suggestions, costs: Two lists are returned. The first contains suggested fingering
+solutions as abcDF strings. The second list contains the respective costs of each suggestion.
+&quot;&quot;&quot;
+return list(), list()</blockquote>
+<p>&#64;staticmethod
+def standard_graph_advise(g, target_id, k):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 183)</p>
+Unexpected indentation.</div>
+<blockquote>
+<p>&quot;&quot;&quot;
+Apply standard shortest path algorithms to determine set of optimal fingerings based on
+a standardized networkx graph.
+:param g:  The weighted graph. Weights must be specified via a &quot;weight&quot; edge parameter. Fingerings
+must be set on each &quot;handed_digit&quot; node parameter.
+:param target_id: The node id (key) for the last node or end point in the graph.
+:param k: The number of
+:return: An array of the k-best abcdf advice strings for the weighted graph provided. Return scalar
+abcdf string if k is set to 1 or is not specified.
+&quot;&quot;&quot;
+if k is None or k == 1:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 194)</p>
+Unexpected indentation.</div>
+<blockquote>
+<p>path = nx.shortest_path(g, source=0, target=target_id, weight=&quot;weight&quot;)
+segment_abcdf = ''
+for node_id in path:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 197)</p>
+Unexpected indentation.</div>
+<blockquote>
+<p>node = g.nodes[node_id]
+if node[&quot;handed_digit&quot;]:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 199)</p>
+Unexpected indentation.</div>
+<blockquote>
+segment_abcdf += node[&quot;handed_digit&quot;]</blockquote>
+</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 200)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<p>return segment_abcdf</p>
+</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 201)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<dl class="docutils">
+<dt>else:</dt>
+<dd><p class="first">k_best_abcdf = list()
+k_best_paths = list(islice(nx.shortest_simple_paths(g, source=0, target=target_id, weight=&quot;weight&quot;), k))
+for path in k_best_paths:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 205)</p>
+Unexpected indentation.</div>
+<blockquote>
+<p>segment_abcdf = ''
+for node_id in path:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 207)</p>
+Unexpected indentation.</div>
+<blockquote>
+<p>node = g.nodes[node_id]
+if node[&quot;handed_digit&quot;]:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 209)</p>
+Unexpected indentation.</div>
+<blockquote>
+segment_abcdf += node[&quot;handed_digit&quot;]</blockquote>
+</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 210)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<p>k_best_abcdf.append(segment_abcdf)</p>
+</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 211)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<p class="last">return k_best_abcdf</p>
+</dd>
+</dl>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 212)</p>
+Definition list ends without a blank line; unexpected unindent.</div>
+<p>pass</p>
+</blockquote>
+<dl class="docutils">
+<dt>def advise(self, score_index=0, staff=&quot;upper&quot;, offset=0, first_digit=None, last_digit=None, k=1):</dt>
+<dd><p class="first">d_scores = self._d_corpus.d_score_list()
+if score_index &gt;= len(d_scores):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 217)</p>
+Unexpected indentation.</div>
+<blockquote>
+raise Exception(&quot;Score index out of range&quot;)</blockquote>
+<p>d_score = d_scores[score_index]
+if staff == &quot;both&quot;:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 221)</p>
+Unexpected indentation.</div>
+<blockquote>
+<dl class="docutils">
+<dt>if offset or first_digit or last_digit:</dt>
+<dd>raise Exception(&quot;Ambiguous use to offset and/or first/last digit for both staves.&quot;)</dd>
+</dl>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 223)</p>
+Definition list ends without a blank line; unexpected unindent.</div>
+<p>upper_advice = self.advise(score_index=score_index, staff=&quot;upper&quot;)
+abcdf = upper_advice + &quot;&#64;&quot;
+if d_score.part_count() &gt; 1:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 226)</p>
+Unexpected indentation.</div>
+<blockquote>
+lower_advice = self.advise(score_index=score_index, staff=&quot;lower&quot;)
+abcdf += lower_advice</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 228)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<p>return abcdf</p>
+</blockquote>
+<dl class="docutils">
+<dt>if staff != &quot;upper&quot; and staff != &quot;lower&quot;:</dt>
+<dd>raise Exception(&quot;Segregated advice is only dispensed one staff at a time.&quot;)</dd>
+</dl>
+<p>handed_first_digit = Dactyler.hand_digit(digit=first_digit, staff=staff)
+handed_last_digit = Dactyler.hand_digit(digit=last_digit, staff=staff)</p>
+<dl class="docutils">
+<dt>if d_score.part_count() == 1:</dt>
+<dd>d_part = d_score.combined_d_part()</dd>
+<dt>else:</dt>
+<dd><p class="first"># We support (segregated) left hand fingerings. By segregated, we
+# mean the right hand is dedicated to the upper staff, and the
+# left hand is dedicated to the lower staff.</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 242)</p>
+Unexpected indentation.</div>
+<blockquote class="last">
+d_part = d_score.d_part(staff=staff)</blockquote>
+</dd>
+</dl>
+<p>segments = d_part.orderly_note_stream_segments(offset=offset)
+segment_index = 0
+last_segment_index = len(segments) - 1
+segment_lengths = list()
+suggestions_for_segment = list()
+costs_for_segment = list()
+for segment in segments:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 251)</p>
+Unexpected indentation.</div>
+<blockquote>
+<p>segment_offset = 0
+segment_handed_first = None
+segment_handed_last = None
+if segment_index == 0:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 255)</p>
+Unexpected indentation.</div>
+<blockquote>
+segment_offset = offset
+segment_handed_first = handed_first_digit</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 257)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<p>segment_length = len(segment) - segment_offset
+if segment_index == last_segment_index:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 259)</p>
+Unexpected indentation.</div>
+<blockquote>
+segment_handed_last = handed_last_digit</blockquote>
+<dl class="docutils">
+<dt>suggestions, costs = self.segment_advise(segment=segment, staff=staff,</dt>
+<dd>offset=segment_offset,
+handed_first_digit=segment_handed_first,
+handed_last_digit=segment_handed_last, k=k)</dd>
+</dl>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 265)</p>
+Definition list ends without a blank line; unexpected unindent.</div>
+<p>suggestions_for_segment.append(suggestions)
+costs_for_segment.append(costs)
+segment_lengths.append(segment_length)
+segment_index += 1</p>
+</blockquote>
+<dl class="docutils">
+<dt>suggestions, costs = self.combine_segments_by_cost(suggestions_for_segment=suggestions_for_segment,</dt>
+<dd>costs_for_segment=costs_for_segment,
+segment_lengths=segment_lengths, k=k)</dd>
+</dl>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 273)</p>
+Definition list ends without a blank line; unexpected unindent.</div>
+<p class="last">return suggestions, costs</p>
+</dd>
+<dt>def load_corpus(self, d_corpus=None, path=None):</dt>
+<dd><dl class="first last docutils">
+<dt>if d_corpus:</dt>
+<dd>self._d_corpus = d_corpus</dd>
+<dt>elif path:</dt>
+<dd>self._d_corpus = DCorpus.DCorpus(path)</dd>
+<dt>else:</dt>
+<dd>raise Exception(&quot;No corpus specified for dactyler.&quot;)</dd>
+</dl>
+</dd>
+</dl>
+<p>&#64;staticmethod
+def strike_distance_cost(gold_hand, gold_digit, test_hand, test_digit, method=&quot;hamming&quot;):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 285)</p>
+Unexpected indentation.</div>
+<blockquote>
+<dl class="docutils">
+<dt>if method == &quot;hamming&quot;:</dt>
+<dd><dl class="first last docutils">
+<dt>if test_digit != gold_digit or test_hand != gold_hand:</dt>
+<dd>return 1</dd>
+<dt>else:</dt>
+<dd>return 0</dd>
+</dl>
+</dd>
+</dl>
+<p>one = str(gold_hand) + str(gold_digit)
+other = str(test_hand) + str(test_digit)
+if method == &quot;natural&quot;:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 294)</p>
+Unexpected indentation.</div>
+<blockquote>
+cost = Constant.NATURAL_EDIT_DISTANCES[(one, other)]
+return cost</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 296)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<dl class="docutils">
+<dt>elif method == &quot;pivot&quot;:</dt>
+<dd>cost = Constant.PIVOT_EDIT_DISTANCES[(one, other)]
+return cost</dd>
+<dt>else:</dt>
+<dd>raise Exception(&quot;Unsupported method: {0}&quot;.format(method))</dd>
+</dl>
+</blockquote>
+<dl class="docutils">
+<dt>def score_note_count(self, score_index=0, staff=&quot;both&quot;):</dt>
+<dd>d_score = self._d_corpus.d_score_by_index(score_index)
+note_count = d_score.note_count(staff=staff)
+return note_count</dd>
+</dl>
+<p>&#64;staticmethod
+def _distance_and_loc(method, staff, test_annot, gold_annot, gold_offset=0, zero_cost=False):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 309)</p>
+Unexpected indentation.</div>
+<blockquote>
+<p>current_gold_hand = &quot;&gt;&quot; if staff == &quot;upper&quot; else &quot;&lt;&quot;
+current_test_hand = &quot;&gt;&quot; if staff == &quot;upper&quot; else &quot;&lt;&quot;</p>
+<p>test_sf_count = test_annot.score_fingering_count(staff=staff)
+gold_sf_count = gold_annot.score_fingering_count(staff=staff)</p>
+<p>adjusted_gold_sf_count = gold_sf_count - gold_offset
+if test_sf_count != adjusted_gold_sf_count:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 317)</p>
+Unexpected indentation.</div>
+<blockquote>
+raise Exception(&quot;Length mismatch: test: {0} gold: {1}&quot;.format(test_sf_count, adjusted_gold_sf_count))</blockquote>
+<p>score = 0
+i = None
+gold_digit = None
+for i in range(test_sf_count):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 323)</p>
+Unexpected indentation.</div>
+<blockquote>
+<p>gold_i = i + gold_offset
+gold_sf = gold_annot.score_fingering_at_index(index=gold_i, staff=staff)
+gold_strike = gold_sf.pf.fingering.strike
+gold_hand = gold_strike.hand if gold_strike.hand else current_gold_hand
+gold_digit = int(gold_strike.digit)</p>
+<p>test_sf = test_annot.score_fingering_at_index(index=i, staff=staff)
+test_strike = test_sf.pf.fingering.strike
+test_hand = test_strike.hand if test_strike.hand else current_test_hand
+test_digit = int(test_strike.digit)</p>
+<p>current_gold_hand = gold_hand
+current_test_hand = test_hand</p>
+<dl class="docutils">
+<dt>cost = Dactyler.strike_distance_cost(method=method,</dt>
+<dd>gold_hand=gold_hand,
+gold_digit=gold_digit,
+test_hand=test_hand,
+test_digit=test_digit)</dd>
+<dt>if zero_cost and cost:</dt>
+<dd>return cost, gold_i, gold_digit</dd>
+</dl>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 344)</p>
+Definition list ends without a blank line; unexpected unindent.</div>
+<p>score += cost</p>
+</blockquote>
+<p>return score, i, gold_digit</p>
+</blockquote>
+<p>&#64;staticmethod
+def _eval_strike_distance(method, staff, test_annot, gold_annot):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 350)</p>
+Unexpected indentation.</div>
+<blockquote>
+<dl class="docutils">
+<dt>(cost, location, gold_digit) = Dactyler._distance_and_loc(method=method, staff=staff,</dt>
+<dd>test_annot=test_annot, gold_annot=gold_annot)</dd>
+</dl>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 352)</p>
+Definition list ends without a blank line; unexpected unindent.</div>
+<p>return cost</p>
+</blockquote>
+<dl class="docutils">
+<dt>def evaluate_strike_distance(self, method=&quot;hamming&quot;, score_index=0, staff=&quot;upper&quot;, gold_indices=[]):</dt>
+<dd><p class="first">&quot;&quot;&quot;
+Evaluate the best solution for a given score reported by the model against each of the specified
+gold-standard annotations embedded in the DScore object using the specified method.
+:param method: The edit distance metric to apply in the evaluation. One of &quot;hamming,&quot; &quot;natural,&quot; or &quot;pivot.&quot;
+:param score_index: The zero-based index of the DScore within the DCorpus currently loaded in this Dactyler.
+:param staff: The staff to include in the evaluation (one of &quot;upper,&quot; &quot;lower,&quot; or &quot;both.&quot;
+:param gold_indices: The zero-based indices of the DAnnotation objects from the DScore's ABCDHeader to use
+as the gold standard advice.
+:return: An array of distance measures against each specified gold index, in sorted order.
+&quot;&quot;&quot;
+d_score = self._d_corpus.d_score_by_index(score_index)
+if not d_score.is_fully_annotated():</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 367)</p>
+Unexpected indentation.</div>
+<blockquote>
+raise Exception(&quot;Only fully annotated scores can be evaluated.&quot;)</blockquote>
+<dl class="docutils">
+<dt>if staff == &quot;both&quot;:</dt>
+<dd>staves = ['upper', 'lower']</dd>
+<dt>else:</dt>
+<dd>staves = [staff]</dd>
+</dl>
+<p>test_abcdf = self.advise(score_index=score_index, staff=staff)
+test_annot = DAnnotation(abcdf=test_abcdf)
+hdr = d_score.abcd_header()
+scores = []
+gold_index = 0
+for gold_annot in hdr.annotations():</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 380)</p>
+Unexpected indentation.</div>
+<blockquote>
+<dl class="docutils">
+<dt>if gold_indices and gold_index not in gold_indices:</dt>
+<dd>gold_index += 1
+continue</dd>
+</dl>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 383)</p>
+Definition list ends without a blank line; unexpected unindent.</div>
+<p>score = 0
+for staff in staves:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 385)</p>
+Unexpected indentation.</div>
+<blockquote>
+<dl class="docutils">
+<dt>score += Dactyler._eval_strike_distance(method=method, staff=staff,</dt>
+<dd>test_annot=test_annot, gold_annot=gold_annot)</dd>
+</dl>
+</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 387)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<p>scores.append(score)
+gold_index += 1</p>
+</blockquote>
+<p class="last">return scores</p>
+</dd>
+<dt>def evaluate_strike_distances(self, method=&quot;hamming&quot;, score_index=0, staff=&quot;upper&quot;, gold_indices=[], k=None):</dt>
+<dd><p class="first">&quot;&quot;&quot;
+Evaluate the k best solutions for a given score reported by the model against each of the specified
+gold-standard annotations embedded in the DScore object.
+:param method: The edit distance metric to apply in the evaluation. One of &quot;hamming,&quot; &quot;natural,&quot; or &quot;pivot.&quot;
+:param score_index: The zero-based index of the DScore within the DCorpus currently loaded in this Dactyler.
+:param staff: The staff to include in the evaluation (one of &quot;upper,&quot; &quot;lower,&quot; or &quot;both.&quot;
+:param gold_indices: The zero-based indices of the DAnnotation objects from the DScore's ABCDHeader to use
+as the gold standard advice.
+:param k: The number of &quot;k-best&quot; abcDF advice strings produced by the Dactyler model to evaluate.
+:return: A DEvaluationSet object detailing the results of the evaluation.
+&quot;&quot;&quot;
+d_score = self._d_corpus.d_score_by_index(score_index)
+if not d_score.is_fully_annotated():</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 406)</p>
+Unexpected indentation.</div>
+<blockquote>
+raise Exception(&quot;Only fully annotated scores can be evaluated.&quot;)</blockquote>
+<dl class="docutils">
+<dt>if staff == &quot;both&quot;:</dt>
+<dd>staves = ['upper', 'lower']</dd>
+<dt>else:</dt>
+<dd>staves = [staff]</dd>
+</dl>
+<p>test_abcdf = self.advise(score_index=score_index, staff=staff)
+test_annot = DAnnotation(abcdf=test_abcdf)
+hdr = d_score.abcd_header()
+scores = []
+gold_index = 0
+for gold_annot in hdr.annotations():</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 419)</p>
+Unexpected indentation.</div>
+<blockquote>
+<dl class="docutils">
+<dt>if gold_indices and gold_index not in gold_indices:</dt>
+<dd>gold_index += 1
+continue</dd>
+</dl>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 422)</p>
+Definition list ends without a blank line; unexpected unindent.</div>
+<p>score = 0
+for staff in staves:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 424)</p>
+Unexpected indentation.</div>
+<blockquote>
+<dl class="docutils">
+<dt>score += Dactyler._eval_strike_distance(method=method, staff=staff,</dt>
+<dd>test_annot=test_annot, gold_annot=gold_annot)</dd>
+</dl>
+</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 426)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<p>scores.append(score)
+gold_index += 1</p>
+</blockquote>
+<p class="last">return scores</p>
+</dd>
+<dt>def evaluate_strike_reentry(self, method=&quot;hamming&quot;, score_index=0, staff=&quot;upper&quot;, gold_indices=[]):</dt>
+<dd><p class="first">d_score = self._d_corpus.d_score_by_index(score_index)
+if not d_score.is_fully_annotated():</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 434)</p>
+Unexpected indentation.</div>
+<blockquote>
+raise Exception(&quot;Only fully annotated scores can be evaluated.&quot;)</blockquote>
+<dl class="docutils">
+<dt>if staff == &quot;both&quot;:</dt>
+<dd>staves = ['upper', 'lower']</dd>
+<dt>else:</dt>
+<dd>staves = [staff]</dd>
+</dl>
+<p>hdr = d_score.abcd_header()
+scores = {&quot;upper&quot;: [], &quot;lower&quot;: []}
+for staff in staves:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 444)</p>
+Unexpected indentation.</div>
+<blockquote>
+<p>current_gold_index = 0
+for gold_annot in hdr.annotations():</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 446)</p>
+Unexpected indentation.</div>
+<blockquote>
+<p>score = 0
+if len(gold_indices) &gt; 0 and current_gold_index not in gold_indices:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 448)</p>
+Unexpected indentation.</div>
+<blockquote>
+current_gold_index += 1
+continue</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 450)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<p>current_gold_index += 1</p>
+<p>test_abcdf = self.advise(score_index=score_index, staff=staff)
+self.squawk(&quot;COMPLETE ADVICE: {0}&quot;.format(test_abcdf))
+if staff == 'upper':</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 455)</p>
+Unexpected indentation.</div>
+<blockquote>
+test_abcdf += '&#64;'</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 456)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<dl class="docutils">
+<dt>else:</dt>
+<dd>test_abcdf = '&#64;' + str(test_abcdf)</dd>
+</dl>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 458)</p>
+Definition list ends without a blank line; unexpected unindent.</div>
+<p>test_annot = DAnnotation(abcdf=test_abcdf)
+(cost, loc, gold_digit) = self._distance_and_loc(zero_cost=True, method=method, staff=staff,</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 460)</p>
+Unexpected indentation.</div>
+<blockquote>
+test_annot=test_annot, gold_annot=gold_annot)</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 461)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<p>score += cost
+self.squawk(&quot;GOLD: {0} staff for {1}&quot;.format(staff, gold_annot.abcdf(staff=staff, flat=True)))
+self.squawk(&quot;TEST: {0} staff for {1}&quot;.format(staff, test_abcdf))
+self.squawk(&quot;SCORE: {0} COST: {1} LOC: {2}&quot;.format(score, cost, loc))</p>
+<dl class="docutils">
+<dt>while cost &gt; 0:</dt>
+<dd><dl class="first docutils">
+<dt>test_abcdf = self.advise(score_index=score_index, staff=staff,</dt>
+<dd>offset=loc, first_digit=gold_digit)</dd>
+</dl>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 469)</p>
+Definition list ends without a blank line; unexpected unindent.</div>
+<p>self.squawk(&quot;GOLD: {0} staff for {1}&quot;.format(staff, gold_annot.abcdf(staff=staff, flat=True)))
+self.squawk(&quot;TRUNCATED ADVICE: {0}&quot;.format(test_abcdf))
+if staff == 'upper':</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 472)</p>
+Unexpected indentation.</div>
+<blockquote>
+test_abcdf += '&#64;'</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 473)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<dl class="docutils">
+<dt>else:</dt>
+<dd>test_abcdf = '&#64;' + str(test_abcdf)</dd>
+</dl>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 475)</p>
+Definition list ends without a blank line; unexpected unindent.</div>
+<p>test_annot = DAnnotation(abcdf=test_abcdf)
+(cost, loc, gold_digit) = self._distance_and_loc(zero_cost=True, gold_offset=loc,</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 477)</p>
+Unexpected indentation.</div>
+<blockquote>
+method=method, staff=staff,
+test_annot=test_annot, gold_annot=gold_annot)</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 479)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<p class="last">score += cost
+self.squawk(&quot;     score: {0} cost: {1} loc: {2}&quot;.format(score, cost, loc))</p>
+</dd>
+</dl>
+<p>scores[staff].append(score)</p>
+</blockquote>
+</blockquote>
+<p>total_scores = []
+if len(scores['upper']) &gt; 0:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 486)</p>
+Unexpected indentation.</div>
+<blockquote>
+<dl class="docutils">
+<dt>for i in range(len(scores['upper'])):</dt>
+<dd><p class="first">total_scores.append(scores['upper'][i])
+if len(scores['lower']) &gt; 0:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 489)</p>
+Unexpected indentation.</div>
+<blockquote class="last">
+total_scores[i] += scores['lower'][i]</blockquote>
+</dd>
+</dl>
+</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 490)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<dl class="docutils">
+<dt>elif len(scores['lower']) &gt; 0:</dt>
+<dd><dl class="first last docutils">
+<dt>for i in range(len(scores['lower'])):</dt>
+<dd>total_scores.append(scores['lower'][i])</dd>
+</dl>
+</dd>
+<dt>else:</dt>
+<dd>raise Exception(&quot;No scores found.&quot;)</dd>
+</dl>
+<p class="last">return total_scores</p>
+</dd>
+</dl>
+<p>&#64;staticmethod
+def _pivot_flags(staff, d_notes, annot):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 500)</p>
+Unexpected indentation.</div>
+<blockquote>
+<p>current_hand = &quot;&gt;&quot; if staff == &quot;upper&quot; else &quot;&lt;&quot;</p>
+<p>sf_count = annot.score_fingering_count(staff=staff)</p>
+<p>pivot_flags = list()
+prior_ad_note = None
+for i in range(sf_count):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 507)</p>
+Unexpected indentation.</div>
+<blockquote>
+<p>d_note = d_notes[i]
+sf = annot.score_fingering_at_index(index=i, staff=staff)
+strike = sf.pf.fingering.strike
+hand = strike.hand if strike.hand else current_hand
+digit = int(strike.digit)
+ad_note = AnnotatedDNote(m21_note=d_note.m21_note(),</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 513)</p>
+Unexpected indentation.</div>
+<blockquote>
+prior_note=prior_ad_note,
+strike_hand=hand,
+strike_digit=digit)</blockquote>
+<dl class="docutils">
+<dt>if ad_note.is_pivot():</dt>
+<dd>pivot_flags.append(True)</dd>
+<dt>else:</dt>
+<dd>pivot_flags.append(False)</dd>
+</dl>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 521)</p>
+Definition list ends without a blank line; unexpected unindent.</div>
+<p>prior_ad_note = ad_note
+current_hand = hand</p>
+</blockquote>
+<p>return pivot_flags</p>
+</blockquote>
+<p>&#64;staticmethod
+def _pivot_alignment_score(gold_pivot_flags, test_pivot_flags, cost=1):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 528)</p>
+Unexpected indentation.</div>
+<blockquote>
+<dl class="docutils">
+<dt>if len(gold_pivot_flags) != len(test_pivot_flags):</dt>
+<dd>raise Exception(&quot;Mismatched pivot flag lists.&quot;)</dd>
+</dl>
+<p>score = 0
+for i in range(len(gold_pivot_flags)):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 533)</p>
+Unexpected indentation.</div>
+<blockquote>
+<dl class="docutils">
+<dt>if gold_pivot_flags[i] != test_pivot_flags[i]:</dt>
+<dd>score += cost</dd>
+</dl>
+</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 535)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<p>return score</p>
+</blockquote>
+<dl class="last docutils">
+<dt>def evaluate_pivot_alignment(self, score_index=0, staff=&quot;upper&quot;, gold_indices=[]):</dt>
+<dd><p class="first">d_score = self._d_corpus.d_score_by_index(score_index)
+if not d_score.is_fully_annotated():</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 540)</p>
+Unexpected indentation.</div>
+<blockquote>
+raise Exception(&quot;Only fully annotated scores can be evaluated.&quot;)</blockquote>
+<dl class="docutils">
+<dt>if staff == &quot;both&quot;:</dt>
+<dd>staves = ['upper', 'lower']</dd>
+<dt>else:</dt>
+<dd>staves = [staff]</dd>
+</dl>
+<p>test_abcdf = self.advise(score_index=score_index, staff=staff)
+test_annot = DAnnotation(abcdf=test_abcdf)
+hdr = d_score.abcd_header()
+scores = []
+gold_index = 0
+for gold_annot in hdr.annotations():</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 553)</p>
+Unexpected indentation.</div>
+<blockquote>
+<dl class="docutils">
+<dt>if gold_indices and gold_index not in gold_indices:</dt>
+<dd>gold_index += 1
+continue</dd>
+</dl>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 556)</p>
+Definition list ends without a blank line; unexpected unindent.</div>
+<p>score = 0
+for staff in staves:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 558)</p>
+Unexpected indentation.</div>
+<blockquote>
+d_part = d_score.d_part(staff=staff)
+d_notes = d_part.orderly_d_notes()
+test_pivot_flags = Dactyler._pivot_flags(staff=staff, d_notes=d_notes, annot=test_annot)
+gold_pivot_flags = Dactyler._pivot_flags(staff=staff, d_notes=d_notes, annot=gold_annot)
+staff_score = self._pivot_alignment_score(gold_pivot_flags=gold_pivot_flags, test_pivot_flags=test_pivot_flags)
+score += staff_score</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 564)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<p>scores.append(score)
+gold_index += 1</p>
+</blockquote>
+<p class="last">return scores</p>
+</dd>
+</dl>
+</dd>
+<dt>class TrainedDactyler(Dactyler):</dt>
+<dd><dl class="first docutils">
+<dt>def __init__(self):</dt>
+<dd>super().__init__()
+self._smoother = None
+self._training = {}</dd>
+</dl>
+<p>&#64;abstractmethod
+def segment_advise(self, segment, staff, offset, handed_first_digit, handed_last_digit, k=None):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 578)</p>
+Unexpected indentation.</div>
+<blockquote>
+pass</blockquote>
+<p>&#64;abstractmethod
+def train(self, d_corpus, staff=&quot;both&quot;, segregate=True, segmenter=None, annotation_indices=[]):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 582)</p>
+Unexpected indentation.</div>
+<blockquote>
+return</blockquote>
+<dl class="docutils">
+<dt>def retain(self, pickle_path=None, to_db=False):</dt>
+<dd><dl class="first last docutils">
+<dt>if pickle_path:</dt>
+<dd><dl class="first last docutils">
+<dt>with open(pickle_path, 'wb') as pickle_file:</dt>
+<dd>pickle.dump(self._training, pickle_file, pickle.HIGHEST_PROTOCOL)</dd>
+</dl>
+</dd>
+<dt>elif to_db:</dt>
+<dd>raise Exception(&quot;Retaining pickled file to database not yet supported.&quot;)</dd>
+<dt>else:</dt>
+<dd>raise Exception(&quot;No retention destination specified.&quot;)</dd>
+</dl>
+</dd>
+<dt>def recall(self, pickle_path=None, pickle_db_id=None):</dt>
+<dd><dl class="first last docutils">
+<dt>if pickle_path:</dt>
+<dd><dl class="first last docutils">
+<dt>with open(pickle_path, 'rb') as pickle_file:</dt>
+<dd>self._training = pickle.load(pickle_file)</dd>
+</dl>
+</dd>
+<dt>elif pickle_db_id:</dt>
+<dd>raise Exception(&quot;Recalling pickled training from database not yet supported.&quot;)</dd>
+<dt>else:</dt>
+<dd>raise Exception(&quot;No source specified from which to recall training.&quot;)</dd>
+</dl>
+</dd>
+<dt>def training(self):</dt>
+<dd>return self._training</dd>
+<dt>def demonstrate(self):</dt>
+<dd><dl class="first last docutils">
+<dt>for k in self._training:</dt>
+<dd>print(k, ': ', self._training[k])</dd>
+</dl>
+</dd>
+<dt>def smoother(self, method=None):</dt>
+<dd><dl class="first last docutils">
+<dt>if method is None:</dt>
+<dd>return self._smoother</dd>
+<dt>else:</dt>
+<dd>self._smoother = method</dd>
+</dl>
+</dd>
+</dl>
+<p>&#64;abstractmethod
+def smooth(self):</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 617)</p>
+Unexpected indentation.</div>
+<blockquote class="last">
+return</blockquote>
+</dd>
+</dl>
+<div class="system-messages section">
+<h1>Docutils System Messages</h1>
+<div class="system-message" id="id1">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/dave/tb2/didactyl/dd/src/didactyl/dactyler/Dactyler.py</tt>, line 45); <em><a href="#id2">backlink</a></em></p>
+Unknown target name: &quot;dactyler&quot;.</div>
+</div>
+</div>
+</body>
+</html>

@@ -32,18 +32,21 @@ __author__ = 'David Randolph'
 
 import numpy
 import re
+import copy
+import networkx as nx
+
 from didactyl.dactyler import Constant
 from . import Dactyler as D
 from didactyl.dcorpus.DNote import DNote
 
 
 class Interval:
-    def __init__(self, l_color, h_color, l_finger, h_finger, s):
-        self._l_color = int(l_color)
-        self._h_color = int(h_color)
-        self._l_finger = int(l_finger)
-        self._h_finger = int(h_finger)
-        self._s = int(s)
+    def __init__(self, low_color, high_color, low_finger, high_finger, semitone_delta):
+        self._l_color = int(low_color)
+        self._h_color = int(high_color)
+        self._l_finger = int(low_finger)
+        self._h_finger = int(high_finger)
+        self._s = int(semitone_delta)
 
     def l_color(self):
         return self._l_color
@@ -108,8 +111,6 @@ class Hart(D.Dactyler):
         cost_re = None
         l_color = None
         h_color = None
-        l_finger = None
-        h_finger = None
 
         f = open(self._cost_path, 'r')
         for line in f:
@@ -139,7 +140,11 @@ class Hart(D.Dactyler):
                 group_num = 3
                 for s in range(0, max_interval_size + 1):
                     cost = matches.group(group_num)
-                    interval = Interval(l_color=l_color, h_color=h_color, l_finger=l_finger, h_finger=h_finger, s=s)
+                    interval = Interval(low_color=l_color,
+                                        high_color=h_color,
+                                        low_finger=l_finger,
+                                        high_finger=h_finger,
+                                        semitone_delta=s)
                     costs[interval] = int(cost)
                     group_num += 1
         f.close()
@@ -153,10 +158,23 @@ class Hart(D.Dactyler):
         self._max_interval_size = max_interval_size
         self._costs = self._define_costs()
 
-    def segment_advise(self, segment, staff, offset, handed_first_digit, handed_last_digit, top=None):
+    def generate_segment_advice(self, segment, staff, offset, handed_first_digit, handed_last_digit, k=None):
+        """
+        Generate a set of k ranked fingering suggestions for the given segment. Note that the original
+        Hart implementation only returns one best fingering.
+        :param segment: The segment to work with, as a music21 score object.
+        :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
+        :param offset: The zero-based index to begin the returned advice.
+        :param handed_first_digit: Constrain the solution to begin with this finger.
+        :param handed_last_digit: Constrain the solution to end with this finger.
+        :param k: The number of advice segments to return. The actual number returned may be less,
+        but will be no more, than this number.
+        :return: suggestions, costs: Two lists are returned. The first contains suggested fingering
+        solutions as abcDF strings. The second list contains the respective costs of each suggestion.
+        """
+        if k is not None and k != 1:
+            raise Exception("Original Hart does not support k best solutions. Try HartK.")
         opt_cost = Hart.BIG_NUM
-
-        abcdf = ""
 
         first_digit = int(handed_first_digit[1:]) if handed_first_digit else None
         last_digit = int(handed_last_digit[1:]) if handed_last_digit else None
@@ -165,9 +183,9 @@ class Hart(D.Dactyler):
         note_list = DNote.note_list(segment)
         if len(segment) == 1:
             abcdf = D.Dactyler.one_note_advise(note_list[0], staff=staff,
-                                                first_digit=handed_first_digit,
-                                                last_digit=handed_last_digit)
-            return abcdf
+                                               first_digit=handed_first_digit,
+                                               last_digit=handed_last_digit)
+            return [abcdf], [0]
 
         m = segment_note_count - 1
         fs = numpy.zeros([segment_note_count, 6], dtype=int)
@@ -299,4 +317,79 @@ class Hart(D.Dactyler):
         if staff == "lower":
             hand = "<"
         abcdf = hand + "".join(str(f) for f in fingers)
-        return abcdf
+        return [abcdf], [0]
+
+
+class HartK(Hart):
+    def generate_segment_advice(self, segment, staff, offset, handed_first_digit, handed_last_digit, k=None):
+        segment_note_count = len(segment)
+        note_list = DNote.note_list(segment)
+        if len(segment) == 1:
+            abcdf = D.Dactyler.one_note_advise(note_list[0], staff=staff,
+                                               first_digit=handed_first_digit,
+                                               last_digit=handed_last_digit)
+            return [abcdf], [0]
+
+        hand = ">"
+        if staff == "lower":
+            hand = "<"
+
+        g = nx.MultiDiGraph()
+        g.add_node(0, midi=None, handed_digit=None)
+        prior_slice_node_ids = list()
+        prior_slice_node_ids.append(0)
+        last_note_in_segment_index = len(segment) - 1
+        node_id = 1
+        on_last_prefingered_note = False
+        for note_in_segment_index in range(segment_note_count):
+            d_note = note_list[note_in_segment_index]
+            on_first_prefingered_note = False
+            slice_node_ids = list()
+
+            if note_in_segment_index == 0 and handed_first_digit:
+                on_first_prefingered_note = True
+
+            if note_in_segment_index == last_note_in_segment_index and handed_last_digit:
+                on_last_prefingered_note = True
+
+            for digit in range(1, 6):
+                handed_digit = hand + str(digit)
+                if on_last_prefingered_note and handed_digit != handed_last_digit:
+                    continue
+                if on_first_prefingered_note and handed_digit != handed_first_digit:
+                    continue
+
+                g.add_node(node_id, midi=d_note.midi(), handed_digit=handed_digit)
+                slice_node_ids.append(node_id)
+                if 0 in prior_slice_node_ids:
+                    g.add_edge(0, node_id, weight=1)
+                else:
+                    for prior_node_id in prior_slice_node_ids:
+                        prior_node = g.nodes[prior_node_id]
+                        prior_hd = prior_node["handed_digit"]
+                        prior_digit = int(prior_hd[1:])
+
+                        if (staff == "upper" and d_note.is_ascending()) or (staff == "lower" and not d_note.is_ascending):
+                            interval = Interval(low_color=d_note.prior_color(),
+                                                high_color=d_note.color(),
+                                                low_finger=prior_digit,
+                                                high_finger=digit,
+                                                semitone_delta=d_note.semitone_delta())
+                        else:
+                            interval = Interval(low_color=d_note.color(),
+                                                high_color=d_note.prior_color(),
+                                                low_finger=digit,
+                                                high_finger=prior_digit,
+                                                semitone_delta=d_note.semitone_delta())
+                        cost = self._costs[interval]
+
+                        g.add_edge(prior_node_id, node_id, weight=cost)
+                node_id += 1
+            if len(slice_node_ids) > 0:
+                prior_slice_node_ids = copy.copy(slice_node_ids)
+
+        g.add_node(node_id, midi=None, handed_digit=None)
+        for prior_node_id in prior_slice_node_ids:
+            g.add_edge(prior_node_id, node_id, weight=1)
+
+        return D.Dactyler.standard_graph_advise(g=g, target_id=node_id, k=k)

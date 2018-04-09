@@ -24,6 +24,7 @@ __author__ = 'David Randolph'
 
 import time
 
+
 class GraphNode:
     START = 'Start'
     END = 'End'
@@ -82,4 +83,4 @@ class GraphNode:
         return False
 
     def dump(self):
-        print str(self)
+        print(str(self))

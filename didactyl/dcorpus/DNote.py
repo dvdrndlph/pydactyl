@@ -127,9 +127,27 @@ class DNote:
         delta = -1 * delta if delta < 0 else delta
         return delta
 
+    def is_between(self, note_x, note_y):
+        if not note_x or not note_y:
+            return False
+
+        midi = self.midi()
+        midi_x = note_x.midi()
+        midi_y = note_y.midi()
+
+        if not midi or not midi_x or not midi_y:
+            return False
+
+        if midi_y > midi > midi_x:
+            return True
+        if midi_y < midi < midi_x:
+            return True
+
+        return False
+
 
 class AnnotatedDNote(DNote):
-    def __init__(self, m21_note, prior_note, strike_hand=None, strike_digit=None):
+    def __init__(self, m21_note, prior_note=None, strike_hand=None, strike_digit=None):
         super().__init__(m21_note=m21_note, prior_note=prior_note)
         self._strike_hand = strike_hand
         self._strike_digit = strike_digit
@@ -139,6 +157,9 @@ class AnnotatedDNote(DNote):
 
     def strike_digit(self):
         return self._strike_digit
+
+    def tuple_str(self):
+        return "%s:%s" % (self.midi(), self.strike_digit())
 
     def is_pivot(self):
         prior_ad_note = self.prior_note()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import re
 import unittest
-from didactyl.dactyler.Hart import Hart
+from didactyl.dactyler.Hart import HartK
 from didactyl.dcorpus.DCorpus import DCorpus
 import TestConstant
 
@@ -9,17 +9,17 @@ import TestConstant
 class HartTest(unittest.TestCase):
     @staticmethod
     def test_hart_edges():
-        hart = Hart()
+        hart = HartK()
         d_corpus = DCorpus(corpus_str=TestConstant.ONE_NOTE)
         hart.load_corpus(d_corpus=d_corpus)
         upper_rh_advice = hart.advise(staff="upper")
         right_re = re.compile('^>\d$')
         assert right_re.match(upper_rh_advice), "Bad one-note, right-hand, upper-staff advice"
-        # both_advice = hart.advise(staff="both")
-        # both_re = re.compile('^>\d@$')
-        # assert both_re.match(both_advice), "Bad one-note, segregated, both-staff advice"
+        both_advice = hart.advise(staff="both")
+        both_re = re.compile('^>\d@$')
+        assert both_re.match(both_advice), "Bad one-note, segregated, both-staff advice"
 
-        hart = Hart()
+        hart = HartK()
         d_corpus = DCorpus(corpus_str=TestConstant.ONE_BLACK_NOTE_PER_STAFF)
         hart.load_corpus(d_corpus=d_corpus)
         upper_advice = hart.advise(staff="upper")
@@ -35,7 +35,7 @@ class HartTest(unittest.TestCase):
         lower_re = re.compile('^<3$')
         assert lower_re.match(lower_advice), "Bad preset black-note, both-staff advice"
 
-        hart = Hart()
+        hart = HartK()
         d_corpus = DCorpus(corpus_str=TestConstant.TWO_WHITE_NOTES_PER_STAFF)
         hart.load_corpus(d_corpus=d_corpus)
         upper_advice = hart.advise(staff="upper")
@@ -47,7 +47,7 @@ class HartTest(unittest.TestCase):
 
     @staticmethod
     def test_pivot_alignment():
-        hart = Hart()
+        hart = HartK()
         d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE)
         hart.load_corpus(d_corpus=d_corpus)
 
@@ -59,7 +59,7 @@ class HartTest(unittest.TestCase):
 
     @staticmethod
     def test_distance_metrics():
-        hart = Hart()
+        hart = HartK()
         d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE)
         hart.load_corpus(d_corpus=d_corpus)
         complete_rh_advice = hart.advise(staff="upper")
@@ -90,8 +90,8 @@ class HartTest(unittest.TestCase):
         combo_re = re.compile('^>\d+@<\d+$')
         assert combo_re.match(combo_advice), "Bad combined advice"
         hamming_evaluations = hart.evaluate_strike_distance(method="hamming", staff="both")
-        # for he in hamming_evaluations:
-            # print(he)
+        for he in hamming_evaluations:
+            print(he)
         assert hamming_evaluations[0] > 0, "Undetected Hamming costs"
         assert hamming_evaluations[1] == 0, "Bad fish in Hamming barrel"
 
@@ -109,7 +109,7 @@ class HartTest(unittest.TestCase):
 
     @staticmethod
     def test_reentry():
-        hart = Hart()
+        hart = HartK()
         d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE)
         hart.load_corpus(d_corpus=d_corpus)
 
