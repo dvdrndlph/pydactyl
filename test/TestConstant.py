@@ -147,3 +147,30 @@ A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|:
 A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|:
 CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA GFED:|C4|]
 """
+
+A_MAJ_SCALE_SHORT = """% abcDidactyl v5
+% abcD fingering 1: 123123412312345@543213214321321
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-13 17:24:43
+% These are complete fingerings, with any gaps filled in.
+% abcD fingering 2: >123412312312345@<432143213214321
+% Authority: Hart et al. Algorithm
+% abcD fingering 3: >123123412312341@<433213214321432
+% Authority: Sayegh Algorithm
+% abcDidactyl END
+X:7
+T:scales_a_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Amaj
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+A,B,CD EFGA Bcde fga2|]
+V:2
+L:1/16
+A,B,CD EFGA Bcde fga2|]
+"""

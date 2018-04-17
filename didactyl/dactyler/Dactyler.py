@@ -48,6 +48,8 @@ class Dactyler(ABC):
         self._log_file_path = '/tmp/dactyler_' + self.__class__.__name__ + '_' + timestamp + '.log'
         self._log = open(self._log_file_path, 'a')
         self._segmenting = segmenting
+
+        # One of "cost," "normal," or "rank"
         self._segment_combination_method = "normal"
         self._staff_combination_method = "naive"
 
@@ -143,7 +145,7 @@ class Dactyler(ABC):
         :return: suggestions, costs: Two lists are returned. The first contains suggested fingering
         solutions as abcDF strings. The second list contains the respective costs of each suggestion.
         """
-        g = nx.MultiDiGraph()
+        g = nx.DiGraph()
         g.add_node(0, suggestion=None)
         prior_slice_node_ids = list()
         prior_slice_node_ids.append(0)
@@ -162,7 +164,7 @@ class Dactyler(ABC):
                     elif self._segment_combination_method == 'rank':
                         cost = suggestion_id
                     else:
-                        raise Exception("Unsupported method: {0}".format(method))
+                        raise Exception("Unsupported method: {0}".format(self._segment_combination_method))
                     g.add_edge(prior_node_id, node_id, weight=cost)
                 slice_node_ids.append(node_id)
                 node_id += 1
@@ -295,7 +297,7 @@ class Dactyler(ABC):
         return list(), list()
 
     @staticmethod
-    def standard_graph_advise(g, target_id, k):
+    def generate_standard_graph_advice(g, target_id, k):
         """
         Apply standard shortest path algorithms to determine set of optimal fingerings based on
         a standardized networkx graph.
@@ -316,19 +318,30 @@ class Dactyler(ABC):
             cost = nx.shortest_path_length(g, source=0, target=target_id, weight="weight")
             return [segment_abcdf], [cost]
         else:
+            sugg_map = dict()
             suggestions = list()
             costs = list()
             k_best_paths = list(islice(nx.shortest_simple_paths(g, source=0, target=target_id, weight="weight"), k))
             for path in k_best_paths:
                 sub_g = g.subgraph(path)
                 suggestion_cost = sub_g.size(weight="weight")
+                # print("SUBGRAPH COST: {0}".format(suggestion_cost))
+                # for (from_id, to_id) in sub_g.edges:
+                #     edge_weight = sub_g[from_id][to_id]['weight']
+                #     print("{0} cost for edge ({1}, {2})".format(edge_weight, from_id, to_id))
                 segment_abcdf = ''
                 for node_id in path:
                     node = g.nodes[node_id]
                     if node["handed_digit"]:
                         segment_abcdf += node["handed_digit"]
                 suggestions.append(segment_abcdf)
+                if segment_abcdf in sugg_map:
+                    sugg_map[segment_abcdf] += 1
+                else:
+                    sugg_map[segment_abcdf] = 1
                 costs.append(suggestion_cost)
+
+            print("TOTAL: {0} DISTINCT: {1}".format(len(suggestions), len(sugg_map)))
             return suggestions, costs
 
     def generate_advice(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None, k=1):
@@ -556,44 +569,47 @@ class Dactyler(ABC):
 
         return scores
 
-    def evaluate_strike_distances(self, method="hamming", score_index=0, staff="upper", gold_indices=[], k=None):
+    def evaluate_strike_distances(self, method="hamming", score_index=0, staff="upper", gold_indices=[], k=1):
         """
         Evaluate the k best solutions for a given score reported by the model against each of the specified
         gold-standard annotations embedded in the DScore object.
         :param method: The edit distance metric to apply in the evaluation. One of "hamming," "natural," or "pivot."
         :param score_index: The zero-based index of the DScore within the DCorpus currently loaded in this Dactyler.
-        :param staff: The staff to include in the evaluation (one of "upper," "lower," or "both."
+        :param staff: The staff to include in the evaluation (one of "upper" or "lower.")
         :param gold_indices: The zero-based indices of the DAnnotation objects from the DScore's ABCDHeader to use
         as the gold standard advice.
         :param k: The number of "k-best" abcDF advice strings produced by the Dactyler model to evaluate.
-        :return: A DEvaluationSet object detailing the results of the evaluation.
+        :return suggestions, costs, scores_for_gold_index: An array of the suggested abcDF strings. An array of
+        the costs determined by the model, and a dictionary mapping gold-standard indices to an array of corresponding
+        distance metric scores.
         """
+        if staff != "upper" and staff != "lower":
+            raise Exception("Strike distances must be evaluated one staff at a time.")
+
         d_score = self._d_corpus.d_score_by_index(score_index)
         if not d_score.is_fully_annotated():
             raise Exception("Only fully annotated scores can be evaluated.")
 
-        if staff == "both":
-            staves = ['upper', 'lower']
-        else:
-            staves = [staff]
-
-        test_abcdf = self.advise(score_index=score_index, staff=staff)
-        test_annot = DAnnotation(abcdf=test_abcdf)
+        suggestions, costs = self.generate_advice(score_index=score_index, staff=staff, k=k)
         hdr = d_score.abcd_header()
-        scores = []
+        scores_for_gold_index = dict()
         gold_index = 0
+
         for gold_annot in hdr.annotations():
             if gold_indices and gold_index not in gold_indices:
                 gold_index += 1
                 continue
-            score = 0
-            for staff in staves:
-                score += Dactyler._eval_strike_distance(method=method, staff=staff,
-                                                        test_annot=test_annot, gold_annot=gold_annot)
-            scores.append(score)
+            scores = []
+            for i in range(len(suggestions)):
+                test_annot = DAnnotation(abcdf=suggestions[i])
+                score = Dactyler._eval_strike_distance(method=method, staff=staff,
+                                                       test_annot=test_annot, gold_annot=gold_annot)
+                scores.append(score)
+
+            scores_for_gold_index[gold_index] = scores
             gold_index += 1
 
-        return scores
+        return suggestions, costs, scores_for_gold_index
 
     def evaluate_strike_reentry(self, method="hamming", score_index=0, staff="upper", gold_indices=[]):
         d_score = self._d_corpus.d_score_by_index(score_index)

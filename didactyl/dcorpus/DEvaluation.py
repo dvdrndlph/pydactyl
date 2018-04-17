@@ -22,6 +22,7 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
+
 class DEvaluation:
     """
     Class to keep track of how well each of the top ranked outputs of a model

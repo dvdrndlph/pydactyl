@@ -166,7 +166,7 @@ class Sayegh(D.TrainedDactyler):
         if staff == "lower":
             hand = "<"
 
-        g = nx.MultiDiGraph()
+        g = nx.DiGraph()
         g.add_node(0, midi=None, handed_digit=None)
         prior_slice_node_ids = list()
         prior_slice_node_ids.append(0)
@@ -221,4 +221,4 @@ class Sayegh(D.TrainedDactyler):
                 # segment_abcdf += node["handed_digit"]
         # return segment_abcdf
 
-        return D.Dactyler.standard_graph_advise(g=g, target_id=node_id, k=k)
+        return D.Dactyler.generate_standard_graph_advice(g=g, target_id=node_id, k=k)

@@ -89,9 +89,9 @@ class DAnnotation:
         return DAnnotation.ast_for_abcdf(lower_abcdf)
 
     def score_fingering_count(self, staff="both"):
-        print(staff + ":::" + self.abcdf() + "\n")
+        # print(staff + ":::" + self.abcdf() + "\n")
         ast = self.parse()
-        print(ast)
+        # print(ast)
         count = 0
         # Each staff is parsed into an array of lines. Each
         # line is an array of "score fingerings," or note

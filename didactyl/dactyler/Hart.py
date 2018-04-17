@@ -334,7 +334,7 @@ class HartK(Hart):
         if staff == "lower":
             hand = "<"
 
-        g = nx.MultiDiGraph()
+        g = nx.DiGraph()
         g.add_node(0, midi=None, handed_digit=None)
         prior_slice_node_ids = list()
         prior_slice_node_ids.append(0)
@@ -392,4 +392,4 @@ class HartK(Hart):
         for prior_node_id in prior_slice_node_ids:
             g.add_edge(prior_node_id, node_id, weight=1)
 
-        return D.Dactyler.standard_graph_advise(g=g, target_id=node_id, k=k)
+        return D.Dactyler.generate_standard_graph_advice(g=g, target_id=node_id, k=k)
