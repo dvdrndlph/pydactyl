@@ -117,6 +117,30 @@ V:2
 L:1/4
 C,2E,2|]"""
 
+FOUR_NOTES = """% abcDidactyl v5
+% abcD fingering 1: 12@21
+% Authority: Foo Bar (1968)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-13 17:24:43
+% abcD fingering 2: >5135@<2222
+% Authority: Bar Baz (1066)
+% abcDidactyl END
+X:1
+T:Four Note
+C:John Doe
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:C
+V:1 treble
+V:2 bass octave=-1
+V:1 treble
+L:1/4
+ACAe|]
+V:2
+L:1/4
+ACAe|]
+"""
+
 A_MAJ_SCALE = """% abcDidactyl v5
 % abcD fingering 1: 12312341231234543213214321321&21234123123412321432132143212&12312341231234543213214321321@54321321432132123123412312345&54321321432132123123412312345&32132143213213231231234123121
 % Authority:  Beringer and Dunhill (1900)

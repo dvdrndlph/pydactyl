@@ -142,12 +142,12 @@ class Sayegh(D.TrainedDactyler):
                                                training=training)
         self._training[staff] = training
 
-    def generate_segment_advice(self, segment, staff, offset, handed_first_digit, handed_last_digit, k=None):
+    def generate_segment_advice(self, segment, staff, offset=0, handed_first_digit=None, handed_last_digit=None, k=None):
         """
         Generate a set of k ranked fingering suggestions for the given segment.
         :param segment: The segment to work with, as a music21 score object.
         :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
-        :param offset: The zero-based index to begin the returned advice.
+        :param offset: The zero-based index to begin the returned advice. Defaults to 0. FIXME: Not supported.
         :param handed_first_digit: Constrain the solution to begin with this finger.
         :param handed_last_digit: Constrain the solution to end with this finger.
         :param k: The number of advice segments to return. The actual number returned may be less,

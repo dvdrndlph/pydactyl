@@ -280,7 +280,7 @@ class Dactyler(ABC):
         return advice
 
     @abstractmethod
-    def generate_segment_advice(self, segment, staff, offset, handed_first_digit, handed_last_digit, k=1):
+    def generate_segment_advice(self, segment, staff, offset, handed_first_digit=None, handed_last_digit=None, k=1):
         """
         Abstract method must be implemented by derived classes to generate a set of up to k ranked fingering
         suggestions for the given segment.

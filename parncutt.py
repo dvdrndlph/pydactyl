@@ -87,6 +87,7 @@ finger_span = {
     #(5, 5): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0}
 }
 
+
 class FingeredNote:
     def __init__(self, m21note=None, finger=None):
         self.m21note = m21note
