@@ -854,12 +854,11 @@ class Parncutt(D.Dactyler):
         g.remove_node(node_id)
         for predecessor_id in predecessor_node_ids:
             Parncutt.prune_dead_end(g=g, node_id=predecessor_id)
-        pass
 
     @staticmethod
     def fingered_note_nx_graph(segment, hand, handed_first_digit, handed_last_digit):
         g = nx.DiGraph()
-        g.add_node(0, midi=0, digit="0")
+        g.add_node(0, start=1, midi=0, digit="-")
         prior_slice_node_ids = list()
         prior_slice_node_ids.append(0)
         last_note_in_segment_index = len(segment) - 1
@@ -911,9 +910,64 @@ class Parncutt(D.Dactyler):
                 prior_slice_node_ids = copy.copy(slice_node_ids)
             note_in_segment_index += 1
 
-        g.add_node(node_id, midi=0, digit="0")
+        g.add_node(node_id, end=1, midi=0, digit="-")
         for prior_node_id in prior_slice_node_ids:
             g.add_edge(prior_node_id, node_id)
+
+        return g
+
+    @staticmethod
+    def trigram_nx_graph(fn_graph):
+        g = nx.DiGraph()
+        g.add_node(0, start=1)
+        level_1_slice = [0]
+        prior_trigram_slice = [0]
+        next_trigram_node_id = 1
+        done = False
+        while not done:
+            slice_trigram_id_for_key = dict()
+            next_level_1_slice = list()
+            for level_1_node_id in level_1_slice:
+                level_2_nodes = list(fn_graph.successors(level_1_node_id))
+                for level_2_node_id in level_2_nodes:
+                    next_level_1_slice.append(level_2_node_id)
+                    level_3_nodes = list(fn_graph.successors(level_2_node_id))
+                    for level_3_node_id in level_3_nodes:
+                        node_1 = fn_graph.nodes[level_1_node_id]
+                        node_2 = fn_graph.nodes[level_2_node_id]
+                        node_3 = fn_graph.nodes[level_3_node_id]
+                        if node_3['digit'] == '-':
+                            done = True
+                        digit_1 = node_1['digit']
+                        digit_2 = node_2['digit']
+                        digit_3 = node_3['digit']
+                        midi_1 = node_1['midi']
+                        midi_2 = node_2['midi']
+                        midi_3 = node_3['midi']
+                        slice_trigram_key = (digit_1, digit_2, digit_3)
+                        if slice_trigram_key not in slice_trigram_id_for_key:
+                            g.add_node(next_trigram_node_id,
+                                       midi_1=midi_1, digit_1=digit_1,
+                                       midi_2=midi_2, digit_2=digit_2,
+                                       midi_3=midi_3, digit_3=digit_3)
+                            slice_trigram_id_for_key[slice_trigram_key] = next_trigram_node_id
+                            trigram_node_id = next_trigram_node_id
+                            next_trigram_node_id += 1
+                        else:
+                            trigram_node_id = slice_trigram_id_for_key[slice_trigram_key]
+                        for prior_trigram_node_id in prior_trigram_slice:
+                            if 'start' in g.nodes[prior_trigram_node_id] or \
+                                (g.nodes[prior_trigram_node_id]['digit_2'] == digit_1 and
+                                 g.nodes[prior_trigram_node_id]['digit_3'] == digit_2):
+                                g.add_edge(prior_trigram_node_id, trigram_node_id)
+            level_1_slice = next_level_1_slice
+            prior_trigram_slice = []
+            for node_key, node_id in slice_trigram_id_for_key.items():
+                prior_trigram_slice.append(node_id)
+
+        g.add_node(next_trigram_node_id, end=1)
+        for prior_trigram_node_id in prior_trigram_slice:
+            g.add_edge(prior_trigram_node_id, next_trigram_node_id)
 
         return g
 
@@ -944,8 +998,10 @@ class Parncutt(D.Dactyler):
         fn_graph = Parncutt.fingered_note_nx_graph(segment=segment, hand=hand,
                                                    handed_first_digit=handed_first_digit,
                                                    handed_last_digit=handed_last_digit)
-
         nx.write_graphml(fn_graph, "/Users/dave/goo.graphml")
+
+        trigram_graph = Parncutt.trigram_nx_graph(fn_graph=fn_graph)
+        nx.write_graphml(trigram_graph, "/Users/dave/gootri.graphml")
         # nx.draw(fn_graph)
         # trigram_graph = TrigramNode.build_from_fnn(fnn_graph)
         # k_best_fingerings = trigram_graph.k_best_fingerings(k=k)
