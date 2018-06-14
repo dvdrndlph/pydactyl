@@ -508,6 +508,6 @@ class Parncutt(D.Dactyler):
         # nx.write_graphml(fn_graph, "/Users/dave/goo.graphml")
 
         trigram_graph, target_node_id = self.trigram_nx_graph(fn_graph=fn_graph)
-        # nx.write_graphml(trigram_graph, "/Users/dave/gootri.graphml")
-        return D.Dactyler.generate_standard_graph_advice(g=trigram_graph, target_id=target_node_id, k=k)
+        nx.write_graphml(trigram_graph, "/Users/dave/gootri.graphml")
+        # return D.Dactyler.generate_standard_graph_advice(g=trigram_graph, target_id=target_node_id, k=k)
 
