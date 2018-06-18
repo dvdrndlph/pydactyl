@@ -14,6 +14,7 @@ class ParncuttTest(unittest.TestCase):
         parncutt.load_corpus(d_corpus=d_corpus)
         complete_rh_advice = parncutt.advise(staff="upper")
         assert complete_rh_advice, "Ahhh!"
+        print(complete_rh_advice)
 
     """
     @staticmethod

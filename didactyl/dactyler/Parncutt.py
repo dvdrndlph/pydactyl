@@ -173,31 +173,31 @@ class Parncutt(D.Dactyler):
         # Repeated notes are always played with the same finger.
         if required_span == 0:
             if from_digit == to_digit:
-                print("Good {0} to {1} trans of span {2}".format(from_digit, to_digit, required_span))
+                # print("Good {0} to {1} trans of span {2}".format(from_digit, to_digit, required_span))
                 return True
             else:
-                print("BAD {0} to {1} trans of span {2}".format(from_digit, to_digit, required_span))
+                # print("BAD {0} to {1} trans of span {2}".format(from_digit, to_digit, required_span))
                 return False
 
         if (from_digit, to_digit) not in finger_span:
-            print("BAD {0} to {1} trans of span {2}".format(from_digit, to_digit, required_span))
+            # print("BAD {0} to {1} trans of span {2}".format(from_digit, to_digit, required_span))
             return False
 
         max_prac = finger_span[(from_digit, to_digit)]['MaxPrac']
         min_prac = finger_span[(from_digit, to_digit)]['MinPrac']
         if min_prac <= required_span <= max_prac:
-            print("Good {0} to {1} trans of span {2} (between {3} and {4})".format(from_digit,
-                                                                                 to_digit,
-                                                                                 required_span,
-                                                                                 min_prac,
-                                                                                 max_prac))
+            # print("Good {0} to {1} trans of span {2} (between {3} and {4})".format(from_digit,
+                                                                                 # to_digit,
+                                                                                 # required_span,
+                                                                                 # min_prac,
+                                                                                 # max_prac))
             return True
 
-        print("BAD {0} to {1} trans of span {2} (between {3} and {4})".format(from_digit,
-                                                                            to_digit,
-                                                                            required_span,
-                                                                            min_prac,
-                                                                            max_prac))
+        # print("BAD {0} to {1} trans of span {2} (between {3} and {4})".format(from_digit,
+                                                                            # to_digit,
+                                                                            # required_span,
+                                                                            # min_prac,
+                                                                            # max_prac))
         return False
 
     @staticmethod
@@ -312,6 +312,12 @@ class Parncutt(D.Dactyler):
         if digit_2 == RING or digit_2 == LITTLE:
             costs['wea'] = self._weights['wea']
 
+        # Rule 10 ("Thumb-on-Black")
+        # "Assign 1 point whenever the thumb plays a black key."
+        # More to follow below.
+        if digit_2 == THUMB and is_black(midi_2):
+            costs['bl1'] += self._weights['bl1']
+
         if digit_1:
             semitone_diff_12 = midi_2 - midi_1
             max_comf_12 = finger_span[(handed_digit_1, handed_digit_2)]['MaxComf']
@@ -319,7 +325,16 @@ class Parncutt(D.Dactyler):
             min_rel_12 = finger_span[(handed_digit_1, handed_digit_2)]['MinRel']
             max_rel_12 = finger_span[(handed_digit_1, handed_digit_2)]['MaxRel']
 
-            # Rule 1 (str "Stretch")
+            # Rule 10 ("Thumb-on-Black")
+            # "Assign 1 point whenever the thumb plays a black key." (Assessed above.)
+            # "If the immediately preceding note is # white, assign a further 2 points." Assessed here.
+            # "If the immediately following note is white, assign a further 2 points." Assessed below.
+            if digit_2 == THUMB and is_black(midi_2) and is_white(midi_1):
+                costs['bl1'] += 2 * self._weights['bl1']
+            if digit_2 == THUMB and is_black(midi_2) and is_white(midi_3):
+                costs['bl1'] += 2 * self._weights['bl1']
+
+            # Rule 1 ("Stretch")
             # ﻿"Assign 2 points for each semitone that an interval exceeds MaxComf or is less than MinComf."
             if semitone_diff_12 > max_comf_12:
                 costs['str'] = 2 * (semitone_diff_12 - max_comf_12) * self._weights['str']
@@ -393,51 +408,45 @@ class Parncutt(D.Dactyler):
             # simultaneously: The finger on the second of the three notes is the thumb; the second pitch
             # lies between the first and third pitches; and the interval between the first and third pitches
             # is greater than MaxPrac or less than MinPrac. All other changes are half changes."
-            if semitone_diff_13 != 0:  #FIXME? This is in the code Parncutt shared, but not clear from paper.
-                if semitone_diff_13 > max_comf_13:
-                    if digit_2 == THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 > max_prac_13:
-                        costs['pcc'] = 2 * self._weights['pcc']  # A "full change"
-                    else:
-                        costs['pcc'] = 1 * self._weights['pcc']  # A "half change"
-                elif semitone_diff_13 < min_comf_13:
-                    if digit_2 == THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 < min_prac_13:
-                        costs['pcc'] = 2 * self._weights['pcc']  # A "full change"
-                    else:
-                        costs['pcc'] = 1 * self._weights['pcc']  # A "half change"
+            ### if semitone_diff_13 != 0:  # This is in the code Parncutt shared, but is contradicted in paper.
+            if semitone_diff_13 > max_comf_13:
+                if digit_2 == THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 > max_prac_13:
+                    costs['pcc'] = 2 * self._weights['pcc']  # A "full change"
+                else:
+                    costs['pcc'] = 1 * self._weights['pcc']  # A "half change"
+            elif semitone_diff_13 < min_comf_13:
+                if digit_2 == THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 < min_prac_13:
+                    costs['pcc'] = 2 * self._weights['pcc']  # A "full change"
+                else:
+                    costs['pcc'] = 1 * self._weights['pcc']  # A "half change"
 
             # Rule 5 ("Position-Change-Size")
             # "If the interval spanned by the first and third notes in a group of three is less than MinComf,
             # assign the difference between the interval and MinComf (expressed in semitones). Conversely,
             # if the interval is greater than MaxComf, assign the difference between the interval and MaxComf."
-            if semitone_diff_13 != 0:  #FIXME? This is in the code Parncutt shared, but not clear from paper.
-                if semitone_diff_13 < min_comf_13:
-                    costs['pcs'] = (min_comf_13 - semitone_diff_13) * self._weights['pcs']
-                elif semitone_diff_13 > max_comf_13:
-                    costs['pcs'] = (semitone_diff_13 - max_comf_13) * self._weights['pcs']
+            ### if semitone_diff_13 != 0:  # This is in the code Parncutt shared, but is contradicted in paper.
+            if semitone_diff_13 < min_comf_13:
+                costs['pcs'] = (min_comf_13 - semitone_diff_13) * self._weights['pcs']
+            elif semitone_diff_13 > max_comf_13:
+                costs['pcs'] = (semitone_diff_13 - max_comf_13) * self._weights['pcs']
 
             # Rule 7 ("Three-Four-Five")
             # "Assign 1 point every time fingers 3, 4, and 5 occur consecutively in any order,
             # even when groups overlap."
-            hard_sequence = True
-            hard_finger = MIDDLE  # That is, 3.
-            for finger in sorted((digit_1, digit_2, digit_3)):
-                if finger != hard_finger:
-                    hard_sequence = False
-                hard_finger += 1
-            if hard_sequence:
+            finger_hash = {
+                digit_1: True,
+                digit_2: True,
+                digit_3: True
+            }
+            if MIDDLE in finger_hash and RING in finger_hash and LITTLE in finger_hash:
                 costs['345'] = self._weights['345']
 
         # Rule 10 ("Thumb-on-Black")
         # "Assign 1 point whenever the thumb plays a black key. If the immediately preceding note is
-        # white, assign a further 2 points. If the immediately following note is white, assign a
-        # further 2 points."
-        black_key_cost = 1
-        if digit_2 == THUMB and is_black(midi_2):
-            if digit_1 and is_white(midi_1):
-                black_key_cost += 2
-            if digit_3 and is_white(midi_3):
-                black_key_cost += 2
-            costs['bl1'] += black_key_cost * self._weights['bl1']
+        #  white, assign a further 2 points." Assessed above.
+        # "If the immediately following note is white, assign a further 2 points." Assessed here.
+        if digit_3 and digit_2 == THUMB and is_black(midi_2) and is_white(midi_3):
+            costs['bl1'] += 2 * self._weights['bl1']
 
         # Rule 11 ("Five-on-Black")
         # "If the fifth finger plays a black key and the immediately preceding and following notes
@@ -525,14 +534,14 @@ class Parncutt(D.Dactyler):
 
         return g, next_trigram_node_id
 
-    def k_best_advice(g, target_id, k):
+    def k_best_advice(self, g, target_id, k):
         """
         Apply standard shortest path algorithms to determine set of optimal fingerings based on
         a standardized networkx graph.
         :param g: The weighted trinode graph. Weights must be specified via a "weight" edge parameter. Fingerings
         must be set on each "handed_digit" node parameter.
         :param target_id: The node id (key) for the last node or end point in the graph.
-        :param k: The number of
+        :param k: The number of suggestions to return.
         :return: suggestions, costs: Two lists are returned. The first contains suggested fingering
         solutions as abcDF strings. The second list contains the respective costs of each suggestion.
         """
@@ -541,8 +550,8 @@ class Parncutt(D.Dactyler):
             segment_abcdf = ''
             for node_id in path:
                 node = g.nodes[node_id]
-                if node["handed_digit"]:
-                    segment_abcdf += node["handed_digit"]
+                if "digit_2" in node:
+                    segment_abcdf += node["digit_2"]
             cost = nx.shortest_path_length(g, source=0, target=target_id, weight="weight")
             return [segment_abcdf], [cost]
         else:
@@ -560,8 +569,8 @@ class Parncutt(D.Dactyler):
                 segment_abcdf = ''
                 for node_id in path:
                     node = g.nodes[node_id]
-                    if node["handed_digit"]:
-                        segment_abcdf += node["handed_digit"]
+                    if "digit_2" in node:
+                        segment_abcdf += node["digit_2"]
                 suggestions.append(segment_abcdf)
                 if segment_abcdf in sugg_map:
                     sugg_map[segment_abcdf] += 1
@@ -602,6 +611,7 @@ class Parncutt(D.Dactyler):
         # nx.write_graphml(fn_graph, "/Users/dave/goo.graphml")
 
         trigram_graph, target_node_id = self.trigram_nx_graph(fn_graph=fn_graph)
-        nx.write_graphml(trigram_graph, "/Users/dave/gootri.graphml")
-        # return D.Dactyler.generate_standard_graph_advice(g=trigram_graph, target_id=target_node_id, k=k)
+        # nx.write_graphml(trigram_graph, "/Users/dave/gootri.graphml")
+        suggestions, costs = self.k_best_advice(g=trigram_graph, target_id=target_node_id, k=k)
+        return suggestions, costs
 
