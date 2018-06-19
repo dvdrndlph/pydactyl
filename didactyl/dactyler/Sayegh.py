@@ -152,15 +152,16 @@ class Sayegh(D.TrainedDactyler):
         :param handed_last_digit: Constrain the solution to end with this finger.
         :param k: The number of advice segments to return. The actual number returned may be less,
         but will be no more, than this number.
-        :return: suggestions, costs: Two lists are returned. The first contains suggested fingering
-        solutions as abcDF strings. The second list contains the respective costs of each suggestion.
+        :return: suggestions, costs, details: Two lists are returned. The first contains suggested fingering
+        solutions as abcDF strings. The second contains the respective costs of each suggestion. The third
+        is a list of lists containing the specific cost of each fingering transition to the total suggestion cost.
         """
         if len(segment) == 1:
             note_list = DNote.note_list(segment)
             abcdf = D.Dactyler.one_note_advise(note_list[0], staff=staff,
                                                first_digit=handed_first_digit,
                                                last_digit=handed_last_digit)
-            return [abcdf], [0]
+            return [abcdf], [0], [0]
 
         hand = ">"
         if staff == "lower":
@@ -212,13 +213,5 @@ class Sayegh(D.TrainedDactyler):
         g.add_node(node_id, midi=None, handed_digit=None)
         for prior_node_id in prior_slice_node_ids:
             g.add_edge(prior_node_id, node_id, weight=-1)
-
-        # path = nx.shortest_path(g, source=0, target=node_id, weight="weight")
-        # segment_abcdf = ''
-        # for node_id in path:
-            # node = g.nodes[node_id]
-            # if node["handed_digit"]:
-                # segment_abcdf += node["handed_digit"]
-        # return segment_abcdf
 
         return D.Dactyler.generate_standard_graph_advice(g=g, target_id=node_id, k=k)

@@ -169,8 +169,9 @@ class Hart(D.Dactyler):
         :param handed_last_digit: Constrain the solution to end with this finger.
         :param k: The number of advice segments to return. The actual number returned may be less,
         but will be no more, than this number.
-        :return: suggestions, costs: Two lists are returned. The first contains suggested fingering
-        solutions as abcDF strings. The second list contains the respective costs of each suggestion.
+        :return: suggestions, costs, details: Three lists are returned. The first contains suggested fingering
+        solutions as abcDF strings. The second contains the respective costs of each suggestion. The third
+        contains details on how each cost was determined.
         """
         if k is not None and k != 1:
             raise Exception("Original Hart does not support k best solutions. Try HartK.")
@@ -185,7 +186,7 @@ class Hart(D.Dactyler):
             abcdf = D.Dactyler.one_note_advise(note_list[0], staff=staff,
                                                first_digit=handed_first_digit,
                                                last_digit=handed_last_digit)
-            return [abcdf], [0]
+            return [abcdf], [0], [0]
 
         m = segment_note_count - 1
         fs = numpy.zeros([segment_note_count, 6], dtype=int)
@@ -317,11 +318,25 @@ class Hart(D.Dactyler):
         if staff == "lower":
             hand = "<"
         abcdf = hand + "".join(str(f) for f in fingers)
-        return [abcdf], [0]
+        return [abcdf], [0], [0]
 
 
 class HartK(Hart):
     def generate_segment_advice(self, segment, staff, offset, handed_first_digit, handed_last_digit, k=None):
+        """
+        Generate a set of k ranked fingering suggestions for the given segment.
+        :param segment: The segment to work with, as a music21 score object.
+        :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
+        :param offset: The zero-based index to begin the returned advice.
+        :param handed_first_digit: Constrain the solution to begin with this finger.
+        :param handed_last_digit: Constrain the solution to end with this finger.
+        :param k: The number of advice segments to return. The actual number returned may be less,
+        but will be no more, than this number.
+        :return: suggestions, costs, details: Three lists are returned. The first contains suggested fingering
+        solutions as abcDF strings. The second contains the respective costs of each suggestion. The third
+        contains details about how each cost was determined. The third is a list of lists containing the
+        specific cost of each fingering transition to the corresponding total suggestion cost.
+        """
         segment_note_count = len(segment)
         note_list = DNote.note_list(segment)
         if len(segment) == 1:

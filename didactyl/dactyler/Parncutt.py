@@ -610,8 +610,9 @@ class Parncutt(D.Dactyler):
         :param handed_last_digit: Constrain the solution to end with this finger.
         :param k: The number of advice segments to return. The actual number returned may be less,
         but will be no more, than this number.
-        :return: suggestions, costs: Two lists are returned. The first contains suggested fingering
-        solutions as abcDF strings. The second list contains the respective costs of each suggestion.
+        :return: suggestions, costs, details: Three lists are returned. The first contains suggested fingering
+        solutions as abcDF strings. The second contains the respective costs of each suggestion. The third
+        contains details about how each cost was determined.
         """
         if len(segment) == 1:
             note_list = DNote.note_list(segment)
@@ -633,5 +634,5 @@ class Parncutt(D.Dactyler):
         # nx.write_graphml(trigram_graph, "/Users/dave/gootri.graphml")
         suggestions, costs, details = self.k_best_advice(g=trigram_graph, target_id=target_node_id, k=k)
         print(details)
-        return suggestions, costs
+        return suggestions, costs, details
 

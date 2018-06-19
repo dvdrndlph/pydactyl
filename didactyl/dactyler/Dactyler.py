@@ -90,7 +90,8 @@ class Dactyler(ABC):
                     abcdf += ch
         return abcdf
 
-    def combine_staves(self, upper_suggestions, upper_costs, lower_suggestions, lower_costs, upper_length, lower_length, k=1):
+    def combine_staves(self, upper_suggestions, upper_costs, upper_details, upper_length,
+                       lower_suggestions, lower_costs, lower_details, lower_length, k=1):
         """
         Apply the staff_combination_method to combine solutions for upper and lower staves.
         :param upper_suggestions:
@@ -105,6 +106,7 @@ class Dactyler(ABC):
         # FIXME
         suggestions = list()
         costs = list()
+        details = list()
         if self.staff_combination_method() == "naive":
             if len(upper_suggestions) == len(lower_suggestions):
                 for i in range(len(upper_suggestions)):
@@ -115,14 +117,18 @@ class Dactyler(ABC):
                     upper_index = lower_index // len(lower_suggestions)
                     suggestions.append(upper_suggestions[upper_index] + "@" + lower_suggestions[lower_index])
                     costs.append(upper_costs[upper_index] + lower_costs[lower_index])
+                    details.extend(upper_details[i])
+                    details.extend(lower_details[i])
             else:
                 for upper_index in range(len(upper_suggestions)):
                     lower_index = upper_index // len(upper_suggestions)
                     suggestions.append(upper_suggestions[upper_index] + "@" + lower_suggestions[lower_index])
                     costs.append(upper_costs[upper_index] + lower_costs[lower_index])
-        return suggestions, costs
+                    details.extend(upper_details[upper_index])
+                    details.extend(lower_details[lower_index])
+        return suggestions, costs, details
 
-    def combine_segments(self, suggestions_for_segment, costs_for_segment, segment_lengths, k=1):
+    def combine_segments(self, suggestions_for_segment, costs_for_segment, details_for_segment, segment_lengths, k=1):
         """
         Given a list of fingering suggestions for an ordered list of fragments in an entire score,
         combine them in the k-best ways. This reduces to a k-shortest path search problem, where the arc costs
@@ -138,12 +144,16 @@ class Dactyler(ABC):
         self.segment_combination_method as one of "cost," "normal," or "rank."
         :param suggestions_for_segment: A list of lists of suggested fingerings for each segment.
         :param costs_for_segment: A corresponding list of lists of costs for each suggestion.
+        :param details_for_segment: A corresponding list of data structures detailing how the cost
+        for each suggestion was determined.
         :param segment_lengths: A corresponding list of lists of the lengths of each segment. Used to
         normalize the contribution of a segment's contribution to the total cost.
         :param k: The number of advice segments to return. The actual number returned may be less,
         but will be no more, than this number.
-        :return: suggestions, costs: Two lists are returned. The first contains suggested fingering
-        solutions as abcDF strings. The second list contains the respective costs of each suggestion.
+        :return: suggestions, costs, details: Three lists are returned. The first contains suggested fingering
+        solutions as abcDF strings. The second contains the respective costs of each complete suggestion, adjusted
+        per self.segment_combination_method. The third contains the pre-adjusted cost details for each suggestion.
+        (The format of these details varies by algorithm used.)
         """
         g = nx.DiGraph()
         g.add_node(0, suggestion=None)
@@ -154,6 +164,7 @@ class Dactyler(ABC):
             slice_node_ids = list()
             suggestions = suggestions_for_segment[segment_index]
             costs = costs_for_segment[segment_index]
+            details = details_for_segment[segment_index]
             for suggestion_id in range(len(suggestions)):
                 g.add_node(node_id, suggestion=suggestions[suggestion_id])
                 for prior_node_id in prior_slice_node_ids:
@@ -165,7 +176,7 @@ class Dactyler(ABC):
                         cost = suggestion_id
                     else:
                         raise Exception("Unsupported method: {0}".format(self._segment_combination_method))
-                    g.add_edge(prior_node_id, node_id, weight=cost)
+                    g.add_edge(prior_node_id, node_id, weight=cost, details=details)
                 slice_node_ids.append(node_id)
                 node_id += 1
             if len(slice_node_ids) > 0:
@@ -184,10 +195,17 @@ class Dactyler(ABC):
                     abcdf_segments.append(node["suggestion"])
             suggestion = Dactyler.combine_abcdf_segments(abcdf_segments)
             cost = nx.shortest_path_length(g, source=0, target=node_id, weight="weight")
-            return [suggestion], [cost]
+            sub_g = g.subgraph(path)
+            suggestion_details = list()
+            for (u, v, segment_details) in sub_g.edges.data('details'):
+                if not segment_details:
+                    continue
+                suggestion_details.extend(details)
+            return [suggestion], [cost], [suggestion_details]
         else:
             suggestions = list()
             costs = list()
+            details = list()
             k_best_paths = list(islice(nx.shortest_simple_paths(g, source=0, target=node_id, weight="weight"), k))
             for path in k_best_paths:
                 sub_g = g.subgraph(path)
@@ -200,7 +218,13 @@ class Dactyler(ABC):
                 suggestion = Dactyler.combine_abcdf_segments(abcdf_segments)
                 suggestions.append(suggestion)
                 costs.append(cost)
-            return suggestions, costs
+                suggestion_details = list()
+                for (u, v, segment_details) in sub_g.edges.data('details'):
+                    if not details:
+                        continue
+                    suggestion_details.extend(segment_details)
+                details.append(suggestion_details)
+            return suggestions, costs, details
 
     @staticmethod
     def hand_digit(digit, staff):
@@ -291,10 +315,11 @@ class Dactyler(ABC):
         :param handed_last_digit: Constrain the solution to end with this finger.
         :param k: The number of advice segments to return. The actual number returned may be less,
         but will be no more, than this number.
-        :return: suggestions, costs: Two lists are returned. The first contains suggested fingering
-        solutions as abcDF strings. The second list contains the respective costs of each suggestion.
+        :return: suggestions, costs, details: Two lists are returned. The first contains suggested fingering
+        solutions as abcDF strings. The second contains the respective costs of each suggestion. The third
+        contains details about how each cost was determined.
         """
-        return list(), list()
+        return list(), list(), list()
 
     @staticmethod
     def generate_standard_graph_advice(g, target_id, k):
@@ -306,7 +331,8 @@ class Dactyler(ABC):
         :param target_id: The node id (key) for the last node or end point in the graph.
         :param k: The number of
         :return: suggestions, costs: Two lists are returned. The first contains suggested fingering
-        solutions as abcDF strings. The second list contains the respective costs of each suggestion.
+        solutions as abcDF strings. The second contains the respective costs of each suggestion.  The third
+        is a list of lists containing the specific cost of each fingering transition to the total suggestion cost.
         """
         if k is None or k == 1:
             path = nx.shortest_path(g, source=0, target=target_id, weight="weight")
@@ -316,19 +342,22 @@ class Dactyler(ABC):
                 if node["handed_digit"]:
                     segment_abcdf += node["handed_digit"]
             cost = nx.shortest_path_length(g, source=0, target=target_id, weight="weight")
-            return [segment_abcdf], [cost]
+            sub_g = g.subgraph(path)
+            node_costs = list()
+            for (u, v, weight) in sub_g.edges.data('weight'):
+                if not weight:
+                    continue
+                node_costs.append(weight)
+            return [segment_abcdf], [cost], [node_costs]
         else:
             sugg_map = dict()
             suggestions = list()
             costs = list()
+            details = list()
             k_best_paths = list(islice(nx.shortest_simple_paths(g, source=0, target=target_id, weight="weight"), k))
             for path in k_best_paths:
                 sub_g = g.subgraph(path)
                 suggestion_cost = sub_g.size(weight="weight")
-                # print("SUBGRAPH COST: {0}".format(suggestion_cost))
-                # for (from_id, to_id) in sub_g.edges:
-                #     edge_weight = sub_g[from_id][to_id]['weight']
-                #     print("{0} cost for edge ({1}, {2})".format(edge_weight, from_id, to_id))
                 segment_abcdf = ''
                 for node_id in path:
                     node = g.nodes[node_id]
@@ -341,8 +370,14 @@ class Dactyler(ABC):
                     sugg_map[segment_abcdf] = 1
                 costs.append(suggestion_cost)
 
+                node_costs = list()
+                for (u, v, weight) in sub_g.edges.data('weight'):
+                    if not weight:
+                        continue
+                    node_costs.append(weight)
+                details.append(node_costs)
             print("TOTAL: {0} DISTINCT: {1}".format(len(suggestions), len(sugg_map)))
-            return suggestions, costs
+            return suggestions, costs, details
 
     def generate_advice(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None, k=1):
         """
@@ -375,13 +410,16 @@ class Dactyler(ABC):
             if offset or first_digit or last_digit:
                 raise Exception("Ambiguous use to offset and/or first/last digit for both staves.")
 
-            upper_suggestions, upper_costs = self.generate_advice(score_index=score_index, staff="upper", k=k)
-            lower_suggestions, lower_costs = self.generate_advice(score_index=score_index, staff="lower", k=k)
+            upper_suggestions, upper_costs, upper_details = self.generate_advice(
+                score_index=score_index, staff="upper", k=k)
+            lower_suggestions, lower_costs, lower_details = self.generate_advice(
+                score_index=score_index, staff="lower", k=k)
             upper_length = d_score.upper_d_part().length()
             lower_length = d_score.lower_d_part().length()
-            return self.combine_staves(upper_suggestions=upper_suggestions, upper_costs=upper_costs,
-                                       lower_suggestions=lower_suggestions, lower_costs=lower_costs,
-                                       upper_length=upper_length, lower_length=lower_length, k=k)
+            return self.combine_staves(
+                upper_suggestions=upper_suggestions, upper_costs=upper_costs, upper_details=upper_details,
+                lower_suggestions=lower_suggestions, lower_costs=lower_costs, lower_details=lower_details,
+                upper_length=upper_length, lower_length=lower_length, k=k)
 
         if staff != "upper" and staff != "lower":
             raise Exception("Segregated advice is only dispensed one staff at a time.")
@@ -403,6 +441,7 @@ class Dactyler(ABC):
         segment_lengths = list()
         suggestions_for_segment = list()
         costs_for_segment = list()
+        details_for_segment = list()
         for segment in segments:
             segment_offset = 0
             segment_handed_first = None
@@ -414,19 +453,21 @@ class Dactyler(ABC):
             if segment_index == last_segment_index:
                 segment_handed_last = handed_last_digit
 
-            suggestions, costs = self.generate_segment_advice(segment=segment, staff=staff,
-                                                              offset=segment_offset,
-                                                              handed_first_digit=segment_handed_first,
-                                                              handed_last_digit=segment_handed_last, k=k)
+            suggestions, costs, details = self.generate_segment_advice(segment=segment, staff=staff,
+                                                                       offset=segment_offset,
+                                                                       handed_first_digit=segment_handed_first,
+                                                                       handed_last_digit=segment_handed_last, k=k)
             suggestions_for_segment.append(suggestions)
             costs_for_segment.append(costs)
+            details_for_segment.append(details)
             segment_lengths.append(segment_length)
             segment_index += 1
 
-        suggestions, costs = self.combine_segments(suggestions_for_segment=suggestions_for_segment,
-                                                   costs_for_segment=costs_for_segment,
-                                                   segment_lengths=segment_lengths, k=k)
-        return suggestions, costs
+        suggestions, costs, details = self.combine_segments(suggestions_for_segment=suggestions_for_segment,
+                                                            costs_for_segment=costs_for_segment,
+                                                            details_for_segment=details_for_segment,
+                                                            segment_lengths=segment_lengths, k=k)
+        return suggestions, costs, details
 
     def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None):
         """
@@ -442,8 +483,8 @@ class Dactyler(ABC):
         returned.)
         :return: abcDF advice string.
         """
-        suggestions, costs = self.generate_advice(score_index=score_index, staff=staff, offset=offset,
-                                                  first_digit=first_digit, last_digit=last_digit)
+        suggestions, costs, details = self.generate_advice(score_index=score_index, staff=staff, offset=offset,
+                                                           first_digit=first_digit, last_digit=last_digit)
         return suggestions[0]
 
     def load_corpus(self, d_corpus=None, path=None):
