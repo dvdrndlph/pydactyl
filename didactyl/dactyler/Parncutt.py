@@ -24,6 +24,7 @@ __author__ = 'David Randolph'
 
 from abc import abstractmethod
 import networkx as nx
+from itertools import islice
 import copy
 import re
 import music21
@@ -465,7 +466,7 @@ class Parncutt(D.Dactyler):
 
         for cost_key in costs:
             cost += costs[cost_key]
-        return cost
+        return cost, costs
 
     def trigram_nx_graph(self, fn_graph):
         g = nx.DiGraph()
@@ -519,10 +520,10 @@ class Parncutt(D.Dactyler):
                             if 'start' in g.nodes[prior_trigram_node_id] or \
                                 (g.nodes[prior_trigram_node_id]['digit_2'] == digit_1 and
                                  g.nodes[prior_trigram_node_id]['digit_3'] == digit_2):
-                                edge_weight = self.trigram_node_cost(midi_1=midi_1, handed_digit_1=digit_1,
-                                                                     midi_2=midi_2, handed_digit_2=digit_2,
-                                                                     midi_3=midi_3, handed_digit_3=digit_3)
-                                g.add_edge(prior_trigram_node_id, trigram_node_id, weight=edge_weight)
+                                weight, weights = self.trigram_node_cost(midi_1=midi_1, handed_digit_1=digit_1,
+                                                                         midi_2=midi_2, handed_digit_2=digit_2,
+                                                                         midi_3=midi_3, handed_digit_3=digit_3)
+                                g.add_edge(prior_trigram_node_id, trigram_node_id, weight=weight, weights=weights)
             level_1_slice = next_level_1_slice
             prior_trigram_slice = []
             for node_key, node_id in slice_trigram_id_for_key.items():
@@ -542,10 +543,12 @@ class Parncutt(D.Dactyler):
         must be set on each "handed_digit" node parameter.
         :param target_id: The node id (key) for the last node or end point in the graph.
         :param k: The number of suggestions to return.
-        :return: suggestions, costs: Two lists are returned. The first contains suggested fingering
-        solutions as abcDF strings. The second list contains the respective costs of each suggestion.
+        :return: suggestions, costs, details: Three lists are returned. The first contains suggested fingering
+        solutions as abcDF strings. The second list contains the respective costs of each suggestion. The third
+        is a hash table detailing the specific contributions of the various rules to the total suggestion cost.
         """
         if k is None or k == 1:
+            rule_costs = dict()
             path = nx.shortest_path(g, source=0, target=target_id, weight="weight")
             segment_abcdf = ''
             for node_id in path:
@@ -553,19 +556,34 @@ class Parncutt(D.Dactyler):
                 if "digit_2" in node:
                     segment_abcdf += node["digit_2"]
             cost = nx.shortest_path_length(g, source=0, target=target_id, weight="weight")
-            return [segment_abcdf], [cost]
+            print("TOTAL COST: {0}".format(cost))
+            sub_g = g.subgraph(path)
+            for (u, v, weights) in sub_g.edges.data('weights'):
+                if not weights:
+                    continue
+                # print("{0} cost for edge ({1}, {2})".format(weights, u, v))
+                for rule_id, rule_cost in weights.items():
+                    if rule_id not in rule_costs:
+                        rule_costs[rule_id] = 0
+                    rule_costs[rule_id] += rule_cost
+            return [segment_abcdf], [cost], [rule_costs]
         else:
             sugg_map = dict()
             suggestions = list()
             costs = list()
+            details = list()
             k_best_paths = list(islice(nx.shortest_simple_paths(g, source=0, target=target_id, weight="weight"), k))
             for path in k_best_paths:
+                rule_costs = dict()
                 sub_g = g.subgraph(path)
                 suggestion_cost = sub_g.size(weight="weight")
-                # print("SUBGRAPH COST: {0}".format(suggestion_cost))
-                # for (from_id, to_id) in sub_g.edges:
-                #     edge_weight = sub_g[from_id][to_id]['weight']
-                #     print("{0} cost for edge ({1}, {2})".format(edge_weight, from_id, to_id))
+                for (u, v, weights) in sub_g.edges.data('weights'):
+                    if not weights:
+                        continue
+                    for rule_id, rule_cost in weights.items():
+                        if rule_id not in rule_costs:
+                            rule_costs[rule_id] = 0
+                        rule_costs[rule_id] += rule_cost
                 segment_abcdf = ''
                 for node_id in path:
                     node = g.nodes[node_id]
@@ -577,9 +595,10 @@ class Parncutt(D.Dactyler):
                 else:
                     sugg_map[segment_abcdf] = 1
                 costs.append(suggestion_cost)
+                details.append(rule_costs)
 
             print("TOTAL: {0} DISTINCT: {1}".format(len(suggestions), len(sugg_map)))
-            return suggestions, costs
+            return suggestions, costs, details
 
     def generate_segment_advice(self, segment, staff, offset, handed_first_digit=None, handed_last_digit=None, k=None):
         """
@@ -612,6 +631,7 @@ class Parncutt(D.Dactyler):
 
         trigram_graph, target_node_id = self.trigram_nx_graph(fn_graph=fn_graph)
         # nx.write_graphml(trigram_graph, "/Users/dave/gootri.graphml")
-        suggestions, costs = self.k_best_advice(g=trigram_graph, target_id=target_node_id, k=k)
+        suggestions, costs, details = self.k_best_advice(g=trigram_graph, target_id=target_node_id, k=k)
+        print(details)
         return suggestions, costs
 
