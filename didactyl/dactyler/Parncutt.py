@@ -556,7 +556,7 @@ class Parncutt(D.Dactyler):
                 if "digit_2" in node:
                     segment_abcdf += node["digit_2"]
             cost = nx.shortest_path_length(g, source=0, target=target_id, weight="weight")
-            print("TOTAL COST: {0}".format(cost))
+            # print("TOTAL COST: {0}".format(cost))
             sub_g = g.subgraph(path)
             for (u, v, weights) in sub_g.edges.data('weights'):
                 if not weights:
@@ -597,7 +597,7 @@ class Parncutt(D.Dactyler):
                 costs.append(suggestion_cost)
                 details.append(rule_costs)
 
-            print("TOTAL: {0} DISTINCT: {1} COSTS: {2}".format(len(suggestions), len(sugg_map), costs))
+            # print("TOTAL: {0} DISTINCT: {1} COSTS: {2}".format(len(suggestions), len(sugg_map), costs))
             return suggestions, costs, details
 
     def generate_segment_advice(self, segment, staff, offset, handed_first_digit=None, handed_last_digit=None, k=None):
@@ -633,6 +633,5 @@ class Parncutt(D.Dactyler):
         trigram_graph, target_node_id = self.trigram_nx_graph(fn_graph=fn_graph)
         # nx.write_graphml(trigram_graph, "/Users/dave/gootri.graphml")
         suggestions, costs, details = self.k_best_advice(g=trigram_graph, target_id=target_node_id, k=k)
-        print(details)
         return suggestions, costs, details
 

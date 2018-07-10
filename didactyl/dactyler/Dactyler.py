@@ -176,7 +176,7 @@ class Dactyler(ABC):
                         cost = suggestion_id
                     else:
                         raise Exception("Unsupported method: {0}".format(self._segment_combination_method))
-                    g.add_edge(prior_node_id, node_id, weight=cost, details=details)
+                    g.add_edge(prior_node_id, node_id, weight=cost, details=details[suggestion_id])
                 slice_node_ids.append(node_id)
                 node_id += 1
             if len(slice_node_ids) > 0:
@@ -200,7 +200,7 @@ class Dactyler(ABC):
             for (u, v, segment_details) in sub_g.edges.data('details'):
                 if not segment_details:
                     continue
-                suggestion_details.extend(details)
+                suggestion_details.append(segment_details)
             return [suggestion], [cost], [suggestion_details]
         else:
             suggestions = list()
@@ -222,7 +222,7 @@ class Dactyler(ABC):
                 for (u, v, segment_details) in sub_g.edges.data('details'):
                     if not segment_details:
                         continue
-                    suggestion_details.extend(segment_details)
+                    suggestion_details.append(segment_details)
                 details.append(suggestion_details)
             return suggestions, costs, details
 
@@ -471,11 +471,13 @@ class Dactyler(ABC):
 
     @staticmethod
     def report_on_advice(suggestions, costs, details):
+        print("")
         for i in range(len(suggestions)):
             print("{0}\ncost: {1} segments: {2}".format(suggestions[i], costs[i], len(details[i])))
             for j in range(len(details[i])):
                 print(details[i][j])
             print("")
+        print("")
 
     def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None):
         """

@@ -16,7 +16,6 @@ class ParncuttTest(unittest.TestCase):
         suggestions, costs, details = parncutt.generate_advice(staff="upper", k=2)
         assert suggestions, "Ahhh!"
         parncutt.report_on_advice(suggestions, costs, details)
-        print(details)
 
     """
     @staticmethod
