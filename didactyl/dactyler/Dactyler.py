@@ -184,7 +184,7 @@ class Dactyler(ABC):
 
         g.add_node(node_id, suggestion=None)
         for prior_node_id in prior_slice_node_ids:
-            g.add_edge(prior_node_id, node_id, cost=0)
+            g.add_edge(prior_node_id, node_id, weight=0)
 
         if k is None or k == 1:
             path = nx.shortest_path(g, source=0, target=node_id, weight="weight")
@@ -220,7 +220,7 @@ class Dactyler(ABC):
                 costs.append(cost)
                 suggestion_details = list()
                 for (u, v, segment_details) in sub_g.edges.data('details'):
-                    if not details:
+                    if not segment_details:
                         continue
                     suggestion_details.extend(segment_details)
                 details.append(suggestion_details)
@@ -376,7 +376,7 @@ class Dactyler(ABC):
                         continue
                     node_costs.append(weight)
                 details.append(node_costs)
-            print("TOTAL: {0} DISTINCT: {1}".format(len(suggestions), len(sugg_map)))
+            print("TOTAL: {0} DISTINCT: {1} COSTS: {2}".format(len(suggestions), len(sugg_map), costs))
             return suggestions, costs, details
 
     def generate_advice(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None, k=1):
@@ -468,6 +468,14 @@ class Dactyler(ABC):
                                                             details_for_segment=details_for_segment,
                                                             segment_lengths=segment_lengths, k=k)
         return suggestions, costs, details
+
+    @staticmethod
+    def report_on_advice(suggestions, costs, details):
+        for i in range(len(suggestions)):
+            print("{0}\ncost: {1} segments: {2}".format(suggestions[i], costs[i], len(details[i])))
+            for j in range(len(details[i])):
+                print(details[i][j])
+            print("")
 
     def advise(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None):
         """

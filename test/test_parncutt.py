@@ -10,11 +10,13 @@ class ParncuttTest(unittest.TestCase):
     @staticmethod
     def test_something():
         parncutt = Parncutt()
+        parncutt.segment_combination_method(method="cost")
         d_corpus = DCorpus(corpus_str=TestConstant.FOUR_NOTES)
         parncutt.load_corpus(d_corpus=d_corpus)
-        complete_rh_advice = parncutt.advise(staff="upper")
-        assert complete_rh_advice, "Ahhh!"
-        print(complete_rh_advice)
+        suggestions, costs, details = parncutt.generate_advice(staff="upper", k=2)
+        assert suggestions, "Ahhh!"
+        parncutt.report_on_advice(suggestions, costs, details)
+        print(details)
 
     """
     @staticmethod

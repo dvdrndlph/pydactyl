@@ -198,3 +198,40 @@ V:2
 L:1/16
 A,B,CD EFGA Bcde fga2|]
 """
+
+PARNCUTT_HUMAN = dict()
+PARNCUTT_HUMAN['A'] = """
+X:1
+T:A (Op. 821 no. 1)
+C:Czerny
+M:C
+L:1/16
+Q:"Allegro"
+K:C
+V:1 treble
+V:2 treble 
+V:1
+!p!egfg efde cc'bc' abga|]
+V:2
+[GB]4 z4 [GB]4 z4|]"""
+
+PARNCUTT_MACHINE = dict()
+PARNCUTT_MACHINE['A'] = """% abcDidactyl v5
+% abcD fingering 1: ﻿24342313@xxxx
+% Authority: Parncutt 1
+% Transcriber: David Randolph
+% Transcription date: 2018-06-19 17:24:43
+% abcDidactyl END
+X:1
+T:A (Op. 821 no. 1)
+C:Czerny
+M:C
+L:1/16
+Q:"Allegro"
+K:C
+V:1 treble
+V:2 treble 
+V:1
+!p!egfg efde cc'bc' abga|]
+V:2
+[GB]4 z4 [GB]4 z4|]"""

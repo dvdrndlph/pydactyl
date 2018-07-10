@@ -597,7 +597,7 @@ class Parncutt(D.Dactyler):
                 costs.append(suggestion_cost)
                 details.append(rule_costs)
 
-            print("TOTAL: {0} DISTINCT: {1}".format(len(suggestions), len(sugg_map)))
+            print("TOTAL: {0} DISTINCT: {1} COSTS: {2}".format(len(suggestions), len(sugg_map), costs))
             return suggestions, costs, details
 
     def generate_segment_advice(self, segment, staff, offset, handed_first_digit=None, handed_last_digit=None, k=None):
