@@ -11,11 +11,11 @@ class ParncuttTest(unittest.TestCase):
     def test_something():
         parncutt = Parncutt()
         parncutt.segment_combination_method(method="cost")
-        d_corpus = DCorpus(corpus_str=TestConstant.FOUR_NOTES)
-        parncutt.load_corpus(d_corpus=d_corpus)
-        suggestions, costs, details = parncutt.generate_advice(staff="upper", k=2)
-        assert suggestions, "Ahhh!"
-        parncutt.report_on_advice(suggestions, costs, details)
+        # d_corpus = DCorpus(corpus_str=TestConstant.FOUR_NOTES)
+        # parncutt.load_corpus(d_corpus=d_corpus)
+        # suggestions, costs, details = parncutt.generate_advice(staff="upper", k=2)
+        # assert suggestions, "Ahhh!"
+        # parncutt.report_on_advice(suggestions, costs, details)
 
         d_corpus = DCorpus(corpus_str=TestConstant.PARNCUTT_HUMAN_FRAGMENT['A'])
         parncutt.load_corpus(d_corpus=d_corpus)
