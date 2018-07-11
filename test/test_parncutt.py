@@ -17,6 +17,12 @@ class ParncuttTest(unittest.TestCase):
         assert suggestions, "Ahhh!"
         parncutt.report_on_advice(suggestions, costs, details)
 
+        d_corpus = DCorpus(corpus_str=TestConstant.PARNCUTT_HUMAN_FRAGMENT['A'])
+        parncutt.load_corpus(d_corpus=d_corpus)
+        suggestions, costs, details = parncutt.generate_advice(staff="upper", last_digit="3", k=10)
+        assert suggestions, "Ahhh!"
+        parncutt.report_on_advice(suggestions, costs, details)
+
     """
     @staticmethod
     def test_parncutt_edges():

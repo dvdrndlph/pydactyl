@@ -524,7 +524,7 @@ class Parncutt(D.Dactyler):
                                                                          midi_2=midi_2, handed_digit_2=digit_2,
                                                                          midi_3=midi_3, handed_digit_3=digit_3)
                                 g.add_edge(prior_trigram_node_id, trigram_node_id, weight=weight, weights=weights)
-            level_1_slice = next_level_1_slice
+            level_1_slice = list(set(next_level_1_slice))  # Distinct IDs only
             prior_trigram_slice = []
             for node_key, node_id in slice_trigram_id_for_key.items():
                 prior_trigram_slice.append(node_id)

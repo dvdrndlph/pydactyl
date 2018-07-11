@@ -199,8 +199,8 @@ L:1/16
 A,B,CD EFGA Bcde fga2|]
 """
 
-PARNCUTT_HUMAN = dict()
-PARNCUTT_HUMAN['A'] = """
+PARNCUTT_HUMAN_MEASURE = dict()
+PARNCUTT_HUMAN_MEASURE['A'] = """
 X:1
 T:A (Op. 821 no. 1)
 C:Czerny
@@ -214,6 +214,22 @@ V:1
 !p!egfg efde cc'bc' abga|]
 V:2
 [GB]4 z4 [GB]4 z4|]"""
+
+PARNCUTT_HUMAN_FRAGMENT = dict()
+PARNCUTT_HUMAN_FRAGMENT['A'] = """
+X:1
+T:A (Op. 821 no. 1)
+C:Czerny
+M:C
+L:1/16
+Q:"Allegro"
+K:C
+V:1 treble
+V:2 treble 
+V:1
+!p!egfg efde z8|]
+V:2
+[GB]4 z4 z8|]"""
 
 PARNCUTT_MACHINE = dict()
 PARNCUTT_MACHINE['A'] = """% abcDidactyl v5
