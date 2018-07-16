@@ -389,23 +389,31 @@ class Parncutt(D.Dactyler):
             # or black to black). Assign 3 points if the lower note is white, played by a finger
             # other than the thumb, and the upper is black, played by the thumb." Invert logic for
             # the left hand.
-            thumb_passing_cost = 1
+            thumb_passing_cost = 0
             if hand == '>':
                 if digit_1 == THUMB and midi_2 < midi_1:  # Finger crossing over thumb, descending.
-                    if is_black(midi_1):
+                    if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
+                        thumb_passing_cost = 1
+                    elif is_black(midi_1):
                         thumb_passing_cost = 3
                     costs['pa1'] = thumb_passing_cost * self._weights['pa1']
                 if digit_2 == THUMB and midi_2 > midi_1:  # Thumb passing under finger, ascending.
-                    if is_black(midi_2):
+                    if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
+                        thumb_passing_cost = 1
+                    elif is_black(midi_2):
                         thumb_passing_cost = 3
                     costs['pa1'] = thumb_passing_cost * self._weights['pa1']
             else:
                 if digit_1 == THUMB and midi_2 > midi_1:  # Finger crossing over thumb, ascending.
-                    if is_black(midi_1):
+                    if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
+                        thumb_passing_cost = 1
+                    elif is_black(midi_1):
                         thumb_passing_cost = 3
                     costs['pa1'] = thumb_passing_cost * self._weights['pa1']
                 if digit_2 == THUMB and midi_2 < midi_1:  # Thumb passing under finger, descending.
-                    if is_black(midi_2):
+                    if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
+                        thumb_passing_cost = 1
+                    elif is_black(midi_2):
                         thumb_passing_cost = 3
                     costs['pa1'] = thumb_passing_cost * self._weights['pa1']
 
