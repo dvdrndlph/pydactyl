@@ -279,6 +279,17 @@ class Parncutt(D.Dactyler):
         return g
 
     def trigram_node_cost(self, midi_1, handed_digit_1, midi_2, handed_digit_2, midi_3, handed_digit_3):
+        """
+        Determine the cost associated with a trigram node configured as input.
+        :param midi_1: The MIDI note number of the first note in the trigram. May be None in first layer.
+        :param handed_digit_1: Fingering for first note (e.g., ">3").
+        :param midi_2: The MIDI note number of the second note in the trigram.
+        :param handed_digit_2: Fingering proposed for second note (e.g., "<5").
+        :param midi_3: The MIDI note number of the third note.
+        :param handed_digit_3: Fingering for third note.
+        :return: cost, costs: The total (scalar integer) cost associated with the node, and a dictionary
+        detailing the specific subcosts contributing to the total.
+        """
         cost = 0
 
         costs = {
@@ -325,6 +336,7 @@ class Parncutt(D.Dactyler):
             costs['bl1'] += self._weights['bl1']
 
         if digit_1:
+            # Handle all the two-note costs, which will be calculated based on midi_1 and midi_2.
             semitone_diff_12 = midi_2 - midi_1
             max_comf_12 = finger_span[(handed_digit_1, handed_digit_2)]['MaxComf']
             min_comf_12 = finger_span[(handed_digit_1, handed_digit_2)]['MinComf']
@@ -333,11 +345,9 @@ class Parncutt(D.Dactyler):
 
             # Rule 10 ("Thumb-on-Black")
             # "Assign 1 point whenever the thumb plays a black key." (Assessed above.)
-            # "If the immediately preceding note is # white, assign a further 2 points." Assessed here.
-            # "If the immediately following note is white, assign a further 2 points." Assessed below.
+            # "If the immediately preceding note is white, assign a further 2 points." Assessed here.
+            # "If the immediately following note is white, assign a further 2 points." Assessed down below.
             if digit_2 == THUMB and is_black(midi_2) and is_white(midi_1):
-                costs['bl1'] += 2 * self._weights['bl1']
-            if digit_2 == THUMB and is_black(midi_2) and is_white(midi_3):
                 costs['bl1'] += 2 * self._weights['bl1']
 
             # Rule 1 ("Stretch")
@@ -353,14 +363,14 @@ class Parncutt(D.Dactyler):
             span_penalty = 2
             if digit_1 == THUMB or digit_2 == THUMB:
                 span_penalty = 1
-            if digit_1 and semitone_diff_12 < min_rel_12:
+            if semitone_diff_12 < min_rel_12:
                 costs['sma'] = span_penalty * (min_rel_12 - semitone_diff_12) * self._weights['sma']
 
             # Rule 3 ("Large-Span")
             # "For finger pairs including the thumb, assign 1 point for each semitone that an interval
             # exceeds MaxRel. For finger pairs not including the thumb, assign 2 points per semitone."
             if semitone_diff_12 > max_rel_12:
-                costs['lar'] = span_penalty * (semitone_diff_12 - min_rel_12) * self._weights['lar']
+                costs['lar'] = span_penalty * (semitone_diff_12 - max_rel_12) * self._weights['lar']
 
             # Rule 8 ("Three-to-Four")
             # "Assign 1 point each time finger 3 is immediately followed by finger 4."
@@ -414,7 +424,8 @@ class Parncutt(D.Dactyler):
             # simultaneously: The finger on the second of the three notes is the thumb; the second pitch
             # lies between the first and third pitches; and the interval between the first and third pitches
             # is greater than MaxPrac or less than MinPrac. All other changes are half changes."
-            ### if semitone_diff_13 != 0:  # This is in the code Parncutt shared, but is contradicted in paper.
+            ###if semitone_diff_13 != 0:  # FIXME: This is in the code Parncutt shared and needed to reproduce
+                                       # results for A and E, but is contradicted by Figure 2(iv) example in paper.
             if semitone_diff_13 > max_comf_13:
                 if digit_2 == THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 > max_prac_13:
                     costs['pcc'] = 2 * self._weights['pcc']  # A "full change"
@@ -474,6 +485,14 @@ class Parncutt(D.Dactyler):
         return cost, costs
 
     def trigram_nx_graph(self, fn_graph):
+        """
+        Generate a trigram trellis graph representation of the fingering problem at hand.
+        :param fn_graph: A networkx graph representing the "fingering network" (as in Figure 5 in
+        Parncutt paper). Each node contains a handed "digit" and "midi" note number. Notes are connected
+        in a trellis, with a single "start" node, a single "end" node, and a number of layers, one for each
+        note in the sequence.
+        :return: A trigram graph a la Figure 6 in the Parncutt paper.
+        """
         g = nx.DiGraph()
         g.add_node(0, uniq='Start', start=1)
         level_1_slice = [0]
@@ -502,9 +521,9 @@ class Parncutt(D.Dactyler):
                         midi_1 = node_1['midi']
                         midi_2 = node_2['midi']
                         midi_3 = node_3['midi']
-                        colored_1 = midi_1 + 'b' if is_black(midi_1) else midi_1
-                        colored_2 = midi_2 + 'b' if is_black(midi_2) else midi_2
-                        colored_3 = midi_3 + 'b' if is_black(midi_3) else midi_3
+                        colored_1 = str(midi_1) + 'b' if is_black(midi_1) else midi_1
+                        colored_2 = str(midi_2) + 'b' if is_black(midi_2) else midi_2
+                        colored_3 = str(midi_3) + 'b' if is_black(midi_3) else midi_3
                         agg_attr = "{0}: {1}{2}{3}\n{4}/{5}/{6}".format(slice_number,
                                                                         re.sub(r'[<>]', '', digit_1),
                                                                         re.sub(r'[<>]', '', digit_2),
@@ -636,6 +655,8 @@ class Parncutt(D.Dactyler):
         # nx.write_graphml(fn_graph, "/Users/dave/goo.graphml")
 
         trigram_graph, target_node_id = self.trigram_nx_graph(fn_graph=fn_graph)
+        all_paths = nx.all_simple_paths(trigram_graph, source=0, target=target_node_id)
+        print("Playable fingerings: {0}".format(len(list(all_paths))))
         # nx.write_graphml(trigram_graph, "/Users/dave/gootri.graphml")
         suggestions, costs, details = self.k_best_advice(g=trigram_graph, target_id=target_node_id, k=k)
         return suggestions, costs, details

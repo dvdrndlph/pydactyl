@@ -215,6 +215,96 @@ V:1
 V:2
 [GB]4 z4 [GB]4 z4|]"""
 
+PARNCUTT_HUMAN_MEASURE['B'] = """
+X:2
+T:B (Op. 821 no. 37)
+C:Czerny
+M:C
+L:1/16
+Q:"Allegro"
+K:A
+V:1 treble
+V:2 treble
+V:1
+!p!ecdf ecdf ecdf ecdf|]
+V:2
+[A,A]2 z2 [A,A]2 z2 [A,A]2 z2 [A,A]2 z2|]"""
+
+PARNCUTT_HUMAN_MEASURE['C'] = """
+X:3
+T:C (Op. 821 no. 38)
+C:Czerny
+M:6/8
+L:1/16
+Q:"Vivace"
+K:A
+V:1 treble
+V:2 bass
+V:1
+(3ECE(3AEA(3cAc (3ece(3aea(3c'ac'|]
+V:2
+A,,2C,2E,2 A,2E,2C,2&A,,12|]"""
+
+PARNCUTT_HUMAN_MEASURE['D'] = """
+X:4
+T:D (Op. 821 no. 54)
+C:Czerny
+M:C
+L:1/16
+Q:"Vivace"
+K:C#
+V:1 treble
+V:2 bass
+V:1
+!f!CEDF EGFA GBAc Bdce|]
+V:2
+C,E,D,F, E,G,F,A, G,B,A,C B,DCE|]"""
+
+PARNCUTT_HUMAN_MEASURE['E'] = """
+X:5
+T:E (Op. 821 no. 62)
+C:Czerny
+M:C
+L:1/16
+Q:"Allegro moderato"
+K:F
+V:1 treble
+V:2 bass
+V:1
+!p!za^g'a' e'f'^c'd' ^gaef ^cd^GA|]
+V:2
+.D,2.[DF]2.A,2.[DF]2 .D,2.[DF]2.A,2.[DF]2|]"""
+
+PARNCUTT_HUMAN_MEASURE['F'] = """
+X:6
+T:F (Op. 821 no. 66)
+C:Czerny
+M:C
+L:1/16
+Q:"Allegro"
+K:Bb
+V:1 treble
+V:2 bass
+V:1
+!f!G,B,DB, GDBG dBgd bgd'b|]
+V:2
+G,,B,,D,B,, G,D,B,G, [K: clef=treble]DB,=GD BGdB|]"""
+
+PARNCUTT_HUMAN_MEASURE['G'] = """
+X:7
+T:G (Op. 821 no. 96)
+C:Czerny
+M:3/4
+L:1/16
+Q:"Allegretto vivace"
+K:D
+V:1 treble
+V:2 bass
+V:1
+!p!(3f'g'f'(3e'f'e' (3d'e'd'(3c'd'c' (3bc'b(3aba|]
+V:2
+[B,,B,]2 z2 [F,B,D]2 z2 [F,B,D]2 z2|]"""
+
 PARNCUTT_HUMAN_FRAGMENT = dict()
 PARNCUTT_HUMAN_FRAGMENT['A'] = """
 X:1
@@ -230,6 +320,81 @@ V:1
 !p!egfg efde z8|]
 V:2
 [GB]4 z4 z8|]"""
+
+PARNCUTT_HUMAN_FRAGMENT['C'] = """
+X:3
+T:C (Op. 821 no. 38)
+C:Czerny
+M:6/8
+L:1/16
+Q:"Vivace"
+K:A
+V:1 treble
+V:2 bass
+V:1
+(3ECE(3AEz(3zzz (3zzz(3zzz(3zzz|]
+V:2
+A,,2C,2E,2 A,2E,2C,2&A,,12|]"""
+
+PARNCUTT_HUMAN_FRAGMENT['D'] = """
+X:4
+T:D (Op. 821 no. 54)
+C:Czerny
+M:C
+L:1/16
+Q:"Vivace"
+K:C#
+V:1 treble
+V:2 bass
+V:1
+!f!CEDF EGFz z4 z4|]
+V:2
+C,E,D,F, E,G,F,A, G,B,A,C B,DCE|]"""
+
+PARNCUTT_HUMAN_FRAGMENT['E'] = """
+X:5
+T:E (Op. 821 no. 62)
+C:Czerny
+M:C
+L:1/16
+Q:"Allegro moderato"
+K:F
+V:1 treble
+V:2 bass
+V:1
+!p!za^g'a' e'f'^c'd' ^gz3 z4|]
+V:2
+.D,2.[DF]2.A,2.[DF]2 .D,2.[DF]2.A,2.[DF]2|]"""
+
+PARNCUTT_HUMAN_FRAGMENT['F'] = """
+X:6
+T:F (Op. 821 no. 66)
+C:Czerny
+M:C
+L:1/16
+Q:"Allegro"
+K:Bb
+V:1 treble
+V:2 bass
+V:1
+!f!G,B,DB, GDz2 z8|]
+V:2
+G,,B,,D,B,, G,D,B,G, [K: clef=treble]DB,=GD BGdB|]"""
+
+PARNCUTT_HUMAN_FRAGMENT['G'] = """
+X:7
+T:G (Op. 821 no. 96)
+C:Czerny
+M:3/4
+L:1/16
+Q:"Allegretto vivace"
+K:D
+V:1 treble
+V:2 bass
+V:1
+!p!(3f'g'f'(3e'f'e' (3d'zz(3zzz (3zzz(3zzz|]
+V:2
+[B,,B,]2 z2 [F,B,D]2 z2 [F,B,D]2 z2|]"""
 
 PARNCUTT_MACHINE = dict()
 PARNCUTT_MACHINE['A'] = """% abcDidactyl v5
