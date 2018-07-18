@@ -110,7 +110,7 @@ class HartTest(unittest.TestCase):
     @staticmethod
     def test_reentry():
         hart = Hart()
-        d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE)
+        d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE_SHORT)
         hart.load_corpus(d_corpus=d_corpus)
 
         reentry_hamming_evals = hart.evaluate_strike_reentry(method="hamming", staff="upper", gold_indices=[0, 1])

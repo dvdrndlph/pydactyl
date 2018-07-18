@@ -590,7 +590,7 @@ class Dactyler(ABC):
         :param score_index: The zero-based index of the DScore within the DCorpus currently loaded in this Dactyler.
         :param staff: The staff to include in the evaluation (one of "upper," "lower," or "both."
         :param gold_indices: The zero-based indices of the DAnnotation objects from the DScore's ABCDHeader to use
-        as the gold standard advice.
+        as the gold standard advice. If not specified, distances against all DAnnotations is calculated.
         :return: An array of distance measures against each specified gold index, in sorted order.
         """
         d_score = self._d_corpus.d_score_by_index(score_index)

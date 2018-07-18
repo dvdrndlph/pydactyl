@@ -155,7 +155,7 @@ class SayeghTest(unittest.TestCase):
     def test_reentry():
         sayegh = Sayegh()
         sayegh.recall(pickle_path=SayeghTest.PICKLE_PATH)
-        d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE)
+        d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE_SHORT)
         sayegh.load_corpus(d_corpus=d_corpus)
 
         reentry_hamming_evals = sayegh.evaluate_strike_reentry(method="hamming", staff="upper", gold_indices=[0, 2])

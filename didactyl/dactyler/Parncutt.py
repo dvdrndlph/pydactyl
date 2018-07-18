@@ -149,27 +149,10 @@ class Parncutt(D.Dactyler):
             'pa1': 1
         }
 
-    def init_rule_costs(self):
-        self._costs = {
-            'str': 0,
-            'sma': 0,
-            'lar': 0,
-            'pcc': 0,
-            'pcs': 0,
-            'wea': 0,
-            '345': 0,
-            '3t4': 0,
-            'bl4': 0,
-            'bl1': 0,
-            'bl5': 0,
-            'pa1': 0,
-        }
-
     def __init__(self):
         super().__init__()
         self._costs = {}
         self._weights = {}
-        self.init_rule_costs()
         self.init_rule_weights()
 
     @staticmethod
@@ -270,6 +253,9 @@ class Parncutt(D.Dactyler):
 
             if len(slice_node_ids) > 0:
                 prior_slice_node_ids = copy.copy(slice_node_ids)
+            else:
+                raise Exception("No solution between {0} and {1}".format(
+                    handed_first_digit, handed_last_digit))
             note_in_segment_index += 1
 
         g.add_node(node_id, end=1, midi=0, digit="-")
@@ -319,8 +305,7 @@ class Parncutt(D.Dactyler):
             digit_3 = None
         if digit_1 is not None:
             digit_1 = int(digit_1)
-        if digit_2 is not None:
-            digit_2 = int(digit_2)
+        digit_2 = int(digit_2)
         if digit_3 is not None:
             digit_3 = int(digit_3)
 
@@ -651,7 +636,7 @@ class Parncutt(D.Dactyler):
             abcdf = D.Dactyler.one_note_advise(note_list[0], staff=staff,
                                                first_digit=handed_first_digit,
                                                last_digit=handed_last_digit)
-            return [abcdf], [0]
+            return [abcdf], [0], [0]
 
         hand = ">"
         if staff == "lower":
@@ -663,8 +648,8 @@ class Parncutt(D.Dactyler):
         # nx.write_graphml(fn_graph, "/Users/dave/goo.graphml")
 
         trigram_graph, target_node_id = self.trigram_nx_graph(fn_graph=fn_graph)
-        all_paths = nx.all_simple_paths(trigram_graph, source=0, target=target_node_id)
-        print("Playable fingerings: {0}".format(len(list(all_paths))))
+        # all_paths = nx.all_simple_paths(trigram_graph, source=0, target=target_node_id)
+        # print("Playable fingerings: {0}".format(len(list(all_paths))))
         # nx.write_graphml(trigram_graph, "/Users/dave/gootri.graphml")
         suggestions, costs, details = self.k_best_advice(g=trigram_graph, target_id=target_node_id, k=k)
         return suggestions, costs, details
