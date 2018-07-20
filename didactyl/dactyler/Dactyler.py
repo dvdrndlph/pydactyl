@@ -304,18 +304,21 @@ class Dactyler(ABC):
         return advice
 
     @abstractmethod
-    def generate_segment_advice(self, segment, staff, offset, handed_first_digit=None, handed_last_digit=None, k=1):
+    def generate_segment_advice(self, segment, staff, offset=0, cycle=None,
+                                handed_first_digit=None, handed_last_digit=None, k=1):
         """
-        Abstract method must be implemented by derived classes to generate a set of up to k ranked fingering
-        suggestions for the given segment.
+        Abstract method must be defined by derived class.
+        Generate a set of k ranked fingering suggestions for the given segment.
         :param segment: The segment to work with, as a music21 score object.
         :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
         :param offset: The zero-based index to begin the returned advice.
+        :param cycle: Detect repeating note patterns of at least this length within each segment and generate
+        advice best suited for uniform fingerings of the repeated patterns. Defaults to None (ignore cycles).
         :param handed_first_digit: Constrain the solution to begin with this finger.
         :param handed_last_digit: Constrain the solution to end with this finger.
         :param k: The number of advice segments to return. The actual number returned may be less,
         but will be no more, than this number.
-        :return: suggestions, costs, details: Two lists are returned. The first contains suggested fingering
+        :return: suggestions, costs, details: Three lists are returned. The first contains suggested fingering
         solutions as abcDF strings. The second contains the respective costs of each suggestion. The third
         contains details about how each cost was determined.
         """
@@ -379,7 +382,7 @@ class Dactyler(ABC):
             print("TOTAL: {0} DISTINCT: {1} COSTS: {2}".format(len(suggestions), len(sugg_map), costs))
             return suggestions, costs, details
 
-    def generate_advice(self, score_index=0, staff="upper", offset=0, first_digit=None, last_digit=None, k=1):
+    def generate_advice(self, score_index=0, staff="upper", cycle=None, offset=0, first_digit=None, last_digit=None, k=1):
         """
         Generate advice for the specified score. This method only supports segregated advice.
         :param score_index:
@@ -388,6 +391,8 @@ class Dactyler(ABC):
         costs if the default "naive" staff_combination_method is used. We only guarantees that the first suggestion
         returned is globally optimal. Additional combination methods may be provided, but the caller should
         generate advice for upper and lower staves separately to be able to combine advice more intelligently.
+        :param cycle: Detect repeating note patterns of at least this length within each segment and generate
+        advice best suited for uniform fingerings of the repeated patterns. Defaults to None (ignore cycles).
         :param offset:
         :param first_digit: Constrain the advice to begin with this digit (1-5). Inconsistent with "both"
         staff parameter.
@@ -411,9 +416,9 @@ class Dactyler(ABC):
                 raise Exception("Ambiguous use to offset and/or first/last digit for both staves.")
 
             upper_suggestions, upper_costs, upper_details = self.generate_advice(
-                score_index=score_index, staff="upper", k=k)
+                score_index=score_index, staff="upper", cycle=cycle, k=k)
             lower_suggestions, lower_costs, lower_details = self.generate_advice(
-                score_index=score_index, staff="lower", k=k)
+                score_index=score_index, staff="lower", cycle=cycle, k=k)
             upper_length = d_score.upper_d_part().length()
             lower_length = d_score.lower_d_part().length()
             return self.combine_staves(
@@ -455,6 +460,7 @@ class Dactyler(ABC):
 
             suggestions, costs, details = self.generate_segment_advice(segment=segment, staff=staff,
                                                                        offset=segment_offset,
+                                                                       cycle=cycle,
                                                                        handed_first_digit=segment_handed_first,
                                                                        handed_last_digit=segment_handed_last, k=k)
             suggestions_for_segment.append(suggestions)
@@ -484,7 +490,7 @@ class Dactyler(ABC):
         Generate advice for the specified score. This method only supports segregated advice.
         :param score_index:
         :param staff: One of "upper," "lower," or "both."
-        :param offset:
+        :param offset: The zero-based index from which to start the advice.
         :param first_digit: Constrain the advice to begin with this digit (1-5). Inconsistent with "both"
         staff parameter.
         :param last_digit: Constrain the advice to end with this digit (1-5). Inconsistent with "both"
@@ -807,7 +813,24 @@ class TrainedDactyler(Dactyler):
         self._training = {}
 
     @abstractmethod
-    def generate_segment_advice(self, segment, staff, offset, handed_first_digit, handed_last_digit, k=None):
+    def generate_segment_advice(self, segment, staff, offset=0, cycle=None,
+                                handed_first_digit=None, handed_last_digit=None, k=None):
+        """
+        Abstract method must be defined by derived class.
+        Generate a set of k ranked fingering suggestions for the given segment.
+        :param segment: The segment to work with, as a music21 score object.
+        :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
+        :param offset: The zero-based index to begin the returned advice.
+        :param cycle: Detect repeating note patterns of at least this length within each segment and generate
+        advice best suited for uniform fingerings of the repeated patterns. Defaults to None (ignore cycles).
+        :param handed_first_digit: Constrain the solution to begin with this finger.
+        :param handed_last_digit: Constrain the solution to end with this finger.
+        :param k: The number of advice segments to return. The actual number returned may be less,
+        but will be no more, than this number.
+        :return: suggestions, costs, details: Three lists are returned. The first contains suggested fingering
+        solutions as abcDF strings. The second contains the respective costs of each suggestion. The third
+        contains details about how each cost was determined.
+        """
         pass
 
     @abstractmethod

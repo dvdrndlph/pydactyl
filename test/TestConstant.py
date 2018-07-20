@@ -325,6 +325,21 @@ V:1
 V:2
 [GB]4 z4 z8|]"""
 
+PARNCUTT_LOOP_FRAGMENT = """
+X:2
+T:B (Op. 821 no. 37)
+C:Czerny
+M:C
+L:1/16
+Q:"Allegro"
+K:A
+V:1 treble
+V:2 treble
+V:1
+!p!ecdf z2 z4|]
+V:2
+[A,A]2 z2 [A,A]2 z2 [A,A]2 z2 [A,A]2 z2|]"""
+
 PARNCUTT_HUMAN_FRAGMENT['C'] = """
 X:3
 T:C (Op. 821 no. 38)

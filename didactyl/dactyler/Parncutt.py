@@ -617,12 +617,15 @@ class Parncutt(D.Dactyler):
             # print("TOTAL: {0} DISTINCT: {1} COSTS: {2}".format(len(suggestions), len(sugg_map), costs))
             return suggestions, costs, details
 
-    def generate_segment_advice(self, segment, staff, offset, handed_first_digit=None, handed_last_digit=None, k=None):
+    def generate_segment_advice(self, segment, staff, offset=0, cycle=None,
+                                handed_first_digit=None, handed_last_digit=None, k=None):
         """
         Generate a set of k ranked fingering suggestions for the given segment.
         :param segment: The segment to work with, as a music21 score object.
         :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
         :param offset: The zero-based index to begin the returned advice.
+        :param cycle: Detect repeating note patterns of at least this length within each segment and generate
+        advice best suited for uniform fingerings of the repeated patterns. Defaults to None (ignore cycles).
         :param handed_first_digit: Constrain the solution to begin with this finger.
         :param handed_last_digit: Constrain the solution to end with this finger.
         :param k: The number of advice segments to return. The actual number returned may be less,
@@ -642,6 +645,14 @@ class Parncutt(D.Dactyler):
         if staff == "lower":
             hand = "<"
 
+        k_to_use = k
+        # FIXME: This is a hack to get a solutions for
+        if cycle:
+            first_note = copy.copy(segment[0])
+            segment.append(first_note)
+            k_to_use = 5 * k
+
+
         fn_graph = Parncutt.fingered_note_nx_graph(segment=segment, hand=hand,
                                                    handed_first_digit=handed_first_digit,
                                                    handed_last_digit=handed_last_digit)
@@ -651,6 +662,28 @@ class Parncutt(D.Dactyler):
         # all_paths = nx.all_simple_paths(trigram_graph, source=0, target=target_node_id)
         # print("Playable fingerings: {0}".format(len(list(all_paths))))
         # nx.write_graphml(trigram_graph, "/Users/dave/gootri.graphml")
-        suggestions, costs, details = self.k_best_advice(g=trigram_graph, target_id=target_node_id, k=k)
-        return suggestions, costs, details
+        suggestions, costs, details = self.k_best_advice(g=trigram_graph, target_id=target_node_id, k=k_to_use)
+
+        # FIXME too
+        if cycle:
+            segment.pop(-1)  # Put it back the way it was.
+            good_suggestions = list()
+            good_costs = list()
+            good_details = list()
+            good_count = 0
+            for i in range(len(suggestions)):
+                first_hf = suggestions[i][:2]
+                last_hf = suggestions[i][-2:]
+                if first_hf == last_hf:
+                    good_suggestions.append(suggestions[i][:-2])
+                    good_costs.append(costs[i])
+                    good_details.append(details[i])
+                    good_count += 1
+                if good_count == k:
+                    # We ignore ties. This may be a mistake. I am pretty sure this is how the networkx
+                    # thing we are doing for the normal path does this. FIXME?
+                    break
+            return good_suggestions, good_costs, good_details
+        else:
+            return suggestions, costs, details
 
