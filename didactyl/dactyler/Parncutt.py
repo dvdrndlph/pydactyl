@@ -652,7 +652,6 @@ class Parncutt(D.Dactyler):
             segment.append(first_note)
             k_to_use = 5 * k
 
-
         fn_graph = Parncutt.fingered_note_nx_graph(segment=segment, hand=hand,
                                                    handed_first_digit=handed_first_digit,
                                                    handed_last_digit=handed_last_digit)
@@ -666,23 +665,39 @@ class Parncutt(D.Dactyler):
 
         # FIXME too
         if cycle:
-            segment.pop(-1)  # Put it back the way it was.
+            done = False
             good_suggestions = list()
             good_costs = list()
             good_details = list()
             good_count = 0
-            for i in range(len(suggestions)):
-                first_hf = suggestions[i][:2]
-                last_hf = suggestions[i][-2:]
-                if first_hf == last_hf:
-                    good_suggestions.append(suggestions[i][:-2])
-                    good_costs.append(costs[i])
-                    good_details.append(details[i])
-                    good_count += 1
-                if good_count == k:
-                    # We ignore ties. This may be a mistake. I am pretty sure this is how the networkx
-                    # thing we are doing for the normal path does this. FIXME?
-                    break
+            last_suggestion_count = 0
+            while not done:
+                for i in range(len(suggestions)):
+                    first_hf = suggestions[i][:2]
+                    last_hf = suggestions[i][-2:]
+                    if first_hf == last_hf:
+                        good_suggestions.append(suggestions[i][:-2])
+                        good_costs.append(costs[i])
+                        good_details.append(details[i])
+                        good_count += 1
+                    if good_count == k:
+                        # We ignore ties. This may be a mistake. I am pretty sure this is how the networkx
+                        # thing we are doing for the normal path does this. FIXME?
+                        break
+                if good_count == k or len(suggestions) == last_suggestion_count:
+                    # We got what was asked for or we got all there was.
+                    segment.pop(-1)  # Put it back the way it was.
+                    done = True
+                else:
+                    last_suggestion_count = len(suggestions)
+                    good_suggestions = list()
+                    good_costs = list()
+                    good_details = list()
+                    good_count = 0
+                    k_to_use *= 2
+                    suggestions, costs, details = self.k_best_advice(g=trigram_graph,
+                                                                     target_id=target_node_id,
+                                                                     k=k_to_use)
             return good_suggestions, good_costs, good_details
         else:
             return suggestions, costs, details
