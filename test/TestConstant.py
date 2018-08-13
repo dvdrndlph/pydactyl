@@ -23,14 +23,14 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 
 REPO_ROOT = "/Users/dave/tb2"
-CORPORA_DIR = REPO_ROOT + "/didactyl/dd/corpora"
+CORPORA_DIR = REPO_ROOT + "/pydactyl/dd/corpora"
 BERINGER2_DIR = CORPORA_DIR + "/beringer2"
 BERINGER2_ARPEGGIO_CORPUS = BERINGER2_DIR + "/arpeggios.abc"
 BERINGER2_ANNOTATED_ARPEGGIO_DIR = BERINGER2_DIR + "/arpeggios"
 BERINGER2_ANNOTATED_BROKEN_CHORD_DIR = BERINGER2_DIR + "/broken_chords"
 BERINGER2_ANNOTATED_SCALE_DIR = BERINGER2_DIR + "/scales"
 
-WTC_CORPUS_DIR = REPO_ROOT + '/dvdrndlph.github.io/didactyl/wtc'
+WTC_CORPUS_DIR = REPO_ROOT + '/dvdrndlph.github.io/pydactyl/wtc'
 
 # Right hand only, sans annotation.
 BERINGER_DIR = CORPORA_DIR + "/beringer"
@@ -325,7 +325,7 @@ V:1
 V:2
 [GB]4 z4 z8|]"""
 
-PARNCUTT_LOOP_FRAGMENT = """
+PARNCUTT_HUMAN_FRAGMENT['B'] = """
 X:2
 T:B (Op. 821 no. 37)
 C:Czerny

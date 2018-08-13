@@ -25,8 +25,8 @@ __author__ = 'David Randolph'
 import re
 import unittest
 import TestConstant
-from didactyl.dcorpus.DCorpus import DCorpus
-from didactyl.dcorpus.DPart import DPart
+from pydactyl.dcorpus.DCorpus import DCorpus
+from pydactyl.dcorpus.DPart import DPart
 
 BERINGER2_SCALE_CORPUS = TestConstant.BERINGER2_DIR + "/scales.abc"
 

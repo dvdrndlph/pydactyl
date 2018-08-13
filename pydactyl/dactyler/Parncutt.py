@@ -27,14 +27,8 @@ from itertools import islice
 import copy
 import re
 from . import Dactyler as D
-from didactyl.dcorpus.DNote import DNote
-
-TEST_CORPUS = '/Users/dave/tb2/didactyl/dd/corpora/small.abc'
-THUMB = 1
-INDEX = 2
-MIDDLE = 3
-RING = 4
-LITTLE = 5
+from . import Constant as C
+from pydactyl.dcorpus.DNote import DNote
 
 NO_MIDI = -1
 
@@ -149,14 +143,28 @@ class Parncutt(D.Dactyler):
             'pa1': 1
         }
 
-    def __init__(self):
+    def __init__(self, pruning_method='max'):
         super().__init__()
         self._costs = {}
+        self._pruned_count = -1  # The count of playable fingerings for the problem solved last.
+        self._pruning_method = None
+        self.pruning_method(method=pruning_method)
         self._weights = {}
         self.init_rule_weights()
 
-    @staticmethod
-    def transition_allowed(from_midi, from_digit, to_midi, to_digit):
+    def pruned_count(self, pruned_count=None):
+        if pruned_count is not None:
+            self._pruned_count = pruned_count
+        return self._pruned_count
+
+    def pruning_method(self, method=None):
+        if method is not None:
+            if method not in ('max', 'none', 'min', 'both'):
+                raise Exception("Bad pruning method: {0}".format(method))
+            self._pruning_method = method
+        return self._pruning_method
+
+    def transition_allowed(self, from_midi, from_digit, to_midi, to_digit):
         required_span = to_midi - from_midi
 
         # Repeated notes are always played with the same finger.
@@ -168,18 +176,28 @@ class Parncutt(D.Dactyler):
                 # print("BAD {0} to {1} trans of span {2}".format(from_digit, to_digit, required_span))
                 return False
 
+        # A repeated finger may only be used to play a repeated note in finger legato.
+        if from_digit == to_digit:
+            if required_span == 0:
+                return True
+            else:
+                return False
+
+        if self.pruning_method() == 'none':
+            return True
+
         if (from_digit, to_digit) not in finger_span:
             # print("BAD {0} to {1} trans of span {2}".format(from_digit, to_digit, required_span))
             return False
 
         max_prac = finger_span[(from_digit, to_digit)]['MaxPrac']
         min_prac = finger_span[(from_digit, to_digit)]['MinPrac']
-        if min_prac <= required_span <= max_prac:
-            # print("Good {0} to {1} trans of span {2} (between {3} and {4})".format(from_digit,
-                                                                                 # to_digit,
-                                                                                 # required_span,
-                                                                                 # min_prac,
-                                                                                 # max_prac))
+
+        if self.pruning_method() == 'max' and required_span <= max_prac:
+            return True
+        elif self.pruning_method() == 'min' and required_span >= min_prac:
+            return True
+        elif min_prac <= required_span <= max_prac:
             return True
 
         # print("BAD {0} to {1} trans of span {2} (between {3} and {4})".format(from_digit,
@@ -200,8 +218,7 @@ class Parncutt(D.Dactyler):
         for predecessor_id in predecessor_node_ids:
             Parncutt.prune_dead_end(g=g, node_id=predecessor_id)
 
-    @staticmethod
-    def fingered_note_nx_graph(segment, hand, handed_first_digit, handed_last_digit):
+    def fingered_note_nx_graph(self, segment, hand, handed_first_digit, handed_last_digit):
         g = nx.DiGraph()
         g.add_node(0, start=1, midi=0, digit="-")
         prior_slice_node_ids = list()
@@ -221,7 +238,7 @@ class Parncutt(D.Dactyler):
                 on_last_prefingered_note = True
 
             viable_prior_node_ids = dict()
-            for digit in (THUMB, INDEX, MIDDLE, RING, LITTLE):
+            for digit in (C.THUMB, C.INDEX, C.MIDDLE, C.RING, C.LITTLE):
                 handed_digit = hand + str(digit)
                 if on_last_prefingered_note and handed_digit != handed_last_digit:
                     continue
@@ -237,8 +254,8 @@ class Parncutt(D.Dactyler):
                         prior_node = g.nodes[prior_node_id]
                         prior_midi = prior_node["midi"]
                         prior_handed_digit = prior_node["digit"]
-                        if Parncutt.transition_allowed(from_midi=prior_midi, from_digit=prior_handed_digit,
-                                                       to_midi=note.pitch.midi, to_digit=handed_digit):
+                        if self.transition_allowed(from_midi=prior_midi, from_digit=prior_handed_digit,
+                                                   to_midi=note.pitch.midi, to_digit=handed_digit):
                             g.add_edge(prior_node_id, node_id)
                             incoming_count += 1
                             viable_prior_node_ids[prior_node_id] = True
@@ -311,13 +328,13 @@ class Parncutt(D.Dactyler):
 
         # Rule 6 (wea "Weak-Finger")
         # "Assign 1 point every time finger 4 or finger 5 is used."
-        if digit_2 == RING or digit_2 == LITTLE:
+        if digit_2 == C.RING or digit_2 == C.LITTLE:
             costs['wea'] = self._weights['wea']
 
         # Rule 10 ("Thumb-on-Black")
         # "Assign 1 point whenever the thumb plays a black key."
         # More to follow below.
-        if digit_2 == THUMB and is_black(midi_2):
+        if digit_2 == C.THUMB and is_black(midi_2):
             costs['bl1'] += self._weights['bl1']
 
         if digit_1:
@@ -332,7 +349,7 @@ class Parncutt(D.Dactyler):
             # "Assign 1 point whenever the thumb plays a black key." (Assessed above.)
             # "If the immediately preceding note is white, assign a further 2 points." Assessed here.
             # "If the immediately following note is white, assign a further 2 points." Assessed down below.
-            if digit_2 == THUMB and is_black(midi_2) and is_white(midi_1):
+            if digit_2 == C.THUMB and is_black(midi_2) and is_white(midi_1):
                 costs['bl1'] += 2 * self._weights['bl1']
 
             # Rule 1 ("Stretch")
@@ -346,7 +363,7 @@ class Parncutt(D.Dactyler):
             # "For finger pairs including the thumb, assign 1 point for each semitone that an interval is
             # less than MinRel. For finger pairs not including the thumb, assign 2 points per semitone."
             span_penalty = 2
-            if digit_1 == THUMB or digit_2 == THUMB:
+            if digit_1 == C.THUMB or digit_2 == C.THUMB:
                 span_penalty = 1
             if semitone_diff_12 < min_rel_12:
                 costs['sma'] = span_penalty * (min_rel_12 - semitone_diff_12) * self._weights['sma']
@@ -359,14 +376,14 @@ class Parncutt(D.Dactyler):
 
             # Rule 8 ("Three-to-Four")
             # "Assign 1 point each time finger 3 is immediately followed by finger 4."
-            if digit_1 == MIDDLE and digit_2 == RING:
+            if digit_1 == C.MIDDLE and digit_2 == C.RING:
                 costs['3t4'] = self._weights['3t4']
 
             # Rule 9 ("Four-on-Black")
             # "Assign 1 point each time fingers 3 and 4 occur consecutively in any order with 3 on
             # white and 4 on black."
-            if (digit_1 == RING and is_black(midi_1) and digit_2 == MIDDLE and is_white(midi_2)) or \
-                    (digit_1 == MIDDLE and is_white(midi_1) and digit_2 == RING and is_black(midi_2)):
+            if (digit_1 == C.RING and is_black(midi_1) and digit_2 == C.MIDDLE and is_white(midi_2)) or \
+                    (digit_1 == C.MIDDLE and is_white(midi_1) and digit_2 == C.RING and is_black(midi_2)):
                 costs['bl4'] = self._weights['bl4']
 
             # Rule 12 ("Thumb-Passing")
@@ -376,26 +393,26 @@ class Parncutt(D.Dactyler):
             # the left hand.
             thumb_passing_cost = 0
             if hand == '>':
-                if digit_1 == THUMB and midi_2 < midi_1:  # Finger crossing over thumb, descending.
+                if digit_1 == C.THUMB and midi_2 < midi_1:  # Finger crossing over thumb, descending.
                     if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
                         thumb_passing_cost = 1
                     elif is_black(midi_1):
                         thumb_passing_cost = 3
                     costs['pa1'] = thumb_passing_cost * self._weights['pa1']
-                if digit_2 == THUMB and midi_2 > midi_1:  # Thumb passing under finger, ascending.
+                if digit_2 == C.THUMB and midi_2 > midi_1:  # Thumb passing under finger, ascending.
                     if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
                         thumb_passing_cost = 1
                     elif is_black(midi_2):
                         thumb_passing_cost = 3
                     costs['pa1'] = thumb_passing_cost * self._weights['pa1']
             else:
-                if digit_1 == THUMB and midi_2 > midi_1:  # Finger crossing over thumb, ascending.
+                if digit_1 == C.THUMB and midi_2 > midi_1:  # Finger crossing over thumb, ascending.
                     if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
                         thumb_passing_cost = 1
                     elif is_black(midi_1):
                         thumb_passing_cost = 3
                     costs['pa1'] = thumb_passing_cost * self._weights['pa1']
-                if digit_2 == THUMB and midi_2 < midi_1:  # Thumb passing under finger, descending.
+                if digit_2 == C.THUMB and midi_2 < midi_1:  # Thumb passing under finger, descending.
                     if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
                         thumb_passing_cost = 1
                     elif is_black(midi_2):
@@ -420,12 +437,12 @@ class Parncutt(D.Dactyler):
             ###if semitone_diff_13 != 0:  # FIXME: This is in the code Parncutt shared and needed to reproduce
                                        # results for A and E, but is contradicted by Figure 2(iv) example in paper.
             if semitone_diff_13 > max_comf_13:
-                if digit_2 == THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 > max_prac_13:
+                if digit_2 == C.THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 > max_prac_13:
                     costs['pcc'] = 2 * self._weights['pcc']  # A "full change"
                 else:
                     costs['pcc'] = 1 * self._weights['pcc']  # A "half change"
             elif semitone_diff_13 < min_comf_13:
-                if digit_2 == THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 < min_prac_13:
+                if digit_2 == C.THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 < min_prac_13:
                     costs['pcc'] = 2 * self._weights['pcc']  # A "full change"
                 else:
                     costs['pcc'] = 1 * self._weights['pcc']  # A "half change"
@@ -448,14 +465,14 @@ class Parncutt(D.Dactyler):
                 digit_2: True,
                 digit_3: True
             }
-            if MIDDLE in finger_hash and RING in finger_hash and LITTLE in finger_hash:
+            if C.MIDDLE in finger_hash and C.RING in finger_hash and C.LITTLE in finger_hash:
                 costs['345'] = self._weights['345']
 
         # Rule 10 ("Thumb-on-Black")
         # "Assign 1 point whenever the thumb plays a black key. If the immediately preceding note is
         #  white, assign a further 2 points." Assessed above.
         # "If the immediately following note is white, assign a further 2 points." Assessed here.
-        if digit_3 and digit_2 == THUMB and is_black(midi_2) and is_white(midi_3):
+        if digit_3 and digit_2 == C.THUMB and is_black(midi_2) and is_white(midi_3):
             costs['bl1'] += 2 * self._weights['bl1']
 
         # Rule 11 ("Five-on-Black")
@@ -463,7 +480,7 @@ class Parncutt(D.Dactyler):
         # are also black, assign 0 points. If the immediately preceding note is white, assign 2 points.
         # If the immediately following key is white, assign 2 further points."
         black_key_cost = 0
-        if digit_2 == LITTLE and is_black(midi_2):
+        if digit_2 == C.LITTLE and is_black(midi_2):
             if midi_1 and is_black(midi_1) and midi_3 and is_black(midi_3):
                 black_key_cost = 0
             else:
@@ -652,15 +669,17 @@ class Parncutt(D.Dactyler):
             segment.append(first_note)
             k_to_use = 5 * k
 
-        fn_graph = Parncutt.fingered_note_nx_graph(segment=segment, hand=hand,
-                                                   handed_first_digit=handed_first_digit,
-                                                   handed_last_digit=handed_last_digit)
-        # nx.write_graphml(fn_graph, "/Users/dave/goo.graphml")
+        fn_graph = self.fingered_note_nx_graph(segment=segment, hand=hand,
+                                               handed_first_digit=handed_first_digit,
+                                               handed_last_digit=handed_last_digit)
+        nx.write_graphml(fn_graph, "/Users/dave/goo.graphml")
 
         trigram_graph, target_node_id = self.trigram_nx_graph(fn_graph=fn_graph)
-        # all_paths = nx.all_simple_paths(trigram_graph, source=0, target=target_node_id)
-        # print("Playable fingerings: {0}".format(len(list(all_paths))))
-        # nx.write_graphml(trigram_graph, "/Users/dave/gootri.graphml")
+        all_paths = nx.all_simple_paths(trigram_graph, source=0, target=target_node_id)
+        self.pruned_count(len(list(all_paths)))
+        # print("Playable fingerings: {0}".format(self.pruned_count()))
+        trigram_graphmlized = Parncutt.graphmlize(trigram_graph)
+        nx.write_graphml(trigram_graphmlized, "/Users/dave/gootri.graphml")
         suggestions, costs, details = self.k_best_advice(g=trigram_graph, target_id=target_node_id, k=k_to_use)
 
         # FIXME too

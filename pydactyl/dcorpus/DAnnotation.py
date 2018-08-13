@@ -40,12 +40,13 @@ class DAnnotation:
 
         ornamental = ornaments:('(' {pedaled_fingering}+ ')') ;
 
-        pedaled_fingering = soft:[soft] fingering:fingering damper:[damper] ;
+        pedaled_fingering = soft:[soft] fingering:fingering damper:[damper] segmenter:[segmenter];
         pedaling = soft:{soft}+ 'x' damper:{damper}+ ;
 
         fingering = strike:finger ['-' release:finger] ;
         finger = hand:[hand] digit:digit ;
 
+        segmenter = "," | ";" | "." ;
         damper = '_' | '^' ;
         soft = 'p' | 'f' ;
         hand = '<' | '>' ;

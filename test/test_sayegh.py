@@ -2,8 +2,8 @@
 import re
 import os.path
 import unittest
-from didactyl.dactyler.Sayegh import Sayegh
-from didactyl.dcorpus.DCorpus import DCorpus
+from pydactyl.dactyler.Sayegh import Sayegh
+from pydactyl.dcorpus.DCorpus import DCorpus
 import TestConstant
 
 

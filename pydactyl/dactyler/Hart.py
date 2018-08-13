@@ -34,10 +34,11 @@ import numpy
 import re
 import copy
 import networkx as nx
+import os
 
-from didactyl.dactyler import Constant
+from pydactyl.dactyler import Constant
 from . import Dactyler as D
-from didactyl.dcorpus.DNote import DNote
+from pydactyl.dcorpus.DNote import DNote
 
 
 class Interval:
@@ -90,7 +91,8 @@ class Interval:
 class Hart(D.Dactyler):
     BIG_NUM = 999
     MAX_INTERVAL_SIZE = 12
-    COST_FILE = '/Users/dave/tb2/didactyl/dd/data/tables_0.dat'
+    BIN_DIR = os.path.abspath(os.path.dirname(__file__))
+    COST_FILE = '/Users/dave/tb2/pydactyl/dd/data/tables_0.dat'
 
     def _define_costs(self):
         costs = {}

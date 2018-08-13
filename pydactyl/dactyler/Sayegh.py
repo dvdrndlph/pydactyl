@@ -33,7 +33,7 @@ __author__ = 'David Randolph'
 import networkx as nx
 import copy
 from . import Dactyler as D
-from didactyl.dcorpus.DNote import DNote
+from pydactyl.dcorpus.DNote import DNote
 
 
 class Sayegh(D.TrainedDactyler):

@@ -26,12 +26,13 @@ import pickle
 import re
 import copy
 import networkx as nx
+import json
 from itertools import islice
 from datetime import datetime
-from didactyl.dactyler import Constant
-from didactyl.dcorpus.DCorpus import DCorpus
-from didactyl.dcorpus.DNote import AnnotatedDNote
-from didactyl.dcorpus.DAnnotation import DAnnotation
+from pydactyl.dactyler import Constant
+from pydactyl.dcorpus.DCorpus import DCorpus
+from pydactyl.dcorpus.DNote import AnnotatedDNote
+from pydactyl.dcorpus.DAnnotation import DAnnotation
 import os
 
 
@@ -72,6 +73,23 @@ class Dactyler(ABC):
         if method is None:
             return self._staff_combination_method
         self._staff_combination_method = method
+
+
+    @staticmethod
+    def graphmlize(g):
+        """
+        Return a version of networkx graph g that can be written as a graphml file.
+        :param g: A networkx graph.
+        :return: h: A networkx graph with all scalar edge attributes.
+        """
+        h = g.copy()
+        for u, v, d in h.edges(data=True):
+            for key, val in d.items():
+                if type(val) in (dict, tuple, list):
+                    json_str = json.JSONEncoder().encode(val)
+                    d[key] = json_str
+        return h
+
 
     @staticmethod
     def combine_abcdf_segments(segments):

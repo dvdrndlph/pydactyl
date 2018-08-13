@@ -23,7 +23,7 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 import re
 from music21 import *
-from didactyl.dactyler import Constant
+from pydactyl.dactyler import Constant
 from .DPart import DPart
 
 
