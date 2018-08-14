@@ -22,6 +22,9 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
+import os
+DACTYLER_DIR = os.path.abspath(os.path.dirname(__file__))
+DATA_DIR = DACTYLER_DIR + '/../../data'
 
 # dcorpus types supported:
 CORPUS_ABC = 'abc'

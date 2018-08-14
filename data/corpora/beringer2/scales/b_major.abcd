@@ -1,0 +1,30 @@
+% abcDidactyl v5
+% abcD fingering 1: 12312341231234543213214321321&21234123123412321432132143212&12312341231234543213214321321@43214321321432123412312341234&21432132143213231234123123412&43214321321432123412312341234
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-14 10:07:26
+% These are complete fingerings, with any gaps filled in.
+% abcD fingering 2: 12312341231234543213214321321&31234123123412321432132143213&12312341231234543213214321321@43214321321432123412312341234&21432132143213231234123123412&43214321321432123412312341234
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-14 10:09:57
+% These are alternate fingerings, if specified, with gaps filled in. 
+% abcDidactyl END
+X:11
+T:scales_b_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Bmaj clef=treble octave=0
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+B,CDE FGAB cdef gaba gfed cBAG FEDC:|B,4|:
+DEFG ABcd efga bc'd'c' bagf edcB AGFE:|D4|:
+B,CDE FGAB cdef gaba gfed cBAG FEDC:|B,4|]
+V:2
+L:1/16
+B,CDE FGAB [K:clef=treble octave=-1] cdef gaba gfed [K:clef=bass octave=-1] cBAG FEDC:|B,4|:
+B,CDE FGAB [K:clef=treble octave=-1] cdef gaba gfed [K:clef=bass octave=-1] cBAG FEDC:|B,4|:
+DEFG ABcd [K:clef=treble octave=-1] efga bc'd'c' bagf [K:clef=bass octave=-1] edcB AGFE:|D4|]

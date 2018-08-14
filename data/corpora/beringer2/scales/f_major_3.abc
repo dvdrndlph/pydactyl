@@ -1,0 +1,40 @@
+% abcDidactyl v5
+% abcD fingering 1: 12341231234123432143213214321&23123123412312321321432132132&12341231234123432143213214321@54321321432132123123412312345&54321321432132123123412312345&32132143213213231231234123123
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-14 11:50:48
+% These are complete fingerings, with any gaps filled in.
+% abcD fingering 2: 12341231234123432143213214321&34123123412312321321432132143&12341231234123432143213214321@54321321432132123123412312345&54321321432132123123412312345&52132143213214341231234123125
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-14 12:00:41
+% These are alternate fingerings, if specified, with gaps filled in. 
+% abcD fingering 3: 12341231234123432143213214321&23123123412312321321432132132&12341231234123432143213214321@32143213214321212341231234123&32143213214321212341231234123&14321321432132123123412312341
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-14 12:14:10
+% These are additional alternate fingerings, with gaps filled in.
+% abcD fingering 4: 12341231234123432143213214321&23123123412312321321432132132&12341231234123432143213214321@32143213214321212341231234123&32143213214321212341231234123&14321321432132123123412312341
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-14 12:14:10
+% Still more alternate fingerings, with gaps filled in.
+% abcDidactyl END
+X:23
+T:scales_f_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Fmaj
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+F,G,A,B, CDEF GABc defe dcBA GFED CB,A,G,:|F,4|:
+A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|:
+F,G,A,B, CDEF GABc defe dcBA GFED CB,A,G,:|F,4||
+V:2
+L:1/16
+F,G,A,B, CDEF GABc defe dcBA GFED CB,A,G,:|F,4|:
+F,G,A,B, CDEF GABc defe dcBA GFED CB,A,G,:|F,4|:
+A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4||

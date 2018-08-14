@@ -1,0 +1,36 @@
+% abcDidactyl v5
+% abcD fingering 1: x@x
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-13 12:38:01
+% These are complete fingerings, with any gaps filled in.
+% abcD fingering 2: x@x
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-13 12:38:01
+% These are alternate fingerings, if specified, with gaps filled in. 
+% abcDidactyl END
+X:2
+T:scales_c_minor_melodic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Cmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"^Octaves"CDEF G=A=Bc defg =a=bc'_b _agfe dc_B_A GFED:|C4|:
+c'bag fedc BAGF EDCD EFG=A =Bcde fg=a=b:|c'4|:
+"^Thirds"EFG=A =Bcde fg=a=b c'd'e'd' c'_b_ag fedc _B_AGF:|E4|:
+e'd'c'b agfe dcBA GFEF G=A=Bc defg =a=bc'd':|e'4|:
+"^Sixths"CDEF G=A=Bc defg =a=bc'=b agfe dc=BA GFED:|C4|:
+c'bag fedc BAGF EDCD EFG=A =Bcde fg=a=b:|c'4|]
+V:2
+L:1/16
+CDEF G=A=Bc [K:clef=treble octave=-1] defg =a=bc'_b _agfe [K:clef=bass octave=-1] dc_B_A GFED:|C4|:
+[K:clef=treble octave=-1]c'bag fedc [K:clef=bass octave=-1] BAGF EDCD EFG=A [K:clef=treble octave=-1] =Bcde fg=a=b:|c'4|:
+[K:clef=bass octave=-1] CDEF G=A=Bc [K:clef=treble octave=-1] defg =a=bc'_b _agfe [K:clef=bass octave=-1] dc_B_A GFED:|C4|:
+[K:clef=treble octave=-1] c'bag fedc [K:clef=bass octave=-1] BAGF EDCD EFG=A [K:clef=treble octave=-1] =Bcde fg=a=b:|c'4|:
+[K:clef=bass octave=-1] EFG=A =Bcde [K:clef=treble octave=-1] fg=a=b c'd'e'd' c'_b_ag fedc [K:clef=bass octave=-1] _B_AGF:|E4|:
+[K:clef=treble] edcB AGFE [K:clef=bass] DCB,A, G,F,E,F, G,=A,=B,C [K:clef=treble] DEFG =A=Bcd:|e4|]

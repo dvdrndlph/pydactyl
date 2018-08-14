@@ -1,0 +1,1103 @@
+X:1
+T:arpeggios_common_c_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Cmaj
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+CEGc egc'g ecGE:|C4|:EGce gc'e'c' gecG:|E4|:Gceg c'e'g'e' c'gec:|G4||
+V:2
+L:1/16
+CEGc [K: clef=treble octave=-1] egc'g [K: clef=bass octave=-1] ecGE:|C4|:EGce [K: clef=treble octave=-1] gc'e'c' gecG [K: clef=bass octave=-1]:|E4|:Gceg [K: clef=treble octave=-1] c'e'g'e' c'gec [K: clef=bass octave=-1]:|G4||
+
+X:2
+T:arpeggios_common_c_minor
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Cmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+CEGc egc'g ecGE:|C4|:EGce gc'e'c' gecG:|E4|:Gceg c'e'g'e' c'gec:|G4||
+V:2
+L:1/16
+CEGc [K: clef=treble octave=-1] egc'g [K: clef=bass octave=-1] ecGE:|C4|:EGce [K: clef=treble octave=-1] gc'e'c' gecG[K: clef=bass octave=-1] :|E4|:Gceg [K: clef=treble octave=-1] c'e'g'e' c'gec [K: clef=bass octave=-1]:|G4||
+
+X:3
+T:arpeggios_common_g_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Gmaj
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+G,B,DG Bdgd BGDB,:|G,4|:B,DGB dgbg dBGD:|B,4|:DGBd gbd'b gdBG:|D4||
+V:2
+L:1/16
+G,B,DG Bdgd BGDB,:|G,4|:B,DGB [K: clef=treble octave=-1] dgbg [K: clef=bass octave=-1] dBGD:|B,4|:DGBd [K: clef=treble octave=-1] gbd'b [K: clef=bass octave=-1] gdBG:|D4||
+
+X:4
+T:arpeggios_common_g_minor
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Gmin
+V:1 treble
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+G,B,DG Bdgd BGDB,:|G,4|:B,DGB dgbg dBGD:|B,4|:DGBd gbd'b gdBG:|D4||
+V:2
+
+L:1/16
+
+G,B,DG Bdgd BGDB,:|G,4|:B,DGB [K: clef=treble octave=-1] dgbg [K: clef=bass octave=-1] dBGD:|B,4|:DGBd [K: clef=treble octave=-1] gbd'b [K: clef=bass octave=-1] gdBG:|D4||
+
+
+X:5
+T:arpeggios_common_d_major
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Dmaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+DFAd fad'a fdAF:|D4|:FAdf ad'f'd' afdA:|F4|:Adfa d'f'a'f' d'afd:|A4||
+V:2
+
+L:1/16
+
+DFAd [K: clef=treble octave=-1] fad'a [K: clef=bass octave=-1] fdAF:|D4|:FAdf [K: clef=treble octave=-1] ad'f'd' afdA [K: clef=bass octave=-1] :|F4|:Adfa [K: clef=treble octave=-1] d'f'a'f' d'afd:|A4||
+
+
+X:6
+T:arpeggios_common_d_minor
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Dmin
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+DFAd fad'a fdAF:|D4|:FAdf ad'f'd' afdA:|F4|:Adfa d'f'a'f' d'afd:|A4||
+V:2
+
+L:1/16
+
+DFAd [K: clef=treble octave=-1] fad'a [K: clef=bass octave=-1] fdAF:|D4|:FAdf [K: clef=treble octave=-1] ad'f'd' afdA [K: clef=bass octave=-1] :|F4|:Adfa [K: clef=treble octave=-1] d'f'a'f' d'afd:|A4||
+
+
+X:7
+T:arpeggios_common_a_major
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Amaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+A,CEA ceae cAEC:|A,4|:CEAc eac'a ecAE:|C4|:EAce ac'e'c' aecA:|E4||
+V:2
+
+L:1/16
+
+A,CEA [K: clef=treble octave=-1] ceae [K: clef=bass octave=-1]cAEC:|A,4|:CEAc [K: clef=treble octave=-1] eac'a [K: clef=bass octave=-1] ecAE:|C4|:EAce [K: clef=treble octave=-1] ac'e'c' aecA [K: clef=bass octave=-1]:|E4||
+
+
+X:8
+T:arpeggios_common_a_minor
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Amin
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+A,CEA ceae cAEC:|A,4|:CEAc eac'a ecAE:|C4|:EAce ac'e'c' aecA:|E4||
+V:2
+
+L:1/16
+
+A,CEA [K: clef=treble octave=-1]ceae [K: clef=bass octave=-1]cAEC:|A,4|:CEAc [K: clef=treble octave=-1]eac'a [K: clef=bass octave=-1]ecAE:|C4|:EAce [K: clef=treble octave=-1]ac'e'c' aecA [K: clef=bass octave=-1]:|E4||
+
+
+X:9
+T:arpeggios_common_e_major
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Emaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+EGBe gbe'b geBG:|E4|:GBeg be'g'e' bgeB:|G4|:Begb e'g'b'g' e'bge:|B4||
+V:2
+
+L:1/16
+
+EGBe [K: clef=treble octave=-1]gbe'b [K: clef=bass octave=-1]geBG:|E4|:GBeg [K: clef=treble octave=-1]be'g'e' bgeB [K: clef=bass octave=-1]:|G4|:[K: clef=treble octave=-1]Begb e'g'b'g' e'bge:|B4||
+
+
+X:10
+T:arpeggios_common_e_minor
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Emin
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+EGBe gbe'b geBG:|E4|:GBeg be'g'e' bgeB:|G4|:Begb e'g'b'g' e'bge:|B4||
+V:2
+
+L:1/16
+
+EGBe [K: clef=treble octave=-1]gbe'b [K: clef=bass octave=-1]geBG:|E4|:GBeg [K: clef=treble octave=-1]be'g'e' bgeB:|[K: clef=bass octave=-1]G4|:[K: clef=treble octave=-1]Begb e'g'b'g' e'bge:|B4||
+
+
+X:11
+T:arpeggios_common_b_major
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Bmaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+B,DFB dfbf dBFD:|B,4|:DFBd fbd'b fdBF:|D4|:FBdf bd'f'd' bfdB:|F4||
+V:2
+
+L:1/16
+
+B,DFB [K: clef=treble octave=-1]dfbf [K: clef=bass octave=-1]dBFD:|B,4|:DFBd [K: clef=treble octave=-1]fbd'b [K: clef=bass octave=-1]fdBF:|D4|:FBdf [K: clef=treble octave=-1]bd'f'd' bfdB:| [K: clef=bass octave=-1]F4||
+
+
+X:12
+T:arpeggios_common_b_minor
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Bmin
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+B,DFB dfbf dBFD:|B,4|:DFBd fbd'b fdBF:|D4|:FBdf bd'f'd' bfdB:|F4||
+V:2
+
+L:1/16
+
+B,DFB [K: clef=treble octave=-1]dfbf [K: clef=bass octave=-1]dBFD:|B,4|:DFBd [K: clef=treble octave=-1]fbd'b [K: clef=bass octave=-1]fdBF:|D4|:FBdf [K: clef=treble octave=-1]bd'f'd' bfdB:|[K: clef=bass octave=-1]F4||
+
+
+X:13
+T:arpeggios_common_fsharp_major
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:F#maj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+F,A,CF Acfc AFCA,:|F,4|:A,CFA cfaf cAFC:|A,4|:CFAc fac'a fcAF:|C4||
+V:2
+
+L:1/16
+
+F,A,CF Acfc AFCA,:|F,4|:A,CFA cfaf cAFC:|A,4|:CFAc [K: clef=treble octave=-1]fac'a [K: clef=bass octave=-1]fcAF:|C4||
+
+
+X:14
+T:arpeggios_common_fsharp_minor
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:F#min
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+F,A,CF Acfc AFCA,:|F,4|:A,CFA cfaf cAFC:|A,4|:CFAc fac'a fcAF:|C4||
+V:2
+
+L:1/16
+
+F,A,CF Acfc AFCA,:|F,4|:A,CFA cfaf cAFC:|A,4|:CFAc [K: clef=treble octave=-1]fac'a [K: clef=bass octave=-1]fcAF:|C4||
+
+
+X:15
+T:arpeggios_common_dflat_major
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Dbmaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+DFAd fad'a fdAF:|D4|:FAdf ad'f'd' afdA:|F4|:Adfa d'f'a'f' d'afd:|A4||
+V:2
+
+L:1/16
+
+DFAd [K: clef=treble octave=-1]fad'a [K: clef=bass octave=-1]fdAF:|D4|:FAdf [K: clef=treble octave=-1]ad'f'd' afdA:|[K: clef=bass octave=-1]F4|:[K: clef=treble octave=-1]Adfa d'f'a'f' d'afd:|A4||
+
+
+X:16
+T:arpeggios_common_csharp_minor
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:C#min
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+CEGc egc'g ecGE:|C4|:EGce gc'e'c' gecG:|E4|:Gceg c'e'g'e' c'gec:|G4||
+V:2
+
+L:1/16
+
+CEGc [K: clef=treble octave=-1]egc'g [K: clef=bass octave=-1]ecGE:|C4|:EGce [K: clef=treble octave=-1]gc'e'c' [K: clef=bass octave=-1]gecG:|E4|:Gceg [K: clef=treble octave=-1]c'e'g'e' c'gec:|[K: clef=bass octave=-1]G4||
+
+
+X:17
+T:arpeggios_common_aflat_major
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Abmaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+A,CEA ceae cAEC:|A,4|:CEAc eac'a ecAE:|C4|:EAce ac'e'c' aecA:|E4||
+V:2
+
+L:1/16
+
+A,CEA ceae cAEC:|A,4|:CEAc [K: clef=treble octave=-1]eac'a [K: clef=bass octave=-1]ecAE:|C4|:EAce [K: clef=treble octave=-1]ac'e'c' aecA:|[K: clef=bass octave=-1]E4||
+
+
+X:18
+T:arpeggios_common_gsharp_minor
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:G#min
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+G,B,DG Bdgd BGDB,:|G,4|:B,DGB dgbg dBGD:|B,4|:DGBd gbd'b gdBG:|D4||
+V:2
+
+L:1/16
+
+G,B,DG Bdgd BGDB,:|G,4|:B,DGB [K: clef=treble octave=-1]dgbg [K: clef=bass octave=-1]dBGD:|B,4|:DGBd [K: clef=treble octave=-1]gbd'b [K: clef=bass octave=-1]gdBG:|D4||
+
+
+X:19
+T:arpeggios_common_eflat_major
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Ebmaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+EGBe gbe'b geBG:|E4|:GBeg be'g'e' bgeB:|G4|:Begb e'g'b'g' e'bge:|B4||
+V:2
+
+L:1/16
+
+EGBe [K: clef=treble octave=-1]gbe'b [K: clef=bass octave=-1]geBG:|E4|:GBeg [K: clef=treble octave=-1]be'g'e' bgeB:|[K: clef=bass octave=-1]G4|:[K: clef=treble octave=-1]Begb e'g'b'g' e'bge:|B4||
+
+
+X:20
+T:arpeggios_common_eflat_minor
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Ebmin
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+EGBe gbe'b geBG:|E4|:GBeg be'g'e' bgeB:|G4|:Begb e'g'b'g' e'bge:|B4||
+V:2
+
+L:1/16
+
+EGBe [K: clef=treble octave=-1]gbe'b [K: clef=bass octave=-1]geBG:|E4|:GBeg [K: clef=treble octave=-1]be'g'e' bgeB:|[K: clef=bass octave=-1]G4|:[K: clef=treble octave=-1]Begb e'g'b'g' e'bge:|B4||
+
+
+X:21
+T:arpeggios_common_bflat_major
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Bbmaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+B,DFB dfbf dBFD:|B,4|:DFBd fbd'b fdBF:|D4|:FBdf bd'f'd' bfdB:|F4||
+V:2
+
+L:1/16
+
+B,DFB [K: clef=treble octave=-1]dfbf [K: clef=bass octave=-1]dBFD:|B,4|:DFBd [K: clef=treble octave=-1]fbd'b [K: clef=bass octave=-1]fdBF:|D4|:FBdf [K: clef=treble octave=-1]bd'f'd' bfdB:|[K: clef=bass octave=-1]F4||
+
+
+X:22
+T:arpeggios_common_bflat_minor
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Bbmin
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+B,DFB dfbf dBFD:|B,4|:DFBd fbd'b fdBF:|D4|:FBdf bd'f'd' bfdB:|F4||
+V:2
+
+L:1/16
+
+B,DFB [K: clef=treble octave=-1]dfbf [K: clef=bass octave=-1]dBFD:|B,4|:DFBd [K: clef=treble octave=-1]fbd'b [K: clef=bass octave=-1]fdBF:|D4|:FBdf [K: clef=treble octave=-1]bd'f'd' bfdB:|[K: clef=bass octave=-1]F4||
+
+
+X:23
+T:arpeggios_common_f_major
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Fmaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+F,A,CF Acfc AFCA,:|F,4|:A,CFA cfaf cAFC:|A,4|:CFAc fac'a fcAF:|C4||
+V:2
+
+L:1/16
+
+F,A,CF Acfc AFCA,:|F,4|:A,CFA cfaf cAFC:|A,4|:CFAc [K: clef=treble octave=-1]fac'a [K: clef=bass octave=-1]fcAF:|C4||
+
+
+X:24
+T:arpeggios_common_f_minor
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Fmin
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+F,A,CF Acfc AFCA,:|F,4|:A,CFA cfaf cAFC:|A,4|:CFAc fac'a fcAF:|C4||
+V:2
+
+L:1/16
+
+F,A,CF Acfc AFCA,:|F,4|:A,CFA cfaf cAFC:|A,4|:CFAc [K: clef=treble octave=-1]fac'a [K: clef=bass octave=-1]fcAF:|C4||
+
+
+X:25
+T:arpeggios_dom7_c
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Cmaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+G,B,DF GBdf gfdB GFDB,:|G,4|:B,DFG Bdfg bgfd BGFD:|B,4|
+|:DFGB dfgb d'bgf dBGF:|D4|:FGBd fgbd' f'd'bg fdBG:|F4||
+V:2
+
+L:1/16
+
+G,B,DF GBdf gfdB GFDB,:|G,4|:B,DFG [K: clef=treble octave=-1]Bdfg bgfd [K: clef=bass octave=-1]BGFD:|B,4|
+
+|:DFGB [K: clef=treble octave=-1]dfgb d'bgf [K: clef=bass octave=-1]dBGF:|D4|:FGBd [K: clef=treble octave=-1]fgbd' f'd'bg [K: clef=bass octave=-1]fdBG:|F4||
+
+
+X:26
+T:arpeggios_dom7_g
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Gmaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+DFAc dfac' d'c'af dcAF:|D4|:FAcd fac'd' f'd'c'a fdcA:|F4|
+|:Acdf ac'd'f' a'f'd'c' afdc:|A4|:cdfa c'd'f'a' c''a'f'd' c'afd:|c4||
+V:2
+
+L:1/16
+
+DFAc [K: clef=treble octave=-1]dfac' d'c'af [K: clef=bass octave=-1]dcAF:|D4|:FAcd [K: clef=treble octave=-1]fac'd' f'd'c'a [K: clef=bass octave=-1]fdcA:|F4|
+
+|:Acdf [K: clef=treble octave=-1]ac'd'f' a'f'd'c' afdc:|[K: clef=bass octave=-1]A4|:[K: clef=treble octave=-1]cdfa c'd'f'a' c''a'f'd' c'afd:|c4||
+
+
+X:27
+T:arpeggios_dom7_d
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Dmaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+A,CEG Aceg agec AGEC:|A,4|:CEGA cega c'age cAGE:|C4|
+|:EGAc egac' e'c'ag ecAG:|E4|:GAce gac'e' g'e'c'a gecA:|G4||
+V:2
+
+L:1/16
+
+A,CEG Aceg agec AGEC:|A,4|:CEGA [K: clef=treble octave=-1]cega c'age [K: clef=bass octave=-1]cAGE:|C4|
+
+|:EGAc [K: clef=treble octave=-1]egac' e'c'ag [K: clef=bass octave=-1]ecAG:|E4|:GAce [K: clef=treble octave=-1]gac'e' g'e'c'a [K: clef=bass octave=-1]gecA:|G4||
+
+
+X:28
+T:arpeggios_dom7_a
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Amaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+EGBd egbd' e'd'bg edBG:|E4|:GBde gbd'e' g'e'd'b gedB:|G4|
+|:Bdeg bd'e'g' b'g'e'd' bged:|B4|:degb d'e'g'b' d''b'g'e' d'bge:|d4||
+V:2
+
+L:1/16
+
+EGBd [K: clef=treble octave=-1]egbd' e'd'bg [K: clef=bass octave=-1]edBG:|E4|:GBde [K: clef=treble octave=-1]gbd'e' g'e'd'b [K: clef=bass octave=-1]gedB:|G4|
+
+|:Bdeg [K: clef=treble octave=-1]bd'e'g' b'g'e'd' bged:|[K: clef=bass octave=-1]B4|:[K: clef=treble octave=-1]degb d'e'g'b' d''b'g'e' d'bge:|d4||
+
+
+X:29
+T:arpeggios_dom7_e
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Emaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+B,DFA Bdfa bafd BAFD:|B,4|:DFAB dfab d'baf dBAF:|D4|
+|:FABd fabd' f'd'ba fdBA:|F4|:ABdf abd'f' a'f'd'b afdB:|A4||
+V:2
+
+L:1/16
+
+B,DFA [K: clef=treble octave=-1]Bdfa bafd [K: clef=bass octave=-1]BAFD:|B,4|:DFAB [K: clef=treble octave=-1]dfab d'baf [K: clef=bass octave=-1]dBAF:|D4|
+
+|:FABd [K: clef=treble octave=-1]fabd' f'd'ba [K: clef=bass octave=-1]fdBA:|F4|:ABdf [K: clef=treble octave=-1]abd'f' a'f'd'b afdB:|[K: clef=bass octave=-1]A4||
+
+
+X:30
+T:arpeggios_dom7_b
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Bmaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+FAce fac'e' f'e'c'a fecA:|F4|:Acef ac'e'f' a'f'e'c' afec:|A4|
+|:cefa c'e'f'a' c''a'f'e' c'afe:|c4|:efac' e'f'a'c'' e''c''a'f' e'c'af:|e4||
+V:2
+
+L:1/16
+
+FAce [K: clef=treble octave=-1]fac'e' f'e'c'a [K: clef=bass octave=-1]fecA:|F4|:Acef [K: clef=treble octave=-1]ac'e'f' a'f'e'c' afec:|[K: clef=bass octave=-1]A4|
+
+|:[K: clef=treble octave=-1]cefa c'e'f'a' c''a'f'e' c'afe:|c4|:efac' e'f'a'c'' e''c''a'f' e'c'af:|e4|
+
+
+X:31
+T:arpeggios_dom7_fsharp
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:F#maj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+CEGB cegb c'bge cBGE:|C4|:EGBc egbc' e'c'bg ecBG:|E4|
+|:GBce gbc'e' g'e'c'b gecB:|G4|:Bceg bc'e'g' b'g'e'c' bgec:|B4||
+V:2
+
+L:1/16
+
+CEGB [K: clef=treble octave=-1]cegb c'bge [K: clef=bass octave=-1]cBGE:|C4|:EGBc [K: clef=treble octave=-1]egbc' e'c'bg [K: clef=bass octave=-1]ecBG:|E4|
+
+|:GBce [K: clef=treble octave=-1]gbc'e' g'e'c'b [K: clef=bass octave=-1]gecB:|G4|:Bceg [K: clef=treble octave=-1]bc'e'g' b'g'e'c' bgec:|[K: clef=bass octave=-1]B4||
+
+
+X:32
+T:arpeggios_dom7_dflat
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Dbmaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+A,CEG Aceg agec AGEC:|A,4|:CEGA cega c'age cAGE:|C4|
+|:EGAc egac' e'c'ag ecAG:|E4|:GAce gac'e' g'e'c'a gecA:|G4||
+V:2
+
+L:1/16
+
+A,CEG [K: clef=treble octave=-1]Aceg agec [K: clef=bass octave=-1]AGEC:|A,4|:CEGA [K: clef=treble octave=-1]cega c'age [K: clef=bass octave=-1]cAGE:|C4|
+
+|:EGAc [K: clef=treble octave=-1]egac' e'c'ag [K: clef=bass octave=-1]ecAG:|E4|:GAce [K: clef=treble octave=-1]gac'e' g'e'c'a [K: clef=bass octave=-1]gecA:|G4||
+
+
+X:33
+T:arpeggios_dom7_aflat
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Abmaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+EGBd egbd' e'd'bg edBG:|E4|:GBde gbd'e' g'e'd'b gedB:|G4|
+|:Bdeg bd'e'g' b'g'e'd' bged:|B4|:degb d'e'g'b' d''b'g'e' d'bge:|d4||
+V:2
+
+L:1/16
+
+EGBd [K: clef=treble octave=-1]egbd' e'd'bg [K: clef=bass octave=-1]edBG:|E4|:GBde [K: clef=treble octave=-1]gbd'e' g'e'd'b [K: clef=bass octave=-1]gedB:|G4|
+
+|:Bdeg [K: clef=treble octave=-1]bd'e'g' b'g'e'd' bged:|[K: clef=bass octave=-1]B4|:[K: clef=treble octave=-1]degb d'e'g'b' d''b'g'e' d'bge:|d4||
+
+
+X:34
+T:arpeggios_dom7_eflat
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Ebmaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+B,DFA Bdfa bafd BAFD:|B,4|:DFAB dfab d'baf dBAF:|D4|
+|:FABd fabd' f'd'ba fdBA:|F4|:ABdf abd'f' a'f'd'b afdB:|A4||
+V:2
+
+L:1/16
+
+B,DFA [K: clef=treble octave=-1]Bdfa bafd [K: clef=bass octave=-1]BAFD:|B,4|:DFAB [K: clef=treble octave=-1]dfab d'baf [K: clef=bass octave=-1]dBAF:|D4|
+
+|:FABd [K: clef=treble octave=-1]fabd' f'd'ba [K: clef=bass octave=-1]fdBA:|F4|:ABdf [K: clef=treble octave=-1]abd'f' a'f'd'b afdB:|[K: clef=bass octave=-1]A4||
+
+
+X:35
+T:arpeggios_dom7_bflat
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Bbmaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+F,A,CE FAce fecA FECA,:|F,4|:A,CEF Acef afec AFEC:|A,4|
+|:CEFA cefa c'afe cAFE:|C4|:EFAc efac' e'c'af ecAF:|E4||
+V:2
+
+L:1/16
+
+F,A,CE FAce fecA FECA,:|F,4|:A,CEF Acef afec AFEC:|A,4|
+
+|:CEFA [K: clef=treble octave=-1]cefa c'afe [K: clef=bass octave=-1]cAFE:|C4|:EFAc [K: clef=treble octave=-1]efac' e'c'af [K: clef=bass octave=-1]ecAF:|E4||
+
+
+X:36
+T:arpeggios_dom7_f
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Fmaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+CEGB cegb c'bge cBGE:|C4|:EGBc egbc' e'c'bg ecBG:|E4|
+|:GBce gbc'e' g'e'c'b gecB:|G4|:Bceg bc'e'g' b'g'e'c' bgec:|B4||
+V:2
+
+L:1/16
+
+CEGB [K: clef=treble octave=-1]cegb c'bge [K: clef=bass octave=-1]cBGE:|C4|:EGBc [K: clef=treble octave=-1]egbc' e'c'bg [K: clef=bass octave=-1]ecBG:|E4|
+
+|:GBce [K: clef=treble octave=-1]gbc'e' g'e'c'b [K: clef=bass octave=-1]gecB:|G4|:Bceg [K: clef=treble octave=-1]bc'e'g' b'g'e'c' bgec:|[K: clef=bass octave=-1]B4||
+
+
+X:37
+T:arpeggios_dim7_c
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Cmaj
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+B,DF_A Bdf_a bafd BAFD:|B,4|:DF_AB df_ab d'baf dBAF:|D4|
+|:F_ABd f_abd' f'd'ba fdBA:|F4|:_ABdf _abd'f' _a'f'd'b afdB:|_A4||
+V:2
+
+L:1/16
+
+B,DF_A [K: clef=treble octave=-1]Bdf_a bafd [K: clef=bass octave=-1]BAFD:|B,4|:DF_AB [K: clef=treble octave=-1]df_ab d'baf [K: clef=bass octave=-1]dBAF:|D4|
+
+|:F_ABd [K: clef=treble octave=-1]f_abd' f'd'ba [K: clef=bass octave=-1]fdBA:|F4|:_ABdf [K: clef=treble octave=-1]_abd'f' _a'f'd'b afdB:|[K: clef=bass octave=-1]_A4||
+
+
+X:38
+T:arpeggios_dim7_g
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Gmaj treble
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+FAc_e fac'_e' f'e'c'a fecA:|F4|:A,C_EF Ac_ef afec AFEC:|A,4|
+|:C_EFA c_efa c'afe cAFE:|C4|:_EFAc _efac' _e'c'af ecAF:|_E4||
+V:2
+
+L:1/16
+
+FAc_e [K: clef=treble octave=-1]fac'_e' f'e'c'a [K: clef=bass octave=-1]fecA:|F4|:A,C_EF Ac_ef afec AFEC:|A,4|
+
+|:C_EFA [K: clef=treble octave=-1]c_efa c'afe [K: clef=bass octave=-1]cAFE:|C4|:_EFAc [K: clef=treble octave=-1]_efac' _e'c'af [K: clef=bass octave=-1]ecAF:|_E4||
+
+
+X:39
+T:arpeggios_dim7_d
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Dmaj treble
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+CEG_B ceg_b c'bge cBGE:|C4|:EG_Bc eg_bc' e'c'bg ecBG:|E4|
+|:G,_B,CE G_Bce gecB GECB,:|G,4|:_B,CEG _Bceg _bgec BGEC:|_B,4||
+V:2
+
+L:1/16
+
+CEG_B [K: clef=treble octave=-1]ceg_b c'bge [K: clef=bass octave=-1]cBGE:|C4|:EG_Bc [K: clef=treble octave=-1]eg_bc' e'c'bg [K: clef=bass octave=-1]ecBG:|E4|
+
+|:G,_B,CE G_Bce gecB GECB,:|G,4|:_B,CEG [K: clef=treble octave=-1]_Bceg _bgec [K: clef=bass octave=-1]BGEC:|_B,4||
+
+
+X:40
+T:arpeggios_dim7_a
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Amaj clef=treble octave=0
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+G,B,D=F GBd=f gfdB GFDB,:|G,4|:B,D=FG Bd=fg bgfd BGFD:|B,4|
+|:D=FGB d=fgb d'bgf dBGF:|D4|:=FGBd =fgbd' =f'd'bg fdBG:|=F4||
+V:2
+
+L:1/16
+
+G,B,D=F GBd=f gfdB GFDB,:|G,4|:B,D=FG [K: clef=treble octave=-1]Bd=fg bgfd [K: clef=bass octave=-1]BGFD:|B,4|
+
+|:D=FGB [K: clef=treble octave=-1]d=fgb d'bgf [K: clef=bass octave=-1]dBGF:|D4|:=FGBd [K: clef=treble octave=-1]=fgbd' =f'd'bg [K: clef=bass octave=-1]fdBG:|=F4||
+
+
+X:41
+T:arpeggios_dim7_e
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Emaj clef=treble octave=0
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+DFA=c dfa=c' d'c'af dcAF:|D4|:FA=cd fa=c'd' f'd'c'a fdcA:|F4|
+|:A,=CDF A=cdf afdc AFDC:|A,4|:=CDFA =cdfa =c'afd cAFD:|=C4||
+V:2
+
+L:1/16
+
+DFA=c [K: clef=treble octave=-1]dfa=c' d'c'af [K: clef=bass octave=-1]dcAF:|D4|:FA=cd [K: clef=treble octave=-1]fa=c'd' f'd'c'a [K: clef=bass octave=-1]fdcA:|F4|
+
+|:A,=CDF A=cdf afdc AFDC:|A,4|:=CDFA [K: clef=treble octave=-1]=cdfa =c'afd [K: clef=bass octave=-1]cAFD:|=C4||
+
+
+X:42
+T:arpeggios_dim7_b
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Bmaj clef=treble octave=0
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+A,CE=G Ace=g agec AGEC:|A,4|:CE=GA ce=ga c'age cAGE:|C4|
+|:E=GAc e=gac' e'c'ag ecAG:|E4|:=GAce =gac'e' =g'e'c'a gecA:|=G4||
+V:2
+
+L:1/16
+
+A,CE=G Ace=g agec AGEC:|A,4|:CE=GA [K: clef=treble octave=-1]ce=ga c'age [K: clef=bass octave=-1]cAGE:|C4|
+
+|:E=GAc [K: clef=treble octave=-1]e=gac' e'c'ag [K: clef=bass octave=-1]ecAG:|E4|:=GAce [K: clef=treble octave=-1]=gac'e' =g'e'c'a [K: clef=bass octave=-1]gecA:|=G4||
+
+
+X:43
+T:arpeggios_dim7_fsharp
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:F#maj clef=treble octave=0
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+EGB=d egb=d' e'd'bg edBG:|E4|:GB=de gb=d'e' g'e'd'b gedB:|G4|
+|:B,=DEG B=deg bged BGED:|B,4|:=DEGB =degb =d'bge dBGE:|=D4||
+V:2
+
+L:1/16
+
+EGB=d [K: clef=treble octave=-1]egb=d' e'd'bg [K: clef=bass octave=-1]edBG:|E4|:GB=de [K: clef=treble octave=-1]gb=d'e' g'e'd'b gedB:|[K: clef=bass octave=-1]G4|
+
+|:B,=DEG [K: clef=treble octave=-1]B=deg bged [K: clef=bass octave=-1]BGED:|B,4|:=DEGB [K: clef=treble octave=-1]=degb =d'bge [K: clef=bass octave=-1]dBGE:|=D4||
+
+
+X:44
+T:arpeggios_dim7_dflat
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Dbmaj clef=treble octave=0
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+CEG__B ceg__b c'bge cBGE:|C4|:EG__Bc eg__bc' e'c'bg ecBG:|E4|
+|:G__Bce g__bc'e' g'e'c'b gecB:|G4|:__Bceg __bc'e'g' __b'g'e'c' bgec:|__B4||
+V:2
+
+L:1/16
+
+CEG__B [K: clef=treble octave=-1]ceg__b c'bge [K: clef=bass octave=-1]cBGE:|C4|:EG__Bc [K: clef=treble octave=-1]eg__bc' e'c'bg [K: clef=bass octave=-1]ecBG:|E4|
+
+|:G__Bce [K: clef=treble octave=-1]g__bc'e' g'e'c'b gecB:|G4|:__Bceg __bc'e'g' __b'g'e'c' bgec:|__B4||
+
+
+X:45
+T:arpeggios_dim7_aflat
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Abmaj clef=treble octave=0
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+G,B,D_F GBd_f gfdB GFDB,:|G,4|:B,D_FG Bd_fg bgfd BGFD:|B,4|
+|:D_FGB d_fgb d'bgf dBGF:|D4|:_FGBd _fgbd' _f'd'bg fdBG:|_F4||
+V:2
+
+L:1/16
+
+G,B,D_F GBd_f gfdB GFDB,:|G,4|:B,D_FG [K: clef=treble octave=-1]Bd_fg bgfd [K: clef=bass octave=-1]BGFD:|B,4|
+
+|:D_FGB [K: clef=treble octave=-1]d_fgb d'bgf [K: clef=bass octave=-1]dBGF:|D4|:_FGBd [K: clef=treble octave=-1]_fgbd' _f'd'bg [K: clef=bass octave=-1]fdBG:|_F4||
+
+
+X:46
+T:arpeggios_dim7_eflat
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Ebmaj clef=treble octave=0
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+DFA_c dfa_c' d'c'af dcAF:|D4|:FA_cd fa_c'd' f'd'c'a fdcA:|F4|
+|:A,_CDF A_cdf afdc AFDC:|A,4|:_CDFA _cdfa _c'afd cAFD:|_C4||
+V:2
+
+L:1/16
+
+DFA_c [K: clef=treble octave=-1]dfa_c' d'c'af [K: clef=bass octave=-1]dcAF:|D4|:FA_cd [K: clef=treble octave=-1]fa_c'd' f'd'c'a [K: clef=bass octave=-1]fdcA:|F4|
+
+|:A,_CDF A_cdf afdc AFDC:|A,4|:_CDFA [K: clef=treble octave=-1]_cdfa _c'afd [K: clef=bass octave=-1]cAFD:|_C4||
+
+
+X:47
+T:arpeggios_dim7_bflat
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Bbmaj clef=treble octave=0
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+A,CE_G Ace_g agec AGEC:|A,4|:CE_GA ce_ga c'age cAGE:|C4|
+|:E_GAc e_gac' e'c'ag ecAG:|E4|:_GAce _gac'e' _g'e'c'a gecA:|_G4||
+V:2
+
+L:1/16
+
+A,CE_G Ace_g agec AGEC:|A,4|:CE_GA [K: clef=treble octave=-1]ce_ga c'age [K: clef=bass octave=-1]cAGE:|C4|
+
+|:E_GAc [K: clef=treble octave=-1]e_gac' e'c'ag [K: clef=bass octave=-1]ecAG:|E4|:_GAce [K: clef=treble octave=-1]_gac'e' _g'e'c'a gecA:|[K: clef=bass octave=-1]_G4||
+
+
+X:48
+T:arpeggios_dim7_f
+C:Beringer and Dunhill
+
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Fmaj clef=treble octave=0
+V:1 treble
+
+V:2 bass octave=-1
+
+V:1
+
+L:1/16
+EGB_d egb_d' e'd'bg edBG:|E4|:GB_de gb_d'e' g'e'd'b gedB:|G4|
+|:B,_DEG B_deg bged BGED:|B,4|:_DEGB _degb _d'bge dBGE:|_D4||
+V:2
+
+L:1/16
+
+EGB_d [K: clef=treble octave=-1]egb_d' e'd'bg [K: clef=bass octave=-1]edBG:|E4|:GB_de [K: clef=treble octave=-1]gb_d'e' g'e'd'b gedB:|[K: clef=bass octave=-1]G4|
+
+|:B,_DEG [K: clef=treble octave=-1]B_deg bged [K: clef=bass octave=-1]BGED:|B,4|:_DEGB [K: clef=treble octave=-1]_degb _d'bge [K: clef=bass octave=-1]dBGE:|_D4||

@@ -1,0 +1,358 @@
+X:1
+T:broken_chords_c_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:Cmaj
+V:1 treble
+V:2 bass octave=-2
+V:1
+L:1/16
+CEGc EGce Gceg cegc' c'gec gecG ecGE cGEC||
+V:2
+L:1/16
+CEGc EGce Gceg cegc' c'gec gecG ecGE cGEC||
+
+X:2
+T:broken_chords_c_minor
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:Cmin
+V:1 treble
+V:2 bass octave=-2
+V:1
+L:1/16
+CEGc EGce Gceg cegc' c'gec ecGE cGEC||
+V:2
+L:1/16
+CEGc EGce Gceg cegc' c'gec ecGE cGEC||
+
+X:3
+T:broken_chords_g_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:Gmaj
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+G,B,DG B,DGB DGBd GBdg gdBG dBGD BGDB, GDB,G,||
+V:2
+L:1/16
+G,B,DG B,DGB DGBd GBdg gdBG dBGD BGDB, GDB,G,||
+
+X:4
+T:broken_chords_g_minor
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:Gmin
+V:1 treble
+V:2 bass bass octave=-1
+V:1
+L:1/16
+G,B,DG B,DGB DGBd GBdg gdBG dBGD BGDB, GDB,G,||
+V:2
+L:1/16
+G,B,DG B,DGB DGBd GBdg gdBG dBGD BGDB, GDB,G,||
+
+X:5
+T:broken_chords_d_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:D
+V:1 treble
+V:2 bass bass octave=-2
+V:1
+L:1/16
+DFAd FAdf Adfa dfad' d'afd afdA fdAF dAFD||
+V:2
+L:1/16
+DFAd FAdf Adfa dfad' d'afd afdA fdAF dAFD||
+
+X:6
+T:broken_chords_d_minor
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:Dm
+V:1 treble
+V:2 bass bass octave=-2
+V:1
+L:1/16
+DFAd FAdf Adfa dfad' d'afd afdA fdAF dAFD||
+V:2
+L:1/16
+DFAd FAdf Adfa dfad' d'afd afdA fdAF dAFD||
+
+X:7
+T:broken_chords_a_major
+C:Beringer and Dunhill
+M:8/4
+K:A
+V:1 treble
+V:2 bass bass octave=-1
+V:1
+L:1/16
+A,CEA CEAc EAce Acea aecA ecAE cAEC AECA,||
+V:2
+L:1/16
+A,CEA CEAc EAce [K: clef=treble octave=-1]Acea aecA [K: clef=bass octave=-1] ecAE cAEC AECA,||
+
+X:8
+T:broken_chords_a_minor
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:Amin
+V:1 treble
+V:2 bass bass octave=-2
+V:1
+L:1/16
+A,CEA CEAc EAce Acea aecA ecAE cAEC AECA,||
+V:2
+L:1/16
+A,CEA CEAc EAce [K: clef=treble octave=-1] Acea aecA [K: clef=bass octave=-1] ecAE cAEC AECA,||
+
+X:9
+T:broken_chords_e_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:E
+V:1 treble
+V:2 bass bass octave=-2
+V:1
+L:1/16
+EGBe GBeg Begb egbe' e'bge bgeB geBG eBGE||
+V:2
+L:1/16
+EGBe GBeg Begb egbe' e'bge bgeB geBG eBGE||
+
+X:10
+T:broken_chords_e_minor
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:Em
+V:1 treble
+V:2 bass bass octave=-2
+V:1
+L:1/16
+EGBe GBeg Begb egbe' e'bge bgeB geBG eBGE||
+V:2
+L:1/16
+EGBe GBeg Begb egbe' e'bge bgeB geBG eBGE||
+
+X:11
+T:broken_chords_b_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:B
+V:1 treble
+V:2 bass bass octave=-1
+V:1
+L:1/16
+B,DFB DFBd FBdf Bdfb bfdB fdBF dBFD BFDB,||
+V:2
+L:1/16
+B,DFB DFBd FBdf [K: clef=treble octave=-1] Bdfb bfdB fdBF [K: clef=bass octave=-1] dBFD BFDB,||
+
+X:12
+T:broken_chords_b_minor
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:Bmin
+V:1 treble
+V:2 bass bass octave=-1
+V:1
+L:1/16
+B,DFB DFBd FBdf Bdfb bfdB fdBF dBFD BFDB,||
+V:2
+L:1/16
+B,DFB DFBd FBdf [K: clef=treble octave=-1] Bdfb bfdB fdBF [K: clef=bass octave=-1]  dBFD BFDB,||
+
+X:13
+T:broken_chords_fsharp_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:F#maj
+V:1 treble
+V:2 bass bass octave=-2
+V:1
+L:1/16
+FAcf Acfa cfac' fac'f' f'c'af c'afc afcA fcAF||
+V:2
+L:1/16
+FAcf Acfa cfac' fac'f' f'c'af c'afc afcA fcAF||
+
+X:14
+T:broken_chords_fsharp_minor
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:F#min
+V:1 treble
+V:2 bass bass octave=-2
+V:1
+L:1/16
+FAcf Acfa cfac' fac'f' f'c'af c'afc afcA fcAF||
+V:2
+L:1/16
+FAcf Acfa cfac' fac'f' f'c'af c'afc afcA fcAF||
+
+X:15
+T:broken_chords_dflat_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:Dbmaj
+V:1 treble
+V:2 bass bass octave=-2
+V:1
+L:1/16
+DFAd FAdf Adfa dfad' d'afd afdA fdAF dAFD||
+V:2
+L:1/16
+DFAd FAdf Adfa dfad' d'afd afdA fdAF dAFD||
+
+X:16
+T:broken_chords_csharp_minor
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:C#min
+V:1 treble
+V:2 bass bass octave=-2
+V:1
+L:1/16
+CEGc EGce Gceg cegc' c'gec gecG ecGE cGEC||
+V:2
+L:1/16
+CEGc EGce Gceg cegc' c'gec gecG ecGE cGEC||
+
+X:17
+T:broken_chords_aflat_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:Abmaj
+V:1 treble
+V:2 bass bass octave=-1
+V:1
+L:1/16
+A,CEA CEAc EAce Acea aecA ecAE cAEC AECA,||
+V:2
+L:1/16
+A,CEA CEAc EAce [K: clef=treble octave=-1] Acea aecA [K: clef=bass octave=-1] ecAE cAEC AECA,||
+
+X:18
+T:broken_chords_gsharp_minor
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:G#min
+V:1 treble
+V:2 bass bass octave=-1
+V:1
+L:1/16
+G,B,DG B,DGB DGBd GBdg gdBG dBGD BGDB, GDB,G,||
+V:2
+L:1/16
+G,B,DG B,DGB DGBd GBdg gdBG dBGD BGDB, GDB,G,||
+
+X:19
+T:broken_chords_eflat_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:Ebmaj
+V:1 treble
+V:2 bass bass octave=-2
+V:1
+L:1/16
+EGBe GBeg Begb egbe' e'bge bgeB geBG eBGE||
+V:2
+L:1/16
+EGBe GBeg Begb egbe' e'bge bgeB geBG eBGE||
+
+X:20
+T:broken_chords_eflat_minor
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:Ebmin
+V:1 treble
+V:2 bass bass octave=-2
+V:1
+L:1/16
+EGBe GBeg Begb egbe' e'bge bgeB geBG eBGE||
+V:2
+L:1/16
+EGBe GBeg Begb egbe' e'bge bgeB [K: clef=bass octave=-1] geBG eBGE||
+
+X:21
+T:broken_chords_bflat_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:Bbmaj
+V:1 treble
+V:2 bass bass octave=-1
+V:1
+L:1/16
+B,DFB DFBd FBdf Bdfb bfdB fdBF dBFD BFDB,||
+V:2
+L:1/16
+B,DFB DFBd FBdf [K: clef=treble octave=-1] Bdfb bfdB [K: clef=bass octave=-1] fdBF dBFD BFDB,||
+
+X:22
+T:broken_chords_bflat_minor
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:Bbmin
+V:1 treble
+V:2 bass bass octave=-1
+V:1
+L:1/16
+B,DFB DFBd FBdf Bdfb bfdB fdBF dBFD BFDB,||
+V:2
+L:1/16
+B,DFB DFBd FBdf [K: clef=treble octave=-1] Bdfb bfdB fdBF [K: clef=bass octave=-1]dBFD BFDB,||
+
+X:23
+T:broken_chords_f_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:Fmaj
+V:1 treble
+V:2 bass bass octave=-2
+V:1
+L:1/16
+FAcf Acfa cfac' fac'f' f'c'af c'afc afcA fcAF||
+V:2
+L:1/16
+FAcf Acfa cfac' fac'f' f'c'af c'afc afcA fcAF||
+
+X:24
+T:broken_chords_f_minor
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:Fmin
+V:1 treble
+V:2 bass bass octave=-2
+V:1
+L:1/16
+FAcf Acfa cfac' fac'f' f'c'af c'afc afcA fcAF||
+V:2
+L:1/16
+FAcf Acfa cfac' fac'f' f'c'af c'afc afcA fcAF||

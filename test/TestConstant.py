@@ -21,20 +21,18 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
+import os
 
-REPO_ROOT = "/Users/dave/tb2"
-CORPORA_DIR = REPO_ROOT + "/pydactyl/dd/corpora"
+TEST_DIR = os.path.abspath(os.path.dirname(__file__))
+DATA_DIR = TEST_DIR + "/../data"
+CORPORA_DIR = DATA_DIR + "/corpora"
 BERINGER2_DIR = CORPORA_DIR + "/beringer2"
 BERINGER2_ARPEGGIO_CORPUS = BERINGER2_DIR + "/arpeggios.abc"
 BERINGER2_ANNOTATED_ARPEGGIO_DIR = BERINGER2_DIR + "/arpeggios"
 BERINGER2_ANNOTATED_BROKEN_CHORD_DIR = BERINGER2_DIR + "/broken_chords"
 BERINGER2_ANNOTATED_SCALE_DIR = BERINGER2_DIR + "/scales"
 
-WTC_CORPUS_DIR = REPO_ROOT + '/dvdrndlph.github.io/pydactyl/wtc'
-
-# Right hand only, sans annotation.
-BERINGER_DIR = CORPORA_DIR + "/beringer"
-BERINGER_BC_CORPUS = BERINGER_DIR + "/broken_chords.abc"
+WTC_CORPUS_DIR = CORPORA_DIR + '/wtc'
 
 
 ONE_NOTE = """% abcDidactyl v5

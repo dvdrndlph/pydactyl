@@ -1,0 +1,30 @@
+% abcDidactyl v5
+% abcD fingering 1: x@x
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-13 12:38:01
+% These are complete fingerings, with any gaps filled in.
+% abcD fingering 2: x@x
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-13 12:38:01
+% These are alternate fingerings, if specified, with gaps filled in. 
+% abcDidactyl END
+X:102
+T:scales_c_minor_harmonic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Cmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"^Octaves"CDEF GA=Bc defg a=bc'=b agfe dc=BA GFED:|C4|:
+"^Thirds"EFGA =Bcde fga=b c'd'e'd' c'=bag fedc =BAGF:|E4|:
+"^Sixths"CDEF GA=Bc defg a=bc'=b agfe dc=BA GFED:|C4|]
+V:2
+L:1/16
+CDEF GA=Bc [K:clef=treble octave=-1] defg a=bc'=b agfe [K:clef=bass octave=-1] dc=BA GFED:|C4|:
+[K:clef=bass octave=-1] CDEF GA=Bc [K:clef=treble octave=-1] defg a=bc'=b agfe [K:clef=bass octave=-1] dc=BA GFED:|C4|:
+[K:clef=bass octave=-1] EFGA =Bcde [K:clef=treble octave=-1] fga=b c'd'e'd' c'=bag fedc [K:clef=bass octave=-1] =BAGF:|E4|]

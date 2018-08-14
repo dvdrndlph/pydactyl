@@ -1,0 +1,66 @@
+X:62
+T:Fugue 6
+T:BWV 851
+C:J. S. Bach
+%%score { ( 1 2 3 ) | ( 4 5 6 ) }
+L:1/8
+Q:1/4=80.00
+M:4/4
+I:linebreak $
+K:F
+V:1 treble nm="Piano"
+L:1/16
+V:2 treble 
+V:3 treble 
+L:1/4
+V:4 bass 
+V:5 bass 
+V:6 bass 
+L:1/4
+V:1
+[M:3/4]"^a tre voci" z2 D2E2F2G2E2 | (FD^CD) !wedge!B4 TG4 | A4- AGFE GFED |$ E2c2- c=BAB BA^GA | %30
+ A=G^FG !wedge!e4 TG4 | F2d2- dcBA cBAG |$ A4 G8- | G2E2F2G2A2F2 | BG^FG !wedge!_e4 !wedge!^c4 |$ %35
+ d4 !wedge!d4 !wedge!=B4 | c4 !wedge!c4 !wedge!A4 | B12- |$ B2A2=B2^c2d2B2 | ^cA^GA !wedge!f4 Td4 | %40
+ e2a2- ag^fe gfed |$ _ec'b2 z a^g^f agf=e | dc=Bc cBAB BA^GA | =G4- GFEF FEDA |$ A12- | %45
+ A4- A^deA c=BA^G | A4- AGFE GFED |$ E2e2d2^c2=B2d2 | ^cefe !wedge!G4 B4- | BAGA AGFG GFEF |$ %50
+ F4- FE^FG FGAG | GABA A=BcB B^cdc | ^c2a2g2f2e2g2 |$ faba ^c4 e4- | e2A2 d4 =c4- | %55
+ c2_e2- edcd dcBc |$ cBAB dcBc cBAB | BAGA cBAB BAGA |$ AGFG !wedge!e4 T^c4 | d4- d=cBA cBAG | %60
+ A2^F2G2A2B2G2 |$ Ac_e2- edcB dcBA | Bdf2- fed^c edc=B |$ ^ce_b2- bagf agfe | gfef fede ed^cd |$ %65
+ =c4- cBAB BAGd | d12- |$ d4- d^gad fed^c | d12 | !fermata!d12 |] %70
+V:2
+[M:3/4] x6 | x6 | x6 |$ x6 | x6 | x6 |$ z F- F/E/D/E/ E/D/^C/D/ | ^C2 DECD | %34
+ _ED G2 =E2 |$ z/ A/G/A/ F2 D2 | z/ G/F/G/ _E2 C2 | z AGF=EG |$ ^C2 DE A,2 | %39
+ z E[I:staff +1]D^C=B,D | x6 |$ x6 | x6 |[I:staff -1] z A,=B,^CDB, |$ =C/A,/^G,/A,/ !wedge!F2 TD2 | %45
+ EF T=B,4 | A,2 z2 z2 |$ x6 | x6 | x6 |$ z D=CB,A,C | B,2 D4 | G,2 z2 z2 |$ z DEFGE | %54
+ F/D/^C/D/ !wedge!B2 TG2 | A2 z4 |$ x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 |$ x6 | x6 |$ z DE^FGE | %66
+ =F/D/^C/D/ !wedge!B2 TG2 |$ AB TE4 | z [Ac][GB][^FA][EG][GB] | [^FA]6 |] %70
+V:3
+[M:3/4] x3 | x3 | x3 |$ x3 | x3 | x3 |$ x3 | x3 | x3 |$ x3 | x3 | x3 |$ x3 | x3 | x3 |$ x3 | x3 | %43
+ x3 |$ x3 | x3 | x3 |$ x3 | x3 | x3 |$ x3 | x3 | x3 |$ x3 | x3 | x3 |$ x3 | x3 |$ x3 | x3 | x3 |$ %61
+ x3 | x3 |$ x3 | x3 |$ x3 | x3 |$ x3 | x3 | x3 |] %70
+V:4
+[M:3/4] z6 | z6 | z A,=B,CDB, |$ C/A,/^G,/A,/ !wedge!F2 TD2 | %30
+ E2- E/D/^C/=B,/ D/C/B,/A,/ | D2 z2 z2 |$ F,/D,/^C,/D,/ !wedge!B,2 TG,2 | %33
+ A,2- A,/G,/F,/E,/ G,/F,/E,/D,/ | G,B, B,/A,/G,/A,/ A,/G,/F,/G,/ |$ %35
+ G,/F,/E,/F,/ A,/G,/F,/G,/ G,/F,/E,/F,/ | F,/E,/D,/E,/ G,/F,/_E,/F,/ F,/E,/D,/E,/ | %37
+ _E,/D,/^C,/D,/ !wedge!B,2 TG,2 |$ A,2- A,/G,/F,/E,/ G,/F,/E,/D,/ | E,^C,D,E,F,D, | %40
+ ^C/E/F/E/ A,2 =C2 |$ B,/D/_E/D/ =B,2 =E2- | E z z2 z2 | ^C,/A,,/^G,,/A,,/ !wedge!F,2 TD,2 |$ %44
+ E,F, E,/D,/C,/D,/ D,/C,/=B,,/C,/ | C,D,E,D, E,2 | A,A,,=B,,^C,D,B,, |$ %47
+ ^C,/A,,/^G,,/A,,/ !wedge!F,2 TD,2 | A,F,E,D,^C,E, | D,/F,/G,/F,/ !wedge!A,,2 T^C,2 |$ D,6 | %51
+ z G,^F,E,D,=F, | E,2- E,/D,/^C,/=B,,/ D,/C,/B,,/A,,/ |$ D,2 z2 z2 | z A,G,F,E,G, | %55
+ ^F,/A,/B,/A,/ ^F,2 A,2 |$ z/ G,/^F,/G,/ E,2 G,2 | z/ =F,/E,/F,/ D,2 F,2 |$ z F,G,A,B,G, | %59
+ A,F,G,A, G,2 | z A, G,^F,E,G, |$ ^F,B,A,G,F,A, | G,C=B,A,^G,B, |$ A,FED^CE | D z z2 z2 |$ %65
+ ^F,/D,/^C,/D,/ !wedge!B,2 TG,2 | A,B, A,/G,/F,/G,/ G,/F,/E,/F,/ |$ F,G,A,G, A,2 | %68
+ z [D,^F,][E,G,][F,A,][G,B,][E,G,] | [^F,A,]6 |] %70
+V:5
+[M:3/4] x6 | x6 | %28
+ x6 |$ x6 | z6 | z D,E,F,G,E, |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | A,2 ^F,E, D,F, |$ %41
+ G,2 ^G,^F,E,G, | A,A,,=B,,C,D,B,, | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | %54
+ x6 | z2 D,2 ^F,2 |$ G,,2 C,2 E,2 | F,,2 B,,2 D,2 |$ E,6 | F,D,E,^F,G,E, | %60
+ ^F,/D,/^C,/D,/ B,A,G,B, |$ A,G,^F,E,D,F, | G,,A,^G,^F,E,G, |$ A,,D^C=B,A,C | DD,E,F,G,E, |$ x6 | %66
+ x6 |$ x6 | D,6 | !fermata!D,6 |] %70
+V:6
+[M:3/4] x3 | x3 | x3 |$ x3 | x3 | x3 |$ %32
+ x3 | x3 | x3 |$ x3 | x3 | x3 |$ x3 | x3 | x3 |$ x3 | x3 | x3 |$ x3 | x3 | x3 |$ x3 | x3 | x3 |$ %50
+ x3 | x3 | x3 |$ x3 | x3 | x3 |$ x3 | x3 |$ x3 | x3 | x3 |$ x3 | x3 |$ x3 | x3 |$ x3 | x3 |$ x3 | %68
+ x3 | x3 |] %70

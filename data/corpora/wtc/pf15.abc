@@ -1,0 +1,117 @@
+X:1
+T:Prelude and Fugue 15
+T:BWV 860
+%%score { ( 1 2 3 ) | ( 4 5 ) }
+L:1/16
+M:4/4
+I:linebreak $
+K:G
+V:1 treble nm="Piano"
+V:2 treble 
+V:3 treble 
+L:1/8
+V:4 bass 
+V:5 bass 
+L:1/8
+V:1
+"_24""_16" (3GBd(3gdB (3dBG(3BGD (3EGc(3ecG (3cGE(3GEC | %1
+ (3A,CF(3AFC (3FCA,(3CA,F, (3G,B,D(3GDB, (3DB,G,(3B,G,[I:staff +1]E, |$ %2
+[I:staff -1] (3A,^CE(3AEC (3ECA,(3CA,E, D2 z2 z2 D2 | %3
+ (3D^CD(3ECD (3FCD(3GCD (3ACD(3BCD (3ACD(3GCD |$ F2G2 A2B2 A2G2 F2A2 | %5
+ (3^GBd(3=fdB (3dBG(3BGE (3D=FG(3BGF (3GFD(3FDB, |$ C2e2 c2A2 E2e2 c2A2 | %7
+ (3^dfa(3c'af (3afd(3fdB (3Acd(3fdc (3dcA(3cAF |$ G2A2 B2c2 B2A2 G2B2 | %9
+ (3A^GA(3BGA (3^cGA(3dGA (3eGA(3fGA (3=gec(3Ace |$ f2 z2 (3afd(3=cdf a2g2 (3ge^c(3Ace | %11
+ g2f2 (3fdB(3GBd f2e2 (3e^cA(3GAc |$ e2d2 z2 d2 (3dcB(3BAG (3GBd(3=fed | %13
+ (3de=fe2 z2 e2 (3ed^c(3cBA (3Ace(3g^fe |$ (3efgf2 z2 a2 (3agf(3fed (3dfa(3c'ba | %15
+ (3abc'b2- (3bag(3=fed (3ceg(3a^fd (3Bdf(3gec |$ (3Ace(3fdB (3GBd(3ecA (3FAc(3dBG (3EGB(3cAF | %17
+ (3DFA(3BGE (3CEG(3AFD (3B,DF(3GEC (3A,CE(3FDC | !fermata![B,DG]16 |]$ %19
+[M:6/8]"^a 3 voci" G2AGFG A2BAGA | B2A2G2 D2 c4 | B2A2G2 F2 e4 | d2edcB A2cBAG | F2G2A2 G2A2B2 |$ %24
+ A2B^cdB cBcdec | d^cdefd edefge | f2gfed g6- |$ gfegdg ^cgBgAg | f2d2e2 f2g2a2- | a2d2g2- g2f2e2 | %30
+ d2c2B2 A4 z2 |$ z2 z2 d2- d2c2a2- | a2 g4- g2agfe | d12- |$ d2d2c2 B2A2G2 | cd e4- edcBAc | %36
+ Bc d4- dcBAGB |$ AB c4- cBAGFA | GA B4- B2E2A2- | AGA2B2 cdcBAG |$ PF3E/F/G2- GBAGFE | %41
+ D2 z2 z2 z4 z2 | A2GABA G2FGAG |$ F2G2A2 d2 TE4 | F2G2A2 B2 T^C4 | D2DEFG A2FGAB |$ c4 B2 A6 | %47
+ Ggfedf efedce | dedcBd cdcBAc |$ BAGBFB EBDB^CB | AGFAEA DA^CAB,A | GFEGDG ^CGB,GA,G |$ %52
+ Fd=cBAG FEDCB,A, | G,A,B,G,CG, DG,EG,=FG, | EcBdAd ^GdFdEd |$ cAB^c^de fgab=c'^d | %56
+ e2fe^de f2gfef | g2f2e2 B2 a4 |$ g2f2e2 ^d2 c'4 | b2c'bag f2agfe | ^d2a2g2 f2e2^d2 |$ %61
+ e2=d2c2 d2c2B2 | cc'bagb abagfa | gagfeg fgfe^df |$ e2fga2- a2gab2- | b2a2g2 fga2^d2 | %66
+ e4 B2 A6- |$ A4 A2 G6- | G4 G2 F6- | FB^cB^AB c2dcBc |$ d2^c2B2 ^A2 g4 | f2gfed ^c2edcB | %72
+ ^AB^cAdA eAfAgA |$ f^ABfe/d/^c/d/ e^GAed/c/B/c/ | d12- |$ d12- | dF/^G/AEBE ^cEdFe=G | %77
+ FG/A/BF^cF dFeGfA |$ GFGBeG FBA^cd2- | d2 ^c4 d2edcd | e2fede f2gfed |$ ^c2 b4- babagf | Te12- | %83
+ ea/g/faea da^caBa |$ gfegdg ^cgBgAg | fedf^cf BfAfGf | ed^ceBe AeGeFe |$ dFEGd^c Td6- | d12- | %89
+ d2 c4- c2 B4- |$ B2 A4- AGAGFG | FD/E/FDGD ADBDcD | Bg=fedc BAG=FED |$ CedcBA ^G^FEDCB, | %94
+ A,B,^CA,DA, EA,FA,GA, | F2B2G2 E2A2F2 |$ G6- GA2<PA2G/A/ | B2cBAB c2dcBc | d2c2B2 A2 g4 |$ %99
+ f2e2d2 ^c2 _b4 | agfed2 z g2cgf | gf/e/dgcg B2g2A2 |$ Bd/c/BdAd G2 c4- | %103
+ c/G/A/B/cGdG e/B/c/d/ec^fc | g4- gf !fermata!g6 |] %105
+V:2
+ x16 | x16 |$ x16 | x16 |$ x16 | x16 |$ x16 | x16 |$ x16 | x16 |$ x16 | x16 |$ x16 | x16 |$ x16 | %15
+ x16 |$ x16 | x16 | x16 |]$[M:6/8] z12 | z12 | z12 | z12 | D2ED^CD E2FEDE |$ F2E2D2 A,2 G4 | %25
+ F2E2D2 ^C2 B4 | A2BAGF E2GFED |$ ^C2G2F2 E2D2C2 | DEFDGD ADBD=cD | B6 c6- | c2F2G2- G2FGAF |$ %31
+ GFGABG AGABcA | B2cBAG c6- | cBAcGc FcEcDc |$ B2=F2E2 D2C2B,2 | z2 z2 G2 F6- | F4 F2 E6- |$ %37
+ E4 E2 D6 | D2CDED C2B,CDC | B,2C2D2 G2 A,4 |$ B,2C2D2 E2[I:staff +1] F,4 | %41
+ G,2[I:staff -1]G,A,B,^C D2B,CDE | F2E2^D2 E2=D2^C2 |$ D2^CB,A,=C B,CB,A,G,B, | x12 | x12 |$ %46
+[I:staff +1] F,2[I:staff -1]A2G2- G2G2F2 | G2 z2 z2 z4 z2 | x12 |$ z2 z2 D2 ^C2 z2 z2 | %50
+ z2 z2 ^C2 B,2 z2 z2 | z2 z2 B,2 A,2 z2 z2 |$ x12 | x12 | x12 |$ x12 | x12 | x12 |$ %58
+ E^DEFGE FEFGAF | G2AGFE A6- | AGFAEA ^DA^CAB,A |$ G2FGAG F2EFGF | E2F2G2 c2 ^D4 | E2F2G2 A2 B,4 |$ %64
+ CB,A,B,CD E^DEFGA | B6- B2c2F2 | EF G4- GFED^CE |$ DE F4- FED^CB,D | ^CD E4- EDCB,^A,C | %69
+ B,2 z2 z2 z4 z2 |$ z12 | x12 | x12 |$ z12 | B,^CDB,EB, FB,^GB,AB, |$ ^G2E2F2 G2A2B2 | %76
+ E2>D2^CB, x6 | x12 |$ x12 | x12 | x12 |$ x12 | x12 | x12 |$ x12 | x12 | x12 |$ x12 | %88
+ z4 z2 z G=FEDF | E=FEDCE DEDCB,D |$ CDCB,A,C B,6 | A,2 z2 z2 x6 | x12 |$ x12 | x12 | %95
+ D2=CDED C2B,CDC |$ B,2C2D2 E2[I:staff +1] F,4 | G,2[I:staff -1]AGFG A2BAGA | B2A2G2- G2d2^c2 |$ %99
+ d2G2F2 E2 ^c4 | =c4- cB/A/ B2 A4 | B2B2A2 G4 F2 |$ G2G2=F2 E4 _E2 | D2=E2[=FB]2 [Gc]2G2A2 | %104
+ B4 A2 B6 |] %105
+V:3
+ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 | %18
+ x8 |]$[M:6/8] x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | %35
+ x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | %53
+ x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | %71
+ x6 | x6 |$ x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | %89
+ x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | z/ d/e/c/- c d3 |] %105
+V:4
+ G,2G,,2 z2 G,2 G,2G,,2 z2 G,2 | G,2G,,2 z2 G,2 G,2G,,2 z2 G,2 |$ %2
+ G,2G,,2 z2 G,2 (3F,A,^C(3DA,F, (3A,F,D,(3F,D,B,, | E,2E,,2 z2 E,2 ^C,2A,,2 B,,2C,2 |$ %4
+ (3D,^CD(3E,CD (3F,CD(3G,CD (3F,CD(3E,CD (3D,CD(3F,CD | B,,2B,2 z2 A,2 ^G,2^G,,2 z2 G,2 |$ %6
+ (3A,CE(3AEC (3ECA,(3CA,E, (3C,E,A,(3CA,E, (3A,E,C,(3E,C,A,, | F,,2F,2 z2 E,2 ^D,2^D,,2 z2 D,2 |$ %8
+ (3E,^DE(3F,DE (3G,DE(3A,DE (3G,DE(3F,DE (3E,DE(3G,DE | ^C,2D,2 E,2F,2 C,2B,,2 A,,2C,2 |$ %10
+ (3D,F,A,(3DA,F, D,2D2 (3D,G,B,(3DB,G, D,2D2 | (3D,A,^C(3DA,F, D,2D2 (3D,E,G,(3B,G,E, D,2D2 |$ %12
+ (3D,F,A,(3DA,F, (3A,F,D,(3F,D,=C, (3B,,D,G,(3G,D,B,, (3D,B,,G,,(3B,,G,,=F,, | %13
+ (3E,,G,,B,,(3C,E,G, (3CG,E,(3G,E,D, (3^C,E,G,(3A,E,C, (3E,C,A,,(3C,A,,G,, |$ %14
+ (3F,,A,,^C,(3D,F,A, (3DA,F,(3A,F,D, (3F,D,A,,(3D,A,,F,, D,,2D,2 | %15
+ G,,2(3G,,B,,D, (3G,A,B,(3B,CD E2(3CA,F, D2(3B,G,E, |$ %16
+ C2(3A,F,D, B,2(3G,E,C, A,2(3F,D,B,, G,2(3E,C,A,, | %17
+ F,2(3D,B,,G,, (3E,C,A,,(3F,D,B,, G,,2E,2 C,2D,2 | !fermata!G,,16 |]$[M:6/8] z12 | z12 | z12 | %22
+ z12 | z12 |$ z12 | z12 | z12 |$ z12 | z12 | G,2A,G,F,G, A,2B,A,G,A, | B,2A,2G,2 D,2 C4 |$ %31
+ B,2A,2G,2 F,2 E4 | D2EDCB, A,2CB,A,G, | F,4 E,2 D,E,D,C,B,,A,, |$ %34
+ G,,A,,B,,G,,C,G,, D,G,,E,G,,=F,G,, | E,D,C,E,B,,E, A,,E,G,,E,F,,E, | %36
+ D,C,B,,D,A,,D, G,,D,F,,D,E,,D, |$ C,B,,A,,C,G,,C, F,,C,E,,C,D,,C, | B,,2A,,2G,,2 A,,2G,,2F,,2 | %39
+ G,,G,=F,E,D,F, E,F,E,D,C,E, |$ D,E,D,C,B,,D, C,D,C,B,,A,,C, | B,,C,B,,A,,G,,A,, B,,^C,D,E,F,G, | %42
+ F,2B,2B,,2 E,2A,2A,,2 |$ D,2E,2F,2- F,2G,2^C,2 | A,B,A,G,F,A, G,A,G,F,E,G, | %45
+ F,G,F,E,D,E, F,G,A,B,CD |$ D,2C,D,E,D, C,2B,,C,D,C, | B,,2C,2D,2 G,2 A,,4 | B,,2C,2D,2 E,2 F,,4 |$ %49
+ G,,A,, B,,4- B,,A,,G,,F,,E,,G,, | F,,G,, A,,4- A,,G,,F,,E,,D,,F,, | %51
+ E,,F,, G,,4- G,,F,,E,,D,,^C,,E,, |$ D,,E,,F,,D,,G,,D,, A,,D,,B,,D,,C,D,, | %53
+ B,,G,=F,E,D,C, B,,A,,G,,=F,,E,,D,, | C,,D,,E,,^F,,^G,,A,, B,,C,D,E,F,^G, |$ %55
+ A,=G,F,A,E,A, ^D,A,^C,A,B,,A, | G,2C2B,2 A,2B,2B,,2 | E,F,G,E,A,E, B,E,^CE,^DE, |$ %58
+ E2 z2 z2 z4 z2 | z12 | z12 |$ z12 | z12 | z12 |$ z12 | z B,,/^C,/^D,B,,E,B,, F,B,,G,B,,A,B,, | %66
+ G,F,E,G,=D,G, ^C,G,B,,G,A,,G, |$ F,E,D,E,^C,F, B,,F,A,,F,G,,F, | %68
+ E,D,^C,E,B,,E, ^A,,E,^G,,E,F,,E, | D,F,E,D,^C,B,, ^A,,C,B,,A,,^G,,F,, |$ %70
+ B,,2^C,B,,^A,,B,, C,2D,C,B,,C, | D,2^C,2B,,2 ^A,,2 G,4 | F,^G,^A,F,B,F, ^CF,DF,EF, |$ %73
+ DF,G,D^C/B,/^A,/B,/ CE,F,CB,/^A,/^G,/A,/ | B,2 z2 z2 z4 B,,2 |$ E,F,^G,E,A,E, B,E,^CE,DE, | %76
+ ^C2 z2 z2 A,B,A,=G,F,E, | D,2 z2 z2 z4 z2 |$ z4 z2 D,2E,D,^C,D, | E,2F,E,D,E, F,2E,2D,2 | %80
+ ^C,2 B,4 A,2B,A,G,F, |$ E,2G,F,E,D, ^C,4 D,2- | D,G,/F,/E,G,D,G, ^C,G,B,,G,A,,G, | %83
+ F,G, A,4- A,G,F,E,D,F, |$ E,F, G,4- G,F,E,D,^C,E, | D,E, F,4- F,B,,^C,D,E,F, | %86
+ G,A,G,F,E,D, ^C,2 z2 z2 |$ F,G,A,2A,,2 D,2=C,D,E,D, | C,2B,,C,D,C, B,,2C,2D,2 | %89
+ G,2 A,,4 B,,2C,2D,2 |$ E,2 F,,4 G,,2F,,G,,A,,B,, | C,,2CB,A,G, F,E,D,C,B,,A,, | %92
+ G,,A,,B,,G,,C,G,, D,G,,E,G,,=F,G,, |$ E,E,,/F,,/^G,,E,,A,,E,, B,,E,,C,E,,D,E,, | %94
+ ^C,A,G,F,E,D, C,B,,A,,G,,F,,E,, | D,,12- |$ D,,D,C,D,E,D, C,2B,,C,D,C, | %97
+ B,,2A,,B,,C,B,, A,,2G,,A,,B,,A,, | G,,G,/F,/E,G,D,G, ^C,A,B,,A,A,,A, |$ %99
+ D,=C,_B,,D,A,,D, G,,E,F,,E,E,,E, | F,,2D,,2G,,2 E,,2C,,2D,,2 | G,,6- G,,G,,/A,,/B,,G,,C,G,,- |$ %102
+ G,,2 G,,4- G,,6- | G,,12- | G,,12 |] %105
+V:5
+ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 | %18
+ x8 |]$[M:6/8] x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | %35
+ x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | D, z z z2 z | x6 |$ x6 | x6 | x6 |$ x6 | x6 | %51
+ x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | %69
+ x6 |$ x6 | x6 | x6 |$ x6 | x6 |$ x6 | z3 z2 ^C, | D,>E,D,/^C,/ B,,/C,/B,,/A,,/G,,/F,,/ |$ %78
+ E,,D,^C, D,2 B,, | G,, A,,2 D,^C,B,, | A,,6- |$ A,,6- | A,,3- A,,2 z | z z/ E,/D,/^C,/ B,,2 z |$ %84
+ z z/ D,/^C,/B,,/ A,,2 z | z z/ ^C,/B,,/A,,/ G,, z z | z2 z z/ A,,/B,,/^C,/D,/E,/ |$ x6 | x6 | %89
+ x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 |$ %102
+ D,G,,B,, C,/4B,,/4C,/4D,/4E,/C,/^F,/C,/ | G,6- | G,6 |] %105

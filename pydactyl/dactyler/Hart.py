@@ -39,7 +39,10 @@ import os
 from pydactyl.dactyler import Constant
 from . import Dactyler as D
 from pydactyl.dcorpus.DNote import DNote
-
+BIG_NUM = 999
+MAX_INTERVAL_SIZE = 12
+BIN_DIR = os.path.abspath(os.path.dirname(__file__))
+COST_FILE = Constant.DATA_DIR + '/tables_0.dat'
 
 class Interval:
     def __init__(self, low_color, high_color, low_finger, high_finger, semitone_delta):
@@ -89,11 +92,6 @@ class Interval:
 
 
 class Hart(D.Dactyler):
-    BIG_NUM = 999
-    MAX_INTERVAL_SIZE = 12
-    BIN_DIR = os.path.abspath(os.path.dirname(__file__))
-    COST_FILE = '/Users/dave/tb2/pydactyl/dd/data/tables_0.dat'
-
     def _define_costs(self):
         costs = {}
         for l_color in range(2):
@@ -103,7 +101,7 @@ class Hart(D.Dactyler):
                         for s in range(0, self._max_interval_size + 1):
                             # FIXME: What about 0 interval?
                             ic = Interval(l_color, h_color, l_finger, h_finger, s)
-                            costs[ic] = Hart.BIG_NUM
+                            costs[ic] = BIG_NUM
 
         interval_size_finalized = False
         max_interval_size = self._max_interval_size
@@ -154,7 +152,7 @@ class Hart(D.Dactyler):
 
     def __init__(self, cost_path=None, max_interval_size=MAX_INTERVAL_SIZE):
         super().__init__()
-        self._cost_path = Hart.COST_FILE
+        self._cost_path = COST_FILE
         if cost_path:
             self._cost_path = cost_path
         self._max_interval_size = max_interval_size
@@ -180,7 +178,7 @@ class Hart(D.Dactyler):
         """
         if k is not None and k != 1:
             raise Exception("Original Hart does not support k best solutions. Try HartK.")
-        opt_cost = Hart.BIG_NUM
+        opt_cost = BIG_NUM
 
         first_digit = int(handed_first_digit[1:]) if handed_first_digit else None
         last_digit = int(handed_last_digit[1:]) if handed_last_digit else None
@@ -197,7 +195,7 @@ class Hart(D.Dactyler):
         fs = numpy.zeros([segment_note_count, 6], dtype=int)
         for n in reversed(range(1, segment_note_count)):
             for s in range(1, 6):
-                fs[n, s] = Hart.BIG_NUM
+                fs[n, s] = BIG_NUM
 
         fsx = numpy.zeros([segment_note_count, 6, 6], dtype=int)
         num_opt = numpy.zeros([segment_note_count, 6], dtype=int)
@@ -226,12 +224,12 @@ class Hart(D.Dactyler):
                     # lead to it by making other paths look less attractive. But we retain preference
                     # for arcs with known reasonable (non-"infinite") costs.
                     if x == last_digit:
-                        if cost == Hart.BIG_NUM:
+                        if cost == BIG_NUM:
                             cost -= 1  # Prefer these arcs over any that lead to the wrong place
                         # Otherwise, prefer plausible arcs (those with non-"infinite" cost) according
                         # to their costs.
                     else:
-                        cost = Hart.BIG_NUM  # Paths leading to the wrong last digit are "infinitely" expensive.
+                        cost = BIG_NUM  # Paths leading to the wrong last digit are "infinitely" expensive.
 
                 fsx[m, s, x] = cost
                 self.squeak("{0:4d}  ".format(fsx[m, s, x]))
@@ -277,12 +275,12 @@ class Hart(D.Dactyler):
                     # for arcs with known reasonable (non-"infinite") costs.
                     if first_digit and n == start_index:
                         if s == first_digit:
-                            if cost == Hart.BIG_NUM:
+                            if cost == BIG_NUM:
                                 cost -= 1  # Prefer these arcs over any that come from the wrong place
                                 # Otherwise, prefer plausible arcs (those with non-"infinite" cost)
                                 # according to their costs.
                         else:
-                            cost = Hart.BIG_NUM  # Paths leading to the wrong last digit are "infinitely" expensive.
+                            cost = BIG_NUM  # Paths leading to the wrong last digit are "infinitely" expensive.
                     fsx[n, s, x] = cost + fs[n + 1, x]
                     self.squeak("{0:4d}+{1:d}={2:4d}  ".format(cost, fs[n + 1, x], fsx[n, s, x]))
 
@@ -351,7 +349,7 @@ class HartK(Hart):
             abcdf = D.Dactyler.one_note_advise(note_list[0], staff=staff,
                                                first_digit=handed_first_digit,
                                                last_digit=handed_last_digit)
-            return [abcdf], [0]
+            return [abcdf], [0], [0]
 
         hand = ">"
         if staff == "lower":

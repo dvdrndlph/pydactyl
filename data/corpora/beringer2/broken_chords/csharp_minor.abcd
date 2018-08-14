@@ -1,0 +1,29 @@
+% abcDidactyl v5
+% abcD fingering 1: 12351245123512355321532154215321@54215421532154211245123512451245
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-24 11:45:28
+% These are complete fingerings, with any gaps filled in.
+% abcD fingering 2: 21241245123521244212532154214212@54215421421254211245212412451245
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-24 11:47:20
+% These are alternate fingerings, if specified, with gaps filled in. 
+% abcDidactyl END
+%%setfont-1 Bookman 11
+%%setfont-2 Helvetica-Bold 11
+%%measurenb 5
+X:16
+T:broken_chords_csharp_minor
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:C#min
+V:1 treble
+V:2 bass bass octave=-2
+V:1
+L:1/16
+"^$12"C"^$11"E"^$12"G"^$14"c "^$11"E"^$12"G"^$14"c"^$15"e "^$11"G"^$12"c"^$13"e"^$15"g "^$12"c"^$11"e"^$12"g"^$14"c' "^$14"c'"^$12"g"^$11"e"^$12"c "^$15"g"^$13"e"^$12"c"^$11"G "^$15"e"^$14"c"^$12"G"^$11"E "^$14"c"^$12"G"^$11"E"^$12"C||
+V:2
+L:1/16
+"_$25"C"_$24"E"_$22"G"_$21"c "_$25"E"_$24"G"_$22"c"_$21"e "_$24"G"_$22"c"_$21"e"_$22"g "_$25"c"_$24"e"_$22"g"_$21"c' "_$21"c'"_$22"g"_$24"e"_$25"c "_$22"g"_$21"e"_$22"c"_$24"G "_$21"e"_$22"c"_$24"G"_$25"E "_$21"c"_$22"G"_$24"E"_$25"C||

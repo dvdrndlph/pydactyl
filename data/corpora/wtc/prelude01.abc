@@ -1,0 +1,40 @@
+X:11
+T:Prelude 1 (BWV 846)
+C:Johann Sebastian Bach
+%%score { ( 1 ) | ( 2 3 ) }
+M:4/4
+L:1/16
+I:linebreak $
+K:C
+V:1 treble nm="Piano"
+V:2 bass
+V:3 bass
+V:1
+ z2 Gc eGce z2 Gc eGce | z2 Ad fAdf z2 Ad fAdf | z2 Gd fGdf z2 Gd fGdf |$ z2 Gc eGce z2 Gc eGce | %4
+ z2 Ae aAea z2 Ae aAea | z2 ^FA dFAd z2 FA dFAd |$ z2 Gd gGdg z2 Gd gGdg | z2 EG cEGc z2 EG cEGc | %8
+ z2 EG cEGc z2 EG cEGc |$ z2 D^F cDFc z2 DF cDFc | z2 DG BDGB z2 DG BDGB | %11
+ z2 EG ^cEGc z2 EG cEGc |$ z2 DA dDAd z2 DA dDAd | z2 DF BDFB z2 DF BDFB | z2 CG cCGc z2 CG cCGc |$ %15
+ z2 A,C FA,CF z2 A,C FA,CF | z2 A,C FA,CF z2 A,C FA,CF | z2 G,B, FG,B,F z2 G,B, FG,B,F |$ %18
+ z2 G,C EG,CE z2 G,C EG,CE | z2 _B,C EB,CE z2 B,C EB,CE | z2 A,C EA,CE z2 A,C EA,CE |$ %21
+ z2 A,C _EA,CE z2 A,C EA,CE | z2 B,C DB,CD z2 B,C DB,CD |$ z2 G,B, DG,B,D z2 G,B, DG,B,D | %24
+ z2 G,C EG,CE z2 G,C EG,CE | z2 G,C FG,CF z2 G,C FG,CF |$ z2 G,B, FG,B,F z2 G,B, FG,B,F | %27
+ z2 A,C ^FA,CF z2 A,C FA,CF | z2 G,C GG,CG z2 G,C GG,CG |$ z2 G,C FG,CF z2 G,C FG,CF | %30
+ z2 G,B, FG,B,F z2 G,B, FG,B,F | z2 G,_B, EG,B,E z2 G,B, EG,B,E |$ %32
+ z2[K:bass] F,A, CFCA, CA,F,A, F,D,F,D, | z2[K:treble] GB dfdB dBGB DFED | %34
+ [EGc]16 |]$ %35
+V:2
+ z E3- E4 z E3- E4 | z D3- D4 z D3- D4 | z D3- D4 z D3- D4 |$ z E3- E4 z E3- E4 | %4
+ z E3- E4 z E3- E4 | z D3- D4 z D3- D4 |$ z D3- D4 z D3- D4 | z C3- C4 z C3- C4 | %8
+ z C3- C4 z C3- C4 |$ z A,3- A,4 z A,3- A,4 | z B,3- B,4 z B,3- B,4 | z _B,3- B,4 z B,3- B,4 |$ %12
+ z A,3- A,4 z A,3- A,4 | z _A,3- A,4 z A,3- A,4 | z G,3- G,4 z G,3- G,4 |$ z F,3- F,4 z F,3- F,4 | %16
+ z F,3- F,4 z F,3- F,4 | z D,3- D,4 z D,3- D,4 |$ z E,3- E,4 z E,3- E,4 | z G,3- G,4 z G,3- G,4 | %20
+ z F,3- F,4 z F,3- F,4 |$ z C,3- C,4 z C,3- C,4 | z =F,3- F,4 z F,3- F,4 |$ z F,3- F,4 z F,3- F,4 | %24
+ z E,3- E,4 z E,3- E,4 | z D,3- D,4 z D,3- D,4 |$ z D,3- D,4 z D,3- D,4 | z _E,3- E,4 z E,3- E,4 | %28
+ z =E,3- E,4 z E,3- E,4 |$ z D,3- D,4 z D,3- D,4 | z D,3- D,4 z D,3- D,4 | z C,3- C,4 z C,3- C,4 |$ %32
+ z C,3- C,4- C,8 | z B,,3- B,,4- B,,8 | C,16 |]$ %35
+V:3
+ C8 C8 | C8 C8 | B,8 B,8 |$ C8 C8 | C8 C8 | C8 C8 |$ B,8 B,8 | B,8 B,8 | A,8 A,8 |$ D,8 D,8 | %10
+ G,8 G,8 | G,8 G,8 |$ F,8 F,8 | F,8 F,8 | E,8 E,8 |$ E,8 E,8 | D,8 D,8 | G,,8 G,,8 |$ C,8 C,8 | %19
+ C,8 C,8 | F,,8 F,,8 |$ ^F,,8 F,,8 | _A,,8 A,,8 |$ G,,8 G,,8 | G,,8 G,,8 | G,,8 G,,8 |$ G,,8 G,,8 | %27
+ G,,8 G,,8 | G,,8 G,,8 |$ G,,8 G,,8 | G,,8 G,,8 | C,,8 C,,8 |$ C,,8- C,,8 | C,,8- C,,8 | C,,16 |]$ %35
+

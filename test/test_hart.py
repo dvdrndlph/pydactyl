@@ -48,12 +48,12 @@ class HartTest(unittest.TestCase):
     @staticmethod
     def test_pivot_alignment():
         hart = Hart()
-        d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE)
+        d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE_SHORT)
         hart.load_corpus(d_corpus=d_corpus)
 
         evaluations = hart.evaluate_pivot_alignment(staff="both")
-        # for he in hamming_evaluations:
-        # print(he)
+        for ev in evaluations:
+            print(ev)
         assert evaluations[0] > 0, "Undetected pivot alignment costs"
         assert evaluations[1] == 0, "Bad fish in pivot alignment barrel"
 

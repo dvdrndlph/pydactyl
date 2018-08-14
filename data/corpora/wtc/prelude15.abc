@@ -1,0 +1,36 @@
+X:151
+T:Prelude 15
+T:BWV 860
+C:J. S. Bach
+%%score { ( 1 ) | ( 2 ) }
+L:1/16
+M:4/4
+I:linebreak $
+K:G
+V:1 treble nm="Piano"
+V:2 bass
+V:1
+ (3GBd(3gdB (3dBG(3BGD (3EGc(3ecG (3cGE(3GEC | %1
+ (3A,CF(3AFC (3FCA,(3CA,F, (3G,B,D(3GDB, (3DB,G,(3B,G,[I:staff +1]E, |$ %2
+[I:staff -1] (3A,^CE(3AEC (3ECA,(3CA,E, D2 z2 z2 D2 | %3
+ (3D^CD(3ECD (3FCD(3GCD (3ACD(3BCD (3ACD(3GCD |$ F2G2 A2B2 A2G2 F2A2 | %5
+ (3^GBd(3=fdB (3dBG(3BGE (3D=FG(3BGF (3GFD(3FDB, |$ C2e2 c2A2 E2e2 c2A2 | %7
+ (3^dfa(3c'af (3afd(3fdB (3Acd(3fdc (3dcA(3cAF |$ G2A2 B2c2 B2A2 G2B2 | %9
+ (3A^GA(3BGA (3^cGA(3dGA (3eGA(3fGA (3=gec(3Ace |$ f2 z2 (3afd(3=cdf a2g2 (3ge^c(3Ace | %11
+ g2f2 (3fdB(3GBd f2e2 (3e^cA(3GAc |$ e2d2 z2 d2 (3dcB(3BAG (3GBd(3=fed | %13
+ (3de=fe2 z2 e2 (3ed^c(3cBA (3Ace(3g^fe |$ (3efgf2 z2 a2 (3agf(3fed (3dfa(3c'ba | %15
+ (3abc'b2- (3bag(3=fed (3ceg(3a^fd (3Bdf(3gec |$ (3Ace(3fdB (3GBd(3ecA (3FAc(3dBG (3EGB(3cAF | %17
+ (3DFA(3BGE (3CEG(3AFD (3B,DF(3GEC (3A,CE(3FDC | !fermata![B,DG]16 |] %19
+V:2
+ G,2G,,2 z2 G,2 G,2G,,2 z2 G,2 | G,2G,,2 z2 G,2 G,2G,,2 z2 G,2 |$ %2
+ G,2G,,2 z2 G,2 (3F,A,^C(3DA,F, (3A,F,D,(3F,D,B,, | E,2E,,2 z2 E,2 ^C,2A,,2 B,,2C,2 |$ %4
+ (3D,^CD(3E,CD (3F,CD(3G,CD (3F,CD(3E,CD (3D,CD(3F,CD | B,,2B,2 z2 A,2 ^G,2^G,,2 z2 G,2 |$ %6
+ (3A,CE(3AEC (3ECA,(3CA,E, (3C,E,A,(3CA,E, (3A,E,C,(3E,C,A,, | F,,2F,2 z2 E,2 ^D,2^D,,2 z2 D,2 |$ %8
+ (3E,^DE(3F,DE (3G,DE(3A,DE (3G,DE(3F,DE (3E,DE(3G,DE | ^C,2D,2 E,2F,2 C,2B,,2 A,,2C,2 |$ %10
+ (3D,F,A,(3DA,F, D,2D2 (3D,G,B,(3DB,G, D,2D2 | (3D,A,^C(3DA,F, D,2D2 (3D,E,G,(3B,G,E, D,2D2 |$ %12
+ (3D,F,A,(3DA,F, (3A,F,D,(3F,D,=C, (3B,,D,G,(3G,D,B,, (3D,B,,G,,(3B,,G,,=F,, | %13
+ (3E,,G,,B,,(3C,E,G, (3CG,E,(3G,E,D, (3^C,E,G,(3A,E,C, (3E,C,A,,(3C,A,,G,, |$ %14
+ (3F,,A,,^C,(3D,F,A, (3DA,F,(3A,F,D, (3F,D,A,,(3D,A,,F,, D,,2D,2 | %15
+ G,,2(3G,,B,,D, (3G,A,B,(3B,CD E2(3CA,F, D2(3B,G,E, |$ %16
+ C2(3A,F,D, B,2(3G,E,C, A,2(3F,D,B,, G,2(3E,C,A,, | %17
+ F,2(3D,B,,G,, (3E,C,A,,(3F,D,B,, G,,2E,2 C,2D,2 | !fermata!G,,16 |]

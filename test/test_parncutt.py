@@ -205,14 +205,13 @@ solutions = {
 
 
 class ParncuttTest(unittest.TestCase):
-    @staticmethod
-    def test_four_note_example():
+    def test_four_note_example(self):
         parncutt = Parncutt()
         parncutt.segment_combination_method(method="cost")
         d_corpus = DCorpus(corpus_str=TestConstant.FOUR_NOTES)
         parncutt.load_corpus(d_corpus=d_corpus)
         suggestions, costs, details = parncutt.generate_advice(staff="upper", k=2)
-        assert len(suggestions) == 2, "No loops in that dog in top ten"
+        self.assertEqual(len(suggestions), 2, "No loops in that dog in top ten")
         parncutt.report_on_advice(suggestions, costs, details)
 
     # @staticmethod

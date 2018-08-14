@@ -1,0 +1,56 @@
+X:51
+T:Prelude 5 (BWV 850)
+C: J. S. Bach
+%%score { ( 1 2 3 ) | ( 4 5 6 ) }
+L:1/8
+M:4/4
+I:linebreak $
+K:D
+V:1 treble nm="Piano"
+L:1/16
+V:2 treble 
+V:3 treble 
+V:4 bass 
+V:5 bass 
+V:6 bass 
+L:1/4
+V:1
+ z def Afed adef Afed | gefg BdcB cefg Agfe |$ fdef AcBA Bdef Ba^gf | ^gefg BdcB Acde Fedc |$ %4
+ dBcd FA^GF GBcd EdcB | cABc E=GFE FABc Fe^dc |$ ^dBcd FAGF EGAB C=dcB | ^AEFG CGFE DBcd F=A^GF |$ %8
+ ^E^GAB EdcB ^g^efg cbag | af^ga c=e^dc df=ga Bagf |$ gefg Bd=cB c^def AcBA | %11
+ Gefg Bd^cB cefg Agfe |$ fdef A=cBA BGAB ^CBAG | FDEF A,=CB,A, B,DEF B,A^GF |$ %14
+ ^GEFG B,D=CB, A,CDE A,=GFE | ^DA,B,=C F,CB,A, G,EFG B,=D^CB, |$ ^A,CDE A,GFE c^ABc Fedc | %17
+ dBcd FA^GF GB=cd EdcB |$ =cABc EGFE FABc DcBA | BGAB DBAG dGAB DBAG |$ =cABc EGFE FABc DcBA | %21
+ BGAB DFED EGAB Ed^cB |$ cABc EGFE DFGA B,AGF | GEFG B,DCB, CEFG A,GFE | FDEF A,FED AFGA D=cBA |$ %25
+ BGAB DBAG dBcd ^G=fed | cABc EGFE Adef Bagf | gcde Agfe fBcd ^Gfed |$ c=GA_B EG=FE Fde=f cedc | %29
+ d_bag =fedc dfed =b^gab |$ =fdef B^GAB E^FGA Bcde | =f6 e2- e2d2- d2c2 |$ %32
+ d4- d/c/B/A/^G/^F/E/F/ G/A/B/c/d/e/=f/e/ d/c/B/A/G/F/E/D/ | %33
+ !arpeggio![ceg_b]2 z2 !arpeggio![d=f^g=b]2 z2 d4 c4 | %34
+ !fermata!d16 |]$
+V:2
+ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ %18
+ x8 | x8 |$ x8 | x8 |$ x8 | x8 | x8 |$ x8 | x8 | x8 |$ x8 | x8 |$ x8 | %31
+ =f/c/d/A/ _B/G/e/G/ A/=F/d/F/ G/E/c/E/ |$ [D=F^GB]2 z2 z4 | [CE=G_B] z [D=F^G=B] z [EA]4 | %34
+ [FA]8 |]$
+V:3
+ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ %18
+ x8 | x8 |$ x8 | x8 |$ x8 | x8 | x8 |$ x8 | x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 | x8 |]$ %35
+V:4
+ D, z D z F, z D z | E, z D z A, z C z |$ D, z D z D, z D z | D, z ^G, z C, z A, z |$ %4
+ B,, z A, z E, z ^G, z | A,, z A, z A,, z A, z |$ A,, z ^D, z G,, z E, z | F,, z F, z F,, z F, z |$ %8
+ F,, z F, z F,, z F, z | F,, z F, z B,, z ^D, z |$ E,, z E, z E,, z ^D, z | %11
+ E,, z E, z A,, z C, z |$ D,, z D, z D,, z D, z | D,, z D, z D,, z D, z |$ D,, z ^G, z =C, z F, z | %15
+ B,, z ^D, z E, z G, z |$ B,, z E, z G, z ^A, z | B,, z B, z E, z ^G, z |$ A,, z A, z D, z F, z | %19
+ G,, z G, z B,, z E, z |$ A,, z G, z D, z F, z | G,, z G, z G,, z G, z |$ G,, z C, z F,, z D, z | %23
+ E,, z D, z A,, z C, z | D,, z D, z F,, z A, z |$ G,, z G, z B,, z D z | A,, z G, z F, z D, z | %27
+ E, z C, z D, z B,, z |$ z/ E,/F,/G,/ C,/E,/D,/C,/ D,/=F,/G,/A,/ E,/G,/F,/E,/ | %29
+ =F,/D,/E,/F,/ A,,/=C,/_B,,/A,,/ ^G,,4- |$ G,,8 | z A,G,C, =F,D,E,G, |$ [D,^G,B,]2 z2 z4 | z4 A,4 | %34
+ A,8 |]$
+V:5
+ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ %18
+ x8 | x8 |$ x8 | x8 |$ x8 | x8 | x8 |$ x8 | A,,8- | A,,8- |$ A,,8 | x8 |$ x8 | A,,8 |$ A,,2 z2 z4 | %33
+ z4 A,,4 | !fermata!D,8 |]$
+V:6
+ x4 | x4 |$ x4 | x4 |$ x4 | x4 |$ x4 | x4 |$ x4 | x4 |$ x4 | x4 |$ x4 | x4 |$ x4 | x4 |$ x4 | x4 |$ %18
+ x4 | x4 |$ x4 | x4 |$ x4 | x4 | x4 |$ x4 | x4 | x4 |$ x4 | x4 |$ x4 | x4 |$ x4 | z2 E, G, | %34
+ F,4 |]$

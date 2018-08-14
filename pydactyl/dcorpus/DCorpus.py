@@ -194,11 +194,11 @@ class DCorpus:
     def d_score_list(self):
         return self._d_scores
 
-    def db_connect(self, host='127.0.0.1', port=3306, user='pydactyl', passwd='', db='diii2'):
+    def db_connect(self, host='127.0.0.1', port=3306, user='didactyl', passwd='', db='diii2'):
         self._conn = pymysql.connect(host=host, port=port, user=user, passwd=passwd, db=db)
         return self._conn
 
-    def append_from_db(self, host='127.0.0.1', port=3306, user='pydactyl', passwd='', db='diii2',
+    def append_from_db(self, host='127.0.0.1', port=3306, user='didactyl', passwd='', db='diii2',
                        query=None, client_id=None, selection_id=None):
         if not query and (not client_id or not selection_id):
             raise Exception("Query not specified.")

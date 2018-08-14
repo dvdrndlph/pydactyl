@@ -1,0 +1,36 @@
+% abcDidactyl v5
+% abcD fingering 1: x@x
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-13 12:38:01
+% These are complete fingerings, with any gaps filled in.
+% abcD fingering 2: x@x
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-13 12:38:01
+% These are alternate fingerings, if specified, with gaps filled in. 
+% abcDidactyl END
+X:8
+T:scales_a_minor_melodic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Amin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"A,B,CD E^F^GA Bcde ^f^ga=g =fedc BA=G=F EDCB,:|A,4|:
+agfe dcBA GFED CB,A,B, CDE^F ^GABc de^f^g:|a4|:
+"Thirds"CDE^F ^GABc de^f^g abc'b a=g=fe dcBA =G=FED:|C4|:
+c'bag fedc BAGF EDCD E^F^GA Bcde ^f^gab:|c'4|:
+"Sixths"A,B,CD E^F^GA Bcde ^f^ga=g =fedc BA=G=F EDCB,:|A,4|:
+agfe dcBA GFED CB,A,B, CDE^F ^GABc de^f^g:|a4|]
+V:2
+L:1/16
+A,B,CD E^F^GA Bcde ^f^ga=g =fedc BA=G=F EDCB,:|A,4|:
+agfe dcBA GFED CB,A,B, CDE^F ^GABc de^f^g:|a4|:
+A,B,CD E^F^GA Bcde ^f^ga=g =fedc BA=G=F EDCB,:|A,4|:
+agfe dcBA GFED CB,A,B, CDE^F ^GABc de^f^g:|a4|:
+CDE^F ^GABc [K:clef=treble octave=-1] de^f^g abc'b a=g=fe [K:clef=bass octave=-1] dcBA =G=FED:|C4|:
+[K:clef=treble octave=-1] c'bag fedc [K:clef=bass octave=-1] BAGF EDCD E^F^GA Bcde [K:clef=treble octave=-1] ^f^gab:|c'4|]

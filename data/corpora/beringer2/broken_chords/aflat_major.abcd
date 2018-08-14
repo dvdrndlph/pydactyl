@@ -1,0 +1,29 @@
+% abcDidactyl v5
+% abcD fingering 1: 12351245124512355321542154215321@53215421532153211235123512451235
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-24 12:17:24
+% These are complete fingerings, with any gaps filled in.
+% abcD fingering 2: 21241245124521244212542154214212@53215421421253211235212412451235
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-24 12:24:22
+% These are alternate fingerings, if specified, with gaps filled in. 
+% abcDidactyl END
+%%setfont-1 Bookman 11
+%%setfont-2 Helvetica-Bold 11
+%%measurenb 5
+X:17
+T:broken_chords_aflat_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:8/4
+K:Abmaj
+V:1 treble
+V:2 bass bass octave=-1
+V:1
+L:1/16
+A,CEA CEAc EAce Acea aecA ecAE cAEC AECA,||
+V:2
+L:1/16
+A,CEA CEAc EAce [K: clef=treble octave=-1] Acea aecA [K: clef=bass octave=-1] ecAE cAEC AECA,||

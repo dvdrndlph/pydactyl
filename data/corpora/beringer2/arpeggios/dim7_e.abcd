@@ -1,0 +1,31 @@
+% abcDidactyl v5
+% abcD fingering 1: 2312341232143213221234123432143212&1234123454321432112341234543214321@4321432121234123432143213231234123&5432143212341234554321432123412345
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-23 22:12:40
+% These are complete fingerings, with any gaps filled in.
+% abcD fingering 2: x@x
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-23 12:38:01
+% These are alternate fingerings, if specified, with gaps filled in. 
+% abcDidactyl END
+%%setfont-1 Bookman 11
+%%setfont-2 Helvetica-Bold 11
+%%measurenb 5
+X:41
+T:arpeggios_dim7_e
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Emaj clef=treble octave=0
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"^$12"D"^$13"F"^$11"A"^$12"=c "^$13"d"^$14"f"^$11"a"^$12"=c' "^$13"d'"^$12"c'"^$11"a"^$14"f "^$13"d"^$12"c"^$11"A"^$13"F:|"^$12"D4|:"^$12"F"^$11"A"^$12"=c"^$13"d "^$14"f"^$11"a"^$12"=c'"^$13"d' "^$14"f'"^$13"d'"^$12"c'"^$11"a "^$14"f"^$13"d"^$12"c"^$11"A:|"^$12"F4|
+|:"^$11"A,"^$12"=C"^$13"D"^$14"F "^$11"A"^$12"=c"^$13"d"^$14"f "^$15"a"^$14"f"^$13"d"^$12"c "^$11"A"^$14"F"^$13"D"^$12"C:|"^$11"A,4|:"^$11"=C"^$12"D"^$13"F"^$14"A "^$11"=c"^$12"d"^$13"f"^$14"a "^$15"=c'"^$14"a"^$13"f"^$12"d "^$11"c"^$14"A"^$13"F"^$12"D:|"^$11"=C4||
+V:2
+L:1/16
+"_$24"D"_$23"F"_$22"A"_$21"=c [K: clef=treble octave=-1]"_$24"d"_$23"f"_$22"a"_$21"=c' "_$22"d'"_$21"c'"_$22"a"_$23"f [K: clef=bass octave=-1]"_$24"d"_$21"c"_$22"A"_$23"F:|"_$24"D4|:"_$23"F"_$22"A"_$21"=c"_$24"d [K: clef=treble octave=-1]"_$23"f"_$22"a"_$21"=c'"_$23"d' "_$22"f'"_$23"d'"_$21"c'"_$22"a [K: clef=bass octave=-1]"_$23"f"_$24"d"_$21"c"_$22"A:|"_$23"F4|
+|:"_$25"A,"_$24"=C"_$23"D"_$22"F "_$21"A"_$24"=c"_$23"d"_$22"f "_$21"a"_$22"f"_$23"d"_$24"c "_$21"A"_$22"F"_$23"D"_$24"C:|"_$25"A,4|:"_$25"=C"_$24"D"_$23"F"_$22"A [K: clef=treble octave=-1]"_$21"=c"_$24"d"_$23"f"_$22"a "_$21"=c'"_$22"a"_$23"f"_$24"d [K: clef=bass octave=-1]"_$21"c"_$22"A"_$23"F"_$24"D:|"_$25"=C4||

@@ -1,0 +1,786 @@
+X:1
+T:scales_c_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Cmaj
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"^Octaves"CDEF GABc defg abc'b agfe dcBA GFED:|C4|:
+"^Thirds"EFGA Bcde fgab c'd'e'd' c'bag fedc BAGF:|E4|:
+"^Sixths"CDEF GABc defg abc'b agfe dcBA GFED:|C4|]
+V:2
+L:1/16
+CDEF GABc [K:clef=treble octave=-1]defg abc'b agfe [K:clef=bass octave=-1]dcBA GFED:|C4|:
+CDEF GABc [K:clef=treble octave=-1]defg abc'b agfe [K:clef=bass octave=-1]dcBA GFED:|C4|:
+EFGA Bcde [K:clef=treble octave=-1]fgab c'd'e'd' c'bag fedc [K:clef=bass octave=-1]BAGF:|E4|]
+
+X:2
+T:scales_c_minor_melodic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Cmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"^Octaves"CDEF G=A=Bc defg =a=bc'_b _agfe dc_B_A GFED:|C4|:
+c'bag fedc BAGF EDCD EFG=A =Bcde fg=a=b:|c'4|:
+"^Thirds"EFG=A =Bcde fg=a=b c'd'e'd' c'_b_ag fedc _B_AGF:|E4|:
+e'd'c'b agfe dcBA GFEF G=A=Bc defg =a=bc'd':|e'4|:
+"^Sixths"CDEF G=A=Bc defg =a=bc'=b agfe dc=BA GFED:|C4|:
+c'bag fedc BAGF EDCD EFG=A =Bcde fg=a=b:|c'4|]
+V:2
+L:1/16
+CDEF G=A=Bc [K:clef=treble octave=-1] defg =a=bc'_b _agfe [K:clef=bass octave=-1] dc_B_A GFED:|C4|:
+[K:clef=treble octave=-1]c'bag fedc [K:clef=bass octave=-1] BAGF EDCD EFG=A [K:clef=treble octave=-1] =Bcde fg=a=b:|c'4|:
+[K:clef=bass octave=-1] CDEF G=A=Bc [K:clef=treble octave=-1] defg =a=bc'_b _agfe [K:clef=bass octave=-1] dc_B_A GFED:|C4|:
+[K:clef=treble octave=-1] c'bag fedc [K:clef=bass octave=-1] BAGF EDCD EFG=A [K:clef=treble octave=-1] =Bcde fg=a=b:|c'4|:
+[K:clef=bass octave=-1] EFG=A =Bcde [K:clef=treble octave=-1] fg=a=b c'd'e'd' c'_b_ag fedc [K:clef=bass octave=-1] _B_AGF:|E4|:
+[K:clef=treble] edcB AGFE [K:clef=bass] DCB,A, G,F,E,F, G,=A,=B,C [K:clef=treble] DEFG =A=Bcd:|e4|]
+
+X:102
+T:scales_c_minor_harmonic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Cmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"^Octaves"CDEF GA=Bc defg a=bc'=b agfe dc=BA GFED:|C4|:
+"^Thirds"EFGA =Bcde fga=b c'd'e'd' c'=bag fedc =BAGF:|E4|:
+"^Sixths"CDEF GA=Bc defg a=bc'=b agfe dc=BA GFED:|C4|]
+V:2
+L:1/16
+CDEF GA=Bc [K:clef=treble octave=-1] defg a=bc'=b agfe [K:clef=bass octave=-1] dc=BA GFED:|C4|:
+[K:clef=bass octave=-1] CDEF GA=Bc [K:clef=treble octave=-1] defg a=bc'=b agfe [K:clef=bass octave=-1] dc=BA GFED:|C4|:
+[K:clef=bass octave=-1] EFGA =Bcde [K:clef=treble octave=-1] fga=b c'd'e'd' c'=bag fedc [K:clef=bass octave=-1] =BAGF:|E4|]
+
+X:3
+T:scales_g_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Gmaj
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+g,,a,,b,,c, DEFG ABcd efgf edcB AGFE Dc,b,,a,,:|g,,4|:
+b,,c,DE FGAB cdef gaba gfed cBAG FEDc,:|b,,4|:
+g,,a,,b,,c, DEFG ABcd efgf edcB AGFE Dc,b,,a,,:|g,,4|]
+V:2
+L:1/16
+g,,a,,b,,c, DEFG ABcd efgf edcB AGFE Dc,b,,a,,:|g,,4|:
+g,,a,,b,,c, DEFG ABcd efgf edcB AGFE Dc,b,,a,,:|g,,4|:
+b,,c,DE FGAB [K:clef=treble octave=-1] cdef gaba gfed [K:clef=bass octave=-1]cBAG FEDc,:|b,,4|]
+
+X:4
+T:scales_g_minor_melodic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Gmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"^Octaves"g,,a,,b,,c, D=E^FG ABcd =e^fg=f _edcB AG=F_E Dc,b,,a,,:|g,,4|:
+gfed cBAG FEDc, b,,a,,g,,a,, b,,c,D=E ^FGAB cd=e^f:|g4|:
+"^Thirds"b,,c,D=E ^FGAB cd=e^f gaba g=f_ed cBAG =F_EDC:|b,,4|:
+bagf edcB AGFE DCb,,C D=E^FG ABcd =e^fga:|b4|:
+"^Sixths"G,A,B,C DE^FG ABcd e^fg^f edcB AG^FE DCB,A, :|G,4|:
+gfed cBAG FEDc, b,,a,,g,,a,, b,,c,D=E ^FGAB cd=e^f:|g4|]
+V:2
+L:1/16
+g,,a,,b,,c, D=E^FG ABcd =e^fg=f _edcB AG=F_E Dc,b,,a,,:|g,,4|:
+gfed cBAG FEDc, b,,a,,g,,a,, b,,c,D=E ^FGAB cd=e^f:|g4|:
+g,,a,,b,,c, D=E^FG ABcd =e^fg=f _edcB AG=F_E Dc,b,,a,,:|g,,4|:
+gfed cBAG FEDc, b,,a,,g,,a,, b,,c,D=E ^FGAB cd=e^f:|g4|:
+B,CDE ^FGAB [K:clef=treble octave=-1]cde^f gaba g^fed [K:clef=bass octave=-1]cBAG ^FEDC:|B,4|:
+[K:clef=treble octave=0]BAGF EDCB, [K:clef=bass octave=-1] AGFE DCB,C D=E^FG ABcd [K:clef=treble octave=0] =E^FGA:|B4|]
+
+
+X:104
+T:scales_g_minor_harmonic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Gmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"^Octaves"g,,a,,b,,c, DE^FG ABcd e^fg^f edcB AG^FE Dc,b,,a,,:|g,,4|:
+"^Thirds"b,,c,DE ^FGAB cde^f gaba g^fed cBAG ^FEDC:|b,,4|:
+"^Sixths"G,A,B,C DE^FG ABcd e^fg^f edcB AG^FE DCB,A, :|G,4|]
+V:2
+L:1/16
+g,,a,,b,,c, DE^FG ABcd e^fg^f edcB AG^FE Dc,b,,a,,:|g,,4|:
+g,,a,,b,,c, D=E^FG ABcd =e^fg=f _edcB AG=F_E Dc,b,,a,,:|g,,4|:
+[K:clef=bass octave=-1] B,CDE ^FGAB [K:clef=treble octave=-1] cde^f gaba g^fed [K:clef=bass octave=-1] cBAG ^FEDC:|
+
+X:5
+T:scales_d_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Dmaj clef=treble octave=0
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+DEFG ABcd efga bc'd'c' bagf edcB AGFE:|D4|:
+FGAB cdef gabc' d'e'f'e' d'c'ba gfed cBAG:|F4|:
+DEFG ABcd efga bc'd'c' bagf edcB AGFE:|D4|]
+V:2
+L:1/16
+DEFG ABcd [K:clef=treble octave=-1] efga bc'd'c' bagf [K:clef=bass octave=-1] edcB AGFE:|D4|:
+DEFG ABcd [K:clef=treble octave=-1] efga bc'd'c' bagf [K:clef=bass octave=-1] edcB AGFE:|D4|:
+FGAB cdef [K:clef=treble octave=-1] gabc' d'e'f'e' d'c'ba gfed [K:clef=bass octave=-1] cBAG:|F4|]
+
+X:6
+T:scales_d_minor_melodic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Dmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"DEFG A=B^cd efga =b^c'd'=c' _bagf ed=c_B AGFE:|D4|:
+d'c'ba gfed cBAG FEDE FGA=B ^cdef ga=b^c':|d'4|:
+"Thirds"FGA=B ^cdef ga=b^c' d'e'f'e' d'=c'_ba gfed =c_BAG:|F4|:
+f'e'd'c' bagf edcB AGFG A=B^cd efga =b^c'd'e':|f'4|:
+"Sixths"DEFG A=B^cd efga =b^c'd'=c' _bagf ed=c_B AGFE:|D4|:
+d'c'ba gfed cBAG FEDE FGA=B ^cdef ga=b^c':|d'4|:
+V:2
+L:1/16
+DEFG A=B^cd [K:clef=treble octave=-1] efga =b^c'd'=c' _bagf [K:clef=bass octave=-1]ed=c_B AGFE:|D4|:
+[K:clef=treble octave=-1] d'c'ba gfed [K:clef=bass octave=-1] cBAG FEDE FGA=B [K:clef=treble octave=-1] ^cdef ga=b^c':|d'4|:
+[K:clef=bass octave=-1] DEFG A=B^cd [K:clef=treble octave=-1] efga =b^c'd'=c' _bagf [K:clef=bass octave=-1] ed=c_B AGFE:|D4|:
+[K:clef=treble octave=-1] d'c'ba gfed [K:clef=bass octave=-1] cBAG FEDE FGA=B [K:clef=treble octave=-1] ^cdef ga=b^c':|d'4|:
+[K:clef=bass octave=-1] FGA=B ^cdef [K:clef=treble octave=-1] ga=b^c' d'e'f'e' d'=c'_ba gfed [K:clef=bass octave=-1] =c_BAG:|F4|:
+[K:clef=treble octave=-1]f'e'd'c' bagf [K:clef=bass octave=-1] edcB AGFG A=B^cd [K:clef=treble octave=-1] efga =b^c'd'e':|f'4|]
+
+X:106
+T:scales_d_minor_harmonic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Dmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"DEFG AB^cd efga b^c'd'^c' bagf ed^cB AGFE:|D4|:
+"Thirds"FGAB ^cdef gab^c' d'e'f'e' d'^c'ba gfed ^cBAG:|F4|:
+"Sixths"DEFG AB^cd efga b^c'd'^c' bagf ed^cB AGFE:|D4|]
+V:2
+L:1/16
+DEFG AB^cd [K:clef=treble octave=-1] efga b^c'd'^c' bagf [K:clef=bass octave=-1]ed^cB AGFE:|D4|:
+[K:clef=bass octave=-1] DEFG AB^cd [K:clef=treble octave=-1] efga b^c'd'^c' bagf [K:clef=bass octave=-1] ed^cB AGFE:|D4|:
+[K:clef=bass octave=-1] FGAB ^cdef [K:clef=treble octave=-1] gab^c' d'e'f'e' d'^c'ba gfed [K:clef=bass octave=-1] ^cBAG:|F4|]
+
+X:7
+T:scales_a_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Amaj
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|:
+CDEF GABc defg abc'b agfe dcBA GFED:|C4|:
+A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|]
+V:2
+L:1/16
+A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|:
+A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|:
+CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA GFED:|C4|]
+
+X:8
+T:scales_a_minor_melodic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Amin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"A,B,CD E^F^GA Bcde ^f^ga=g =fedc BA=G=F EDCB,:|A,4|:
+agfe dcBA GFED CB,A,B, CDE^F ^GABc de^f^g:|a4|:
+"Thirds"CDE^F ^GABc de^f^g abc'b a=g=fe dcBA =G=FED:|C4|:
+c'bag fedc BAGF EDCD E^F^GA Bcde ^f^gab:|c'4|:
+"Sixths"A,B,CD E^F^GA Bcde ^f^ga=g =fedc BA=G=F EDCB,:|A,4|:
+agfe dcBA GFED CB,A,B, CDE^F ^GABc de^f^g:|a4|]
+V:2
+L:1/16
+A,B,CD E^F^GA Bcde ^f^ga=g =fedc BA=G=F EDCB,:|A,4|:
+agfe dcBA GFED CB,A,B, CDE^F ^GABc de^f^g:|a4|:
+A,B,CD E^F^GA Bcde ^f^ga=g =fedc BA=G=F EDCB,:|A,4|:
+agfe dcBA GFED CB,A,B, CDE^F ^GABc de^f^g:|a4|:
+CDE^F ^GABc [K:clef=treble octave=-1] de^f^g abc'b a=g=fe [K:clef=bass octave=-1] dcBA =G=FED:|C4|:
+[K:clef=treble octave=-1] c'bag fedc [K:clef=bass octave=-1] BAGF EDCD E^F^GA Bcde [K:clef=treble octave=-1] ^f^gab:|c'4|]
+
+X:108
+T:scales_a_minor_harmonic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Amin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"A,B,CD EF^GA Bcde f^ga^g fedc BA^GF EDCB,:|A,4|:
+"Thirds"CDEF ^GABc def^g abc'b a^gfe dcBA ^GFED:|C4|:
+"Sixths"A,B,CD EF^GA Bcde f^ga^g fedc BA^GF EDCB,:|A,4|]
+V:2
+L:1/16
+A,B,CD EF^GA Bcde f^ga^g fedc BA^GF EDCB,:|A,4|:
+A,B,CD EF^GA Bcde f^ga^g fedc BA^GF EDCB,:|A,4|:
+CDEF ^GABc [K:clef=treble octave=-1] def^g abc'b a^gfe [K:clef=bass octave=-1] dcBA ^GFED:|C4|]
+
+X:9
+T:scales_e_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Emaj
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+EFGA Bcde fgab c'd'e'd' c'bag fedc BAGF:|E4|:
+GABc defg abc'd' e'f'g'f' e'd'c'b agfe dcBA:|G4|:
+EFGA Bcde fgab c'd'e'd' c'bag fedc BAGF:|E4|]
+V:2
+L:1/16
+EFGA Bcde [K:clef=treble octave=-1] fgab c'd'e'd' c'bag [K:clef=bass octave=-1] fedc BAGF:|E4|:
+EFGA Bcde [K:clef=treble octave=-1] fgab c'd'e'd' c'bag fedc [K:clef=bass octave=-1] BAGF:|E4|:
+GABc defg [K:clef=treble octave=-1] abc'd' e'f'g'f' e'd'c'b agfe [K:clef=bass octave=-1] dcBA:|G4|]
+
+X:10
+T:scales_e_minor_melodic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Emin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"EFGA B^c^de fgab ^c'^d'e'=d' =c'bag fe=d=c BAGF:|E4|:
+e'd'c'b agfe dcBA GFEF GAB^c ^defg ab^c'^d':|e'4|:
+"Thirds"GAB^c ^defg ab^c'^d' e'f'g'f' e'=d'=c'b agfe =d=cBA:|G4|:
+g'f'e'd' c'bag fedc BAGA B^c^de fgab ^c'^d'e'f':|g'4|:
+"Sixths"EFGA B^c^de fgab ^c'^d'e'=d' =c'bag fe=d=c BAGF:|E4|:
+e'd'c'b agfe dcBA GFEF GAB^c ^defg ab^c'^d':|e'4|]
+V:2
+L:1/16
+EFGA B^c^de [K:clef=treble octave=-1] fgab ^c'^d'e'=d' =c'bag [K:clef=bass octave=-1] fe=d=c BAGF:|E4|:
+[K:clef=treble octave=-1] e'd'c'b agfe [K:clef=bass octave=-1] dcBA GFEF GAB^c [K:clef=treble octave=-1]^defg ab^c'^d':|e'4|:
+[K:clef=bass octave=-1] EFGA B^c^de [K:clef=treble octave=-1] fgab ^c'^d'e'=d' =c'bag [K:clef=bass octave=-1] fe=d=c BAGF:|E4|:
+[K:clef=treble octave=-1] e'd'c'b agfe [K:clef=bass octave=-1] dcBA GFEF GAB^c [K:clef=treble octave=-1]^defg ab^c'^d':|e'4|:
+[K:clef=bass octave=-1] GAB^c [K:clef=treble octave=-1] ^defg ab^c'^d' e'f'g'f' e'=d'=c'b agfe [K:clef=bass octave=-1] =d=cBA:|G4|:
+[K:clef=treble octave=-1] g'f'e'd' c'bag fedc [K:clef=bass octave=-1] BAGA B^c^de [K:clef=treble octave=-1] fgab ^c'^d'e'f':|g'4|]
+
+X:110
+T:scales_e_minor_harmonic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Emin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"EFGA Bc^de fgab c'^d'e'^d' c'bag fe^dc BAGF:|E4|:
+"Thirds"GABc ^defg abc'^d' e'f'g'f' e'^d'c'b agfe ^dcBA:|G4|:
+"Sixths"EFGA Bc^de fgab c'^d'e'^d' c'bag fe^dc BAGF:|E4|]
+V:2
+L:1/16
+EFGA Bc^de [K:clef=treble octave=-1] fgab c'^d'e'^d' c'bag [K:clef=bass octave=-1] fe^dc BAGF:|E4|:
+[K:clef=bass octave=-1] EFGA Bc^de [K:clef=treble octave=-1] fgab c'^d'e'^d' c'bag [K:clef=bass octave=-1] fe^dc BAGF:|E4|:
+[K:clef=bass octave=-1] GABc [K:clef=treble octave=-1] ^defg abc'^d' e'f'g'f' e'^d'c'b agfe [K:clef=bass octave=-1] ^dcBA:|G4|]
+
+X:11
+T:scales_b_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Bmaj clef=treble octave=0
+V:1 treble
+V:2 bass octave=-2
+V:1
+L:1/16
+B,CDE FGAB cdef gaba gfed cBAG FEDC:|B,4|:
+DEFG ABcd efga bc'd'c' bagf edcB AGFE:|D4|:
+B,CDE FGAB cdef gaba gfed cBAG FEDC:|B,4|]
+V:2
+L:1/16
+B,CDE FGAB [K:clef=treble octave=-1] cdef gaba gfed [K:clef=bass octave=-1] cBAG FEDC:|B,4|:
+B,CDE FGAB [K:clef=treble octave=-1] cdef gaba gfed [K:clef=bass octave=-1] cBAG FEDC:|B,4|:
+DEFG ABcd [K:clef=treble octave=-1] efga bc'd'c' bagf [K:clef=bass octave=-1] edcB AGFE:|D4|]
+
+X:12
+T:scales_b_minor_melodic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Bmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"B,CDE F^G^AB cdef ^g^ab=a =gfed cB=A=G FEDC:|B,4|:
+bagf edcB AGFE DCB,C DEF^G ^ABcd ef^g^a:|b4|:
+"Thirds"DEF^G ^ABcd ef^g^a bc'd'c' b=a=gf edcB =A=GFE:|D4|:
+d'c'ba gfed cBAG FEDE F^G^AB cdef ^g^abc':|d'4|:
+"Sixths"B,CDE F^G^AB cdef ^g^ab=a =gfed cB=A=G FEDC:|B,4|:
+bagf edcB AGFE DCB,C DEF^G ^ABcd ef^g^a:|b4|:]
+V:2
+L:1/16
+B,CDE F^G^AB [K:clef=treble octave=-1] cdef ^g^ab=a =gfed [K:clef=bass octave=-1] cB=A=G FEDC:|B,4|:
+[K:clef=treble octave=-1] bagf edcB [K:clef=bass octave=-1] AGFE DCB,C DEF^G ^ABcd [K:clef=treble octave=-1] ef^g^a:|b4|:
+[K:clef=bass octave=-1] B,CDE F^G^AB [K:clef=treble octave=-1] cdef ^g^ab=a =gfed [K:clef=bass octave=-1] cB=A=G FEDC:|B,4|:
+[K:clef=treble octave=-1]bagf edcB [K:clef=bass octave=-1] AGFE DCB,C DEF^G ^ABcd [K:clef=treble octave=-1]ef^g^a:|b4|:
+[K:clef=bass octave=-1]DEF^G ^ABcd [K:clef=treble octave=-1] ef^g^a bc'd'c' b=a=gf [K:clef=bass octave=-1] edcB =A=GFE:|D4|:
+[K:clef=treble octave=-1]d'c'ba gfed [K:clef=bass octave=-1] cBAG FEDE F^G^AB [K:clef=treble octave=-1] cdef ^g^abc':|d'4|]
+
+X:112
+T:scales_b_minor_harmonic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Bmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"B,CDE FG^AB cdef g^ab^a gfed cB^AG FEDC:|B,4|:
+"Thirds"DEFG ^ABcd efg^a bc'd'c' b^agf edcB A=GFE:|D4|:
+"Sixths"B,CDE FG^AB cdef g^ab^a gfed cB^AG FEDC:|B,4|]
+V:2
+L:1/16
+B,CDE FG^AB [K:clef=treble octave=-1] cdef g^ab^a gfed [K:clef=bass octave=-1] cB^AG FEDC:|B,4|:
+[K:clef=bass octave=-1] B,CDE FG^AB [K:clef=treble octave=-1] cdef g^ab^a gfed [K:clef=bass octave=-1] cB^AG FEDC:|B,4|:
+[K:clef=bass octave=-1]DEFG ^ABcd [K:clef=treble octave=-1] efg^a bc'd'c' b^agf [K:clef=bass octave=-1] edcB ^AGFE:|D4|]
+
+X:13
+T:scales_fsharp_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:F#maj
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+F,G,A,B, CDEF GABc defe dcBA GFED CB,A,G,:|F,4|:
+A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|:
+F,G,A,B, CDEF GABc defe dcBA GFED CB,A,G,:|F,4|]
+V:2
+L:1/16
+F,G,A,B, CDEF GABc defe dcBA GFED CB,A,G,:|F,4|:
+F,G,A,B, CDEF GABc defe dcBA GFED CB,A,G,:|F,4|:
+A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|]
+
+X:14
+T:scales_fsharp_minor_melodic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:F#min
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"F,G,A,B, C^D^EF GABc ^d^ef=e =dcBA GF=E=D CB,A,G,:|F,4|:
+fedc BAGF EDCB, A,G,F,G, A,B,C^D ^EFGA Bc^d^e:|f4|:
+"Thirds"A,B,C^D ^EFGA Bc^d^e fgag f=e=dc BAGF =E=DCB,:|A,4|:
+agfe dcBA GFED CB,A,B, C^D^EF GABc ^d^efg:|a4|:
+"Sixths"F,G,A,B, C^D^EF GABc ^d^ef=e =dcBA GF=E=D CB,A,G,:|F,4|:
+fedc BAGF EDCB, A,G,F,G, A,B,C^D ^EFGA Bc^d^e:|f4|]
+V:2
+L:1/16
+F,G,A,B, C^D^EF GABc ^d^ef=e =dcBA GF=E=D CB,A,G,:|F,4|:
+fedc BAGF EDCB, A,G,F,G, A,B,C^D ^EFGA Bc^d^e:|f4|:
+F,G,A,B, C^D^EF GABc ^d^ef=e =dcBA GF=E=D CB,A,G,:|F,4|:
+fedc BAGF EDCB, A,G,F,G, A,B,C^D ^EFGA Bc^d^e:|f4|:
+A,B,C^D ^EFGA Bc^d^e fgag f=e=dc BAGF =E=DCB,:|A,4|:
+agfe dcBA GFED CB,A,B, C^D^EF GABc ^d^efg:|a4|]
+
+X:114
+T:scales_fsharp_minor_harmonic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:F#min
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"F,G,A,B, CD^EF GABc d^ef^e dcBA GF^ED CB,A,G,:|F,4|:
+"Thirds"A,B,CD ^EFGA Bcd^e fgag f^edc BAGF ^EDCB,:|A,4|:
+"Sixths"F,G,A,B, CD^EF GABc d^ef^e dcBA GF^ED CB,A,G,:|F,4|]
+V:2
+L:1/16
+F,G,A,B, CD^EF GABc d^ef^e dcBA GF^ED CB,A,G,:|F,4|:
+F,G,A,B, CD^EF GABc d^ef^e dcBA GF^ED CB,A,G,:|F,4|:
+A,B,CD ^EFGA Bcd^e fgag f^edc BAGF ^EDCB,:|A,4|]
+
+X:15
+T:scales_dflat_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Dbmaj
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+DEFG ABcd efga bc'd'c' bagf edcB AGFE:|D4|:
+FGAB cdef gabc' d'e'f'e' d'c'ba gfed cBAG:|F4|:
+DEFG ABcd efga bc'd'c' bagf edcB AGFE:|D4|]
+V:2
+L:1/16
+DEFG ABcd [K:clef=treble octave=-1]efga bc'd'c' bagf [K:clef=bass octave=-1] edcB AGFE:|D4|:
+DEFG ABcd [K:clef=treble octave=-1] efga bc'd'c' bagf [K:clef=bass octave=-1] edcB AGFE:|D4|:
+FGAB cdef [K:clef=treble octave=-1]gabc' d'e'f'e' d'c'ba gfed [K:clef=bass octave=-1] cBAG:|F4|]
+
+X:16
+T:scales_csharp_minor_melodic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:C#min
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"CDEF G^A^Bc defg ^a^bc'=b =agfe dc=B=A GFED:|C4|:
+c'bag fedc BAGF EDCD EFG^A ^Bcde fg^a^b:|c'4|:
+"Thirds"EFG^A ^Bcde fg^a^b c'd'e'd' c'=b=ag fedc =B=AGF:|E4|:
+e'd'c'b agfe dcBA GFEF G^A^Bc defg ^a^bc'd':|e'4|:
+"Sixths"CDEF G^A^Bc defg ^a^bc'=b =agfe dc=B=A GFED:|C4|:
+c'bag fedc BAGF EDCD EFG^A ^Bcde fg^a^b:|c'4|]
+V:2
+L:1/16
+CDEF G^A^Bc [K:clef=treble octave=-1] defg ^a^bc'=b =agfe [K:clef=bass octave=-1] dc=B=A GFED:|C4|:
+[K:clef=treble octave=-1] c'bag fedc [K:clef=bass octave=-1] BAGF EDCD EFG^A ^Bcde [K:clef=treble octave=-1] fg^a^b:|c'4|:
+[K:clef=bass octave=-1] CDEF G^A^Bc [K:clef=treble octave=-1] defg ^a^bc'=b =agfe [K:clef=bass octave=-1] dc=B=A GFED:|C4|:
+[K:clef=treble octave=-1] c'bag fedc [K:clef=bass octave=-1] BAGF EDCD EFG^A ^Bcde [K:clef=treble octave=-1] fg^a^b:|c'4|:
+[K:clef=bass octave=-1] EFG^A ^Bcde [K:clef=treble octave=-1] fg^a^b c'd'e'd' c'=b=ag fedc [K:clef=bass octave=-1] =B=AGF:|E4|:
+[K:clef=treble octave=-1] e'd'c'b agfe [K:clef=bass octave=-1] dcBA GFEF G^A^Bc defg [K:clef=treble octave=-1]^a^bc'd':|e'4|]
+
+X:116
+T:scales_csharp_minor_harmonic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:C#min
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"CDEF GA^Bc defg a^bc'^b agfe dc^BA GFED:|C4|:
+"Thirds"EFGA ^Bcde fga^b c'd'e'd' c'^bag fedc ^BAGF:|E4|:
+"Sixths"CDEF GA^Bc defg a^bc'^b agfe dc^BA GFED:|C4|]
+V:2
+L:1/16
+CDEF GA^Bc [K:clef=treble octave=-1] defg a^bc'^b agfe [K:clef=bass octave=-1] dc^BA GFED:|C4|:
+CDEF GA^Bc [K:clef=treble octave=-1] defg a^bc'^b agfe [K:clef=bass octave=-1] dc^BA GFED:|C4|:
+EFGA ^Bcde [K:clef=treble octave=-1] fga^b c'd'e'd' c'^bag fedc [K:clef=bass octave=-1] ^BAGF:|E4|]
+
+X:17
+T:scales_aflat_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Abmaj
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|:
+CDEF GABc defg abc'b agfe dcBA GFED:|C4|:
+A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|]
+V:2
+L:1/16
+A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|:
+A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|:
+CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1]dcBA GFED:|C4||
+
+X:18
+T:scales_gsharp_minor_melodic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:G#min
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"G,A,B,C D^E^^FG ABcd ^e^^fg^f =edcB AG^F=E DCB,A,:|G,4|:
+gfed cBAG FEDC B,A,G,A, B,CD^E ^^FGAB cd^e^^f:|g4|:
+"Thirds"B,CD^E ^^FGAB cd^e^^f gaba g^f=ed cBAG ^F=EDC:|B,4|:
+bagf edcB AGFE DCB,C D^E^^FG ABcd ^e^^fga:|b4|:
+"Sixths"G,A,B,C D^E^^FG ABcd ^e^^fg^f =edcB AG^F=E DCB,A,:|G,4|:
+gfed cBAG FEDC B,A,G,A, B,CD^E ^^FGAB cd^e^^f:|g4|]
+V:2
+L:1/16
+G,A,B,C D^E^^FG ABcd ^e^^fg^f =edcB AG^F=E DCB,A,:|G,4|:
+gfed cBAG FEDC B,A,G,A, B,CD^E ^^FGAB cd^e^^f:|g4|:
+G,A,B,C D^E^^FG ABcd ^e^^fg^f =edcB AG^F=E DCB,A,:|G,4|:
+gfed cBAG FEDC B,A,G,A, B,CD^E ^^FGAB cd^e^^f:|g4|:
+B,CD^E ^^FGAB [K:clef=treble octave=-1] cd^e^^f gaba g^f=ed [K:clef=bass octave=-1] cBAG ^F=EDC:|B,4|:
+[K:clef=treble octave=-1] bagf [K:clef=bass octave=-1] edcB AGFE DCB,C D^E^^FG ABcd [K:clef=treble octave=-1]  ^e^^fga:|b4|]
+
+X:118
+T:scales_gsharp_minor_harmonic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:G#min
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"G,A,B,C DE^^FG ABcd e^^fg^^f edcB AG^^FE DCB,A,:|G,4|:
+"Thirds"B,CDE ^^FGAB cde^^f gaba g^^fed cBAG ^^FEDC:|B,4|:
+"Sixths"G,A,B,C DE^^FG ABcd e^^fg^^f edcB AG^^FE DCB,A,:|G,4|]
+V:2
+L:1/16
+G,A,B,C DE^^FG ABcd e^^fg^^f edcB AG^^FE DCB,A,:|G,4|:
+G,A,B,C DE^^FG ABcd e^^fg^^f edcB AG^^FE DCB,A,:|G,4|:
+B,CDE ^^FGAB [K:clef=treble octave=-1] cde^^f gaba g^^fed [K:clef=bass octave=-1] cBAG ^^FEDC:|B,4|]
+X:19
+
+T:scales_eflat_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Ebmaj
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+EFGA Bcde fgab c'd'e'd' c'bag fedc BAGF:|E4|:
+GABc defg abc'd' e'f'g'f' e'd'c'b agfe dcBA:|G4|:
+EFGA Bcde fgab c'd'e'd' c'bag fedc BAGF:|E4|]
+V:2
+L:1/16
+EFGA Bcde [K:clef=treble octave=-1] fgab c'd'e'd' c'bag [K:clef=bass octave=-1] fedc BAGF:|E4|:
+EFGA Bcde [K:clef=treble octave=-1] fgab c'd'e'd' c'bag [K:clef=bass octave=-1] fedc BAGF:|E4|:
+GABc [K:clef=treble octave=-1] defg abc'd' e'f'g'f' e'd'c'b agfe [K:clef=trele octave=-1] dcBA:|G4|]
+
+X:20
+T:scales_eflat_minor_melodic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Ebmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"EFGA B=c=de fgab =c'=d'e'_d' _c'bag fe_d_c BAGF:|E4|:
+e'd'c'b agfe dcBA GFEF GAB=c =defg ab=c'=d':|e'4|:
+"Thirds"GAB=c =defg ab=c'=d' e'f'g'f' e'_d'_c'b agfe _d_cBA:|G4|:
+g'f'e'd' c'bag fedc BAGA B=c=de fgab =c'=d'e'f':|g'4|:
+"Sixths"EFGA B=c=de fgab =c'=d'e'_d' _c'bag fe_d_c BAGF:|E4|:
+e'd'c'b agfe dcBA GFEF GAB=c =defg ab=c'=d':|e'4|:]
+V:2
+L:1/16
+EFGA B=c=de [K:clef=treble octave=-1] fgab =c'=d'e'_d' _c'bag [K:clef=bass octave=-1] fe_d_c BAGF:|E4|:
+[K:clef=treble octave=-1] e'd'c'b agfe [K:clef=bass octave=-1] dcBA GFEF GAB=c [K:clef=treble octave=-1] =defg ab=c'=d':|e'4|:
+[K:clef=bass octave=-1] EFGA B=c=de [K:clef=treble octave=-1] fgab =c'=d'e'_d' _c'bag [K:clef=bass octave=-1] fe_d_c BAGF:|E4|:
+[K:clef=treble octave=-1] e'd'c'b agfe [K:clef=bass octave=-1] dcBA GFEF GAB=c [K:clef=treble octave=-1] =defg ab=c'=d':|e'4|:
+[K:clef=bass octave=-1] GAB=c [K:clef=treble octave=-1] =defg ab=c'=d' e'f'g'f' e'_d'_c'b agfe [K:clef=bass octave=-1] _d_cBA:|G4|:
+[K:clef=treble octave=-1] g'f'e'd' c'bag fedc [K:clef=bass octave=-1] BAGA B=c=de [K:clef=treble octave=-1] fgab =c'=d'e'f':|g'4|]
+
+X:120
+T:scales_eflat_minor_harmonic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Ebmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"EFGA Bc=de fgab c'=d'e'=d' c'bag fe=dc BAGF:|E4|:
+"Thirds"GABc =defg abc'=d' e'f'g'f' e'=d'c'b agfe =dcBA:|G4|:
+"Sixths"EFGA Bc=de fgab c'=d'e'=d' c'bag fe=dc BAGF:|E4|]
+V:2
+L:1/16
+EFGA Bc=de [K:clef=treble octave=-1] fgab c'=d'e'=d' c'bag [K:clef=bass octave=-1] fe=dc BAGF:|E4|:
+EFGA Bc=de [K:clef=treble octave=-1] fgab c'=d'e'=d' c'bag [K:clef=bass octave=-1] fe=dc BAGF:|E4|:
+[K:clef=bass octave=-1] GABc [K:clef=treble octave=-1] =defg abc'=d' e'f'g'f' e'=d'c'b agfe [K:clef=bass octave=-1] =dcBA:|G4|]
+
+X:21
+T:scales_bflat_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Bbmaj
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+B,CDE FGAB cdef gaba gfed cBAG FEDC:|B,4|:
+DEFG ABcd efga bc'd'c' bagf edcB AGFE:|D4|:
+B,CDE FGAB cdef gaba gfed cBAG FEDC:|B,4|]
+V:2
+L:1/16
+B,CDE FGAB [K:clef=treble octave=-1] cdef gaba gfed [K:clef=bass octave=-1] cBAG FEDC:|B,4|:
+B,CDE FGAB [K:clef=treble octave=-1] cdef gaba gfed [K:clef=bass octave=-1] cBAG FEDC:|B,4|:
+DEFG ABcd [K:clef=treble octave=-1] efga bc'd'c' bagf [K:clef=bass octave=-1] edcB AGFE:|D4||
+
+X:22
+T:scales_bflat_minor_melodic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Bbmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"B,CDE F=G=AB cdef =g=ab_a _gfed cB_A_G FEDC:|B,4|:
+bagf edcB AGFE DCB,C DEF=G =ABcd ef=g=a:|b4|:
+"Thirds"DEF=G =ABcd ef=g=a bc'd'c' b_a_gf edcB _A_GFE:|D4|:
+d'c'ba gfed cBAG FEDE F=G=AB cdef =g=abc':|d'4|:
+"Sixths"B,CDE F=G=AB cdef =g=ab_a _gfed cB_A_G FEDC:|B,4|:
+bagf edcB AGFE DCB,C DEF=G =ABcd ef=g=a:|b4|]
+V:2
+L:1/16
+B,CDE F=G=AB [K:clef=treble octave=-1] cdef =g=ab_a _gfed [K:clef=bass octave=-1] cB_A_G FEDC:|B,4|:
+[K:clef=treble octave=-1] bagf edcB [K:clef=bass octave=-1] AGFE DCB,C DEF=G =ABcd [K:clef=treble octave=-1] ef=g=a:|b4|:
+[K:clef=bass octave=-1] B,CDE F=G=AB [K:clef=treble octave=-1] cdef =g=ab_a _gfed [K:clef=bass octave=-1] cB_A_G FEDC:|B,4|:
+[K:clef=treble octave=-1] bagf edcB [K:clef=bass octave=-1] AGFE DCB,C DEF=G =ABcd [K:clef=treble octave=-1] ef=g=a:|b4|:
+[K:clef=bass octave=-1] DEF=G =ABcd [K:clef=treble octave=-1] ef=g=a bc'd'c' b_a_gf [K:clef=bass octave=-1] edcB _A_GFE:|D4|:
+[K:clef=treble octave=-1] d'c'ba gfed [K:clef=bass octave=-1] cBAG FEDE F=G=AB [K:clef=treble octave=-1] cdef =g=abc':|d'4|]
+
+X:122
+T:scales_bflat_minor_harmonic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Bbmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"B,CDE FG=AB cdef g=ab=a gfed cB=AG FEDC:|B,4|:
+"Thirds"DEFG =ABcd efg=a bc'd'c' b=agf edcB =AGFE:|D4|:
+"Sixths"B,CDE FG=AB cdef g=ab=a gfed cB=AG FEDC:|B,4|]
+V:2
+L:1/16
+B,CDE FG=AB [K:clef=treble octave=-1] cdef g=ab=a gfed [K:clef=bass octave=-1] cB=AG FEDC:|B,4|:
+B,CDE FG=AB [K:clef=treble octave=-1] cdef g=ab=a gfed [K:clef=bass octave=-1] cB=AG FEDC:|B,4|:
+[K:clef=bass octave=-1] DEFG =ABcd [K:clef=treble octave=-1] efg=a bc'd'c' b=agf [K:clef=bass octave=-1] edcB =AGFE:|D4|]
+
+X:23
+T:scales_f_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Fmaj
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+F,G,A,B, CDEF GABc defe dcBA GFED CB,A,G,:|F,4|:
+A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|:
+F,G,A,B, CDEF GABc defe dcBA GFED CB,A,G,:|F,4||
+V:2
+L:1/16
+F,G,A,B, CDEF GABc defe dcBA GFED CB,A,G,:|F,4|:
+F,G,A,B, CDEF GABc defe dcBA GFED CB,A,G,:|F,4|:
+A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4||
+
+X:24
+T:scales_f_minor_melodic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Fmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"F,G,A,B, C=D=EF GABc =d=ef_e _dcBA GF_E_D CB,A,G,:|F,4|:
+fedc BAGF EDCB, A,G,F,G, A,B,C=D =EFGA Bc=d=e:|f4|:
+"Thirds"A,B,C=D =EFGA Bc=d=e fgag f_e_dc BAGF _E_DCB,:|A,4|:
+agfe dcBA GFED CB,A,B, C=D=EF GABc =d=efg:|a4|:
+"Sixths"F,G,A,B, C=D=EF GABc =d=ef_e _dcBA GF_E_D CB,A,G,:|F,4|:
+fedc BAGF EDCB, A,G,F,G, A,B,C=D =EFGA Bc=d=e:|f4|]
+V:2
+L:1/16
+F,G,A,B, C=D=EF GABc =d=ef_e _dcBA GF_E_D CB,A,G,:|F,4|:
+fedc BAGF EDCB, A,G,F,G, A,B,C=D =EFGA Bc=d=e:|f4|:
+F,G,A,B, C=D=EF GABc =d=ef_e _dcBA GF_E_D CB,A,G,:|F,4|:
+fedc BAGF EDCB, A,G,F,G, A,B,C=D =EFGA Bc=d=e:|f4|:
+A,B,C=D =EFGA Bc=d=e fgag f_e_dc BAGF _E_DCB,:|A,4|:
+agfe dcBA GFED CB,A,B, C=D=EF GABc =d=efg:|a4|]
+
+X:124
+T:scales_f_minor_harmonic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Fmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"F,G,A,B, CD=EF GABc d=ef=e dcBA GF=ED CB,A,G,:|F,4|:
+"Thirds"A,B,CD =EFGA Bcd=e fgag f=edc BAGF =EDCB,:|A,4|:
+"Sixths"F,G,A,B, CD=EF GABc d=ef=e dcBA GF=ED CB,A,G,:|F,4|:]
+V:2
+L:1/16
+F,G,A,B, CD=EF GABc d=ef=e dcBA GF=ED CB,A,G,:|F,4|:
+F,G,A,B, CD=EF GABc d=ef=e dcBA GF=ED CB,A,G,:|F,4|:
+A,B,CD =EFGA Bcd=e fgag f=edc BAGF =EDCB,:|A,4|]
+
+X:25
+T:scales_chromatic_ascending
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:6/4
+K:Cmaj
+V:1 treble
+V:2 bass octave=-2
+V:1
+L:1/16
+C_D=D_E =EF^FG _A=A_B=B cB_BA _AG^F=F E_ED_D:|C4|]
+V:2
+L:1/16
+C_D=D_E =EF^FG _A=A_B=B cB_BA _AG^F=F E_ED_D:|C4|]
+
+X:26
+T:scales_chromatic_descending
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:6/4
+K:Cmaj
+V:1 treble
+V:2 bass octave=-2
+V:1
+L:1/16
+cB_BA _AG^F=F E_ED_D C_D=D_E =EF^FG _A=A_B=B:|c4|]
+V:2
+L:1/16
+cB_BA _AG^F=F E_ED_D C_D=D_E =EF^FG _A=A_B=B:|c4|]

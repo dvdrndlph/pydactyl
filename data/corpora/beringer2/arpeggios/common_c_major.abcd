@@ -1,0 +1,26 @@
+% abcDidactyl v5
+% abcD fingering 1: 1231235321321124124542142&11241245421421@5421421241245542142124124&55321321231235
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-23 12:04:51
+% These are complete fingerings, with any gaps filled in.
+% abcD fingering 2: x@x
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-23 12:38:01
+% These are alternate fingerings, if specified, with gaps filled in. 
+% abcDidactyl END
+X:1
+T:arpeggios_common_c_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Cmaj
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+CEGc egc'g ecGE:|C4|:EGce gc'e'c' gecG:|E4|:Gceg c'e'g'e' c'gec:|G4||
+V:2
+L:1/16
+CEGc [K: clef=treble octave=-1] egc'g [K: clef=bass octave=-1] ecGE:|C4|:EGce [K: clef=treble octave=-1] gc'e'c' gecG [K: clef=bass octave=-1]:|E4|:Gceg [K: clef=treble octave=-1] c'e'g'e' c'gec [K: clef=bass octave=-1]:|G4||

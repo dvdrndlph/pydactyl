@@ -1,0 +1,30 @@
+% abcDidactyl v5
+% abcD fingering 1: x@x
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-13 12:38:01
+% These are complete fingerings, with any gaps filled in.
+% abcD fingering 2: x@x
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-13 12:38:01
+% These are alternate fingerings, if specified, with gaps filled in. 
+% abcDidactyl END
+X:114
+T:scales_fsharp_minor_harmonic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:F#min
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"F,G,A,B, CD^EF GABc d^ef^e dcBA GF^ED CB,A,G,:|F,4|:
+"Thirds"A,B,CD ^EFGA Bcd^e fgag f^edc BAGF ^EDCB,:|A,4|:
+"Sixths"F,G,A,B, CD^EF GABc d^ef^e dcBA GF^ED CB,A,G,:|F,4|]
+V:2
+L:1/16
+F,G,A,B, CD^EF GABc d^ef^e dcBA GF^ED CB,A,G,:|F,4|:
+F,G,A,B, CD^EF GABc d^ef^e dcBA GF^ED CB,A,G,:|F,4|:
+A,B,CD ^EFGA Bcd^e fgag f^edc BAGF ^EDCB,:|A,4|]

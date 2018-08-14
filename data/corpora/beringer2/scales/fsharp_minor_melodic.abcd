@@ -1,0 +1,36 @@
+% abcDidactyl v5
+% abcD fingering 1: x@x
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-13 12:38:01
+% These are complete fingerings, with any gaps filled in.
+% abcD fingering 2: x@x
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-13 12:38:01
+% These are alternate fingerings, if specified, with gaps filled in. 
+% abcDidactyl END
+X:14
+T:scales_fsharp_minor_melodic
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:F#min
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"Octaves"F,G,A,B, C^D^EF GABc ^d^ef=e =dcBA GF=E=D CB,A,G,:|F,4|:
+fedc BAGF EDCB, A,G,F,G, A,B,C^D ^EFGA Bc^d^e:|f4|:
+"Thirds"A,B,C^D ^EFGA Bc^d^e fgag f=e=dc BAGF =E=DCB,:|A,4|:
+agfe dcBA GFED CB,A,B, C^D^EF GABc ^d^efg:|a4|:
+"Sixths"F,G,A,B, C^D^EF GABc ^d^ef=e =dcBA GF=E=D CB,A,G,:|F,4|:
+fedc BAGF EDCB, A,G,F,G, A,B,C^D ^EFGA Bc^d^e:|f4|]
+V:2
+L:1/16
+F,G,A,B, C^D^EF GABc ^d^ef=e =dcBA GF=E=D CB,A,G,:|F,4|:
+fedc BAGF EDCB, A,G,F,G, A,B,C^D ^EFGA Bc^d^e:|f4|:
+F,G,A,B, C^D^EF GABc ^d^ef=e =dcBA GF=E=D CB,A,G,:|F,4|:
+fedc BAGF EDCB, A,G,F,G, A,B,C^D ^EFGA Bc^d^e:|f4|:
+A,B,C^D ^EFGA Bc^d^e fgag f=e=dc BAGF =E=DCB,:|A,4|:
+agfe dcBA GFED CB,A,B, C^D^EF GABc ^d^efg:|a4|]

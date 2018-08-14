@@ -1,0 +1,33 @@
+% abcDidactyl v5
+% abcD fingering 1: 1234123454321432112341234543214321&2312341232143213221234123432143212@5432143212341234554321432123412345&4321432121234123432143213231234123
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-23 22:47:57
+% These are complete fingerings, with any gaps filled in.
+% 
+% 3212 at start of second upper staff appears to be a misprint. Correcting to 2312.
+% abcD fingering 2: x@x
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-23 12:38:01
+% These are alternate fingerings, if specified, with gaps filled in. 
+% abcDidactyl END
+%%setfont-1 Bookman 11
+%%setfont-2 Helvetica-Bold 11
+%%measurenb 5
+X:48
+T:arpeggios_dim7_f
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Fmaj clef=treble octave=0
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"^$11"E"^$12"G"^$13"B"^$14"_d "^$11"e"^$12"g"^$13"b"^$14"_d' "^$15"e'"^$14"d'"^$13"b"^$12"g "^$11"e"^$14"d"^$13"B"^$12"G:|"^$11"E4|:"^$11"G"^$12"B"^$13"_d"^$14"e "^$11"g"^$12"b"^$13"_d'"^$14"e' "^$15"g'"^$14"e'"^$13"d'"^$12"b "^$11"g"^$14"e"^$13"d"^$12"B:|"^$11"G4|
+|:"^$12"B,"^$13"_D"^$11"E"^$12"G "^$13"B"^$14"_d"^$11"e"^$12"g "^$13"b"^$12"g"^$11"e"^$14"d "^$13"B"^$12"G"^$11"E"^$13"D:|"^$12"B,4|:"^$12"_D"^$11"E"^$12"G"^$13"B "^$14"_d"^$11"e"^$12"g"^$13"b "^$14"_d'"^$13"b"^$12"g"^$11"e "^$14"d"^$13"B"^$12"G"^$11"E:|"^$12"_D4||
+V:2
+L:1/16
+"_$25"E"_$24"G"_$23"B"_$22"_d [K: clef=treble octave=-1]"_$21"e"_$24"g"_$23"b"_$22"_d' "_$21"e'"_$22"d'"_$23"b"_$24"g [K: clef=bass octave=-1]"_$21"e"_$22"d"_$23"B"_$24"G:|"_$25"E4|:"_$25"G"_$24"B"_$23"_d"_$22"e [K: clef=treble octave=-1]"_$21"g"_$24"b"_$23"_d'"_$22"e' "_$21"g'"_$22"e'"_$23"d'"_$24"b "_$21"g"_$22"e"_$23"d"_$24"B:|[K: clef=bass octave=-1]"_$25"G4|
+|:"_$24"B,"_$23"_D"_$22"E"_$21"G [K: clef=treble octave=-1]"_$24"B"_$23"_d"_$22"e"_$21"g "_$22"b"_$21"g"_$22"e"_$23"d [K: clef=bass octave=-1]"_$24"B"_$21"G"_$22"E"_$23"D:|"_$24"B,4|:"_$23"_D"_$22"E"_$21"G"_$24"B [K: clef=treble octave=-1]"_$23"_d"_$22"e"_$21"g"_$23"b "_$22"_d'"_$23"b"_$21"g"_$22"e [K: clef=bass octave=-1]"_$23"d"_$24"B"_$21"G"_$22"E:|"_$23"_D4||

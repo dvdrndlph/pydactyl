@@ -1,0 +1,66 @@
+X:61
+T:Prelude 6 (BWV 851)
+C:J. S. Bach
+%%score { ( 1 2 3 ) | ( 4 5 6 ) }
+L:1/8
+Q:1/4=80.00
+M:4/4
+I:linebreak $
+K:F
+V:1 treble nm="Piano"
+L:1/16
+V:2 treble 
+V:3 treble 
+L:1/4
+V:4 bass 
+V:5 bass 
+V:6 bass 
+L:1/4
+V:1
+ z2 z A (3FDA (3FDd (3BGB (3GEG (3E^CG (3ECA | (3FDA (3FDa (3fdf (3dAd (3BGd (3BGg (3ece (3cGc |$ %2
+ (3AFc (3AFf (3dBd (3BGg (3ece (3cAa (3fdf (3dBb | %3
+ (3geg (3ecc' (3afa (3fca (3fdf (3dAf (3dBd (3BFd |$ %4
+ (3BGB (3GDB (3GCB (3GEB (3AFA (3FCF (3DB,F (3CB,E | %5
+ (3CA,F (3CA,C (3A,F,C (3A,F,C (3A,^F,C (3A,F,_E (3A,F,D (3A,F,C |$ %6
+ (3B,G,D (3B,G,D (3B,G,=E (3B,G,^F (3B,G,G (3DB,G (3_EA,G (3DA,^F | %7
+ (3DB,G (3DB,D (3B,G,D (3B,G,D (3=B,^G,D (3B,G,F (3B,G,E (3B,G,D |$ %8
+ (3CA,E (3CA,E (3CA,^F (3CA,^G (3CA,A (3ECA (3=F=B,A (3EB,^G |$ %9
+ (3ECA (3ECc (3FD_B (3GEB (3AFA (3CA,A (3D=B,G (3E^CG | %10
+ (3FDd (3AFf (3BG_e (3cAe (3dBd (3FDd (3G=Ec (3A^Fc |$ %11
+ (3BGd (3BGg (3_eGg (3dGg (3^cAg (3=ecb (3eca (3ecg | %12
+ (3fdA (3FDA (3FD=B (3FD^c (3FDd (3FDA (3FD_B (3E^CA |$ %13
+ (3E^CG (3DA,F (3DB,E (3=CF,_E (3B,F,D (3A,F,D (3B,=E,D (3A,E,^C | %14
+ (3A,^F,A, (3=CA,C (3_ECE ^F2 (3B,G,B, (3DB,D (3GDG B2- |$ %15
+ (3BGe (3BGg (3BGe (3BG^c (3BGe (3BGg (3BGe (3BGc | %16
+ (3A^Fd (3AF_e (3AFd (3AFc (3AFd (3AFe (3AFd (3AFc |$ %17
+ (3GDG (3BGB (3dBd (3gdg (3bag (3fed (3^cAc (3ece | %18
+ (3ged (3^c=BA (3GEG (3_BGB (3cGe (3cBe (3cAe (3cGe |$ %19
+ (3=cAd (3BG_e (3A^Fd (3AFc (3GDB (3G=FB (3G_EB (3GDB |$ %20
+ (3G^CB (3ECB (3ECA (3ECG (3D=B,F (3DCF (3D_B,F (3DA,F |$ %21
+ (3^CG,E (3C_B,E (3CA,E (3CG,E (3=B,^G,D (3^CG,E (3DG,F =G,2- |$ %22
+ (3G,[K:bass]E,G, (3^CG,C (3ECE[K:treble] G2 (3FDF (3AFA (3dAd f2- |$ %23
+ (3f=Bd (3fdf (3^gfg (3=bgf (3_b=ge (3a^f^d (3^g=f=d (3=ge^c |$ %24
+ (3^f_e=c (3=fd=B (3=e^c_B (3_e=cA d8 | d4 ^c4 !fermata!d8 |]$ %26
+V:2
+ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | %18
+ x8 |$ x8 |$ x8 |$ x8 |$ x/3[K:bass] x8/3[K:treble] x5 |$ x8 |$ z4 z2 [DF]2 | %25
+ [DF]2 [EG]2 [D^F]4 |]
+V:3
+ x4 | x4 |$ x4 | x4 |$ x4 | x4 |$ x4 | x4 |$ x4 |$ x4 | x4 |$ x4 | x4 |$ x4 | x4 |$ x4 | x4 |$ x4 | %18
+ x4 |$ x4 |$ x4 |$ x4 |$ x/6[K:bass] x4/3[K:treble] x5/2 |$ x4 |$ z2 z [^G=B] | A2 A2 |]$ %26
+V:4
+ D,D, D,D, D,D, D,D, | D,D, DD G,G, CC |$ F,F, B,G, CA, DD, | E,C, F,E, D,C, B,,A,, |$ %4
+ G,,F,, E,,C,, F,,A,, B,,C, | F,,2 z _E, D,C, B,,A,, |$ G,,B,, C,D, _E,B,, C,D, | %7
+ G,,2 z F, E,D, C,=B,, |$ A,,C, D,E, F,C, D,E, |$ A,,A, A,G, F,F,, F,,E,, | %10
+ D,,D, D,C, B,,B, B,A, |$ G,2 z B, A,G, F,E, | D,F, G,A, B,F, G,A, |$ B,,F,, G,,A,, B,,F,, G,,A,, | %14
+ D,,3- (3D,,/^F,,/A,,/ D,3- (3D,/G,/B,/ |$ ^CD, CD, CD, CD, | =CD, CD, CD, CD, |$ %17
+ B,D, B,D, G,D, G,D, | E,D, E,D, E,D, E,D, |$ z4 G,A, G,=F, |$ E,G, F,E, D,E, F,2 |$ %21
+ E,G, F,E, F,E, F,- (3F,/E,/D,/ |$ ^C,E, G,B, A,D FA |$ ^G z z2 z4 |$ z4 z2 [D,F,^G,]2 | %25
+ A,4 D,4 |]
+V:5
+ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | x8 |$ x8 | %18
+ x8 |$ ^F,D, F,D,- D,4- |$ D,4 ^G,,3 A,, |$ B,,4 =B,,3 _B,, |$ %22
+ A,,3- (3A,,/^C,/E,/ A,3- (3A,/D/F/ |$ x8 |$ z4 z2 =B,,2 | A,,4 !fermata!D,,4 |]
+V:6
+ x4 | x4 |$ x4 | x4 |$ x4 | x4 |$ x4 | x4 |$ x4 |$ x4 | x4 |$ x4 | x4 |$ x4 | x4 |$ x4 | x4 |$ x4 | %18
+ x4 |$ x4 |$ x4 |$ x4 |$ x4 |$ x4 |$ x4 | [D,F,] E, z2 |]

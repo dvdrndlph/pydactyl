@@ -1,0 +1,31 @@
+% abcDidactyl v5
+% abcD fingering 1: 1234123454321432123123412321432132&2123312343214321212341234543214321@5432143212341234543214321212341234&3214321323123412354321432123412345
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-23 22:29:23
+% These are complete fingerings, with any gaps filled in.
+% abcD fingering 2: x@x
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-23 12:38:01
+% These are alternate fingerings, if specified, with gaps filled in. 
+% abcDidactyl END
+%%setfont-1 Bookman 11
+%%setfont-2 Helvetica-Bold 11
+%%measurenb 5
+X:45
+T:arpeggios_dim7_aflat
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:4/4
+K:Abmaj clef=treble octave=0
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+"^$11"G,"^$12"B,"^$13"D"^$14"_F "^$11"G"^$12"B"^$13"d"^$14"_f "^$15"g"^$14"f"^$13"d"^$12"B "^$11"G"^$14"F"^$13"D"^$12"B,:|"^$11"G,4|:"^$12"B,"^$13"D"^$11"_F"^$12"G "^$13"B"^$14"d"^$11"_f"^$12"g "^$13"b"^$12"g"^$11"f"^$14"d "^$13"B"^$12"G"^$11"F"^$13"D:|"^$12"B,4|
+|:"^$12"D"^$11"_F"^$12"G"^$13"B "^$13"d"^$11"_f"^$12"g"^$13"b "^$14"d'"^$13"b"^$12"g"^$11"f "^$14"d"^$13"B"^$12"G"^$11"F:|"^$12"D4|:"^$11"_F"^$12"G"^$13"B"^$14"d "^$11"_f"^$12"g"^$13"b"^$14"d' "^$15"_f'"^$14"d'"^$13"b"^$12"g "^$11"f"^$14"d"^$13"B"^$12"G:|"^$11"_F4||
+V:2
+L:1/16
+"_$25"G,"_$24"B,"_$23"D"_$22"_F "_$21"G"_$24"B"_$23"d"_$22"_f "_$21"g"_$22"f"_$23"d"_$24"B "_$21"G"_$22"F"_$23"D"_$24"B,:|"_$25"G,4|:"_$24"B,"_$23"D"_$22"_F"_$21"G [K: clef=treble octave=-1]"_$24"B"_$23"d"_$22"_f"_$21"g "_$22"b"_$21"g"_$22"f"_$23"d [K: clef=bass octave=-1]"_$24"B"_$21"G"_$22"F"_$23"D:|"_$24"B,4|
+|:"_$23"D"_$22"_F"_$21"G"_$24"B [K: clef=treble octave=-1]"_$23"d"_$22"_f"_$21"g"_$23"b "_$22"d'"_$23"b"_$21"g"_$22"f [K: clef=bass octave=-1]"_$23"d"_$24"B"_$21"G"_$22"F:|"_$23"D4|:"_$25"_F"_$24"G"_$23"B"_$22"d [K: clef=treble octave=-1]"_$21"_f"_$24"g"_$23"b"_$22"d' "_$21"_f'"_$22"d'"_$23"b"_$24"g [K: clef=bass octave=-1]"_$21"f"_$22"d"_$23"B"_$24"G:|"_$25"_F4||
