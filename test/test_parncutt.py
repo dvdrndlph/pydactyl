@@ -3,6 +3,7 @@ import re
 import unittest
 from pydactyl.dactyler.Parncutt import Parncutt
 from pydactyl.dcorpus.DCorpus import DCorpus
+from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 import TestConstant
 
 last_digit = {
@@ -206,7 +207,7 @@ solutions = {
 
 class ParncuttTest(unittest.TestCase):
     def test_four_note_example(self):
-        parncutt = Parncutt()
+        parncutt = Parncutt(segmenter=ManualDSegmenter())
         parncutt.segment_combination_method(method="cost")
         d_corpus = DCorpus(corpus_str=TestConstant.FOUR_NOTES)
         parncutt.load_corpus(d_corpus=d_corpus)

@@ -32,7 +32,7 @@ from pydactyl.dcorpus.DNote import DNote
 
 NO_MIDI = -1
 
-finger_span = {
+FINGER_SPANS = {
     ('>1', '>1'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
     ('>2', '>2'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
     ('>3', '>3'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
@@ -126,7 +126,6 @@ def is_between(midi, midi_left, midi_right):
 
 
 class Parncutt(D.Dactyler):
-
     def init_rule_weights(self):
         self._weights = {
             'str': 1,
@@ -143,14 +142,22 @@ class Parncutt(D.Dactyler):
             'pa1': 1
         }
 
-    def __init__(self, pruning_method='max'):
+    def __init__(self, pruning_method='max', finger_spans=None):
         super().__init__()
+        self._finger_spans = FINGER_SPANS
+        if finger_spans:
+            self._finger_spans = finger_spans
         self._costs = {}
         self._pruned_count = -1  # The count of playable fingerings for the problem solved last.
         self._pruning_method = None
         self.pruning_method(method=pruning_method)
         self._weights = {}
         self.init_rule_weights()
+
+    def finger_spans(self, finger_spans=None):
+        if finger_spans is not None:
+            self._finger_spans = finger_spans
+        return self._finger_spans
 
     def pruned_count(self, pruned_count=None):
         if pruned_count is not None:
@@ -186,12 +193,12 @@ class Parncutt(D.Dactyler):
         if self.pruning_method() == 'none':
             return True
 
-        if (from_digit, to_digit) not in finger_span:
+        if (from_digit, to_digit) not in self._finger_spans:
             # print("BAD {0} to {1} trans of span {2}".format(from_digit, to_digit, required_span))
             return False
 
-        max_prac = finger_span[(from_digit, to_digit)]['MaxPrac']
-        min_prac = finger_span[(from_digit, to_digit)]['MinPrac']
+        max_prac = self._finger_spans[(from_digit, to_digit)]['MaxPrac']
+        min_prac = self._finger_spans[(from_digit, to_digit)]['MinPrac']
 
         if self.pruning_method() == 'max' and required_span <= max_prac:
             return True
@@ -340,10 +347,10 @@ class Parncutt(D.Dactyler):
         if digit_1:
             # Handle all the two-note costs, which will be calculated based on midi_1 and midi_2.
             semitone_diff_12 = midi_2 - midi_1
-            max_comf_12 = finger_span[(handed_digit_1, handed_digit_2)]['MaxComf']
-            min_comf_12 = finger_span[(handed_digit_1, handed_digit_2)]['MinComf']
-            min_rel_12 = finger_span[(handed_digit_1, handed_digit_2)]['MinRel']
-            max_rel_12 = finger_span[(handed_digit_1, handed_digit_2)]['MaxRel']
+            max_comf_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxComf']
+            min_comf_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinComf']
+            min_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinRel']
+            max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
 
             # Rule 10 ("Thumb-on-Black")
             # "Assign 1 point whenever the thumb plays a black key." (Assessed above.)
@@ -421,10 +428,10 @@ class Parncutt(D.Dactyler):
 
         if digit_1 and digit_3:
             semitone_diff_13 = midi_3 - midi_1
-            max_comf_13 = finger_span[(handed_digit_1, handed_digit_3)]['MaxComf']
-            min_comf_13 = finger_span[(handed_digit_1, handed_digit_3)]['MinComf']
-            max_prac_13 = finger_span[(handed_digit_1, handed_digit_3)]['MaxPrac']
-            min_prac_13 = finger_span[(handed_digit_1, handed_digit_3)]['MinPrac']
+            max_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxComf']
+            min_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MinComf']
+            max_prac_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxPrac']
+            min_prac_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MinPrac']
 
             # Rule 4 ("Position-Change-Count")
             # "Assign 2 points for every full change of hand position and 1 point for every half change.

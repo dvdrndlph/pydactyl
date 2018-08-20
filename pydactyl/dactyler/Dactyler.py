@@ -43,36 +43,36 @@ class Dactyler(ABC):
     SQUAWK_OUT_LOUD = False
     DELETE_LOG = True
 
-    def __init__(self, segmenting=False):
+    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive"):
         self._d_corpus = None
         timestamp = datetime.now().isoformat()
         self._log_file_path = '/tmp/dactyler_' + self.__class__.__name__ + '_' + timestamp + '.log'
         self._log = open(self._log_file_path, 'a')
-        self._segmenting = segmenting
-
+        self._segmenter = segmenter
         # One of "cost," "normal," or "rank"
-        self._segment_combination_method = "normal"
-        self._staff_combination_method = "naive"
+        self._segment_combiner = segment_combiner
+
+        self._staff_combiner = staff_combiner
 
     def __del__(self):
         self._log.close()
         if Dactyler.DELETE_LOG:
             os.remove(self._log_file_path)
 
-    def segmenting(self, segmenting=None):
-        if segmenting is None:
-            return self._segmenting
-        self._segmenting = segmenting
+    def segmenter(self, segmenter=None):
+        if segmenter is None:
+            return self._segmenter
+        self._segmenter = segmenter
 
-    def segment_combination_method(self, method=None):
+    def segment_combiner(self, method=None):
         if method is None:
-            return self._segment_combination_method
-        self._segment_combination_method = method
+            return self._segment_combiner
+        self._segment_combiner = method
 
-    def staff_combination_method(self, method=None):
+    def staff_combiner(self, method=None):
         if method is None:
-            return self._staff_combination_method
-        self._staff_combination_method = method
+            return self._staff_combiner
+        self._staff_combiner = method
 
 
     @staticmethod
@@ -111,7 +111,7 @@ class Dactyler(ABC):
     def combine_staves(self, upper_suggestions, upper_costs, upper_details, upper_length,
                        lower_suggestions, lower_costs, lower_details, lower_length, k=1):
         """
-        Apply the staff_combination_method to combine solutions for upper and lower staves.
+        Apply the staff_combiner to combine solutions for upper and lower staves.
         :param upper_suggestions:
         :param upper_costs:
         :param lower_suggestions:
@@ -125,7 +125,7 @@ class Dactyler(ABC):
         suggestions = list()
         costs = list()
         details = list()
-        if self.staff_combination_method() == "naive":
+        if self.staff_combiner() == "naive":
             if len(upper_suggestions) == len(lower_suggestions):
                 for i in range(len(upper_suggestions)):
                     suggestions.append(upper_suggestions[i] + "@" + lower_suggestions[i])
@@ -135,8 +135,8 @@ class Dactyler(ABC):
                     upper_index = lower_index // len(lower_suggestions)
                     suggestions.append(upper_suggestions[upper_index] + "@" + lower_suggestions[lower_index])
                     costs.append(upper_costs[upper_index] + lower_costs[lower_index])
-                    details.extend(upper_details[i])
-                    details.extend(lower_details[i])
+                    details.extend(upper_details[upper_index])
+                    details.extend(lower_details[lower_index])
             else:
                 for upper_index in range(len(upper_suggestions)):
                     lower_index = upper_index // len(upper_suggestions)
@@ -159,7 +159,7 @@ class Dactyler(ABC):
         agreement among pianists. It might be better to normalize the cost by the number of notes in the segment
         or even to only look at the ordinal rank of segment suggestions, so we see a similar amount of variability
         for each segment. These three costing approaches are supported here, and must be specified in via the
-        self.segment_combination_method as one of "cost," "normal," or "rank."
+        self.segment_combiner() as one of "cost," "normal," or "rank."
         :param suggestions_for_segment: A list of lists of suggested fingerings for each segment.
         :param costs_for_segment: A corresponding list of lists of costs for each suggestion.
         :param details_for_segment: A corresponding list of data structures detailing how the cost
@@ -170,7 +170,7 @@ class Dactyler(ABC):
         but will be no more, than this number.
         :return: suggestions, costs, details: Three lists are returned. The first contains suggested fingering
         solutions as abcDF strings. The second contains the respective costs of each complete suggestion, adjusted
-        per self.segment_combination_method. The third contains the pre-adjusted cost details for each suggestion.
+        per self.segment_combiner(). The third contains the pre-adjusted cost details for each suggestion.
         (The format of these details varies by algorithm used.)
         """
         g = nx.DiGraph()
@@ -186,14 +186,14 @@ class Dactyler(ABC):
             for suggestion_id in range(len(suggestions)):
                 g.add_node(node_id, suggestion=suggestions[suggestion_id])
                 for prior_node_id in prior_slice_node_ids:
-                    if self._segment_combination_method == 'cost':
+                    if self.segment_combiner() == 'cost':
                         cost = costs[suggestion_id]
-                    elif self._segment_combination_method == 'normal':
+                    elif self.segment_combiner() == 'normal':
                         cost = costs[suggestion_id] / segment_lengths[segment_index]
-                    elif self._segment_combination_method == 'rank':
+                    elif self.segment_combiner() == 'rank':
                         cost = suggestion_id
                     else:
-                        raise Exception("Unsupported method: {0}".format(self._segment_combination_method))
+                        raise Exception("Unsupported method: {0}".format(self.segment_combiner()))
                     g.add_edge(prior_node_id, node_id, weight=cost, details=details[suggestion_id])
                 slice_node_ids.append(node_id)
                 node_id += 1
@@ -406,7 +406,7 @@ class Dactyler(ABC):
         :param score_index:
         :param staff: One of "upper," "lower," or "both." Note that requesting "both" staves will result in
         the pairwise combination of k suggestions from upper and lower staves and the conflation of the staff
-        costs if the default "naive" staff_combination_method is used. We only guarantees that the first suggestion
+        costs if the default "naive" staff_combiner() is used. We only guarantees that the first suggestion
         returned is globally optimal. Additional combination methods may be provided, but the caller should
         generate advice for upper and lower staves separately to be able to combine advice more intelligently.
         :param cycle: Detect repeating note patterns of at least this length within each segment and generate
