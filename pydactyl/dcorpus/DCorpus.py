@@ -29,6 +29,7 @@ from pydactyl.dactyler import Constant
 
 from .DScore import DScore
 from .ABCDHeader import ABCDHeader
+from .ManualDSegmenter import ManualDSegmenter
 
 
 class DCorpus:
@@ -107,11 +108,13 @@ class DCorpus:
                 corp = converter.parse(corpus_path)
                 if isinstance(corpus, stream.Opus):
                     for score in corp:
-                        d_score = DScore(music21_stream=score)
+                        d_score = DScore(music21_stream=score, segmenter=self.segmenter(),
+                                         abcd_header=DCorpus.abcd_header(corpus_path=corpus_path))
                         self._d_scores.append(d_score)
                 else:
                     score = corp
-                    d_score = DScore(music21_stream=score)
+                    d_score = DScore(music21_stream=score, segmenter=self.segmenter(),
+                                     abcd_header=DCorpus.abcd_header(corpus_path=corpus_path))
                     self._d_scores.append(d_score)
         elif corpus_str:
             corpus_type = DCorpus.corpus_type(corpus_str=corpus_str)
@@ -142,9 +145,10 @@ class DCorpus:
             for score_id in ah_for_id:
                 if len(staff_assignments) > 0:
                     d_score = DScore(abc_handle=ah_for_id[score_id], abcd_header=abcd_header,
-                                     voice_map=staff_assignments[score_index])
+                                     voice_map=staff_assignments[score_index], segmenter=self.segmenter())
                 else:
-                    d_score = DScore(abc_handle=ah_for_id[score_id], abcd_header=abcd_header)
+                    d_score = DScore(abc_handle=ah_for_id[score_id], abcd_header=abcd_header,
+                                     segmenter=self.segmenter())
                 self._d_scores.append(d_score)
                 score_index += 1
 
@@ -159,13 +163,22 @@ class DCorpus:
                 overall_high = high
         return overall_low, overall_high
 
-    def __init__(self, corpus_path=None, corpus_str=None):
+    def segmenter(self, segmenter=None):
+        if segmenter:
+            # FIXME: Broadcast change to components.
+            self._segmenter = segmenter
+        return self._segmenter
+
+    def __init__(self, corpus_path=None, corpus_str=None, paths=[], segmenter=ManualDSegmenter()):
         self._conn = None
         self._d_scores = []
+        self._segmenter = segmenter
         if corpus_path:
             self.append(corpus_path=corpus_path)
         if corpus_str:
             self.append(corpus_str=corpus_str)
+        for path in paths:
+            self.append(corpus_path=path)
 
     def __del__(self):
         if self._conn:

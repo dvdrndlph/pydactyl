@@ -23,13 +23,41 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 from music21 import *
 from pydactyl.dactyler import Constant
+from .DSegmenter import DSegmenter
+from .DNote import DNote
 
 
-class ManualDSegmenter():
+class ManualDSegmenter(DSegmenter):
     """A manual phrase-segmentation algorithm. Requires """
 
-    def __init__(self):
+    def __init__(self, d_annotation=None):
+        self._d_annotation = d_annotation
         return
 
-    def segment(self, d_part, abcd_header):
-        return
+    def d_annotation(self, d_annotation=None):
+        if d_annotation:
+            self._d_annotation = d_annotation
+        return d_annotation
+
+    def segment_to_orderly_streams(self, d_part, offset=0):
+        orderly_stream = d_part.orderly_note_stream(offset=offset)
+        staff = d_part.staff()
+        if staff == "both":
+            staff = "upper"
+        new_note_streams = list()
+        stream_index = 0
+        new_note_stream = stream.Score()
+        note_index = -1
+        for note in orderly_stream:
+            note_index += 1
+            if note_index < offset:
+                continue
+            new_note_stream.append(note)
+            if self._d_annotation.phrase_mark_at_index(note_index):
+                new_note_streams.append(new_note_stream)
+                new_note_stream = stream.Score()
+                stream_index += 1
+        if len(new_note_stream) > 0:
+            new_note_streams.append(new_note_stream)
+
+        return new_note_streams

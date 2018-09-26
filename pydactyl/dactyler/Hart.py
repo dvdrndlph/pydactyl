@@ -150,8 +150,9 @@ class Hart(D.Dactyler):
         f.close()
         return costs
 
-    def __init__(self, cost_path=None, max_interval_size=MAX_INTERVAL_SIZE):
-        super().__init__()
+    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
+                 cost_path=None, max_interval_size=MAX_INTERVAL_SIZE):
+        super().__init__(segmenter=segmenter, segment_combiner=segment_combiner, staff_combiner=staff_combiner)
         self._cost_path = COST_FILE
         if cost_path:
             self._cost_path = cost_path

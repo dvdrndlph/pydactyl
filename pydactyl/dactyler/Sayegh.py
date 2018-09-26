@@ -38,8 +38,8 @@ from pydactyl.dcorpus.DNote import DNote
 
 class Sayegh(D.TrainedDactyler):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive"):
+        super().__init__(segmenter=segmenter, segment_combiner=segment_combiner, staff_combiner=staff_combiner)
         self._training = dict()  # W' in the Sayegh paper.
 
     @staticmethod

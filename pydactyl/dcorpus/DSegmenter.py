@@ -29,6 +29,6 @@ class DSegmenter(ABC):
     def __init__(self):
         return
 
-    @abstractmethod
-    def segment(self, d_part, abcd_header):
+    # @abstractmethod
+    def segment_to_orderly_streams(self, d_part, offset=0):
         return

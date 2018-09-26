@@ -207,8 +207,8 @@ solutions = {
 
 class ParncuttTest(unittest.TestCase):
     def test_four_note_example(self):
-        parncutt = Parncutt(segmenter=ManualDSegmenter())
-        parncutt.segment_combination_method(method="cost")
+        parncutt = Parncutt(segmenter=ManualDSegmenter(), segment_combiner="cost")
+        # parncutt.segment_combiner(method="cost")
         d_corpus = DCorpus(corpus_str=TestConstant.FOUR_NOTES)
         parncutt.load_corpus(d_corpus=d_corpus)
         suggestions, costs, details = parncutt.generate_advice(staff="upper", k=2)

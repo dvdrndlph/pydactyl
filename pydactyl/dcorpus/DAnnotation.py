@@ -33,14 +33,14 @@ class DAnnotation:
         staff = '&'.{line};
         line = {score_fingering}* ;
 
-        score_fingering = orn:ornamental ["/" alt_orn:ornamental]
-        | pf:pedaled_fingering ['/' alt_pf:pedaled_fingering]
-        | p:pedaling ['/' alt_p:pedaling]
+        score_fingering = orn:ornamental ["/" alt_orn:ornamental] segmenter:[segmenter]
+        | pf:pedaled_fingering ['/' alt_pf:pedaled_fingering] segmenter:[segmenter]
+        | p:pedaling ['/' alt_p:pedaling] segmenter:[segmenter]
         ;
 
         ornamental = ornaments:('(' {pedaled_fingering}+ ')') ;
 
-        pedaled_fingering = soft:[soft] fingering:fingering damper:[damper] segmenter:[segmenter];
+        pedaled_fingering = soft:[soft] fingering:fingering damper:[damper] ;
         pedaling = soft:{soft}+ 'x' damper:{damper}+ ;
 
         fingering = strike:finger ['-' release:finger] ;
@@ -80,6 +80,11 @@ class DAnnotation:
         sf = self.score_fingering_at_index(staff=staff, index=index)
         strike = sf.pf.fingering.strike
         return strike.digit
+
+    def phrase_mark_at_index(self, index, staff="upper"):
+        sf = self.score_fingering_at_index(staff=staff, index=index)
+        segger = sf.segmenter
+        return segger
 
     def parse_upper(self):
         upper_abcdf = self.upper_abcdf()

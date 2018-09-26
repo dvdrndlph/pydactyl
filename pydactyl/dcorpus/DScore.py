@@ -25,6 +25,7 @@ import re
 from music21 import *
 from pydactyl.dactyler import Constant
 from .DPart import DPart
+from .ManualDSegmenter import ManualDSegmenter
 
 
 class DScore:
@@ -37,17 +38,22 @@ class DScore:
             return int(voice_id)
         return None
 
-    def __init__(self, music21_stream=None, segmenter=None, abc_handle=None, voice_map=None, abcd_header=None):
+    def __init__(self, music21_stream=None, segmenter=ManualDSegmenter(), abc_handle=None,
+                 voice_map=None, abcd_header=None):
         self._abcd_header = abcd_header
+        if type(segmenter) is ManualDSegmenter and not segmenter.d_annotation():
+            segmenter.d_annotation(abcd_header.annotation())
+        self._segmenter = segmenter
+
         if music21_stream:
-            self._combined_d_part = DPart(music21_stream=music21_stream, segmenter=segmenter)
+            self._combined_d_part = DPart(music21_stream=music21_stream, segmenter=segmenter, staff="both")
             self._score = music21_stream
             meta = self._score[0]
             self._title = meta.title
         elif abc_handle:
             self._title = abc_handle.getTitle()
             music21_stream = abcFormat.translate.abcToStreamScore(abc_handle)
-            self._combined_d_part = DPart(music21_stream=music21_stream, segmenter=segmenter)
+            self._combined_d_part = DPart(music21_stream=music21_stream, segmenter=segmenter, staff="both")
 
             self._lower_d_part = None
             self._upper_d_part = None
@@ -79,9 +85,11 @@ class DScore:
                         lower_ah = lower_ah + voice
 
                 upper_stream = abcFormat.translate.abcToStreamScore(upper_ah)
-                self._upper_d_part = DPart(music21_stream=upper_stream, segmenter=segmenter)
+                self._upper_d_part = DPart(music21_stream=upper_stream, segmenter=segmenter, staff="upper")
                 lower_stream = abcFormat.translate.abcToStreamScore(lower_ah)
-                self._lower_d_part = DPart(music21_stream=lower_stream, segmenter=segmenter)
+                self._lower_d_part = DPart(music21_stream=lower_stream, segmenter=segmenter, staff="lower")
+
+
 
     def is_monophonic(self):
         return self._combined_d_part.is_monophonic()

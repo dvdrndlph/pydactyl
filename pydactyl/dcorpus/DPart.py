@@ -26,9 +26,16 @@ from .DNote import DNote
 
 
 class DPart:
-    def __init__(self, music21_stream, segmenter=None):
+    def __init__(self, music21_stream, segmenter=None, staff="both"):
         self._stream = music21_stream
         self._segmenter = segmenter
+        self._staff = staff
+
+    def segmenter(self):
+        return self._segmenter;
+
+    def staff(self):
+        return self._staff;
 
     @staticmethod
     def stream_has_chords(music21_stream):
@@ -60,9 +67,10 @@ class DPart:
         return True
 
     def orderly_note_stream_segments(self, offset=0):
-        if not self._segmenter:
+        if self._segmenter:
+            return self._segmenter.segment_to_orderly_streams(d_part=self, offset=offset)
+        else:
             return [self.orderly_note_stream(offset=offset)]
-        raise Exception("Automatic segmentation not yet implemented.")
 
     def orderly_note_stream(self, offset=0):
         """Return part as stream of notes with no notes starting at the same
@@ -155,3 +163,4 @@ class DPart:
 
     def stream(self):
         return self._stream
+

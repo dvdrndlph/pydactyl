@@ -116,7 +116,7 @@ L:1/4
 C,2E,2|]"""
 
 FOUR_NOTES = """% abcDidactyl v5
-% abcD fingering 1: 12@21
+% abcD fingering 1: 31,31@13;12.
 % Authority: Foo Bar (1968)
 % Transcriber: David Randolph
 % Transcription date: 2016-09-13 17:24:43
