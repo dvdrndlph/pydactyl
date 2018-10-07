@@ -151,7 +151,7 @@ class Parncutt(D.Dactyler):
         if finger_spans:
             self._finger_spans = finger_spans
         self._costs = {}
-        self._pruned_count = -1  # The count of playable fingerings for the problem solved last.
+        self._last_segment_all_paths = None  # Generator of all paths for last segment processed.
         self._pruning_method = None
         self.pruning_method(method=pruning_method)
         self._weights = {}
@@ -162,10 +162,15 @@ class Parncutt(D.Dactyler):
             self._finger_spans = finger_spans
         return self._finger_spans
 
-    def pruned_count(self, pruned_count=None):
-        if pruned_count is not None:
-            self._pruned_count = pruned_count
-        return self._pruned_count
+    def last_segment_all_paths(self, all_paths=None):
+        if all_paths:
+            self._last_segment_all_paths = all_paths
+        return self._last_segment_all_paths
+
+    def last_segment_pruned_count(self):
+        if self.last_segment_all_paths():
+            return len(list(self._last_segment_all_paths))
+        return 0
 
     def pruning_method(self, method=None):
         if method is not None:
@@ -682,14 +687,13 @@ class Parncutt(D.Dactyler):
         fn_graph = self.fingered_note_nx_graph(segment=segment, hand=hand,
                                                handed_first_digit=handed_first_digit,
                                                handed_last_digit=handed_last_digit)
-        nx.write_graphml(fn_graph, "/Users/dave/goo.graphml")
+        # nx.write_graphml(fn_graph, "/Users/dave/goo.graphml")
 
         trigram_graph, target_node_id = self.trigram_nx_graph(fn_graph=fn_graph)
         all_paths = nx.all_simple_paths(trigram_graph, source=0, target=target_node_id)
-        self.pruned_count(len(list(all_paths)))
-        # print("Playable fingerings: {0}".format(self.pruned_count()))
-        trigram_graphmlized = Parncutt.graphmlize(trigram_graph)
-        nx.write_graphml(trigram_graphmlized, "/Users/dave/gootri.graphml")
+        self.last_segment_all_paths(all_paths)
+        # trigram_graphmlized = Parncutt.graphmlize(trigram_graph)
+        # nx.write_graphml(trigram_graphmlized, "/Users/dave/gootri.graphml")
         suggestions, costs, details = self.k_best_advice(g=trigram_graph, target_id=target_node_id, k=k_to_use)
 
         # FIXME too

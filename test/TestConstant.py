@@ -115,8 +115,8 @@ V:2
 L:1/4
 C,2E,2|]"""
 
-FOUR_NOTES = """% abcDidactyl v5
-% abcD fingering 1: 31,31@13;12.
+FOUR_NOTES = """% abcDidactyl v6
+% abcD fingering 1: 3131@1312
 % Authority: Foo Bar (1968)
 % Transcriber: David Randolph
 % Transcription date: 2016-09-13 17:24:43
@@ -137,6 +137,26 @@ ACAe|]
 V:2
 L:1/4
 ACAe|]
+"""
+
+MALODY = """﻿% abcDidactyl v6
+% abcD fingering 1: 512122.13231313123;231223.@15-155232.2.
+% Authority: Joe Ivory (1847)
+% Transcriber: David Bartleby
+% Transcription date: 2018-08-21 12:49:02
+% Joe Ivory is a mythical pianist.
+% This is an example.
+% abcDidactyl END
+X:1
+X:1
+T:Malody
+M:C
+K:C
+V:1 treble
+!ff!c/C/E/F/ A/A/zz4|egfg egdg|cD'e2 abga|\
+[Ac]8|]
+V:2 bass
+z8|C3C,3 C,,2-|C,,2 C,3 D/E/ z2|z2 A,,6|]
 """
 
 A_MAJ_SCALE = """% abcDidactyl v5

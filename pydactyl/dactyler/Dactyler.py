@@ -535,6 +535,9 @@ class Dactyler(ABC):
         else:
             raise Exception("No corpus specified for Dactyler.")
 
+        if self.segmenter():
+            self._d_corpus.segmenter(self.segmenter())
+
     @staticmethod
     def strike_distance_cost(gold_hand, gold_digit, test_hand, test_digit, method="hamming"):
         if method == "hamming":
@@ -826,8 +829,8 @@ class Dactyler(ABC):
 
 
 class TrainedDactyler(Dactyler):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive"):
+        super().__init__(segmenter=segmenter, segment_combiner=segment_combiner, staff_combiner=staff_combiner)
         self._training = {}
 
     @abstractmethod

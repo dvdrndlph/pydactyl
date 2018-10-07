@@ -31,11 +31,13 @@ class DPart:
         self._segmenter = segmenter
         self._staff = staff
 
-    def segmenter(self):
-        return self._segmenter;
+    def segmenter(self, segmenter=None):
+        if segmenter:
+            self._segmenter = segmenter
+        return self._segmenter
 
     def staff(self):
-        return self._staff;
+        return self._staff
 
     @staticmethod
     def stream_has_chords(music21_stream):

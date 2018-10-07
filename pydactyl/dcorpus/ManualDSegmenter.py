@@ -37,22 +37,19 @@ class ManualDSegmenter(DSegmenter):
     def d_annotation(self, d_annotation=None):
         if d_annotation:
             self._d_annotation = d_annotation
-        return d_annotation
+        return self._d_annotation
 
     def segment_to_orderly_streams(self, d_part, offset=0):
         orderly_stream = d_part.orderly_note_stream(offset=offset)
-        staff = d_part.staff()
-        if staff == "both":
-            staff = "upper"
         new_note_streams = list()
         stream_index = 0
         new_note_stream = stream.Score()
         note_index = -1
-        for note in orderly_stream:
+        for knot in orderly_stream:
             note_index += 1
             if note_index < offset:
                 continue
-            new_note_stream.append(note)
+            new_note_stream.append(knot)
             if self._d_annotation.phrase_mark_at_index(note_index):
                 new_note_streams.append(new_note_stream)
                 new_note_stream = stream.Score()

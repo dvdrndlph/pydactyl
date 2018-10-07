@@ -1,3 +1,4 @@
+__author__ = 'David Randolph'
 # Copyright (c) 2018 David A. Randolph.
 #
 # Permission is hereby granted, free of charge, to any person
@@ -20,41 +21,25 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-####################################################################################
-# File: test
-# Author: David Randolph
-# Date: 18 January 2018
-# Purpose: Set up test environment and execute specified unit tests.
-#          NOTE: Must be run from the directory that holds this script.
-# Usage: Run all tests:
-#            $ ./test all
-#
-#        Run test_hart.py script:
-#            $ ./test hart
-####################################################################################
-# set -x
-# MODULES="dactyler d_corpus hart interval"
-# hart_k segment
-MODULES="abcd_header d_corpus hart sayegh parncutt"
+from music21 import *
+from .DSegmenter import DSegmenter
 
-cd ..
-export PYTHONPATH=$(pwd)
-cd -
-export PYTHONPATH=$PYTHONPATH:$(pwd)
-export PYTHONPATH=/Users/dave/tb2/music21:$PYTHONPATH
-if [[ "$1" == 'all' ]]
-then
-    modules=$MODULES
-else
-    modules=$@
-fi
 
-for module in $modules
-do
-    echo Testing $module
-    ./test_${module}.py
-    if [[ $? != 0 ]]
-    then
-        exit 1
-    fi 
-done
+class OneDSegmenter(DSegmenter):
+    """A degenerate phrase segmenter that always returns one segment."""
+
+    def __init__(self, d_annotation=None):
+        self._d_annotation = d_annotation
+        return
+
+    def segment_to_orderly_streams(self, d_part, offset=0):
+        orderly_stream = d_part.orderly_note_stream(offset=offset)
+        new_note_stream = stream.Score()
+        note_index = -1
+        for knot in orderly_stream:
+            note_index += 1
+            if note_index < offset:
+                continue
+            new_note_stream.append(knot)
+
+        return [new_note_stream]

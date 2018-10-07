@@ -165,11 +165,12 @@ class DCorpus:
 
     def segmenter(self, segmenter=None):
         if segmenter:
-            # FIXME: Broadcast change to components.
             self._segmenter = segmenter
+            for d_score in self._d_scores:
+                d_score.segmenter(segmenter)
         return self._segmenter
 
-    def __init__(self, corpus_path=None, corpus_str=None, paths=[], segmenter=ManualDSegmenter()):
+    def __init__(self, corpus_path=None, corpus_str=None, paths=[], segmenter=None):
         self._conn = None
         self._d_scores = []
         self._segmenter = segmenter

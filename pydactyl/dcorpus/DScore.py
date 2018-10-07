@@ -38,13 +38,25 @@ class DScore:
             return int(voice_id)
         return None
 
-    def __init__(self, music21_stream=None, segmenter=ManualDSegmenter(), abc_handle=None,
-                 voice_map=None, abcd_header=None):
-        self._abcd_header = abcd_header
-        if type(segmenter) is ManualDSegmenter and not segmenter.d_annotation():
-            segmenter.d_annotation(abcd_header.annotation())
-        self._segmenter = segmenter
+    def abcd_header(self, abcd_header=None):
+        if abcd_header:
+            self._abcd_header = abcd_header
+        return self._abcd_header
 
+    def segmenter(self, segmenter=None):
+        if segmenter:
+            self._segmenter = segmenter
+            if type(segmenter) is ManualDSegmenter and self.abcd_header() and not segmenter.d_annotation():
+                segmenter.d_annotation(self._abcd_header.annotation())
+            self._combined_d_part.segmenter(segmenter)
+            if self.lower_d_part():
+                self._lower_d_part.segmenter(segmenter)
+            if self.upper_d_part():
+                self._lower_d_part.segmenter(segmenter)
+        return self._segmenter
+
+    def __init__(self, music21_stream=None, segmenter=None, abc_handle=None,
+                 voice_map=None, abcd_header=None):
         if music21_stream:
             self._combined_d_part = DPart(music21_stream=music21_stream, segmenter=segmenter, staff="both")
             self._score = music21_stream
@@ -89,7 +101,10 @@ class DScore:
                 lower_stream = abcFormat.translate.abcToStreamScore(lower_ah)
                 self._lower_d_part = DPart(music21_stream=lower_stream, segmenter=segmenter, staff="lower")
 
-
+        self._abcd_header = abcd_header
+        # self.abcd_header(abcd_header)
+        self._segmenter = None
+        self.segmenter(segmenter)
 
     def is_monophonic(self):
         return self._combined_d_part.is_monophonic()

@@ -6,7 +6,7 @@ from pydactyl.dcorpus.DCorpus import DCorpus
 import TestConstant
 
 
-class HartTest(unittest.TestCase):
+class HartKTest(unittest.TestCase):
     @staticmethod
     def test_hart_edges():
         hart = HartK()
@@ -50,7 +50,8 @@ class HartTest(unittest.TestCase):
         hart = HartK()
         d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE_SHORT)
         hart.load_corpus(d_corpus=d_corpus)
-
+        both_advice = hart.advise(staff="both")
+        print(both_advice)
         evaluations = hart.evaluate_pivot_alignment(staff="both")
         for ev in evaluations:
             print(ev)

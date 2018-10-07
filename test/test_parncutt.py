@@ -213,108 +213,106 @@ class ParncuttTest(unittest.TestCase):
         parncutt.load_corpus(d_corpus=d_corpus)
         suggestions, costs, details = parncutt.generate_advice(staff="upper", k=2)
         self.assertEqual(len(suggestions), 2, "No loops in that dog in top ten")
-        parncutt.report_on_advice(suggestions, costs, details)
+        # parncutt.report_on_advice(suggestions, costs, details)
 
-    # @staticmethod
-    # def test_cycles():
-    #     parncutt = Parncutt()
-    #     parncutt.segment_combination_method(method="cost")
-    #     d_corpus = DCorpus(corpus_str=TestConstant.FOUR_NOTES)
-    #     parncutt.load_corpus(d_corpus=d_corpus)
-    #     suggestions, costs, details = parncutt.generate_advice(staff="upper", cycle=4, k=2)
-    #     assert len(suggestions) == 2, "No loops in that dog in top ten"
-    #     parncutt.report_on_advice(suggestions, costs, details)
-    #     d_corpus = DCorpus(corpus_str=TestConstant.PARNCUTT_HUMAN_FRAGMENT['B'])
-    #     parncutt.load_corpus(d_corpus=d_corpus)
-    #     suggestions, costs, details = parncutt.generate_advice(staff="upper", cycle=4, k=16)
-    #     assert len(suggestions) == 16, "There should be 16 cyclic fingerings!"
-    #     parncutt.report_on_advice(suggestions, costs, details)
-    #
-    # @staticmethod
-    # def test_fingering_counts():
-    #     parncutt = Parncutt(pruning_method="none")
-    #     parncutt.segment_combination_method(method="cost")
-    #     d_corpus = DCorpus(corpus_str=TestConstant.FOUR_NOTES)
-    #     parncutt.load_corpus(d_corpus=d_corpus)
-    #     suggestions, costs, details = parncutt.generate_advice(staff="upper", k=2)
-    #     assert parncutt.pruned_count() == 320, "Bad none pruning on open-ended problem"
-    #     suggestions, costs, details = parncutt.generate_advice(staff="upper", last_digit=5, k=10)
-    #     print(suggestions)
-    #     print(parncutt.pruned_count())
-    #
-    # @staticmethod
-    # def test_sma_lar():
-    #     parncutt = Parncutt()
-    #     parncutt.segment_combination_method(method="cost")
-    #
-    #     for id in sma_lar_sums:
-    #         d_corpus = DCorpus(corpus_str=TestConstant.PARNCUTT_HUMAN_FRAGMENT[id])
-    #         parncutt.load_corpus(d_corpus=d_corpus)
-    #         if id == 'B':
-    #             suggestions, costs, details = parncutt.generate_advice(staff="upper", cycle=4, k=20)
-    #         else:
-    #             suggestions, costs, details = parncutt.generate_advice(staff="upper", last_digit=last_digit[id], k=20)
-    #         details_for_sugg = dict()
-    #         for i in range(len(details)):
-    #             details_for_sugg[suggestions[i]] = details[i][0]  # 0 index because we only have one segment
-    #
-    #         # parncutt.report_on_advice(suggestions, costs, details)
-    #         for gold_sugg in sma_lar_sums[id]:
-    #             assert gold_sugg in details_for_sugg,\
-    #                 "Missing suggestion {0} in {1}".format(gold_sugg, id)
-    #             sma = details_for_sugg[gold_sugg]['sma']
-    #             lar = details_for_sugg[gold_sugg]['lar']
-    #             assert sma + lar == sma_lar_sums[id][gold_sugg],\
-    #                 "Bad sma + lar total for {0} in {1}".format(gold_sugg, id)
-    #
-    # @staticmethod
-    # def test_bl1():
-    #     parncutt = Parncutt()
-    #     parncutt.segment_combination_method(method="cost")
-    #     midi_1 = None
-    #     handed_digit_1 = '-'
-    #     midi_2 = 61
-    #     handed_digit_2 = '>1'
-    #     midi_3 = 65
-    #     handed_digit_3 = '>3'
-    #
-    #     cost, costs = parncutt.trigram_node_cost(midi_1, handed_digit_1, midi_2, handed_digit_2, midi_3, handed_digit_3)
-    #     assert costs['bl1'] == 3, "Bad bl1 cost"
-    #
-    # @staticmethod
-    # def test_good_rules():
-    #     parncutt = Parncutt()
-    #     parncutt.segment_combination_method(method="cost")
-    #
-    #     for id in subcosts:
-    #         d_corpus = DCorpus(corpus_str=TestConstant.PARNCUTT_HUMAN_FRAGMENT[id])
-    #         parncutt.load_corpus(d_corpus=d_corpus)
-    #         if id == 'B':
-    #             suggestions, costs, details = parncutt.generate_advice(staff="upper", cycle=4, k=20)
-    #         else:
-    #             suggestions, costs, details = parncutt.generate_advice(staff="upper", last_digit=last_digit[id], k=30)
-    #         details_for_sugg = dict()
-    #         for i in range(len(details)):
-    #             details_for_sugg[suggestions[i]] = details[i][0]  # 0 index because we only have one segment
-    #
-    #         parncutt.report_on_advice(suggestions, costs, details)
-    #         for gold_sugg in subcosts[id]:
-    #             assert gold_sugg in details_for_sugg, \
-    #                 "Missing suggestion {0} in {1}".format(gold_sugg, id)
-    #             for rule in subcosts[id][gold_sugg]:
-    #                 # if rule == 'bl1':
-    #                     # continue
-    #                 gold_cost = subcosts[id][gold_sugg][rule]
-    #                 cost = details_for_sugg[gold_sugg][rule]
-    #                 assert cost == gold_cost, \
-    #                     "Bad {0} cost for {1} in {2}: {3} should be {4}".format(rule, gold_sugg, id, cost, gold_cost)
+    @staticmethod
+    def test_cycles():
+        parncutt = Parncutt()
+        parncutt.segment_combiner(method="cost")
+        d_corpus = DCorpus(corpus_str=TestConstant.FOUR_NOTES)
+        parncutt.load_corpus(d_corpus=d_corpus)
+        suggestions, costs, details = parncutt.generate_advice(staff="upper", cycle=4, k=2)
+        assert len(suggestions) == 2, "No loops in that dog in top ten"
+        # parncutt.report_on_advice(suggestions, costs, details)
+        d_corpus = DCorpus(corpus_str=TestConstant.PARNCUTT_HUMAN_FRAGMENT['B'])
+        parncutt.load_corpus(d_corpus=d_corpus)
+        suggestions, costs, details = parncutt.generate_advice(staff="upper", cycle=4, k=16)
+        assert len(suggestions) == 16, "There should be 16 cyclic fingerings!"
+        # parncutt.report_on_advice(suggestions, costs, details)
 
-    #
+    @staticmethod
+    def test_fingering_counts():
+        parncutt = Parncutt(pruning_method="none")
+        parncutt.segment_combiner(method="cost")
+        d_corpus = DCorpus(corpus_str=TestConstant.FOUR_NOTES)
+        parncutt.load_corpus(d_corpus=d_corpus)
+        suggestions, costs, details = parncutt.generate_advice(staff="upper", k=2)
+        assert parncutt.last_segment_pruned_count() == 320, "Bad none pruning on open-ended problem"
+        # suggestions, costs, details = parncutt.generate_advice(staff="upper", last_digit=5, k=10)
+        # print(suggestions)
+        # print(parncutt.last_segment_pruned_count())
+
+    @staticmethod
+    def test_sma_lar():
+        parncutt = Parncutt()
+        parncutt.segment_combiner(method="cost")
+
+        for id in sma_lar_sums:
+            d_corpus = DCorpus(corpus_str=TestConstant.PARNCUTT_HUMAN_FRAGMENT[id])
+            parncutt.load_corpus(d_corpus=d_corpus)
+            if id == 'B':
+                suggestions, costs, details = parncutt.generate_advice(staff="upper", cycle=4, k=20)
+            else:
+                suggestions, costs, details = parncutt.generate_advice(staff="upper", last_digit=last_digit[id], k=20)
+            details_for_sugg = dict()
+            for i in range(len(details)):
+                details_for_sugg[suggestions[i]] = details[i][0]  # 0 index because we only have one segment
+
+            # parncutt.report_on_advice(suggestions, costs, details)
+            for gold_sugg in sma_lar_sums[id]:
+                assert gold_sugg in details_for_sugg,\
+                    "Missing suggestion {0} in {1}".format(gold_sugg, id)
+                sma = details_for_sugg[gold_sugg]['sma']
+                lar = details_for_sugg[gold_sugg]['lar']
+                assert sma + lar == sma_lar_sums[id][gold_sugg],\
+                    "Bad sma + lar total for {0} in {1}".format(gold_sugg, id)
+
+    @staticmethod
+    def test_bl1():
+        parncutt = Parncutt()
+        parncutt.segment_combiner(method="cost")
+        midi_1 = None
+        handed_digit_1 = '-'
+        midi_2 = 61
+        handed_digit_2 = '>1'
+        midi_3 = 65
+        handed_digit_3 = '>3'
+
+        cost, costs = parncutt.trigram_node_cost(midi_1, handed_digit_1, midi_2, handed_digit_2, midi_3, handed_digit_3)
+        assert costs['bl1'] == 3, "Bad bl1 cost"
+
+    @staticmethod
+    def test_good_rules():
+        parncutt = Parncutt()
+        parncutt.segment_combiner(method="cost")
+
+        for id in subcosts:
+            d_corpus = DCorpus(corpus_str=TestConstant.PARNCUTT_HUMAN_FRAGMENT[id])
+            parncutt.load_corpus(d_corpus=d_corpus)
+            if id == 'B':
+                suggestions, costs, details = parncutt.generate_advice(staff="upper", cycle=4, k=20)
+            else:
+                suggestions, costs, details = parncutt.generate_advice(staff="upper", last_digit=last_digit[id], k=30)
+            details_for_sugg = dict()
+            for i in range(len(details)):
+                details_for_sugg[suggestions[i]] = details[i][0]  # 0 index because we only have one segment
+
+            # parncutt.report_on_advice(suggestions, costs, details)
+            for gold_sugg in subcosts[id]:
+                assert gold_sugg in details_for_sugg, \
+                    "Missing suggestion {0} in {1}".format(gold_sugg, id)
+                for rule in subcosts[id][gold_sugg]:
+                    # if rule == 'bl1':
+                        # continue
+                    gold_cost = subcosts[id][gold_sugg][rule]
+                    cost = details_for_sugg[gold_sugg][rule]
+                    assert cost == gold_cost, \
+                        "Bad {0} cost for {1} in {2}: {3} should be {4}".format(rule, gold_sugg, id, cost, gold_cost)
 
     # @staticmethod
     # def test_corrected_parncutt():
     #     parncutt = Parncutt(pruning_method="none")
-    #     parncutt.segment_combination_method(method="cost")
+    #     parncutt.segment_combiner(method="cost")
     #
     #     for id in subcosts:
     #         if id != 'B':
@@ -325,20 +323,23 @@ class ParncuttTest(unittest.TestCase):
     #             suggestions, costs, details = parncutt.generate_advice(staff="upper", cycle=4, k=500)
     #         else:
     #             suggestions, costs, details = parncutt.generate_advice(staff="upper", last_digit=last_digit[id], k=500)
-    #         playable_count = parncutt.pruned_count()
-    #         # parncutt.report_on_advice(suggestions, costs, details)
-    #
-    #         for i in range(len(details)):
-    #             sugg = suggestions[i]
-    #             cost = costs[i]
-    #             subcosts_for_sugg = details[i][0]  # 0 index because we only have one segment
-    #             record_str = "{0}&{1}&".format(i+1, sugg[1:])
-    #             for subcost_name in subcost_names:
-    #                 record_str += str(subcosts_for_sugg[subcost_name]) + '&'
-    #             record_str += str(int(cost)) + "\\\\"
-    #             print(record_str)
-    #         print("Piece {0}, playable fingerings: {1}".format(id, playable_count))
+    #         playable_count = parncutt.last_segment_pruned_count()
+            # parncutt.report_on_advice(suggestions, costs, details)
 
+            # Output for LaTeX report.
+            # for i in range(len(details)):
+            #     sugg = suggestions[i]
+            #     cost = costs[i]
+            #     subcosts_for_sugg = details[i][0]  # 0 index because we only have one segment
+            #     record_str = "{0}&{1}&".format(i+1, sugg[1:])
+            #     for subcost_name in subcost_names:
+            #         record_str += str(subcosts_for_sugg[subcost_name]) + '&'
+            #     record_str += str(int(cost)) + "\\\\"
+            #     print(record_str)
+            # print("Piece {0}, playable fingerings: {1}".format(id, playable_count))
+
+        # The solutions from original Parncutt paper are inconsistent for painfully well-documented reasons.
+        # Leave the following commented out.
         # for id in solutions:
         #     d_corpus = DCorpus(corpus_str=TestConstant.PARNCUTT_HUMAN_FRAGMENT[id])
         #     parncutt.load_corpus(d_corpus=d_corpus)
@@ -351,143 +352,142 @@ class ParncuttTest(unittest.TestCase):
         #             "Missing {0} cost suggestion {1} in {2}".format(costs[i], suggestions[i], id)
 
 
-    # @staticmethod
-    # def test_parncutt_edges():
-    #     parncutt = Parncutt()
-    #     d_corpus = DCorpus(corpus_str=TestConstant.ONE_NOTE)
-    #     parncutt.load_corpus(d_corpus=d_corpus)
-    #     upper_rh_advice = parncutt.advise(staff="upper")
-    #     right_re = re.compile('^>\d$')
-    #     assert right_re.match(upper_rh_advice), "Bad one-note, right-hand, upper-staff advice"
-    #     # both_advice = parncutt.advise(staff="both")
-    #     # both_re = re.compile('^>\d@$')
-    #     # assert both_re.match(both_advice), "Bad one-note, segregated, both-staff advice"
-    #
-    #     parncutt = Parncutt()
-    #     d_corpus = DCorpus(corpus_str=TestConstant.ONE_BLACK_NOTE_PER_STAFF)
-    #     parncutt.load_corpus(d_corpus=d_corpus)
-    #     upper_advice = parncutt.advise(staff="upper")
-    #
-    #     right_re = re.compile('^>2$')
-    #     assert right_re.match(upper_advice), "Bad black-note, upper-staff advice"
-    #     lower_advice = parncutt.advise(staff="lower")
-    #     left_re = re.compile('^<2$')
-    #     assert left_re.match(lower_advice), "Bad black-note, upper-staff advice"
-    #     both_advice = parncutt.advise(staff="both")
-    #     both_re = re.compile('^>2@<2$')
-    #     assert both_re.match(both_advice), "Bad black-note, both-staff advice"
-    #     lower_advice = parncutt.advise(staff="lower", first_digit=3)
-    #     lower_re = re.compile('^<3$')
-    #     assert lower_re.match(lower_advice), "Bad preset black-note, both-staff advice"
-    #
-    #     parncutt = Parncutt()
-    #     d_corpus = DCorpus(corpus_str=TestConstant.TWO_WHITE_NOTES_PER_STAFF)
-    #     parncutt.load_corpus(d_corpus=d_corpus)
-    #     upper_advice = parncutt.advise(staff="upper")
-    #     right_re = re.compile('^>\d\d$')
-    #     assert right_re.match(upper_advice), "Bad two white-note, upper-staff advice"
-    #     upper_advice = parncutt.advise(staff="upper", first_digit=2, last_digit=4)
-    #     right_re = re.compile('^>24$')
-    #     assert right_re.match(upper_advice), "Bad preset two white-note, upper-staff advice"
-    #
-    # @staticmethod
-    # def test_distance_metrics():
-    #     parncutt = Parncutt()
-    #     d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE)
-    #     parncutt.load_corpus(d_corpus=d_corpus)
-    #     complete_rh_advice = parncutt.advise(staff="upper")
-    #     complete_rh_advice_len = len(complete_rh_advice)
-    #     right_re = re.compile('^>\d+$')
-    #     assert right_re.match(complete_rh_advice), "Bad right-hand, upper-staff advice"
-    #     rh_advice = parncutt.advise(staff="upper", offset=3, first_digit=4)
-    #     short_advice_len = len(rh_advice)
-    #     assert complete_rh_advice_len - 3 == short_advice_len, "Bad offset for advise() call"
-    #     ff_re = re.compile('^>4\d+$')
-    #     assert ff_re.match(rh_advice), "Bad first finger constraint"
-    #
-    #     rh_advice = parncutt.advise(staff="upper", offset=10, first_digit=1, last_digit=3)
-    #     short_advice_len = len(rh_advice)
-    #     assert complete_rh_advice_len - 10 == short_advice_len, "Bad offset for advise() call"
-    #     ff_re = re.compile('^>1\d+3$')
-    #     assert ff_re.match(rh_advice), "Bad first and last finger constraints"
-    #
-    #     lh_advice = parncutt.advise(staff="lower")
-    #     left_re = re.compile('^<\d+$')
-    #     assert left_re.match(lh_advice), "Bad left-hand, lower-staff advice"
-    #     combo_advice = parncutt.advise(staff="both")
-    #     clean_combo_advice = re.sub('[><&]', '',  combo_advice)
-    #     d_score = d_corpus.d_score_by_index(index=0)
-    #     gold_fingering = d_score.abcdf(index=0)
-    #     clean_gold_fingering = re.sub('[><&]', '',  gold_fingering)
-    #
-    #     combo_re = re.compile('^>\d+@<\d+$')
-    #     assert combo_re.match(combo_advice), "Bad combined advice"
-    #     hamming_evaluations = parncutt.evaluate_strike_distance(method="hamming", staff="both")
-    #     assert hamming_evaluations[0] > 0, "Undetected Hamming costs"
-    #     assert hamming_evaluations[3] == 0, "Bad fish in Hamming barrel"
-    #
-    #     natural_evaluations = parncutt.evaluate_strike_distance(method="natural", staff="both")
-    #     assert natural_evaluations[0] > 0, "Undetected natural costs"
-    #     assert natural_evaluations[3] == 0, "Bad fish in natural barrel"
-    #
-    #     pivot_evaluations = parncutt.evaluate_strike_distance(method="pivot", staff="both")
-    #     assert pivot_evaluations[0] > 0, "Undetected pivot costs"
-    #     assert pivot_evaluations[3] == 0, "Bad fish in pivot barrel"
-    #
-    #
-    # @staticmethod
-    # def test_reentry():
-    #     parncutt = Parncutt()
-    #
-    #     # We cannot use the longer example A_MAJ_SCALE because the gold standard fingering
-    #     # requires hand repositionings not allowed by the Parncutt model. This reinforces the need
-    #     # for segmentation and also (maybe) the need for a more inclusive option for Parncutt where
-    #     # all paths are possible but some are just very expensive, as we have in Sayegh.
-    #     d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE_SHORT)
-    #     parncutt.load_corpus(d_corpus=d_corpus)
-    #
-    #     reentry_hamming_evals = parncutt.evaluate_strike_reentry(method="hamming", staff="upper", gold_indices=[2, 3])
-    #     # Note we are not picking Beringer for the real gold standard because Beringer and Parncutt agree
-    #     # on the fingering for this scale.
-    #     # for rhe in reentry_hamming_evals:
-    #         # print("RHE:{0}".format(rhe))
-    #     assert reentry_hamming_evals[0] > 0, "Undetected upper Hamming reentry costs"
-    #     assert reentry_hamming_evals[1] == 0, "Bad fish in upper-staff Hamming reentry barrel"
-    #
-    #     reentry_hamming_evals = parncutt.evaluate_strike_reentry(method="hamming", staff="both", gold_indices=[2, 3])
-    #     # for rhe in reentry_hamming_evals:
-    #         # print("RHE:{0}".format(rhe))
-    #     assert reentry_hamming_evals[0] > 0, "Undetected both-staff Hamming reentry costs"
-    #     assert reentry_hamming_evals[1] == 0, "Bad fish in both-staff Hamming reentry barrel"
-    #     hamming_score = reentry_hamming_evals[0]
-    #
-    #     reentry_natural_evals = parncutt.evaluate_strike_reentry(method="natural", staff="both", gold_indices=[2, 3])
-    #     # for rne in reentry_natural_evals:
-    #         # print("RNE:{0}".format(rne))
-    #     assert reentry_natural_evals[0] > 0, "Undetected natural reentry costs"
-    #     assert reentry_natural_evals[1] == 0, "Bad fish in natural reentry barrel"
-    #     natural_score = reentry_natural_evals[0]
-    #     assert natural_score > hamming_score, "Reentry: Natural <= Hamming"
-    #
-    #     reentry_pivot_evals = parncutt.evaluate_strike_reentry(method="pivot", staff="both", gold_indices=[2, 3])
-    #     # for rpe in reentry_pivot_evals:
-    #         # print("RPE:{0}".format(rpe))
-    #     assert reentry_pivot_evals[0] > 0, "Undetected pivot reentry costs"
-    #     assert reentry_pivot_evals[1] == 0, "Bad fish in pivot reentry barrel"
-    #     pivot_score = reentry_pivot_evals[0]
-    #     assert natural_score < pivot_score, "Reentry: Natural >= Pivot"
-    #
-    # @staticmethod
-    # def test_pivot_alignment():
-    #     parncutt = Parncutt()
-    #     d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE)
-    #     parncutt.load_corpus(d_corpus=d_corpus)
-    #
-    #     evaluations = parncutt.evaluate_pivot_alignment(staff="both")
-    #     # for he in hamming_evaluations:
-    #     # print(he)
-    #     assert evaluations[0] > 0, "Undetected pivot alignment costs"
-    #     assert evaluations[3] == 0, "Bad fish in pivot alignment barrel"
+    @staticmethod
+    def test_parncutt_edges():
+        parncutt = Parncutt()
+        d_corpus = DCorpus(corpus_str=TestConstant.ONE_NOTE)
+        parncutt.load_corpus(d_corpus=d_corpus)
+        upper_rh_advice = parncutt.advise(staff="upper")
+        right_re = re.compile('^>\d$')
+        assert right_re.match(upper_rh_advice), "Bad one-note, right-hand, upper-staff advice"
+        # both_advice = parncutt.advise(staff="both")
+        # both_re = re.compile('^>\d@$')
+        # assert both_re.match(both_advice), "Bad one-note, segregated, both-staff advice"
+
+        parncutt = Parncutt()
+        d_corpus = DCorpus(corpus_str=TestConstant.ONE_BLACK_NOTE_PER_STAFF)
+        parncutt.load_corpus(d_corpus=d_corpus)
+        upper_advice = parncutt.advise(staff="upper")
+
+        right_re = re.compile('^>2$')
+        assert right_re.match(upper_advice), "Bad black-note, upper-staff advice"
+        lower_advice = parncutt.advise(staff="lower")
+        left_re = re.compile('^<2$')
+        assert left_re.match(lower_advice), "Bad black-note, upper-staff advice"
+        both_advice = parncutt.advise(staff="both")
+        both_re = re.compile('^>2@<2$')
+        assert both_re.match(both_advice), "Bad black-note, both-staff advice"
+        lower_advice = parncutt.advise(staff="lower", first_digit=3)
+        lower_re = re.compile('^<3$')
+        assert lower_re.match(lower_advice), "Bad preset black-note, both-staff advice"
+
+        parncutt = Parncutt()
+        d_corpus = DCorpus(corpus_str=TestConstant.TWO_WHITE_NOTES_PER_STAFF)
+        parncutt.load_corpus(d_corpus=d_corpus)
+        upper_advice = parncutt.advise(staff="upper")
+        right_re = re.compile('^>\d\d$')
+        assert right_re.match(upper_advice), "Bad two white-note, upper-staff advice"
+        upper_advice = parncutt.advise(staff="upper", first_digit=2, last_digit=4)
+        right_re = re.compile('^>24$')
+        assert right_re.match(upper_advice), "Bad preset two white-note, upper-staff advice"
+
+    @staticmethod
+    def test_distance_metrics():
+        parncutt = Parncutt()
+        d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE_SHORT)
+        parncutt.load_corpus(d_corpus=d_corpus)
+        complete_rh_advice = parncutt.advise(staff="upper")
+        complete_rh_advice_len = len(complete_rh_advice)
+        right_re = re.compile('^>\d+$')
+        assert right_re.match(complete_rh_advice), "Bad right-hand, upper-staff advice"
+        rh_advice = parncutt.advise(staff="upper", offset=3, first_digit=4)
+        short_advice_len = len(rh_advice)
+        assert complete_rh_advice_len - 3 == short_advice_len, "Bad offset for advise() call"
+        ff_re = re.compile('^>4\d+$')
+        assert ff_re.match(rh_advice), "Bad first finger constraint"
+
+        rh_advice = parncutt.advise(staff="upper", offset=10, first_digit=1, last_digit=3)
+        short_advice_len = len(rh_advice)
+        assert complete_rh_advice_len - 10 == short_advice_len, "Bad offset for advise() call"
+        ff_re = re.compile('^>1\d+3$')
+        assert ff_re.match(rh_advice), "Bad first and last finger constraints"
+
+        lh_advice = parncutt.advise(staff="lower")
+        left_re = re.compile('^<\d+$')
+        assert left_re.match(lh_advice), "Bad left-hand, lower-staff advice"
+        combo_advice = parncutt.advise(staff="both")
+        clean_combo_advice = re.sub('[><&]', '',  combo_advice)
+        d_score = d_corpus.d_score_by_index(index=0)
+        gold_fingering = d_score.abcdf(index=0)
+        clean_gold_fingering = re.sub('[><&]', '',  gold_fingering)
+
+        combo_re = re.compile('^>\d+@<\d+$')
+        assert combo_re.match(combo_advice), "Bad combined advice"
+        hamming_evaluations = parncutt.evaluate_strike_distance(method="hamming", staff="both")
+        assert hamming_evaluations[0] > 0, "Undetected Hamming costs"
+        assert hamming_evaluations[3] == 0, "Bad fish in Hamming barrel"
+
+        natural_evaluations = parncutt.evaluate_strike_distance(method="natural", staff="both")
+        assert natural_evaluations[0] > 0, "Undetected natural costs"
+        assert natural_evaluations[3] == 0, "Bad fish in natural barrel"
+
+        pivot_evaluations = parncutt.evaluate_strike_distance(method="pivot", staff="both")
+        assert pivot_evaluations[0] > 0, "Undetected pivot costs"
+        assert pivot_evaluations[3] == 0, "Bad fish in pivot barrel"
+
+    @staticmethod
+    def test_reentry():
+        parncutt = Parncutt()
+
+        # We cannot use the longer example A_MAJ_SCALE because the gold standard fingering
+        # requires hand repositionings not allowed by the Parncutt model. This reinforces the need
+        # for segmentation and also (maybe) the need for a more inclusive option for Parncutt where
+        # all paths are possible but some are just very expensive, as we have in Sayegh.
+        d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE_SHORT)
+        parncutt.load_corpus(d_corpus=d_corpus)
+
+        reentry_hamming_evals = parncutt.evaluate_strike_reentry(method="hamming", staff="upper", gold_indices=[2, 3])
+        # Note we are not picking Beringer for the real gold standard because Beringer and Parncutt agree
+        # on the fingering for this scale.
+        # for rhe in reentry_hamming_evals:
+            # print("RHE:{0}".format(rhe))
+        assert reentry_hamming_evals[0] > 0, "Undetected upper Hamming reentry costs"
+        assert reentry_hamming_evals[1] == 0, "Bad fish in upper-staff Hamming reentry barrel"
+
+        reentry_hamming_evals = parncutt.evaluate_strike_reentry(method="hamming", staff="both", gold_indices=[2, 3])
+        # for rhe in reentry_hamming_evals:
+            # print("RHE:{0}".format(rhe))
+        assert reentry_hamming_evals[0] > 0, "Undetected both-staff Hamming reentry costs"
+        assert reentry_hamming_evals[1] == 0, "Bad fish in both-staff Hamming reentry barrel"
+        hamming_score = reentry_hamming_evals[0]
+
+        reentry_natural_evals = parncutt.evaluate_strike_reentry(method="natural", staff="both", gold_indices=[2, 3])
+        # for rne in reentry_natural_evals:
+            # print("RNE:{0}".format(rne))
+        assert reentry_natural_evals[0] > 0, "Undetected natural reentry costs"
+        assert reentry_natural_evals[1] == 0, "Bad fish in natural reentry barrel"
+        natural_score = reentry_natural_evals[0]
+        assert natural_score > hamming_score, "Reentry: Natural <= Hamming"
+
+        reentry_pivot_evals = parncutt.evaluate_strike_reentry(method="pivot", staff="both", gold_indices=[2, 3])
+        # for rpe in reentry_pivot_evals:
+            # print("RPE:{0}".format(rpe))
+        assert reentry_pivot_evals[0] > 0, "Undetected pivot reentry costs"
+        assert reentry_pivot_evals[1] == 0, "Bad fish in pivot reentry barrel"
+        pivot_score = reentry_pivot_evals[0]
+        assert natural_score < pivot_score, "Reentry: Natural >= Pivot"
+
+    @staticmethod
+    def test_pivot_alignment():
+        parncutt = Parncutt()
+        d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE_SHORT)
+        parncutt.load_corpus(d_corpus=d_corpus)
+
+        evaluations = parncutt.evaluate_pivot_alignment(staff="both")
+        # for he in hamming_evaluations:
+        # print(he)
+        assert evaluations[0] > 0, "Undetected pivot alignment costs"
+        assert evaluations[3] == 0, "Bad fish in pivot alignment barrel"
 
 
 if __name__ == "__main__":

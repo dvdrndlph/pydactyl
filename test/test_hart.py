@@ -52,8 +52,8 @@ class HartTest(unittest.TestCase):
         hart.load_corpus(d_corpus=d_corpus)
 
         evaluations = hart.evaluate_pivot_alignment(staff="both")
-        for ev in evaluations:
-            print(ev)
+        # for ev in evaluations:
+            # print(ev)
         assert evaluations[0] > 0, "Undetected pivot alignment costs"
         assert evaluations[1] == 0, "Bad fish in pivot alignment barrel"
 
