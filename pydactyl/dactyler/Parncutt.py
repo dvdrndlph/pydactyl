@@ -296,20 +296,8 @@ class Parncutt(D.Dactyler):
 
         return g
 
-    def trigram_node_cost(self, midi_1, handed_digit_1, midi_2, handed_digit_2, midi_3, handed_digit_3):
-        """
-        Determine the cost associated with a trigram node configured as input.
-        :param midi_1: The MIDI note number of the first note in the trigram. May be None in first layer.
-        :param handed_digit_1: Fingering for first note (e.g., ">3").
-        :param midi_2: The MIDI note number of the second note in the trigram.
-        :param handed_digit_2: Fingering proposed for second note (e.g., "<5").
-        :param midi_3: The MIDI note number of the third note.
-        :param handed_digit_3: Fingering for third note.
-        :return: cost, costs: The total (scalar integer) cost associated with the node, and a dictionary
-        detailing the specific subcosts contributing to the total.
-        """
-        cost = 0
-
+    @staticmethod
+    def init_costs():
         costs = {
             'str': 0,
             'sma': 0,
@@ -324,7 +312,10 @@ class Parncutt(D.Dactyler):
             'bl5': 0,
             'pa1': 0,
         }
+        return costs
 
+    @staticmethod
+    def _hand_and_trigram_digits(handed_digit_1, handed_digit_2, handed_digit_3):
         pat = re.compile('^([<>])')
         mat = pat.match(handed_digit_2)
         hand = mat.group(1)
@@ -341,155 +332,157 @@ class Parncutt(D.Dactyler):
         if digit_3 is not None:
             digit_3 = int(digit_3)
 
+        return hand, digit_1, digit_2, digit_3
+
+    def assess_stretch(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
+        # Rule 1 ("Stretch")
+        if not midi_1:
+            return
+
+        semitone_diff_12 = midi_2 - midi_1
+        max_comf_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxComf']
+        min_comf_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinComf']
+
+        # ﻿"Assign 2 points for each semitone that an interval exceeds MaxComf or is less than MinComf."
+        if semitone_diff_12 > max_comf_12:
+            costs['str'] = 2 * (semitone_diff_12 - max_comf_12) * self._weights['str']
+        elif semitone_diff_12 < min_comf_12:
+            costs['str'] = 2 * (min_comf_12 - semitone_diff_12) * self._weights['str']
+
+    def assess_small_span(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
+        # Rule 2 ("Small-Span")
+        # "For finger pairs including the thumb, assign 1 point for each semitone that an interval is
+        # less than MinRel. For finger pairs not including the thumb, assign 2 points per semitone."
+        if not midi_1:
+            return
+
+        semitone_diff_12 = midi_2 - midi_1
+        min_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinRel']
+
+        digit_1 = D.Dactyler.digit_only(handed_digit_1)
+        digit_2 = D.Dactyler.digit_only(handed_digit_2)
+        span_penalty = 2
+        if digit_1 == C.THUMB or digit_2 == C.THUMB:
+            span_penalty = 1
+        if semitone_diff_12 < min_rel_12:
+            costs['sma'] = span_penalty * (min_rel_12 - semitone_diff_12) * self._weights['sma']
+
+    def assess_large_span(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
+        # Rule 3 ("Large-Span")
+        # "For finger pairs including the thumb, assign 1 point for each semitone that an interval
+        # exceeds MaxRel. For finger pairs not including the thumb, assign 2 points per semitone."
+        if not midi_1:
+            return
+
+        digit_1 = D.Dactyler.digit_only(handed_digit_1)
+        digit_2 = D.Dactyler.digit_only(handed_digit_2)
+        span_penalty = 2
+        if digit_1 == C.THUMB or digit_2 == C.THUMB:
+            span_penalty = 1
+        semitone_diff_12 = midi_2 - midi_1
+        max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
+        if semitone_diff_12 > max_rel_12:
+            costs['lar'] = span_penalty * (semitone_diff_12 - max_rel_12) * self._weights['lar']
+
+    def assess_position_change_count(self, costs, handed_digit_1, midi_1, handed_digit_2,
+                                     midi_2, handed_digit_3, midi_3):
+        # Rule 4 ("Position-Change-Count")
+        # "Assign 2 points for every full change of hand position and 1 point for every half change.
+        # A change of hand position occurs whenever the first and third notes in a consecutive
+        # group of three span an interval that is greater than MaxComf or less than MinComf
+        # for the corresponding fingers. In a full change, three conditions are satisfied
+        # simultaneously: The finger on the second of the three notes is the thumb; the second pitch
+        # lies between the first and third pitches; and the interval between the first and third pitches
+        # is greater than MaxPrac or less than MinPrac. All other changes are half changes."
+        ###if semitone_diff_13 != 0:  # FIXME: This is in the code Parncutt shared and needed to reproduce
+        # results for A and E, but is contradicted by Figure 2(iv) example in paper.
+        if not midi_1 or not midi_3:
+            return
+
+        semitone_diff_13 = midi_3 - midi_1
+        max_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxComf']
+        min_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MinComf']
+        max_prac_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxPrac']
+        min_prac_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MinPrac']
+
+        digit_2 = D.Dactyler.digit_only(handed_digit_2)
+
+        if semitone_diff_13 > max_comf_13:
+            if digit_2 == C.THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 > max_prac_13:
+                costs['pcc'] = 2 * self._weights['pcc']  # A "full change"
+            else:
+                costs['pcc'] = 1 * self._weights['pcc']  # A "half change"
+        elif semitone_diff_13 < min_comf_13:
+            if digit_2 == C.THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 < min_prac_13:
+                costs['pcc'] = 2 * self._weights['pcc']  # A "full change"
+            else:
+                costs['pcc'] = 1 * self._weights['pcc']  # A "half change"
+
+    def assess_position_change_size(self, costs, handed_digit_1, midi_1, handed_digit_3, midi_3):
+        # Rule 5 ("Position-Change-Size")
+        # "If the interval spanned by the first and third notes in a group of three is less than MinComf,
+        # assign the difference between the interval and MinComf (expressed in semitones). Conversely,
+        # if the interval is greater than MaxComf, assign the difference between the interval and MaxComf."
+        ### if semitone_diff_13 != 0:  # This is in the code Parncutt shared, but is contradicted in paper.
+        if not midi_1 or not midi_3:
+            return
+
+        semitone_diff_13 = midi_3 - midi_1
+        max_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxComf']
+        min_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MinComf']
+
+        if semitone_diff_13 < min_comf_13:
+            costs['pcs'] = (min_comf_13 - semitone_diff_13) * self._weights['pcs']
+        elif semitone_diff_13 > max_comf_13:
+            costs['pcs'] = (semitone_diff_13 - max_comf_13) * self._weights['pcs']
+
+    def assess_weak_finger(self, costs, digit_2):
         # Rule 6 (wea "Weak-Finger")
         # "Assign 1 point every time finger 4 or finger 5 is used."
         if digit_2 == C.RING or digit_2 == C.LITTLE:
             costs['wea'] = self._weights['wea']
 
+    def assess_345(self, costs, digit_1, digit_2, digit_3):
+        # Rule 7 ("Three-Four-Five")
+        # "Assign 1 point every time fingers 3, 4, and 5 occur consecutively in any order,
+        # even when groups overlap."
+        finger_hash = {
+            digit_1: True,
+            digit_2: True,
+            digit_3: True
+        }
+        if C.MIDDLE in finger_hash and C.RING in finger_hash and C.LITTLE in finger_hash:
+            costs['345'] = self._weights['345']
+
+    def assess_3_to_4(self, costs, digit_1, digit_2):
+        # Rule 8 ("Three-to-Four")
+        # "Assign 1 point each time finger 3 is immediately followed by finger 4."
+        if digit_1 == C.MIDDLE and digit_2 == C.RING:
+            costs['3t4'] = self._weights['3t4']
+
+    def assess_4_on_black(self, costs, digit_1, midi_1, digit_2, midi_2):
+        # Rule 9 ("Four-on-Black")
+        # "Assign 1 point each time fingers 3 and 4 occur consecutively in any order with 3 on
+        # white and 4 on black."
+        if (digit_1 == C.RING and is_black(midi_1) and digit_2 == C.MIDDLE and is_white(midi_2)) or \
+                (digit_1 == C.MIDDLE and is_white(midi_1) and digit_2 == C.RING and is_black(midi_2)):
+            costs['bl4'] = self._weights['bl4']
+
+    def assess_thumb_on_black(self, costs, digit_1, midi_1, digit_2, midi_2, digit_3, midi_3):
         # Rule 10 ("Thumb-on-Black")
         # "Assign 1 point whenever the thumb plays a black key."
-        # More to follow below.
         if digit_2 == C.THUMB and is_black(midi_2):
             costs['bl1'] += self._weights['bl1']
 
-        if digit_1:
-            # Handle all the two-note costs, which will be calculated based on midi_1 and midi_2.
-            semitone_diff_12 = midi_2 - midi_1
-            max_comf_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxComf']
-            min_comf_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinComf']
-            min_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinRel']
-            max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
+        # "If the immediately preceding note is white, assign a further 2 points."
+        if digit_1 and digit_2 == C.THUMB and is_black(midi_2) and is_white(midi_1):
+            costs['bl1'] += 2 * self._weights['bl1']
 
-            # Rule 10 ("Thumb-on-Black")
-            # "Assign 1 point whenever the thumb plays a black key." (Assessed above.)
-            # "If the immediately preceding note is white, assign a further 2 points." Assessed here.
-            # "If the immediately following note is white, assign a further 2 points." Assessed down below.
-            if digit_2 == C.THUMB and is_black(midi_2) and is_white(midi_1):
-                costs['bl1'] += 2 * self._weights['bl1']
-
-            # Rule 1 ("Stretch")
-            # ﻿"Assign 2 points for each semitone that an interval exceeds MaxComf or is less than MinComf."
-            if semitone_diff_12 > max_comf_12:
-                costs['str'] = 2 * (semitone_diff_12 - max_comf_12) * self._weights['str']
-            elif semitone_diff_12 < min_comf_12:
-                costs['str'] = 2 * (min_comf_12 - semitone_diff_12) * self._weights['str']
-
-            # Rule 2 ("Small-Span")
-            # "For finger pairs including the thumb, assign 1 point for each semitone that an interval is
-            # less than MinRel. For finger pairs not including the thumb, assign 2 points per semitone."
-            span_penalty = 2
-            if digit_1 == C.THUMB or digit_2 == C.THUMB:
-                span_penalty = 1
-            if semitone_diff_12 < min_rel_12:
-                costs['sma'] = span_penalty * (min_rel_12 - semitone_diff_12) * self._weights['sma']
-
-            # Rule 3 ("Large-Span")
-            # "For finger pairs including the thumb, assign 1 point for each semitone that an interval
-            # exceeds MaxRel. For finger pairs not including the thumb, assign 2 points per semitone."
-            if semitone_diff_12 > max_rel_12:
-                costs['lar'] = span_penalty * (semitone_diff_12 - max_rel_12) * self._weights['lar']
-
-            # Rule 8 ("Three-to-Four")
-            # "Assign 1 point each time finger 3 is immediately followed by finger 4."
-            if digit_1 == C.MIDDLE and digit_2 == C.RING:
-                costs['3t4'] = self._weights['3t4']
-
-            # Rule 9 ("Four-on-Black")
-            # "Assign 1 point each time fingers 3 and 4 occur consecutively in any order with 3 on
-            # white and 4 on black."
-            if (digit_1 == C.RING and is_black(midi_1) and digit_2 == C.MIDDLE and is_white(midi_2)) or \
-                    (digit_1 == C.MIDDLE and is_white(midi_1) and digit_2 == C.RING and is_black(midi_2)):
-                costs['bl4'] = self._weights['bl4']
-
-            # Rule 12 ("Thumb-Passing")
-            # "Assign 1 point for each thumb- or finger-pass on the same level (from white to white
-            # or black to black). Assign 3 points if the lower note is white, played by a finger
-            # other than the thumb, and the upper is black, played by the thumb." Invert logic for
-            # the left hand.
-            thumb_passing_cost = 0
-            if hand == '>':
-                if digit_1 == C.THUMB and midi_2 < midi_1:  # Finger crossing over thumb, descending.
-                    if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
-                        thumb_passing_cost = 1
-                    elif is_black(midi_1):
-                        thumb_passing_cost = 3
-                    costs['pa1'] = thumb_passing_cost * self._weights['pa1']
-                if digit_2 == C.THUMB and midi_2 > midi_1:  # Thumb passing under finger, ascending.
-                    if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
-                        thumb_passing_cost = 1
-                    elif is_black(midi_2):
-                        thumb_passing_cost = 3
-                    costs['pa1'] = thumb_passing_cost * self._weights['pa1']
-            else:
-                if digit_1 == C.THUMB and midi_2 > midi_1:  # Finger crossing over thumb, ascending.
-                    if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
-                        thumb_passing_cost = 1
-                    elif is_black(midi_1):
-                        thumb_passing_cost = 3
-                    costs['pa1'] = thumb_passing_cost * self._weights['pa1']
-                if digit_2 == C.THUMB and midi_2 < midi_1:  # Thumb passing under finger, descending.
-                    if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
-                        thumb_passing_cost = 1
-                    elif is_black(midi_2):
-                        thumb_passing_cost = 3
-                    costs['pa1'] = thumb_passing_cost * self._weights['pa1']
-
-        if digit_1 and digit_3:
-            semitone_diff_13 = midi_3 - midi_1
-            max_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxComf']
-            min_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MinComf']
-            max_prac_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxPrac']
-            min_prac_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MinPrac']
-
-            # Rule 4 ("Position-Change-Count")
-            # "Assign 2 points for every full change of hand position and 1 point for every half change.
-            # A change of hand position occurs whenever the first and third notes in a consecutive
-            # group of three span an interval that is greater than MaxComf or less than MinComf
-            # for the corresponding fingers. In a full change, three conditions are satisfied
-            # simultaneously: The finger on the second of the three notes is the thumb; the second pitch
-            # lies between the first and third pitches; and the interval between the first and third pitches
-            # is greater than MaxPrac or less than MinPrac. All other changes are half changes."
-            ###if semitone_diff_13 != 0:  # FIXME: This is in the code Parncutt shared and needed to reproduce
-                                       # results for A and E, but is contradicted by Figure 2(iv) example in paper.
-            if semitone_diff_13 > max_comf_13:
-                if digit_2 == C.THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 > max_prac_13:
-                    costs['pcc'] = 2 * self._weights['pcc']  # A "full change"
-                else:
-                    costs['pcc'] = 1 * self._weights['pcc']  # A "half change"
-            elif semitone_diff_13 < min_comf_13:
-                if digit_2 == C.THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 < min_prac_13:
-                    costs['pcc'] = 2 * self._weights['pcc']  # A "full change"
-                else:
-                    costs['pcc'] = 1 * self._weights['pcc']  # A "half change"
-
-            # Rule 5 ("Position-Change-Size")
-            # "If the interval spanned by the first and third notes in a group of three is less than MinComf,
-            # assign the difference between the interval and MinComf (expressed in semitones). Conversely,
-            # if the interval is greater than MaxComf, assign the difference between the interval and MaxComf."
-            ### if semitone_diff_13 != 0:  # This is in the code Parncutt shared, but is contradicted in paper.
-            if semitone_diff_13 < min_comf_13:
-                costs['pcs'] = (min_comf_13 - semitone_diff_13) * self._weights['pcs']
-            elif semitone_diff_13 > max_comf_13:
-                costs['pcs'] = (semitone_diff_13 - max_comf_13) * self._weights['pcs']
-
-            # Rule 7 ("Three-Four-Five")
-            # "Assign 1 point every time fingers 3, 4, and 5 occur consecutively in any order,
-            # even when groups overlap."
-            finger_hash = {
-                digit_1: True,
-                digit_2: True,
-                digit_3: True
-            }
-            if C.MIDDLE in finger_hash and C.RING in finger_hash and C.LITTLE in finger_hash:
-                costs['345'] = self._weights['345']
-
-        # Rule 10 ("Thumb-on-Black")
-        # "Assign 1 point whenever the thumb plays a black key. If the immediately preceding note is
-        #  white, assign a further 2 points." Assessed above.
-        # "If the immediately following note is white, assign a further 2 points." Assessed here.
+        # "If the immediately following note is white, assign a further 2 points."
         if digit_3 and digit_2 == C.THUMB and is_black(midi_2) and is_white(midi_3):
             costs['bl1'] += 2 * self._weights['bl1']
 
+    def assess_5_on_black(self, costs, midi_1, digit_2, midi_2, midi_3):
         # Rule 11 ("Five-on-Black")
         # "If the fifth finger plays a black key and the immediately preceding and following notes
         # are also black, assign 0 points. If the immediately preceding note is white, assign 2 points.
@@ -504,6 +497,96 @@ class Parncutt(D.Dactyler):
                 if midi_3 and is_white(midi_3):
                     black_key_cost += 2
             costs['bl5'] += black_key_cost * self._weights['bl5']
+
+    def assess_thumb_passing(self, costs, hand, digit_1, midi_1, digit_2, midi_2):
+        # Rule 12 ("Thumb-Passing")
+        # "Assign 1 point for each thumb- or finger-pass on the same level (from white to white
+        # or black to black). Assign 3 points if the lower note is white, played by a finger
+        # other than the thumb, and the upper is black, played by the thumb." Invert logic for
+        # the left hand.
+        if not digit_1:
+            return
+
+        thumb_passing_cost = 0
+        if hand == '>':
+            if digit_1 == C.THUMB and midi_2 < midi_1:  # Finger crossing over thumb, descending.
+                if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
+                    thumb_passing_cost = 1
+                elif is_black(midi_1):
+                    thumb_passing_cost = 3
+                costs['pa1'] = thumb_passing_cost * self._weights['pa1']
+            if digit_2 == C.THUMB and midi_2 > midi_1:  # Thumb passing under finger, ascending.
+                if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
+                    thumb_passing_cost = 1
+                elif is_black(midi_2):
+                    thumb_passing_cost = 3
+                costs['pa1'] = thumb_passing_cost * self._weights['pa1']
+        else:
+            if digit_1 == C.THUMB and midi_2 > midi_1:  # Finger crossing over thumb, ascending.
+                if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
+                    thumb_passing_cost = 1
+                elif is_black(midi_1):
+                    thumb_passing_cost = 3
+                costs['pa1'] = thumb_passing_cost * self._weights['pa1']
+            if digit_2 == C.THUMB and midi_2 < midi_1:  # Thumb passing under finger, descending.
+                if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
+                    thumb_passing_cost = 1
+                elif is_black(midi_2):
+                    thumb_passing_cost = 3
+                costs['pa1'] = thumb_passing_cost * self._weights['pa1']
+
+    def trigram_node_cost(self, midi_1, handed_digit_1, midi_2, handed_digit_2, midi_3, handed_digit_3):
+        """
+        Determine the cost associated with a trigram node configured as input.
+        :param midi_1: The MIDI note number of the first note in the trigram. May be None in first layer.
+        :param handed_digit_1: Fingering for first note (e.g., ">3").
+        :param midi_2: The MIDI note number of the second note in the trigram.
+        :param handed_digit_2: Fingering proposed for second note (e.g., "<5").
+        :param midi_3: The MIDI note number of the third note.
+        :param handed_digit_3: Fingering for third note.
+        :return: cost, costs: The total (scalar integer) cost associated with the node, and a dictionary
+        detailing the specific subcosts contributing to the total.
+        """
+        cost = 0
+        costs = Parncutt.init_costs()
+
+        hand, digit_1, digit_2, digit_3 = Parncutt._hand_and_trigram_digits(handed_digit_1, handed_digit_2, handed_digit_3)
+
+        # Rule 1 ("Stretch")
+        self.assess_stretch(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+
+        # Rule 2 ("Small-Span")
+        self.assess_small_span(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+
+        # Rule 3 ("Large-Span")
+        self.assess_large_span(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+
+        # Rule 4 ("Position-Change-Count")
+        self.assess_position_change_count(costs, handed_digit_1, midi_1, handed_digit_2, midi_2, handed_digit_3, midi_3)
+
+        # Rule 5 ("Position-Change-Size")
+        self.assess_position_change_size(costs, handed_digit_1, midi_1, handed_digit_3, midi_3)
+
+        # Rule 6 (wea "Weak-Finger")
+        self.assess_weak_finger(costs, digit_2)
+
+        # Rule 7 ("Three-Four-Five")
+        self.assess_345(costs, digit_1, digit_2, digit_3)
+
+        # Rule 8 ("Three-to-Four")
+        self.assess_3_to_4(costs, digit_1, digit_2)
+
+        # Rule 9 ("Four-on-Black")
+        self.assess_4_on_black(costs, digit_1, midi_1, digit_2, midi_2)
+
+        # Rule 10 ("Thumb-on-Black")
+        self.assess_thumb_on_black(costs, digit_1, midi_1, digit_2, midi_2, digit_3, midi_3)
+
+        # Rule 11 ("Five-on-Black")
+        self.assess_5_on_black(costs, midi_1, digit_2, midi_2, midi_3)
+
+        # Rule 12 ("Thumb-Passing")
+        self.assess_thumb_passing(costs, hand, digit_1, midi_1, digit_2, midi_2)
 
         for cost_key in costs:
             cost += costs[cost_key]

@@ -278,6 +278,20 @@ class Dactyler(ABC):
             raise Exception("Ill-formed handed digit: {0}".format(handed_digit))
         return hand
 
+    @staticmethod
+    def digit_only(handed_digit):
+        """
+        Return the digit specified in the handed digit as an integer.
+        :param handed_digit:
+        :return:
+        """
+        handed_re = re.compile('^[<>]{1}(\d)$')
+        mat = handed_re.match(str(handed_digit))
+        digit = mat.group(1)
+        if not digit:
+            raise Exception("Ill-formed handed digit: {0}".format(handed_digit))
+        return int(digit)
+
     def squawk(self, msg):
         self._log.write(str(msg) + "\n")
         if Dactyler.SQUAWK_OUT_LOUD:
