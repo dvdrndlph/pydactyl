@@ -314,6 +314,16 @@ class Parncutt(D.Dactyler):
         }
         return costs
 
+    def distance(self, from_midi, to_midi):
+        """
+        Estimate the distance between two piano keys identified by MIDI code.
+        The original Parncutt paper simply uses semitone differences.
+        :param from_midi: The starting piano key.
+        :param to_midi: The ending piano key.
+        :return: The distance between the two keys.
+        """
+        return to_midi - from_midi
+
     @staticmethod
     def _hand_and_trigram_digits(handed_digit_1, handed_digit_2, handed_digit_3):
         pat = re.compile('^([<>])')
@@ -339,7 +349,7 @@ class Parncutt(D.Dactyler):
         if not midi_1:
             return
 
-        semitone_diff_12 = midi_2 - midi_1
+        semitone_diff_12 = self.distance(midi_1, midi_2)
         max_comf_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxComf']
         min_comf_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinComf']
 
@@ -356,7 +366,7 @@ class Parncutt(D.Dactyler):
         if not midi_1:
             return
 
-        semitone_diff_12 = midi_2 - midi_1
+        semitone_diff_12 = self.distance(midi_1, midi_2)
         min_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinRel']
 
         digit_1 = D.Dactyler.digit_only(handed_digit_1)
@@ -379,7 +389,7 @@ class Parncutt(D.Dactyler):
         span_penalty = 2
         if digit_1 == C.THUMB or digit_2 == C.THUMB:
             span_penalty = 1
-        semitone_diff_12 = midi_2 - midi_1
+        semitone_diff_12 = self.distance(midi_1, midi_2)
         max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
         if semitone_diff_12 > max_rel_12:
             costs['lar'] = span_penalty * (semitone_diff_12 - max_rel_12) * self._weights['lar']
@@ -399,7 +409,7 @@ class Parncutt(D.Dactyler):
         if not midi_1 or not midi_3:
             return
 
-        semitone_diff_13 = midi_3 - midi_1
+        semitone_diff_13 = self.distance(midi_1, midi_3)
         max_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxComf']
         min_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MinComf']
         max_prac_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxPrac']
@@ -427,7 +437,7 @@ class Parncutt(D.Dactyler):
         if not midi_1 or not midi_3:
             return
 
-        semitone_diff_13 = midi_3 - midi_1
+        semitone_diff_13 = self.distance(midi_1, midi_3)
         max_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxComf']
         min_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MinComf']
 
@@ -818,3 +828,44 @@ class Parncutt(D.Dactyler):
         else:
             return suggestions, costs, details
 
+
+class Jacobs(Parncutt):
+    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
+                 pruning_method='max', finger_spans=None):
+        super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
+                         staff_combiner=staff_combiner, pruning_method=pruning_method,
+                         finger_spans=finger_spans)
+        self._key_positions = D.Dactyler.horizontal_key_positions()
+        avg_distances = list()
+        for interval_size in range(0, 20):
+            distance = 0
+            for manifestation_num in range(0, 12):
+                start_midi = 21 + manifestation_num
+                end_midi = start_midi + interval_size
+                distance += (self._key_positions[end_midi] - self._key_positions[start_midi])
+            avg_distances.append(distance/12)
+
+        self._bounds_for_semitone_interval = list()
+        self._bounds_for_semitone_interval.append(0)
+
+        for i in range(1, len(avg_distances) - 1):
+            if i == 1:
+                self._bounds_for_semitone_interval.append(0)
+            else:
+                self._bounds_for_semitone_interval.append((avg_distances[i] + avg_distances[i-1])/2.0)
+
+        # print(self._key_positions)
+        # print(self._bounds_for_semitone_interval)
+
+    def distance(self, from_midi, to_midi):
+        from_pos = self._key_positions[from_midi]
+        to_pos = self._key_positions[to_midi]
+        multiplier = 1
+        dist = to_pos - from_pos
+        if to_midi < from_midi:
+            multiplier = -1
+            dist = from_pos - to_pos
+        for i in range(len(self._bounds_for_semitone_interval) - 1):
+            if self._bounds_for_semitone_interval[i] <= dist <= self._bounds_for_semitone_interval[i+1]:
+                return multiplier * i
+        raise Exception("Distance between {0} and {1} could not be calculated".format(from_midi, to_midi))

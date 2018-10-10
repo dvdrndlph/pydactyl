@@ -326,6 +326,12 @@ class Hart(D.Dactyler):
 
 
 class HartK(Hart):
+    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
+                 cost_path=None, max_interval_size=MAX_INTERVAL_SIZE):
+        super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
+                         staff_combiner=staff_combiner, cost_path=cost_path,
+                         max_interval_size=max_interval_size)
+
     def generate_segment_advice(self, segment, staff, offset=0, cycle=False,
                                 handed_first_digit=None, handed_last_digit=None, k=None):
         """

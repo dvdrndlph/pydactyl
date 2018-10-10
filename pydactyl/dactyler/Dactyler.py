@@ -74,6 +74,23 @@ class Dactyler(ABC):
             return self._staff_combiner
         self._staff_combiner = method
 
+    @staticmethod
+    def horizontal_key_positions():
+        """
+        Return a dictionary mapping MIDI pitch numbers to the millimeter offsets
+        to their lengthwise center lines on the keyboard.
+        """
+        positions = dict()
+        #           A    A#    B  C     C#   D   D#  E     F  F#    G
+        offsets = [11.5, 15.5, 8, 23.5, 9.5, 14, 14, 9.5, 23.5, 8, 15.5, 11.5]
+        cycle_index = 0
+        value = 0
+        for midi_id in range(21, 109):
+            value += offsets[cycle_index % len(offsets)]
+            positions[midi_id] = value
+            cycle_index += 1
+
+        return positions
 
     @staticmethod
     def graphmlize(g):
