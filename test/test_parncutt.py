@@ -67,7 +67,9 @@ subcosts = {
     # Bad wea cost for >4125 in B: 3 should be 2
     #
     # But all other costs are the same as ours. ???? FIXME ???? Is Parncutt including
-    # the costs for the transition from the fourth note to the first or not?
+    # the costs for the transition from the fourth note to the first or not? We are
+    # applying all rule costs, as if an n+1 length sequence. For now we just bump up
+    # the wea cost for each sequence that has a weak finger on the first note.
     #
     # 345
     'B': {

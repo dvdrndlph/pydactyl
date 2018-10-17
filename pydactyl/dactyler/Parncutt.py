@@ -430,7 +430,8 @@ class Parncutt(D.Dactyler):
             costs['lar'] = span_penalty * (semitone_diff_12 - max_rel_12) * self._weights['lar']
 
     def assess_large_span(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
-        # Rule 3 ("Large-Span") as described in Parncutt text and implied in results reported.
+        # Rule 3 ("Large-Span") as described in Parncutt text and implied in results reported,
+        # NOT as defined in the stated Rule 3.
         if not midi_1:
             return
 
@@ -959,40 +960,36 @@ class Jacobs(Parncutt):
         if digit_2 == C.RING:
             costs['wea'] = self._weights['wea']
 
-    def assess_small_span(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
-        # Rule 2 ("Small-Span")
-        # "For finger pairs including the thumb, assign 1 point for each semitone that an interval is
-        # less than MinRel. For finger pairs not including the thumb, assign 2 points per semitone."
-        if not midi_1:
-            return
-
-        semitone_diff_12 = self.distance(midi_1, midi_2)
-        min_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinRel']
-
-        digit_1 = D.Dactyler.digit_only(handed_digit_1)
-        digit_2 = D.Dactyler.digit_only(handed_digit_2)
-        span_penalty = 2
-        if digit_1 == C.THUMB or digit_2 == C.THUMB:
-            span_penalty = 1
-        if semitone_diff_12 < min_rel_12:
-            costs['sma'] = span_penalty * (min_rel_12 - semitone_diff_12) * self._weights['sma']
-
     def assess_large_span(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
-        # Rule 3 ("Large-Span")
-        # "For finger pairs including the thumb, assign 1 point for each semitone that an interval
-        # exceeds MaxRel. For finger pairs not including the thumb, assign 2 points per semitone."
+        # Rule 3 ("Large-Span") as described in Parncutt text and implied in results reported,
+        # NOT as defined in the stated Rule 3.
         if not midi_1:
             return
 
+        absolute_semitone_diff_12 = abs(self.distance(midi_1, midi_2))
         digit_1 = D.Dactyler.digit_only(handed_digit_1)
         digit_2 = D.Dactyler.digit_only(handed_digit_2)
-        span_penalty = 2
-        if digit_1 == C.THUMB or digit_2 == C.THUMB:
-            span_penalty = 1
-        semitone_diff_12 = self.distance(midi_1, midi_2)
-        max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
-        if semitone_diff_12 > max_rel_12:
-            costs['lar'] = span_penalty * (semitone_diff_12 - max_rel_12) * self._weights['lar']
+        # "penalizes equally (by 1 point per semitone) all spans exceeding MaxRel."
+        span_penalty = 1
+
+        hand = D.Dactyler.digit_hand(handed_digit_1)
+        if hand == '>':
+            if digit_1 < digit_2 and midi_1 < midi_2:
+                max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
+            elif digit_1 > digit_2 and midi_1 > midi_2:
+                max_rel_12 = self._finger_spans[(handed_digit_2, handed_digit_1)]['MaxRel']
+            else:
+                return
+        else:
+            if digit_1 < digit_2 and midi_1 < midi_2:
+                max_rel_12 = self._finger_spans[(handed_digit_2, handed_digit_1)]['MaxRel']
+            elif digit_1 > digit_2 and midi_1 > midi_2:
+                max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
+            else:
+                return
+
+        if absolute_semitone_diff_12 > max_rel_12:
+            costs['lar'] = span_penalty * (absolute_semitone_diff_12 - max_rel_12) * self._weights['lar']
 
     def trigram_node_cost(self, midi_1, handed_digit_1, midi_2, handed_digit_2, midi_3, handed_digit_3):
         """
