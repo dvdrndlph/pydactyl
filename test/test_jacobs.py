@@ -195,7 +195,7 @@ class JacobsTest(unittest.TestCase):
         jacobs.load_corpus(d_corpus=d_corpus)
         suggestions, costs, details = jacobs.generate_advice(staff="upper", k=2)
         self.assertEqual(len(suggestions), 2, "No loops in that dog in top ten")
-        jacobs.report_on_advice(suggestions, costs, details)
+        # jacobs.report_on_advice(suggestions, costs, details)
 
     @staticmethod
     def test_cycles():
@@ -254,7 +254,7 @@ class JacobsTest(unittest.TestCase):
             for i in range(len(details)):
                 details_for_sugg[suggestions[i]] = details[i][0]  # 0 index because we only have one segment
 
-            jake.report_on_advice(suggestions, costs, details)
+            # jake.report_on_advice(suggestions, costs, details)
             for gold_sugg in subcosts[id]:
                 assert gold_sugg in details_for_sugg, \
                     "Missing suggestion {0} in {1}".format(gold_sugg, id)
@@ -308,46 +308,46 @@ class JacobsTest(unittest.TestCase):
     #     #         assert suggestions[i] in solutions[id][int(costs[i])],\
     #     #             "Missing {0} cost suggestion {1} in {2}".format(costs[i], suggestions[i], id)
     #
-    #
-    # @staticmethod
-    # def test_jake():
-    #     jake = Jacobs()
-    #     d_corpus = DCorpus(corpus_str=TestConstant.ONE_NOTE)
-    #     jake.load_corpus(d_corpus=d_corpus)
-    #     upper_rh_advice = jake.advise(staff="upper")
-    #     right_re = re.compile('^>\d$')
-    #     assert right_re.match(upper_rh_advice), "Bad one-note, right-hand, upper-staff advice"
-    #     # both_advice = jake.advise(staff="both")
-    #     # both_re = re.compile('^>\d@$')
-    #     # assert both_re.match(both_advice), "Bad one-note, segregated, both-staff advice"
-    #
-    #     jake = Jacobs()
-    #     d_corpus = DCorpus(corpus_str=TestConstant.ONE_BLACK_NOTE_PER_STAFF)
-    #     jake.load_corpus(d_corpus=d_corpus)
-    #     upper_advice = jake.advise(staff="upper")
-    #
-    #     right_re = re.compile('^>2$')
-    #     assert right_re.match(upper_advice), "Bad black-note, upper-staff advice"
-    #     lower_advice = jake.advise(staff="lower")
-    #     left_re = re.compile('^<2$')
-    #     assert left_re.match(lower_advice), "Bad black-note, upper-staff advice"
-    #     both_advice = jake.advise(staff="both")
-    #     both_re = re.compile('^>2@<2$')
-    #     assert both_re.match(both_advice), "Bad black-note, both-staff advice"
-    #     lower_advice = jake.advise(staff="lower", first_digit=3)
-    #     lower_re = re.compile('^<3$')
-    #     assert lower_re.match(lower_advice), "Bad preset black-note, both-staff advice"
-    #
-    #     jake = Jacobs()
-    #     d_corpus = DCorpus(corpus_str=TestConstant.TWO_WHITE_NOTES_PER_STAFF)
-    #     jake.load_corpus(d_corpus=d_corpus)
-    #     upper_advice = jake.advise(staff="upper")
-    #     right_re = re.compile('^>\d\d$')
-    #     assert right_re.match(upper_advice), "Bad two white-note, upper-staff advice"
-    #     upper_advice = jake.advise(staff="upper", first_digit=2, last_digit=4)
-    #     right_re = re.compile('^>24$')
-    #     assert right_re.match(upper_advice), "Bad preset two white-note, upper-staff advice"
-    #
+
+    @staticmethod
+    def test_jake():
+        jake = Jacobs()
+        d_corpus = DCorpus(corpus_str=TestConstant.ONE_NOTE)
+        jake.load_corpus(d_corpus=d_corpus)
+        upper_rh_advice = jake.advise(staff="upper")
+        right_re = re.compile('^>\d$')
+        assert right_re.match(upper_rh_advice), "Bad one-note, right-hand, upper-staff advice"
+        # both_advice = jake.advise(staff="both")
+        # both_re = re.compile('^>\d@$')
+        # assert both_re.match(both_advice), "Bad one-note, segregated, both-staff advice"
+
+        jake = Jacobs()
+        d_corpus = DCorpus(corpus_str=TestConstant.ONE_BLACK_NOTE_PER_STAFF)
+        jake.load_corpus(d_corpus=d_corpus)
+        upper_advice = jake.advise(staff="upper")
+
+        right_re = re.compile('^>2$')
+        assert right_re.match(upper_advice), "Bad black-note, upper-staff advice"
+        lower_advice = jake.advise(staff="lower")
+        left_re = re.compile('^<2$')
+        assert left_re.match(lower_advice), "Bad black-note, upper-staff advice"
+        both_advice = jake.advise(staff="both")
+        both_re = re.compile('^>2@<2$')
+        assert both_re.match(both_advice), "Bad black-note, both-staff advice"
+        lower_advice = jake.advise(staff="lower", first_digit=3)
+        lower_re = re.compile('^<3$')
+        assert lower_re.match(lower_advice), "Bad preset black-note, both-staff advice"
+
+        jake = Jacobs()
+        d_corpus = DCorpus(corpus_str=TestConstant.TWO_WHITE_NOTES_PER_STAFF)
+        jake.load_corpus(d_corpus=d_corpus)
+        upper_advice = jake.advise(staff="upper")
+        right_re = re.compile('^>\d\d$')
+        assert right_re.match(upper_advice), "Bad two white-note, upper-staff advice"
+        upper_advice = jake.advise(staff="upper", first_digit=2, last_digit=4)
+        right_re = re.compile('^>24$')
+        assert right_re.match(upper_advice), "Bad preset two white-note, upper-staff advice"
+
     @staticmethod
     def test_distance_metrics():
         jake = Jacobs()
@@ -382,15 +382,20 @@ class JacobsTest(unittest.TestCase):
         assert combo_re.match(combo_advice), "Bad combined advice"
         hamming_evaluations = jake.evaluate_strike_distance(method="hamming", staff="both")
         assert hamming_evaluations[0] > 0, "Undetected Hamming costs"
-        assert hamming_evaluations[3] == 0, "Bad fish in Hamming barrel"
+        assert hamming_evaluations[4] == 0, "Bad fish in Hamming barrel"
 
         natural_evaluations = jake.evaluate_strike_distance(method="natural", staff="both")
         assert natural_evaluations[0] > 0, "Undetected natural costs"
-        assert natural_evaluations[3] == 0, "Bad fish in natural barrel"
+        assert natural_evaluations[4] == 0, "Bad fish in natural barrel"
 
         pivot_evaluations = jake.evaluate_strike_distance(method="pivot", staff="both")
         assert pivot_evaluations[0] > 0, "Undetected pivot costs"
-        assert pivot_evaluations[3] == 0, "Bad fish in pivot barrel"
+        assert pivot_evaluations[4] == 0, "Bad fish in pivot barrel"
+
+        # suggestions, costs, details = jake.generate_advice(staff="upper", k=2)
+        # jake.report_on_advice(suggestions, costs, details)
+        # suggestions, costs, details = jake.generate_advice(staff="lower", k=2)
+        # jake.report_on_advice(suggestions, costs, details)
 
     # @staticmethod
     # def test_reentry():
@@ -444,7 +449,7 @@ class JacobsTest(unittest.TestCase):
         # for he in hamming_evaluations:
         # print(he)
         assert evaluations[0] > 0, "Undetected pivot alignment costs"
-        assert evaluations[3] == 0, "Bad fish in pivot alignment barrel"
+        assert evaluations[4] == 0, "Bad fish in pivot alignment barrel"
 
 
 if __name__ == "__main__":

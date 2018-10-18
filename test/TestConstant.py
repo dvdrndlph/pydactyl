@@ -204,6 +204,8 @@ A_MAJ_SCALE_SHORT = """% abcDidactyl v5
 % Authority: Sayegh Algorithm
 % abcD fingering 4: >123123412312345@<543214321321321
 % Authority: Parncutt Algorithm
+% abcD fingering 5: >123123412312345@<543214321321321
+% Authority: Jacobs Algorithm
 % abcDidactyl END
 X:7
 T:scales_a_major
