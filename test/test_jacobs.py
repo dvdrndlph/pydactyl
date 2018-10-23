@@ -254,7 +254,7 @@ class JacobsTest(unittest.TestCase):
             for i in range(len(details)):
                 details_for_sugg[suggestions[i]] = details[i][0]  # 0 index because we only have one segment
 
-            # jake.report_on_advice(suggestions, costs, details)
+            jake.report_on_advice(suggestions, costs, details)
             for gold_sugg in subcosts[id]:
                 assert gold_sugg in details_for_sugg, \
                     "Missing suggestion {0} in {1}".format(gold_sugg, id)
@@ -397,48 +397,48 @@ class JacobsTest(unittest.TestCase):
         # suggestions, costs, details = jake.generate_advice(staff="lower", k=2)
         # jake.report_on_advice(suggestions, costs, details)
 
-    # @staticmethod
-    # def test_reentry():
-    #     jake = Jacobs()
-    #
-    #     # We cannot use the longer example A_MAJ_SCALE because the gold standard fingering
-    #     # requires hand repositionings not allowed by the Parncutt model. This reinforces the need
-    #     # for segmentation and also (maybe) the need for a more inclusive option for Parncutt where
-    #     # all paths are possible but some are just very expensive, as we have in Sayegh.
-    #     d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE_SHORT)
-    #     jake.load_corpus(d_corpus=d_corpus)
-    #
-    #     reentry_hamming_evals = jake.evaluate_strike_reentry(method="hamming", staff="upper", gold_indices=[2, 3])
-    #     # Note we are not picking Beringer for the real gold standard because Beringer and Parncutt agree
-    #     # on the fingering for this scale.
-    #     # for rhe in reentry_hamming_evals:
-    #         # print("RHE:{0}".format(rhe))
-    #     assert reentry_hamming_evals[0] > 0, "Undetected upper Hamming reentry costs"
-    #     assert reentry_hamming_evals[1] == 0, "Bad fish in upper-staff Hamming reentry barrel"
-    #
-    #     reentry_hamming_evals = jake.evaluate_strike_reentry(method="hamming", staff="both", gold_indices=[2, 3])
-    #     # for rhe in reentry_hamming_evals:
-    #         # print("RHE:{0}".format(rhe))
-    #     assert reentry_hamming_evals[0] > 0, "Undetected both-staff Hamming reentry costs"
-    #     assert reentry_hamming_evals[1] == 0, "Bad fish in both-staff Hamming reentry barrel"
-    #     hamming_score = reentry_hamming_evals[0]
-    #
-    #     reentry_natural_evals = jake.evaluate_strike_reentry(method="natural", staff="both", gold_indices=[2, 3])
-    #     # for rne in reentry_natural_evals:
-    #         # print("RNE:{0}".format(rne))
-    #     assert reentry_natural_evals[0] > 0, "Undetected natural reentry costs"
-    #     assert reentry_natural_evals[1] == 0, "Bad fish in natural reentry barrel"
-    #     natural_score = reentry_natural_evals[0]
-    #     assert natural_score > hamming_score, "Reentry: Natural <= Hamming"
-    #
-    #     reentry_pivot_evals = jake.evaluate_strike_reentry(method="pivot", staff="both", gold_indices=[2, 3])
-    #     # for rpe in reentry_pivot_evals:
-    #         # print("RPE:{0}".format(rpe))
-    #     assert reentry_pivot_evals[0] > 0, "Undetected pivot reentry costs"
-    #     assert reentry_pivot_evals[1] == 0, "Bad fish in pivot reentry barrel"
-    #     pivot_score = reentry_pivot_evals[0]
-    #     assert natural_score < pivot_score, "Reentry: Natural >= Pivot"
-    #
+    @staticmethod
+    def test_reentry():
+        jake = Jacobs()
+
+        # We cannot use the longer example A_MAJ_SCALE because the gold standard fingering
+        # requires hand repositionings not allowed by the Parncutt model. This reinforces the need
+        # for segmentation and also (maybe) the need for a more inclusive option for Parncutt where
+        # all paths are possible but some are just very expensive, as we have in Sayegh.
+        d_corpus = DCorpus(corpus_str=TestConstant.A_MAJ_SCALE_SHORT)
+        jake.load_corpus(d_corpus=d_corpus)
+
+        reentry_hamming_evals = jake.evaluate_strike_reentry(method="hamming", staff="upper", gold_indices=[2, 3])
+        # Note we are not picking Beringer for the real gold standard because Beringer and Parncutt agree
+        # on the fingering for this scale.
+        # for rhe in reentry_hamming_evals:
+            # print("RHE:{0}".format(rhe))
+        assert reentry_hamming_evals[0] > 0, "Undetected upper Hamming reentry costs"
+        assert reentry_hamming_evals[1] == 0, "Bad fish in upper-staff Hamming reentry barrel"
+
+        reentry_hamming_evals = jake.evaluate_strike_reentry(method="hamming", staff="both", gold_indices=[2, 3])
+        # for rhe in reentry_hamming_evals:
+            # print("RHE:{0}".format(rhe))
+        assert reentry_hamming_evals[0] > 0, "Undetected both-staff Hamming reentry costs"
+        assert reentry_hamming_evals[1] == 0, "Bad fish in both-staff Hamming reentry barrel"
+        hamming_score = reentry_hamming_evals[0]
+
+        reentry_natural_evals = jake.evaluate_strike_reentry(method="natural", staff="both", gold_indices=[2, 3])
+        # for rne in reentry_natural_evals:
+            # print("RNE:{0}".format(rne))
+        assert reentry_natural_evals[0] > 0, "Undetected natural reentry costs"
+        assert reentry_natural_evals[1] == 0, "Bad fish in natural reentry barrel"
+        natural_score = reentry_natural_evals[0]
+        assert natural_score > hamming_score, "Reentry: Natural <= Hamming"
+
+        reentry_pivot_evals = jake.evaluate_strike_reentry(method="pivot", staff="both", gold_indices=[2, 3])
+        # for rpe in reentry_pivot_evals:
+            # print("RPE:{0}".format(rpe))
+        assert reentry_pivot_evals[0] > 0, "Undetected pivot reentry costs"
+        assert reentry_pivot_evals[1] == 0, "Bad fish in pivot reentry barrel"
+        pivot_score = reentry_pivot_evals[0]
+        assert natural_score < pivot_score, "Reentry: Natural >= Pivot"
+
     @staticmethod
     def test_pivot_alignment():
         jake = Jacobs()

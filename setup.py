@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(name='pydactyl',
-    version='0.5',
+    version='0.6',
     description='Toolkit for piano fingering. Part of Didactyl project at the University of Illinois at Chicago.',
     url='http://github.com/dvdrndlph/pydactyl',
     author='David A. Randolph',
@@ -22,5 +22,6 @@ setuptools.setup(name='pydactyl',
         'pymysql>=0.8',
         'networkx>=2.1',
         'TatSu',
+        'krippendorff',
     ],
 )

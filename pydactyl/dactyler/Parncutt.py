@@ -21,6 +21,26 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
+"""
+The "Parncutt" class implements and enhances the model described in the
+following paper:
+
+   ﻿R. Parncutt, J. A. Sloboda, E. F. Clarke, M. Raekallio, and P. Desain,
+       “An ergonomic model of keyboard fingering for melodic fragments,”
+       Music Percept., vol. 14, no. 4, pp. 341–382, 1997.     
+
+We enhance the method to handle repeated pitches, two staffs,
+and segregated two-hand fingering. Herein, we also implement the "Jacobs"
+class, providing the same treatment for the model described here:
+
+   ﻿J. P. Jacobs, “Refinements to the ergonomic model for keyboard
+       fingering of Parncutt, Sloboda, Clarke, Raekallio, and Desain,”
+       Music Percept., vol. 18, no. 4, pp. 505–511, 2001.
+
+Also included is our own "Badgerow" class, tweaking the Parncutt model
+per the suggestions of pianist Justin Badgerow at Elizabethtown College.
+"""
+
 
 import networkx as nx
 from itertools import islice
@@ -29,6 +49,7 @@ import re
 from . import Dactyler as D
 from . import Constant as C
 from pydactyl.dcorpus.DNote import DNote
+from pydactyl.dcorpus.DAnnotation import DAnnotation
 
 
 FINGER_SPANS = {
@@ -81,6 +102,64 @@ FINGER_SPANS = {
     ('<1', '<3'): {'MinPrac': -12, 'MinComf': -10, 'MinRel': -7, 'MaxRel': -3, 'MaxComf': 2, 'MaxPrac': 4},
     ('<1', '<4'): {'MinPrac': -14, 'MinComf': -12, 'MinRel': -9, 'MaxRel': -5, 'MaxComf': 1, 'MaxPrac': 3},
     ('<1', '<5'): {'MinPrac': -15, 'MinComf': -13, 'MinRel': -10, 'MaxRel': -7, 'MaxComf': -1, 'MaxPrac': 1},
+    ('<2', '<3'): {'MinPrac': -5, 'MinComf': -3, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+    ('<2', '<4'): {'MinPrac': -7, 'MinComf': -5, 'MinRel': -4, 'MaxRel': -3, 'MaxComf': -1, 'MaxPrac': -1},
+    ('<2', '<5'): {'MinPrac': -10, 'MinComf': -8, 'MinRel': -6, 'MaxRel': -5, 'MaxComf': -2, 'MaxPrac': -2},
+    ('<3', '<4'): {'MinPrac': -4, 'MinComf': -2, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+    ('<3', '<5'): {'MinPrac': -7, 'MinComf': -5, 'MinRel': -4, 'MaxRel': -3, 'MaxComf': -1, 'MaxPrac': -1},
+    ('<4', '<5'): {'MinPrac': -5, 'MinComf': -3, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+}
+
+BADGEROW_FINGER_SPANS = {
+    ('>1', '>1'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('>2', '>2'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('>3', '>3'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('>4', '>4'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('>5', '>5'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+
+    ('<1', '<1'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('<2', '<2'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('<3', '<3'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('<4', '<4'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('<5', '<5'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+
+    ('>1', '>2'): {'MinPrac': -5, 'MinComf': -3, 'MinRel': 1, 'MaxRel': 5, 'MaxComf': 9, 'MaxPrac': 10},
+    ('>1', '>3'): {'MinPrac': -4, 'MinComf': -2, 'MinRel': 1, 'MaxRel': 7, 'MaxComf': 11, 'MaxPrac': 12},
+    ('>1', '>4'): {'MinPrac': -3, 'MinComf': -1, 'MinRel': 4, 'MaxRel': 9, 'MaxComf': 13, 'MaxPrac': 14},
+    ('>1', '>5'): {'MinPrac': -1, 'MinComf': 1, 'MinRel': 7, 'MaxRel': 10, 'MaxComf': 14, 'MaxPrac': 15},
+    ('>2', '>3'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 3, 'MaxPrac': 5},
+    ('>2', '>4'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 3, 'MaxRel': 4, 'MaxComf': 5, 'MaxPrac': 7},
+    ('>2', '>5'): {'MinPrac': 2, 'MinComf': 2, 'MinRel': 5, 'MaxRel': 6, 'MaxComf': 8, 'MaxPrac': 10},
+    ('>3', '>4'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 2, 'MaxPrac': 4},
+    ('>3', '>5'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 3, 'MaxRel': 4, 'MaxComf': 5, 'MaxPrac': 7},
+    ('>4', '>5'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 3, 'MaxPrac': 5},
+
+    ('>2', '>1'): {'MinPrac': -10, 'MinComf': -9, 'MinRel': -5, 'MaxRel': -1, 'MaxComf': 3, 'MaxPrac': 5},
+    ('>3', '>1'): {'MinPrac': -12, 'MinComf': -11, 'MinRel': -7, 'MaxRel': -1, 'MaxComf': 2, 'MaxPrac': 4},
+    ('>4', '>1'): {'MinPrac': -14, 'MinComf': -13, 'MinRel': -9, 'MaxRel': -4, 'MaxComf': 1, 'MaxPrac': 3},
+    ('>5', '>1'): {'MinPrac': -15, 'MinComf': -14, 'MinRel': -10, 'MaxRel': -7, 'MaxComf': -1, 'MaxPrac': 1},
+    ('>3', '>2'): {'MinPrac': -5, 'MinComf': -3, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+    ('>4', '>2'): {'MinPrac': -7, 'MinComf': -5, 'MinRel': -4, 'MaxRel': -3, 'MaxComf': -1, 'MaxPrac': -1},
+    ('>5', '>2'): {'MinPrac': -10, 'MinComf': -8, 'MinRel': -6, 'MaxRel': -5, 'MaxComf': -2, 'MaxPrac': -2},
+    ('>4', '>3'): {'MinPrac': -4, 'MinComf': -2, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+    ('>5', '>3'): {'MinPrac': -7, 'MinComf': -5, 'MinRel': -4, 'MaxRel': -3, 'MaxComf': -1, 'MaxPrac': -1},
+    ('>5', '>4'): {'MinPrac': -5, 'MinComf': -3, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+
+    ('<2', '<1'): {'MinPrac': -5, 'MinComf': -3, 'MinRel': 1, 'MaxRel': 5, 'MaxComf': 9, 'MaxPrac': 10},
+    ('<3', '<1'): {'MinPrac': -4, 'MinComf': -2, 'MinRel': 1, 'MaxRel': 7, 'MaxComf': 11, 'MaxPrac': 12},
+    ('<4', '<1'): {'MinPrac': -3, 'MinComf': -1, 'MinRel': 4, 'MaxRel': 9, 'MaxComf': 13, 'MaxPrac': 14},
+    ('<5', '<1'): {'MinPrac': -1, 'MinComf': 1, 'MinRel': 7, 'MaxRel': 10, 'MaxComf': 14, 'MaxPrac': 15},
+    ('<3', '<2'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 3, 'MaxPrac': 5},
+    ('<4', '<2'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 3, 'MaxRel': 4, 'MaxComf': 5, 'MaxPrac': 7},
+    ('<5', '<2'): {'MinPrac': 2, 'MinComf': 2, 'MinRel': 5, 'MaxRel': 6, 'MaxComf': 8, 'MaxPrac': 10},
+    ('<4', '<3'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 2, 'MaxPrac': 4},
+    ('<5', '<3'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 3, 'MaxRel': 4, 'MaxComf': 5, 'MaxPrac': 7},
+    ('<5', '<4'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 3, 'MaxPrac': 5},
+
+    ('<1', '<2'): {'MinPrac': -10, 'MinComf': -9, 'MinRel': -5, 'MaxRel': -1, 'MaxComf': 3, 'MaxPrac': 5},
+    ('<1', '<3'): {'MinPrac': -12, 'MinComf': -11, 'MinRel': -7, 'MaxRel': -1, 'MaxComf': 2, 'MaxPrac': 4},
+    ('<1', '<4'): {'MinPrac': -14, 'MinComf': -13, 'MinRel': -9, 'MaxRel': -4, 'MaxComf': 1, 'MaxPrac': 3},
+    ('<1', '<5'): {'MinPrac': -15, 'MinComf': -14, 'MinRel': -10, 'MaxRel': -7, 'MaxComf': -1, 'MaxPrac': 1},
     ('<2', '<3'): {'MinPrac': -5, 'MinComf': -3, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
     ('<2', '<4'): {'MinPrac': -7, 'MinComf': -5, 'MinRel': -4, 'MaxRel': -3, 'MaxComf': -1, 'MaxPrac': -1},
     ('<2', '<5'): {'MinPrac': -10, 'MinComf': -8, 'MinRel': -6, 'MaxRel': -5, 'MaxComf': -2, 'MaxPrac': -2},
@@ -144,11 +223,11 @@ class Parncutt(D.Dactyler):
         }
 
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
-                 pruning_method='max', finger_spans=None):
+                 pruning_method='max', finger_spans=FINGER_SPANS):
         super().__init__(segmenter=segmenter, segment_combiner=segment_combiner, staff_combiner=staff_combiner)
-        self._finger_spans = FINGER_SPANS
-        if finger_spans:
-            self._finger_spans = finger_spans
+        # self._finger_spans = FINGER_SPANS
+        # if finger_spans:
+        self._finger_spans = finger_spans
         self._costs = {}
         self._last_segment_all_paths = None  # Generator of all paths for last segment processed.
         self._pruning_method = None
@@ -407,10 +486,12 @@ class Parncutt(D.Dactyler):
             else:
                 return
 
+        cost = 0
         if min_rel is not None and semitone_diff < min_rel:
-            costs['sma'] = span_penalty * (min_rel - semitone_diff) * self._weights['sma']
+            cost = span_penalty * (min_rel - semitone_diff) * self._weights['sma']
         if max_rel is not None and semitone_diff > max_rel:
-            costs['sma'] = span_penalty * (semitone_diff - max_rel) * self._weights['sma']
+            cost = span_penalty * (semitone_diff - max_rel) * self._weights['sma']
+        costs['sma'] = cost
 
     def assess_large_span_per_rule(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
         # Rule 3 ("Large-Span")
@@ -461,6 +542,34 @@ class Parncutt(D.Dactyler):
         if absolute_semitone_diff_12 > max_rel_12:
             costs['lar'] = span_penalty * (absolute_semitone_diff_12 - max_rel_12) * self._weights['lar']
 
+    def raw_position_change_count(self, handed_digit_1, midi_1, handed_digit_2,
+                              midi_2, handed_digit_3, midi_3):
+        if not midi_1 or not midi_3:
+            return 0
+
+        pcc = 0
+        semitone_diff_13 = self.distance(midi_1, midi_3)
+        ###if semitone_diff_13 != 0:  # FIXME: This is in the code Parncutt shared and needed to reproduce
+        # results for A and E, but is contradicted by Figure 2(iv) example in paper.
+        max_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxComf']
+        min_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MinComf']
+        max_prac_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxPrac']
+        min_prac_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MinPrac']
+
+        digit_2 = D.Dactyler.digit_only(handed_digit_2)
+
+        if semitone_diff_13 > max_comf_13:
+            if digit_2 == C.THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 > max_prac_13:
+                pcc = 2  # A "full change"
+            else:
+                pcc = 1  # A "half change"
+        elif semitone_diff_13 < min_comf_13:
+            if digit_2 == C.THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 < min_prac_13:
+                pcc = 2  # A "full change"
+            else:
+                pcc = 1 # A "half change"
+        return pcc
+
     def assess_position_change_count(self, costs, handed_digit_1, midi_1, handed_digit_2,
                                      midi_2, handed_digit_3, midi_3):
         # Rule 4 ("Position-Change-Count")
@@ -471,29 +580,10 @@ class Parncutt(D.Dactyler):
         # simultaneously: The finger on the second of the three notes is the thumb; the second pitch
         # lies between the first and third pitches; and the interval between the first and third pitches
         # is greater than MaxPrac or less than MinPrac. All other changes are half changes."
-        ###if semitone_diff_13 != 0:  # FIXME: This is in the code Parncutt shared and needed to reproduce
-        # results for A and E, but is contradicted by Figure 2(iv) example in paper.
-        if not midi_1 or not midi_3:
-            return
-
-        semitone_diff_13 = self.distance(midi_1, midi_3)
-        max_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxComf']
-        min_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MinComf']
-        max_prac_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxPrac']
-        min_prac_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MinPrac']
-
-        digit_2 = D.Dactyler.digit_only(handed_digit_2)
-
-        if semitone_diff_13 > max_comf_13:
-            if digit_2 == C.THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 > max_prac_13:
-                costs['pcc'] = 2 * self._weights['pcc']  # A "full change"
-            else:
-                costs['pcc'] = 1 * self._weights['pcc']  # A "half change"
-        elif semitone_diff_13 < min_comf_13:
-            if digit_2 == C.THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 < min_prac_13:
-                costs['pcc'] = 2 * self._weights['pcc']  # A "full change"
-            else:
-                costs['pcc'] = 1 * self._weights['pcc']  # A "half change"
+        raw_pcc = self.raw_position_change_count(handed_digit_1, midi_1,
+                                                 handed_digit_2, midi_2,
+                                                 handed_digit_3, midi_3)
+        costs['pcc'] = raw_pcc * self._weights['pcc']
 
     def assess_position_change_size(self, costs, handed_digit_1, midi_1, handed_digit_3, midi_3):
         # Rule 5 ("Position-Change-Size")
@@ -668,6 +758,55 @@ class Parncutt(D.Dactyler):
         for cost_key in costs:
             cost += costs[cost_key]
         return cost, costs
+
+    def segment_advice_cost(self, abcdf, staff="upper", score_index=0, segment_index=0):
+        """
+        Calculate cost and cost details for a given fingering sequence.
+        :param abcdf: The fingering sequence.
+        :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
+        :param score_index: Identifies the score to process.
+        :param segment_index: Identifies the segment.
+        :return: cost, transition_detail: cost is th total cost. detail is a data structure itemizing
+        more granular subcosts.
+        """
+        segments = self.segments(score_index=score_index, staff=staff)
+        segment = segments[segment_index]
+        annot = DAnnotation(abcdf=abcdf)
+        handed_strikers = annot.handed_strike_digits(staff=staff)
+        total_cost = 0
+        transition_detail = list()
+
+        if len(segment) < 3:
+            # return 0, {}
+            raise Exception("Segment too short")
+
+        for note_num in range(len(segment)):
+            if note_num == 0:
+                midi_1 = None
+                hd_1 = '-'
+                midi_2 = segment[note_num].pitch.midi
+                hd_2 = handed_strikers[note_num]
+                midi_3 = segment[note_num + 1].pitch.midi
+                hd_3 = handed_strikers[note_num + 1]
+            elif note_num == len(segment) - 1:
+                midi_1 = segment[note_num - 1].pitch.midi
+                hd_1 = handed_strikers[note_num - 1]
+                midi_2 = segment[note_num].pitch.midi
+                hd_2 = handed_strikers[note_num]
+                midi_3 = None
+                hd_3 = '-'
+            else:
+                midi_1 = segment[note_num - 1].pitch.midi
+                hd_1 = handed_strikers[note_num - 1]
+                midi_2 = segment[note_num].pitch.midi
+                hd_2 = handed_strikers[note_num]
+                midi_3 = segment[note_num + 1].pitch.midi
+                hd_3 = handed_strikers[note_num + 1]
+
+            cost, detail = self.trigram_node_cost(midi_1, hd_1, midi_2, hd_2, midi_3, hd_3)
+            total_cost += cost
+            transition_detail.append(detail)
+        return total_cost, transition_detail
 
     def trigram_nx_graph(self, fn_graph):
         """
@@ -897,8 +1036,39 @@ class Parncutt(D.Dactyler):
 
 
 class Jacobs(Parncutt):
+    def init_rule_weights(self):
+        self._weights = {
+            'str': 1,
+            'sma': 1,
+            'lar': 1,
+            'pcc': 1,
+            'pcs': 1,
+            'wea': 1,
+            '3t4': 1,
+            'bl4': 1,
+            'bl1': 1,
+            'bl5': 1,
+            'pa1': 1
+        }
+
+    def init_costs(self):
+        costs = {
+            'str': 0,
+            'sma': 0,
+            'lar': 0,
+            'pcc': 0,
+            'pcs': 0,
+            'wea': 0,
+            '3t4': 0,
+            'bl4': 0,
+            'bl1': 0,
+            'bl5': 0,
+            'pa1': 0,
+        }
+        return costs
+
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
-                 pruning_method='max', finger_spans=None):
+                 pruning_method='max', finger_spans=FINGER_SPANS):
         super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
                          staff_combiner=staff_combiner, pruning_method=pruning_method,
                          finger_spans=finger_spans)
@@ -924,22 +1094,6 @@ class Jacobs(Parncutt):
 
         # print(self._key_positions)
         # print(self._bounds_for_semitone_interval)
-
-    def init_costs(self):
-        costs = {
-            'str': 0,
-            'sma': 0,
-            'lar': 0,
-            'pcc': 0,
-            'pcs': 0,
-            'wea': 0,
-            '3t4': 0,
-            'bl4': 0,
-            'bl1': 0,
-            'bl5': 0,
-            'pa1': 0,
-        }
-        return costs
 
     def distance(self, from_midi, to_midi):
         from_pos = self._key_positions[from_midi]
@@ -1050,9 +1204,174 @@ class Jacobs(Parncutt):
         return cost, costs
 
 
-class Badgerow(Jacobs):
+class Badgerow(Parncutt):
+    def init_rule_weights(self):
+        self._weights = {
+            'str': 1,
+            'sma': 1,
+            'lar': 1,
+            'pcc': 1,
+            'pcs': 1,
+            'wea': 1,
+            '345': 1,
+            '3t4': 1,
+            'bl1': 1,
+            'bl5': 1,
+            'pa1': 1,
+            'apr': 1,
+        }
+
+    def init_costs(self):
+        costs = {
+            'str': 0,
+            'sma': 0,
+            'lar': 0,
+            'pcc': 0,
+            'pcs': 0,
+            'wea': 0,
+            '345': 0,
+            '3t4': 0,
+            'bl1': 0,
+            'bl5': 0,
+            'pa1': 0,
+            'apr': 0,
+        }
+        return costs
+
+    def assess_large_span(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2, handed_digit_3, midi_3):
+        # Rule 3 ("Large-Span") as described in Parncutt text and implied in results reported,
+        # NOT as defined in the stated Rule 3.
+        if not midi_1:
+            return
+
+        absolute_semitone_diff_12 = abs(self.distance(midi_1, midi_2))
+        digit_1 = D.Dactyler.digit_only(handed_digit_1)
+        digit_2 = D.Dactyler.digit_only(handed_digit_2)
+        span_penalty = 2
+        if digit_1 == C.THUMB or digit_2 == C.THUMB:
+            span_penalty = 1
+
+        hand = D.Dactyler.digit_hand(handed_digit_1)
+        if hand == '>':
+            if digit_1 < digit_2 and midi_1 < midi_2:
+                max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
+                max_comf_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxComf']
+            elif digit_1 > digit_2 and midi_1 > midi_2:
+                max_rel_12 = self._finger_spans[(handed_digit_2, handed_digit_1)]['MaxRel']
+                max_comf_12 = self._finger_spans[(handed_digit_2, handed_digit_1)]['MaxComf']
+            else:
+                return
+        else:
+            if digit_1 < digit_2 and midi_1 < midi_2:
+                max_rel_12 = self._finger_spans[(handed_digit_2, handed_digit_1)]['MaxRel']
+                max_comf_12 = self._finger_spans[(handed_digit_2, handed_digit_1)]['MaxComf']
+            elif digit_1 > digit_2 and midi_1 > midi_2:
+                max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
+                max_comf_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxComf']
+            else:
+                return
+
+        raw_pcc = 2
+        if midi_3:
+            raw_pcc = self.raw_position_change_count(handed_digit_1, midi_1, handed_digit_2, midi_2,
+                                                     handed_digit_3, midi_3)
+        if raw_pcc <= 1:
+            if absolute_semitone_diff_12 > max_comf_12:
+                costs['lar'] = span_penalty * (absolute_semitone_diff_12 - max_comf_12) * self._weights['lar']
+        else:
+            if absolute_semitone_diff_12 > max_rel_12:
+                costs['lar'] = span_penalty * (absolute_semitone_diff_12 - max_rel_12) * self._weights['lar']
+
+    def assess_alternation_pairing(self, costs, digit_1, digit_2, digit_3):
+        # New Rule ("Alternation-Pairing") from Justin Badgerow
+        # "Assign 1 point for 3-4-3 or 4-3-4 combinations and 1 point for 4-5-4 or 5-4-5 combinations."
+        if (digit_1 == 3 and digit_2 == 4 and digit_3 == 3) or (digit_1 == 4 and digit_2 == 3 and digit_3 == 4) or \
+           (digit_1 == 4 and digit_2 == 5 and digit_3 == 4) or (digit_1 == 5 and digit_2 == 4 and digit_3 == 4):
+            costs['apr'] = self._weights['apr']
+
+    def assess_thumb_on_black(self, costs, digit_1, midi_1, digit_2, midi_2, digit_3, midi_3):
+        # Rule 10 ("Thumb-on-Black")
+        # "Assign 1 point whenever the thumb plays a black key."
+        if digit_2 != C.THUMB:
+            return
+
+        if is_black(midi_2):
+            costs['bl1'] += self._weights['bl1']
+
+        # "If the immediately preceding note is white, assign a further 2 points."
+        if digit_1 and is_black(midi_2) and is_white(midi_1):
+            costs['bl1'] += 2 * self._weights['bl1']
+
+        # "If the immediately following note is white, assign a further 2 points."
+        if digit_3 and is_black(midi_2) and is_white(midi_3):
+            costs['bl1'] += 2 * self._weights['bl1']
+
+        # Justin's amendment: "When the thumb plays a black key, if the preceding OR
+        # following note is finger 5 on a white key, assign a further 2 points for each usage."
+        if digit_1 == C.LITTLE and is_white(midi_1):
+            costs['bl1'] += 2 * self._weights['bl1']
+        if digit_3 == C.LITTLE and is_white(midi_3):
+            costs['bl1'] += 2 * self._weights['bl1']
+
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
-                 pruning_method='max', finger_spans=None):
+                 pruning_method='max', finger_spans=BADGEROW_FINGER_SPANS):
         super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
                          staff_combiner=staff_combiner, pruning_method=pruning_method,
                          finger_spans=finger_spans)
+
+    def trigram_node_cost(self, midi_1, handed_digit_1, midi_2, handed_digit_2, midi_3, handed_digit_3):
+        """
+        Determine the cost associated with a trigram node configured as input.
+        :param midi_1: The MIDI note number of the first note in the trigram. May be None in first layer.
+        :param handed_digit_1: Fingering for first note (e.g., ">3").
+        :param midi_2: The MIDI note number of the second note in the trigram.
+        :param handed_digit_2: Fingering proposed for second note (e.g., "<5").
+        :param midi_3: The MIDI note number of the third note.
+        :param handed_digit_3: Fingering for third note.
+        :return: cost, costs: The total (scalar integer) cost associated with the node, and a dictionary
+        detailing the specific subcosts contributing to the total.
+        """
+        cost = 0
+        costs = self.init_costs()
+
+        hand, digit_1, digit_2, digit_3 = Parncutt._hand_and_trigram_digits(handed_digit_1, handed_digit_2, handed_digit_3)
+
+        # Rule 1 ("Stretch")
+        self.assess_stretch(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+
+        # Rule 2 ("Small-Span")
+        self.assess_small_span(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+
+        # Rule 3 ("Large-Span")
+        self.assess_large_span(costs, handed_digit_1, midi_1, handed_digit_2, midi_2, handed_digit_3, midi_3)
+
+        # Rule 4 ("Position-Change-Count")
+        self.assess_position_change_count(costs, handed_digit_1, midi_1, handed_digit_2, midi_2, handed_digit_3, midi_3)
+
+        # Rule 5 ("Position-Change-Size")
+        self.assess_position_change_size(costs, handed_digit_1, midi_1, handed_digit_3, midi_3)
+
+        # Rule 6 (wea "Weak-Finger")
+        self.assess_weak_finger(costs, digit_2)
+
+        # Rule 7 ("Three-Four-Five")
+        self.assess_345(costs, digit_1, digit_2, digit_3)
+
+        # Rule 8 ("Three-to-Four")
+        self.assess_3_to_4(costs, digit_1, digit_2)
+
+        # Rule 10 ("Thumb-on-Black")
+        self.assess_thumb_on_black(costs, digit_1, midi_1, digit_2, midi_2, digit_3, midi_3)
+
+        # Rule 11 ("Five-on-Black")
+        self.assess_5_on_black(costs, midi_1, digit_2, midi_2, midi_3)
+
+        # Rule 12 ("Thumb-Passing")
+        self.assess_thumb_passing(costs, hand, digit_1, midi_1, digit_2, midi_2)
+
+        # New rule ("Alternation-Pairing")
+        self.assess_alternation_pairing(costs, digit_1, digit_2, digit_3)
+
+        for cost_key in costs:
+            cost += costs[cost_key]
+        return cost, costs

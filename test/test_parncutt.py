@@ -311,22 +311,39 @@ class ParncuttTest(unittest.TestCase):
                     assert cost == gold_cost, \
                         "Bad {0} cost for {1} in {2}: {3} should be {4}".format(rule, gold_sugg, id, cost, gold_cost)
 
+    @staticmethod
+    def test_a_segment_cost():
+        parncutt = Parncutt(segment_combiner="cost")
+        d_corpus = DCorpus(corpus_str=TestConstant.PARNCUTT_HUMAN_FRAGMENT['A'])
+        parncutt.load_corpus(d_corpus=d_corpus)
+        abcdf = ">24342313"
+        cost, details = parncutt.segment_advice_cost(abcdf)
+        # print("")
+        # print(abcdf)
+        # print("Cost: {0}".format(cost))
+        # for det in details:
+        #     print(det)
+        assert cost == 6, "Bad segment cost calculation"
+
     # @staticmethod
     # def test_corrected_parncutt():
     #     parncutt = Parncutt(pruning_method="none")
     #     parncutt.segment_combiner(method="cost")
     #
     #     for id in subcosts:
-    #         if id != 'B':
-    #             continue
+    #         # if id != 'B':
+    #             # continue
+    #         print("")
+    #         print("Piece {0}".format(id))
+    #         print("=======")
     #         d_corpus = DCorpus(corpus_str=TestConstant.PARNCUTT_HUMAN_FRAGMENT[id])
     #         parncutt.load_corpus(d_corpus=d_corpus)
     #         if id == 'B':
-    #             suggestions, costs, details = parncutt.generate_advice(staff="upper", cycle=4, k=500)
+    #             suggestions, costs, details = parncutt.generate_advice(staff="upper", cycle=4, k=10)
     #         else:
-    #             suggestions, costs, details = parncutt.generate_advice(staff="upper", last_digit=last_digit[id], k=500)
+    #             suggestions, costs, details = parncutt.generate_advice(staff="upper", last_digit=last_digit[id], k=10)
     #         playable_count = parncutt.last_segment_pruned_count()
-            # parncutt.report_on_advice(suggestions, costs, details)
+    #         parncutt.report_on_advice(suggestions, costs, details)
 
             # Output for LaTeX report.
             # for i in range(len(details)):
@@ -352,7 +369,6 @@ class ParncuttTest(unittest.TestCase):
         #             "Missing cost {0} in {1}".format(costs[i], id)
         #         assert suggestions[i] in solutions[id][int(costs[i])],\
         #             "Missing {0} cost suggestion {1} in {2}".format(costs[i], suggestions[i], id)
-
 
     @staticmethod
     def test_parncutt_edges():

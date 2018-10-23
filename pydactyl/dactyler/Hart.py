@@ -159,6 +159,19 @@ class Hart(D.Dactyler):
         self._max_interval_size = max_interval_size
         self._costs = self._define_costs()
 
+    def segment_advice_cost(abcdf, staff="upper", score_index=0, segment_index=0):
+        """
+        NOT YET IMPLEMENTED
+        Calculate cost and cost details for a given fingering sequence.
+        :param abcdf: The fingering sequence.
+        :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
+        :param score_index: Identifies the score to process.
+        :param segment_index: Identifies the segment.
+        :return: cost, transition_detail: cost is th total cost. detail is a data structure itemizing
+        more granular subcosts.
+        """
+        raise Exception("Not yet implemented.")
+
     def generate_segment_advice(self, segment, staff, offset=0, cycle=False,
                                 handed_first_digit=None, handed_last_digit=None, k=None):
         """

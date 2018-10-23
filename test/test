@@ -35,7 +35,7 @@
 # set -x
 # MODULES="dactyler d_corpus hart interval"
 # hart_k segment
-MODULES="abcd_header d_corpus hart sayegh parncutt"
+MODULES="abcd_header d_corpus hart sayegh parncutt jacobs badgerow"
 
 cd ..
 export PYTHONPATH=$(pwd)

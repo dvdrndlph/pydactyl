@@ -449,14 +449,15 @@ class Dactyler(ABC):
         staff parameter.
         :param k: The number of suggestions and corresponding costs to return. (Up to this number may be
         returned.)
-        :return: suggestions, costs: Two lists are returned. The first contains suggested fingering
-        solutions as abcDF strings. The second contains the respective costs of each suggestion.
+        :return: suggestions, costs, details: Three lists are returned. The first contains suggested fingering
+        solutions as abcDF strings. The second contains the respective costs of each suggestion. The third
+        is a list of data structures conveying more granular information on the costs.
         """
         d_scores = self._d_corpus.d_score_list()
         if score_index >= len(d_scores):
             raise Exception("Score index out of range")
-
         d_score = d_scores[score_index]
+
         if staff == "both":
             if d_score.part_count() < 2:
                 raise Exception("Only one staff present.")
@@ -475,8 +476,64 @@ class Dactyler(ABC):
                 lower_suggestions=lower_suggestions, lower_costs=lower_costs, lower_details=lower_details,
                 upper_length=upper_length, lower_length=lower_length, k=k)
 
+        suggestions_for_segment, costs_for_segment, details_for_segment, segment_lengths = \
+            self.generate_segmented_advice(score_index, staff, cycle, offset, first_digit, last_digit, k)
+        suggestions, costs, details = self.combine_segments(suggestions_for_segment=suggestions_for_segment,
+                                                            costs_for_segment=costs_for_segment,
+                                                            details_for_segment=details_for_segment,
+                                                            segment_lengths=segment_lengths, k=k)
+        return suggestions, costs, details
+
+    def segments(self, score_index=0, staff="upper", offset=0):
+        if staff != "upper" and staff != "lower":
+            raise Exception("Segments are dispensed one staff at a time.")
+
+        d_scores = self._d_corpus.d_score_list()
+        if score_index >= len(d_scores):
+            raise Exception("Score index out of range")
+
+        d_score = d_scores[score_index]
+
+        if d_score.part_count() == 1:
+            d_part = d_score.combined_d_part()
+        else:
+            # We support (segregated) left hand fingerings. By segregated, we
+            # mean the right hand is dedicated to the upper staff, and the
+            # left hand is dedicated to the lower staff.
+            d_part = d_score.d_part(staff=staff)
+
+        segments = d_part.orderly_note_stream_segments(offset=offset)
+        return segments
+
+    def generate_segmented_advice(self, score_index=0, staff="upper", cycle=None, offset=0,
+                                  first_digit=None, last_digit=None, k=1):
+        """
+        Generate advice for the specified score. This method only supports segregated advice.
+        :param score_index:
+        :param staff: One of "upper" or "lower." The "both" option is not allowed and will raise an exception.
+        :param cycle: Detect repeating note patterns of at least this length within each segment and generate
+        advice best suited for uniform fingerings of the repeated patterns. Defaults to None (ignore cycles).
+        :param offset:
+        :param first_digit: Constrain the advice to begin with this digit (1-5). Inconsistent with "both"
+        staff parameter.
+        :param last_digit: Constrain the advice to end with this digit (1-5). Inconsistent with "both"
+        staff parameter.
+        :param k: The number of suggestions and corresponding costs to return. (Up to this number may be
+        returned.)
+        :return: segment_suggestions, segment_costs, segment_details, segment_lengths: Three lists of lists
+        and one list are returned. The first is list of lists of suggested fingering solutions (as abcDF strings)
+        for each segment. The second contains the respective costs of each suggestion for each segment. The third
+        is data structures conveying more granular information on the costs of each suggestion for each segment.
+        (This will vary by derived class.) The fourth conveys the note lengths of each segment.
+        """
         if staff != "upper" and staff != "lower":
             raise Exception("Segregated advice is only dispensed one staff at a time.")
+
+        d_scores = self._d_corpus.d_score_list()
+        if score_index >= len(d_scores):
+            raise Exception("Score index out of range")
+
+        d_score = d_scores[score_index]
 
         handed_first_digit = Dactyler.hand_digit(digit=first_digit, staff=staff)
         handed_last_digit = Dactyler.hand_digit(digit=last_digit, staff=staff)
@@ -518,11 +575,7 @@ class Dactyler(ABC):
             segment_lengths.append(segment_length)
             segment_index += 1
 
-        suggestions, costs, details = self.combine_segments(suggestions_for_segment=suggestions_for_segment,
-                                                            costs_for_segment=costs_for_segment,
-                                                            details_for_segment=details_for_segment,
-                                                            segment_lengths=segment_lengths, k=k)
-        return suggestions, costs, details
+        return suggestions_for_segment, costs_for_segment, details_for_segment, segment_lengths
 
     @staticmethod
     def report_on_advice(suggestions, costs, details):
@@ -882,6 +935,19 @@ class TrainedDactyler(Dactyler):
         :return: suggestions, costs, details: Three lists are returned. The first contains suggested fingering
         solutions as abcDF strings. The second contains the respective costs of each suggestion. The third
         contains details about how each cost was determined.
+        """
+        pass
+
+    @abstractmethod
+    def segment_advice_cost(abcdf, staff="upper", score_index=0, segment_index=0):
+        """
+        Calculate cost and cost details for a given fingering sequence.
+        :param abcdf: The fingering sequence.
+        :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
+        :param score_index: Identifies the score to process.
+        :param segment_index: Identifies the segment.
+        :return: cost, transition_detail: cost is th total cost. detail is a data structure itemizing
+        more granular subcosts.
         """
         pass
 
