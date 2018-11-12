@@ -12,6 +12,10 @@ setuptools.setup(name='pydactyl',
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
+    scripts=[
+        'bin/coster',
+        'bin/krippenorffer',
+    ],
     classifiers=(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

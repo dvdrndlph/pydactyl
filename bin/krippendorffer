@@ -1,0 +1,167 @@
+#!/usr/bin/env python
+__author__ = 'David Randolph'
+# Copyright (c) 2014-2018 David A. Randolph.
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without
+# restriction, including without limitation the rights to use,
+# copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following
+# conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+
+from pydactyl.dactyler.Parncutt import Parncutt
+from pydactyl.dactyler.Parncutt import Jacobs
+from pydactyl.dactyler.Parncutt import Badgerow
+from pydactyl.dcorpus.DCorpus import DCorpus
+from krippendorff import alpha
+import pymysql
+
+last_digit = {
+    0: 3,
+    # B is cyclic pattern
+    2: 1,
+    3: 2,
+    4: 2,
+    5: 1,
+    6: 1
+}
+
+conn = pymysql.connect(host='127.0.0.1', port=3306, user='didactyl', passwd='', db='didactyl2')
+query = """select exercise, abc_fragment
+             from parncutt"""
+curs = conn.cursor()
+curs.execute(query)
+
+
+d_corpus = DCorpus()
+upper_gold = list()
+for row in curs:
+    ex = row[0]
+    abc_content = row[1]
+
+    # print(abc_content)
+    d_corpus.append(corpus_str=abc_content)
+
+query_gold = """select exercise, fingering, subject_count
+                  from parncutt_published
+                  order by exercise"""
+curs.execute(query_gold)
+upper_gold = list()
+last_ex_id = None
+for row_gold in curs:
+    subject_count = row_gold[2]
+    gold_fingering = list(row_gold[1])
+    ex_id = int(row_gold[0])
+    if ex_id != last_ex_id:
+        rank_counts = list()
+        exercise_upper_gold = list()
+        upper_gold.append(exercise_upper_gold)
+        last_ex_id = ex_id
+
+    gold_finger_ints = list(map(int, gold_fingering))
+    for i in range(int(subject_count)):
+        exercise_upper_gold.append(gold_finger_ints)
+
+ex_index = 0
+human_alphas = list()
+for exercise_upper_gold in upper_gold:
+    krip = alpha(reliability_data=exercise_upper_gold, level_of_measurement='interval')
+    # print(krip)
+    human_alphas.append(krip)
+    ex_index += 1
+
+
+def krip_it(upper_rh_advice, exercise_upper_gold):
+    fingerings = list(upper_rh_advice)
+    fingerings.pop(0)
+    finger_ints = list(map(int, fingerings))
+    exercise_upper_gold.append(finger_ints)
+    krip = alpha(reliability_data=exercise_upper_gold, level_of_measurement='interval')
+    exercise_upper_gold.pop()
+    return krip
+
+
+parncutt = Parncutt(segment_combiner="cost")
+parncutt.load_corpus(d_corpus=d_corpus)
+parncutt_alphas = list()
+parncutt_constrained_alphas = list()
+for i in range(7):
+    exercise_upper_gold = upper_gold[i]
+    upper_rh_advice = parncutt.advise(staff="upper", score_index=i)
+    print("Parncutt {0} advice: {1}".format(i, upper_rh_advice))
+
+    krip = krip_it(upper_rh_advice, exercise_upper_gold)
+    parncutt_alphas.append(krip)
+    # print(upper_rh_advice)
+    if i == 1:
+        suggestions, costs, details = parncutt.generate_advice(staff="upper", score_index=i, cycle=4, k=20)
+    else:
+        suggestions, costs, details = parncutt.generate_advice(staff="upper", score_index=i, last_digit=last_digit[i], k=30)
+
+    print("Constrained {0}    : {1}".format(i, suggestions[0]))
+    krip = krip_it(upper_rh_advice=suggestions[0], exercise_upper_gold=exercise_upper_gold)
+    parncutt_constrained_alphas.append(krip)
+
+jacobs = Jacobs(segment_combiner="cost")
+jacobs.load_corpus(d_corpus=d_corpus)
+jacobs_alphas = list()
+for i in range(7):
+    exercise_upper_gold = upper_gold[i]
+    upper_rh_advice = jacobs.advise(staff="upper", score_index=i)
+    print("Jacobs {0} advice: {1}".format(i, upper_rh_advice))
+
+    fingering = list(upper_rh_advice)
+    fingering.pop(0)
+    finger_ints = list(map(int, fingering))
+    exercise_upper_gold.append(finger_ints)
+    krip = alpha(reliability_data=exercise_upper_gold, level_of_measurement='interval')
+    jacobs_alphas.append(krip)
+    # print(krip)
+    exercise_upper_gold.pop()
+    # print(upper_rh_advice)
+
+justin = Badgerow(segment_combiner="cost")
+justin.load_corpus(d_corpus=d_corpus)
+justin_alphas = list()
+for i in range(7):
+    exercise_upper_gold = upper_gold[i]
+    upper_rh_advice = justin.advise(staff="upper", score_index=i)
+    print("Badgerow {0} advice: {1}".format(i, upper_rh_advice))
+
+    fingering = list(upper_rh_advice)
+    fingering.pop(0)
+    finger_ints = list(map(int, fingering))
+    exercise_upper_gold.append(finger_ints)
+    krip = alpha(reliability_data=exercise_upper_gold, level_of_measurement='interval')
+    justin_alphas.append(krip)
+    # print(krip)
+    exercise_upper_gold.pop()
+    # print(upper_rh_advice)
+
+
+print("Human alpha PCalpha     P alpha     J alpha     B alpha      PCdelta     P delta     J delta     B delta")
+for i in range(7):
+    print("{0:1.6f}\t{1:1.6f}\t{2:1.6f}\t{3:1.6f}\t{4:1.6f}\t{5:+1.6f}\t{6:+1.6f}\t{7:+1.6f}\t{8:+1.6f}".format(
+        human_alphas[i],
+        parncutt_constrained_alphas[i],
+        parncutt_alphas[i],
+        jacobs_alphas[i],
+        justin_alphas[i],
+        parncutt_constrained_alphas[i] - human_alphas[i],
+        parncutt_alphas[i] - human_alphas[i],
+        jacobs_alphas[i] - human_alphas[i],
+        justin_alphas[i] - human_alphas[i]))
