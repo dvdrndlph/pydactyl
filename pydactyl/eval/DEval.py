@@ -125,7 +125,7 @@ class DEval(ABC):
                 nugget_count += 1
             if nugget_count == len(gold):
                 break
-        trimmed_suggestions = suggestions[0:nugget_count]
+        trimmed_suggestions = suggestions[0:i+1]
         return trimmed_suggestions
 
     @staticmethod
@@ -294,6 +294,10 @@ class DEval(ABC):
 
     @abstractmethod
     def map_at_perfect_recall(self, staff="upper"):
+        return
+
+    @abstractmethod
+    def map_at_k(self, staff="upper", k=10):
         return
 
     @abstractmethod

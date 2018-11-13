@@ -79,6 +79,7 @@ class Parncutter(DEval):
 
     def map_at_perfect_recall(self, staff="upper"):
         avg_p_sum = 0
+        details = list()
         for i in range(7):
             if i == 1:
                 result = self.score_avg_p_at_perfect_recall(score_index=i, staff="upper",
@@ -86,10 +87,27 @@ class Parncutter(DEval):
             else:
                 result = self.score_avg_p_at_perfect_recall(score_index=i, staff="upper",
                                                             cycle=None, last_digit=last_digit[i])
+            details.append(result)
             # {'relevant': tp_count, 'p_at_rank': precisions_at_rank, 'avg_p': avg_p}
             avg_p_sum += result['avg_p']
         mean_avg_p = avg_p_sum/7
-        return mean_avg_p
+        return mean_avg_p, details
+
+    def map_at_k(self, staff="upper", k=10):
+        avg_p_sum = 0
+        details = list()
+        for i in range(7):
+            if i == 1:
+                result = self.score_avg_p_at_k(score_index=i, staff="upper",
+                                               cycle=4, last_digit=None, k=k)
+            else:
+                result = self.score_avg_p_at_k(score_index=i, staff="upper",
+                                               cycle=None, last_digit=last_digit[i], k=k)
+            details.append(result)
+            # {'relevant': tp_count, 'p_at_rank': precisions_at_rank, 'avg_p': avg_p}
+            avg_p_sum += result['avg_p']
+        mean_avg_p = avg_p_sum/7
+        return mean_avg_p, details
 
     def p_r_at_k(self, staff="upper", k=5):
         results = list()

@@ -24,8 +24,15 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 
 from pydactyl.eval.Parncutter import Parncutter
+from pprint import pprint
 
 cutter = Parncutter()
 cutter.load_published_parncutt()
-map_at_perfect = cutter.map_at_perfect_recall()
+map_at_perfect, details = cutter.map_at_perfect_recall()
 print("MAP@perfectR: {0}".format(map_at_perfect))
+for detail in details:
+    print(detail)
+map_at_10, details = cutter.map_at_k(k=10)
+print("MAP@10: {0}".format(map_at_10))
+for detail in details:
+    print(detail)
