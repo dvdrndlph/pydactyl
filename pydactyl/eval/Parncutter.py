@@ -121,6 +121,38 @@ class Parncutter(DEval):
             results.append(result)
         return results
 
+    def dcg_at_k(self, staff="upper", base="2", k=10):
+        total_dcg = 0
+        results = list()
+        for i in range(7):
+            if i == 1:
+                dcg_at_k = self.score_dcg_at_k(score_index=i, staff="upper",
+                                               cycle=4, last_digit=None, base=base, k=k)
+            else:
+                dcg_at_k = self.score_dcg_at_k(score_index=i, staff="upper", base=base,
+                                               cycle=None, last_digit=last_digit[i], k=k)
+            results.append(dcg_at_k)
+            # {'relevant': tp_count, 'p_at_rank': precisions_at_rank, 'avg_p': avg_p}
+            total_dcg += dcg_at_k
+        mean = total_dcg/7
+        return mean, results
+
+    def ndcg_at_k(self, staff="upper", base="2", k=10):
+        total_ndcg = 0
+        results = list()
+        for i in range(7):
+            if i == 1:
+                ndcg_at_k = self.score_ndcg_at_k(score_index=i, staff="upper",
+                                                 cycle=4, last_digit=None, base=base, k=k)
+            else:
+                ndcg_at_k = self.score_ndcg_at_k(score_index=i, staff="upper", base=base,
+                                                 cycle=None, last_digit=last_digit[i], k=k)
+            results.append(ndcg_at_k)
+            # {'relevant': tp_count, 'p_at_rank': precisions_at_rank, 'avg_p': avg_p}
+            total_ndcg += ndcg_at_k
+        mean = total_ndcg/7
+        return mean, results
+
     def compare_jacobs(self):
         jacobs = Jacobs(segment_combiner="cost")
         jacobs.load_corpus(d_corpus=self._d_corpus)

@@ -26,6 +26,8 @@ from abc import ABC, abstractmethod
 from krippendorff import alpha
 import re
 import random
+import numpy as np
+import math
 from pydactyl.dcorpus.DCorpus import DCorpus
 
 
@@ -292,6 +294,62 @@ class DEval(ABC):
         }
         return result
 
+    def _relevancy_asfarray(self, suggestions, score_index, staff="upper", last_digit=None):
+        score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
+        relevancy = list()
+        largest_count = 0
+        for fingering in suggestions:
+            if fingering in score_gold:
+                vote_count = int(score_gold[fingering])
+                relevancy.append(vote_count)
+                if vote_count > largest_count:
+                    largest_count = vote_count
+            else:
+                relevancy.append(0)
+
+        relevancy_asf = np.asfarray(a=relevancy)
+        if largest_count != 0:
+            relevancy_asf /= largest_count
+        return relevancy_asf
+
+    @staticmethod
+    def _dcg(relevancy, base="2"):
+        if base == "e":
+            dcg = relevancy[0] + np.sum(relevancy[1:] / np.log(np.arange(2, relevancy.size + 1)))
+        elif base == "2":
+            dcg = relevancy[0] + np.sum(relevancy[1:] / np.log2(np.arange(2, relevancy.size + 1)))
+        else:
+            b = int(base)
+            dcg = relevancy[0]
+            for i in range(1, relevancy.size + 1):
+                dcg += 1.0*relevancy[i]/math.log(i + 1, base=b)
+        return dcg
+
+    def score_dcg_at_k(self, score_index, staff="upper", cycle=None, last_digit=None, base="2", k=10):
+        self.assert_good_gold(staff=staff)
+        suggestions, costs, details = self.score_advice(score_index=score_index, staff=staff,
+                                                        last_digit=last_digit, cycle=cycle, k=k)
+        relevancy = self._relevancy_asfarray(suggestions=suggestions, score_index=score_index,
+                                             staff=staff, last_digit=last_digit)
+        dcg_at_k = DEval._dcg(relevancy=relevancy, base=base)
+        return dcg_at_k
+
+    def score_ndcg_at_k(self, score_index, staff="upper", cycle=None, last_digit=None, base="2", k=10):
+        self.assert_good_gold(staff=staff)
+        suggestions, costs, details = self.score_advice(score_index=score_index, staff=staff,
+                                                        last_digit=last_digit, cycle=cycle, k=k)
+        relevancy = self._relevancy_asfarray(suggestions=suggestions, score_index=score_index,
+                                             staff=staff, last_digit=last_digit)
+        most_relevant = sorted(relevancy, reverse=True)
+        most_relevant_asf = np.asfarray(a=most_relevant)
+        dcg_ideal = self._dcg(relevancy=most_relevant_asf, base=base)
+        if not dcg_ideal:
+            return 0.0
+
+        dcg_at_k = DEval._dcg(relevancy=relevancy, base=base)
+        ndcg_at_k = dcg_at_k/dcg_ideal
+        return ndcg_at_k
+
     @abstractmethod
     def map_at_perfect_recall(self, staff="upper"):
         return
@@ -302,6 +360,14 @@ class DEval(ABC):
 
     @abstractmethod
     def p_r_at_k(self, staff="upper", k=10):
+        return
+
+    @abstractmethod
+    def dcg_at_k(self, staff="upper", base="2", k=10):
+        return
+
+    @abstractmethod
+    def ndcg_at_k(self, staff="upper", base="2", k=10):
         return
 
 

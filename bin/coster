@@ -28,11 +28,19 @@ from pprint import pprint
 
 cutter = Parncutter()
 cutter.load_published_parncutt()
-map_at_perfect, details = cutter.map_at_perfect_recall()
-print("MAP@perfectR: {0}".format(map_at_perfect))
-for detail in details:
+map_full, map_full_details = cutter.map_at_perfect_recall()
+print("MAP@perfectR: {0}".format(map_full))
+for detail in map_full_details:
     print(detail)
-map_at_10, details = cutter.map_at_k(k=10)
+map_at_10, map_10_details = cutter.map_at_k(k=10)
 print("MAP@10: {0}".format(map_at_10))
-for detail in details:
+for detail in map_10_details:
+    print(detail)
+dcg_at_10, dcg_10_details = cutter.dcg_at_k(k=10)
+print("DCG@10: {0}".format(dcg_at_10))
+for detail in dcg_10_details:
+    print(detail)
+ndcg_at_10, ndcg_10_details = cutter.ndcg_at_k(k=10)
+print("NDCG@10: {0}".format(ndcg_at_10))
+for detail in ndcg_10_details:
     print(detail)
