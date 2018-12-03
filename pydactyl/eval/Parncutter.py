@@ -24,9 +24,6 @@ __author__ = 'David Randolph'
 
 from .DEval import DEval
 from pydactyl.dactyler.Parncutt import Parncutt
-from pydactyl.dactyler.Parncutt import Jacobs
-from pydactyl.dactyler.Parncutt import Badgerow
-from pydactyl.dcorpus.DCorpus import DCorpus
 import pymysql
 
 last_digit = {
@@ -41,10 +38,10 @@ last_digit = {
 
 
 class Parncutter(DEval):
-    def __init__(self):
+    def __init__(self, dactyler=Parncutt(segment_combiner="cost")):
         super().__init__()
         self._conn = pymysql.connect(host='127.0.0.1', port=3306, user='didactyl', passwd='', db='didactyl2')
-        self._dactyler = Parncutt(segment_combiner="cost")
+        self._dactyler = dactyler
 
     def load_published_parncutt(self):
         query = """select exercise, abc_fragment
@@ -153,11 +150,43 @@ class Parncutter(DEval):
         mean = total_ndcg/7
         return mean, results
 
-    def compare_jacobs(self):
-        jacobs = Jacobs(segment_combiner="cost")
-        jacobs.load_corpus(d_corpus=self._d_corpus)
+    def dcpg_at_k(self, staff="upper", phi=None, p=None, k=10):
+        total_dcpg = 0
+        results = list()
+        for i in range(7):
+            if i == 1:
+                dcpg_at_k = self.score_dcpg_at_k(score_index=i, staff="upper",
+                                                 cycle=4, last_digit=None, phi=phi, p=p, k=k)
+            else:
+                dcpg_at_k = self.score_dcpg_at_k(score_index=i, staff="upper", phi=phi, p=p,
+                                                 cycle=None, last_digit=last_digit[i], k=k)
+            results.append(dcpg_at_k)
+            # {'relevant': tp_count, 'p_at_rank': precisions_at_rank, 'avg_p': avg_p}
+            total_dcpg += dcpg_at_k
+        mean = total_dcpg/7
+        return mean, results
 
-    def compare_badgerow(self):
-        justin = Badgerow(segment_combiner="cost")
-        justin.load_corpus(d_corpus=self._d_corpus)
+    def ndcpg_at_k(self, staff="upper", phi=None, p=None, k=10):
+        total_ndcpg = 0
+        results = list()
+        for i in range(7):
+            if i == 1:
+                ndcpg_at_k = self.score_ndcpg_at_k(score_index=i, staff="upper",
+                                                   cycle=4, last_digit=None, phi=phi, p=p, k=k)
+            else:
+                ndcpg_at_k = self.score_ndcpg_at_k(score_index=i, staff="upper", phi=phi, p=p,
+                                                   cycle=None, last_digit=last_digit[i], k=k)
+            results.append(ndcpg_at_k)
+            # {'relevant': tp_count, 'p_at_rank': precisions_at_rank, 'avg_p': avg_p}
+            total_ndcpg += ndcpg_at_k
+        mean = total_ndcpg/7
+        return mean, results
+
+    # def compare_jacobs(self):
+    #     jacobs = Jacobs(segment_combiner="cost")
+    #     jacobs.load_corpus(d_corpus=self._d_corpus)
+    #
+    # def compare_badgerow(self):
+    #     justin = Badgerow(segment_combiner="cost")
+    #     justin.load_corpus(d_corpus=self._d_corpus)
 

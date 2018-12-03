@@ -161,6 +161,7 @@ PIVOT_EDIT_DISTANCES = {
     ('>5', '>5'): 0
 }
 
+MAX_NATURAL_EDIT_DISTANCE = 9
 NATURAL_EDIT_DISTANCES = {
     ('<5', '<5'): 0,
     ('<5', '<4'): 1,

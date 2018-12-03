@@ -22,6 +22,8 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 from tatsu import parse
+import re
+from pydactyl.dactyler import Constant
 
 
 class DAnnotation:
@@ -54,7 +56,7 @@ class DAnnotation:
     """
 
     @staticmethod
-    def ast_for_abcdf(abcdf):
+    def abcdf_to_ast(abcdf):
         ast = parse(DAnnotation.GRAMMAR, abcdf)
         return ast
 
@@ -88,7 +90,7 @@ class DAnnotation:
 
     def parse_upper(self):
         upper_abcdf = self.upper_abcdf()
-        return DAnnotation.ast_for_abcdf(upper_abcdf)
+        return DAnnotation.abcdf_to_ast(upper_abcdf)
 
     def parse_lower(self):
         lower_abcdf = self.upper_abcdf()
@@ -112,7 +114,8 @@ class DAnnotation:
                 count += len(line)
         return count
 
-    def segregated_strike_digits(self, staff="upper", hand=None):
+    @staticmethod
+    def ast_to_segregated_strike_digits(ast, staff="upper", hand=None):
         """
         :return: String of digits (1-5), assuming all fingerings are
                  are for the specified hand (">" or right for the
@@ -130,7 +133,6 @@ class DAnnotation:
                 hand = "<"
 
         digits = []
-        ast = self.parse()
         if staff == "upper":
             lines = ast.upper
         else:
@@ -147,25 +149,113 @@ class DAnnotation:
         digit_str = "".join(digits)
         return digit_str
 
-    def handed_strike_digits(self, staff="upper"):
+    @staticmethod
+    def hand_digit(digit, staff):
         """
-        :return: Array of string, each of which is either "x" or is
-                 composed of a hand ("<" or ">") identifief and a digit (1-5).
+        Determine the handed digit for the input digit string.
+        If the string already has an assigned digit, just return it.
+        Otherwise assign the default hand for the specified staff.
+        :return: The abcDF hand digit (">2" or "<3").
+        """
+        if digit is None:
+            return None
+
+        handed_re = re.compile('^[<>]\d$')
+        if handed_re.match(str(digit)):
+            return digit
+
+        staff_prefix = ">"
+        if staff == "lower":
+            staff_prefix = "<"
+        handed_digit = staff_prefix + str(digit)
+        return handed_digit
+
+    @staticmethod
+    def digit_hand(handed_digit):
+        """
+        Determine the hand specified in the handed digit.
+        :return: The abcDF hand specifier (">" or "<").
+        """
+        handed_re = re.compile('^([<>]{1})\d$')
+        mat = handed_re.match(str(handed_digit))
+        hand = mat.group(1)
+        if hand != "<" and hand != ">":
+            raise Exception("Ill-formed handed digit: {0}".format(handed_digit))
+        return hand
+
+    @staticmethod
+    def digit_only(handed_digit):
+        """
+        Return the digit specified in the handed digit as an integer.
+        :param handed_digit:
+        :return:
+        """
+        handed_re = re.compile('^[<>]{1}(\d)$')
+        mat = handed_re.match(str(handed_digit))
+        digit = mat.group(1)
+        if not digit:
+            raise Exception("Ill-formed handed digit: {0}".format(handed_digit))
+        return int(digit)
+
+    @staticmethod
+    def strike_distance_cost(gold_handed_digit, test_handed_digit, method="hamming"):
+        test_digit = DAnnotation.digit_only(test_handed_digit)
+        test_hand = DAnnotation.digit_hand(test_handed_digit)
+        gold_digit = DAnnotation.digit_only(gold_handed_digit)
+        gold_hand = DAnnotation.digit_hand(gold_handed_digit)
+        if method == "hamming":
+            if test_digit != gold_digit or test_hand != gold_hand:
+                return 1
+            else:
+                return 0
+
+        one = str(gold_hand) + str(gold_digit)
+        other = str(test_hand) + str(test_digit)
+        if method == "natural":
+            cost = Constant.NATURAL_EDIT_DISTANCES[(one, other)]
+            return cost
+        elif method == "pivot":
+            cost = Constant.PIVOT_EDIT_DISTANCES[(one, other)]
+            return cost
+        else:
+            raise Exception("Unsupported method: {0}".format(method))
+
+    def segregated_strike_digits(self, staff="upper", hand=None):
+        """
+        :return: String of digits (1-5), assuming all fingerings are
+                 are for the specified hand (">" or right for the
+                 upper staff by default).
 
                  Returns None if any fingerings for the other hand
                  are detected.
         """
+        ast = self.parse()
+        return DAnnotation.ast_to_segregated_strike_digits(ast=ast, staff=staff, hand=hand)
+
+    @staticmethod
+    def abcdf_to_segregated_strike_digits(abcdf, staff="upper", hand=None):
+        """
+        :return: String of digits (1-5), assuming all fingerings are
+                 are for the specified hand (">" or right for the
+                 upper staff by default).
+
+                 Returns None if any fingerings for the other hand
+                 are detected.
+        """
+        ast = parse(DAnnotation.GRAMMAR, abcdf)
+        return DAnnotation.ast_to_segregated_strike_digits(ast=ast, staff=staff, hand=hand)
+
+    @staticmethod
+    def ast_to_handed_strike_digits(ast, staff="upper"):
         if staff not in ("upper", "lower"):
             raise Exception("Invalid input: staff must be 'upper' or 'lower'.")
 
-        ast = self.parse()
         if staff == "upper":
             lines = ast.upper
             hand = ">"
         else:
             lines = ast.lower
             hand = "<"
-
         handed_digits = []
         for line in lines:
             for score_fingering in line:
@@ -176,6 +266,29 @@ class DAnnotation:
                 handed_digit = hand + str(digit)
                 handed_digits.append(handed_digit)
         return handed_digits
+
+    @staticmethod
+    def abcdf_to_handed_strike_digits(abcdf, staff="upper"):
+        """
+        :return: Array of string, each of which is either "x" or is
+                 composed of a hand ("<" or ">") identifier and a digit (1-5).
+
+                 Returns None if any fingerings for the other hand
+                 are detected.
+        """
+        ast = parse(DAnnotation.GRAMMAR, abcdf)
+        return DAnnotation.ast_to_handed_strike_digits(ast=ast, staff=staff)
+
+    def handed_strike_digits(self, staff="upper"):
+        """
+        :return: Array of string, each of which is either "x" or is
+                 composed of a hand ("<" or ">") identifier and a digit (1-5).
+
+                 Returns None if any fingerings for the other hand
+                 are detected.
+        """
+        ast = self.parse()
+        return DAnnotation.ast_to_handed_strike_digits(ast=ast, staff=staff)
 
     def __init__(self, abcdf=None, authority=None, authority_year=None, transcriber=None,
                  transcription_date=None, abcdf_id=None, comments=''):

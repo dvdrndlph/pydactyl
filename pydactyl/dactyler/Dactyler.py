@@ -535,8 +535,8 @@ class Dactyler(ABC):
 
         d_score = d_scores[score_index]
 
-        handed_first_digit = Dactyler.hand_digit(digit=first_digit, staff=staff)
-        handed_last_digit = Dactyler.hand_digit(digit=last_digit, staff=staff)
+        handed_first_digit = DAnnotation.hand_digit(digit=first_digit, staff=staff)
+        handed_last_digit = DAnnotation.hand_digit(digit=last_digit, staff=staff)
 
         if d_score.part_count() == 1:
             d_part = d_score.combined_d_part()
@@ -622,25 +622,6 @@ class Dactyler(ABC):
         if self.segmenter():
             self._d_corpus.segmenter(self.segmenter())
 
-    @staticmethod
-    def strike_distance_cost(gold_hand, gold_digit, test_hand, test_digit, method="hamming"):
-        if method == "hamming":
-            if test_digit != gold_digit or test_hand != gold_hand:
-                return 1
-            else:
-                return 0
-
-        one = str(gold_hand) + str(gold_digit)
-        other = str(test_hand) + str(test_digit)
-        if method == "natural":
-            cost = Constant.NATURAL_EDIT_DISTANCES[(one, other)]
-            return cost
-        elif method == "pivot":
-            cost = Constant.PIVOT_EDIT_DISTANCES[(one, other)]
-            return cost
-        else:
-            raise Exception("Unsupported method: {0}".format(method))
-
     def score_note_count(self, score_index=0, staff="both"):
         d_score = self._d_corpus.d_score_by_index(score_index)
         note_count = d_score.note_count(staff=staff)
@@ -666,21 +647,19 @@ class Dactyler(ABC):
             gold_sf = gold_annot.score_fingering_at_index(index=gold_i, staff=staff)
             gold_strike = gold_sf.pf.fingering.strike
             gold_hand = gold_strike.hand if gold_strike.hand else current_gold_hand
-            gold_digit = int(gold_strike.digit)
+            gold_digit_str = str(gold_strike.digit)
 
             test_sf = test_annot.score_fingering_at_index(index=i, staff=staff)
             test_strike = test_sf.pf.fingering.strike
             test_hand = test_strike.hand if test_strike.hand else current_test_hand
-            test_digit = int(test_strike.digit)
+            test_digit_str = str(test_strike.digit)
 
             current_gold_hand = gold_hand
             current_test_hand = test_hand
 
-            cost = Dactyler.strike_distance_cost(method=method,
-                                                 gold_hand=gold_hand,
-                                                 gold_digit=gold_digit,
-                                                 test_hand=test_hand,
-                                                 test_digit=test_digit)
+            cost = DAnnotation.strike_distance_cost(method=method,
+                                                    gold_handed_digit=gold_hand+gold_digit_str,
+                                                    test_handed_digit=test_hand+test_digit_str)
             if zero_cost and cost:
                 return cost, gold_i, gold_digit
             score += cost

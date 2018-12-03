@@ -23,24 +23,75 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
+import matplotlib
+matplotlib.use('TkAgg')
+# import matplotlib.pyplot as plt
+
 from pydactyl.eval.Parncutter import Parncutter
+from pydactyl.dactyler.Parncutt import Parncutt
+from pydactyl.dactyler.Parncutt import Jacobs
+from pydactyl.dactyler.Parncutt import Badgerow
+# from pydactyl.dcorpus.DCorpus import DCorpus
 from pprint import pprint
+
+def published_parncutt_evaluate(cutter, name="", spew=False):
+    dcpg_10, dcpg_10_details = cutter.dcpg_at_k(k=10)
+    ndcpg_10, ndcpg_10_details = cutter.ndcpg_at_k(k=10)
+    map_full, map_full_details = cutter.map_at_perfect_recall()
+    map_10, map_10_details = cutter.map_at_k(k=10)
+    dcg_10, dcg_10_details = cutter.dcg_at_k(k=10)
+    ndcg_10, ndcg_10_details = cutter.ndcg_at_k(k=10)
+    dcg_full, dcg_full_details = cutter.dcg_at_k(k=None)
+    ndcg_full, ndcg_full_details = cutter.ndcg_at_k(k=None)
+    results = {
+        'map_full': {'result': map_full, 'details': map_full_details},
+        'map_10': {'result': map_10, 'details': map_10_details},
+        'dcg_10': {'result': dcg_10, 'details': dcg_10_details},
+        'ndcg_10': {'result': ndcg_10, 'details': ndcg_10_details},
+        'dcg_full': {'result': dcg_full, 'details': dcg_full_details},
+        'ndcg_full': {'result': ndcg_full, 'details': ndcg_full_details},
+        'dcpg_10': {'result': dcpg_10, 'details': dcpg_10_details},
+        'ndcpg_10': {'result': ndcpg_10, 'details': ndcpg_10_details},
+    }
+    if spew:
+        print("{0} MAP@perfectR: {1}".format(name, map_full))
+        for detail in map_full_details:
+            print(detail)
+        print("{0} MAP@10: {1}".format(name, map_10))
+        for detail in map_10_details:
+            print(detail)
+        print("{0} meanDCG@10: {1}".format(name, dcg_10))
+        for detail in dcg_10_details:
+            print(detail)
+        print("{0} meanNDCG@10: {1}".format(name, ndcg_10))
+        for detail in ndcg_10_details:
+            print(detail)
+        print("{0} meanDCG@perfectR: {1}".format(name, dcg_full))
+        for detail in dcg_full_details:
+            print(detail)
+        print("{0} meanNDCG@perfectR: {1}".format(name, ndcg_full))
+        for detail in ndcg_full_details:
+            print(detail)
+        print("{0} meanDCPG@10: {1}".format(name, dcpg_10))
+        for detail in dcpg_10_details:
+            print(detail)
+        print("{0} meanNDCPG@10: {1}".format(name, ndcpg_10))
+        for detail in ndcpg_10_details:
+            print(detail)
+    return results
+
 
 cutter = Parncutter()
 cutter.load_published_parncutt()
-map_full, map_full_details = cutter.map_at_perfect_recall()
-print("MAP@perfectR: {0}".format(map_full))
-for detail in map_full_details:
-    print(detail)
-map_at_10, map_10_details = cutter.map_at_k(k=10)
-print("MAP@10: {0}".format(map_at_10))
-for detail in map_10_details:
-    print(detail)
-dcg_at_10, dcg_10_details = cutter.dcg_at_k(k=10)
-print("DCG@10: {0}".format(dcg_at_10))
-for detail in dcg_10_details:
-    print(detail)
-ndcg_at_10, ndcg_10_details = cutter.ndcg_at_k(k=10)
-print("NDCG@10: {0}".format(ndcg_at_10))
-for detail in ndcg_10_details:
-    print(detail)
+parncutt_results = published_parncutt_evaluate(cutter=cutter, name="Parncutt", spew=True)
+
+jacobs = Jacobs(segment_combiner="cost")
+cutter = Parncutter(dactyler=jacobs)
+cutter.load_published_parncutt()
+jacobs_results = published_parncutt_evaluate(cutter=cutter, name="Jacobs", spew=True)
+
+justin = Badgerow(segment_combiner="cost")
+cutter = Parncutter(dactyler=justin)
+cutter.load_published_parncutt()
+badgerow_results = published_parncutt_evaluate(cutter=cutter, name="Badgerow", spew=True)
+

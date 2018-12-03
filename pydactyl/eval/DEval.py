@@ -27,8 +27,15 @@ from krippendorff import alpha
 import re
 import random
 import numpy as np
+import matplotlib.pyplot as plt
+import sklearn.cluster as cluster
+import seaborn as sns
+import time
 import math
 from pydactyl.dcorpus.DCorpus import DCorpus
+from pydactyl.dactyler import Constant
+from pydactyl.dcorpus.DNote import DNote
+from pydactyl.dcorpus.DAnnotation import DAnnotation
 
 
 class DEval(ABC):
@@ -38,6 +45,47 @@ class DEval(ABC):
         self._gold = dict()
         self._gold['upper'] = list()
         self._gold['lower'] = list()
+
+    @staticmethod
+    def _proximal_gain(test_abcdf, gold_handed_strikers, gold_vote_counts, staff, method="natural"):
+        testee = DAnnotation.abcdf_to_handed_strike_digits(test_abcdf, staff=staff)
+        gain = 0
+        if method == "natural":
+            d_max = Constant.MAX_NATURAL_EDIT_DISTANCE
+        elif method == "hamming":
+            d_max = 1
+        else:
+            raise Exception("Not ready to measure {} gain".format(method))
+
+        nugget_index = 0
+        for nugget in gold_handed_strikers:
+            for i in range(len(testee)):
+                distance = DAnnotation.strike_distance_cost(gold_handed_digit=nugget[i],
+                                                            test_handed_digit=testee[i],
+                                                            method=method)
+                gain += (d_max - distance)
+            gain *= gold_vote_counts[nugget_index]
+            nugget_index += 1
+        return gain
+
+    def gold_asts(self, score_index, staff="upper", last_digit=None):
+        score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
+        asts = list()
+        for abcdf in score_gold:
+            ast = DAnnotation.abcdf_to_ast(abcdf)
+            asts.append(ast)
+        return asts
+
+    def gold_list_of_handed_strike_lists(self, score_index, staff="upper", last_digit=None):
+        gold_asts = self.gold_asts(score_index, staff=staff, last_digit=last_digit)
+        list_of_strike_lists = list()
+        for gold_ast in gold_asts:
+            nuggets = DAnnotation.ast_to_handed_strike_digits(gold_ast, staff=staff)
+            list_of_strike_lists.append(nuggets)
+        return list_of_strike_lists
+
+    def gold_clusters(self, score_index, staff="upper", last_digit=None):
+        score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
 
     @staticmethod
     def krippendorfs_alpha(upper_rh_advice, exercise_upper_gold):
@@ -56,15 +104,16 @@ class DEval(ABC):
             raise Exception("Gold count ({0}) does not match score count ({1}).".format(
                 gold_score_count, score_count))
 
-    def _random_sorted_gold(self, staff="upper"):
+    def _random_sorted_gold(self, score_index, staff="upper", last_digit=None):
         """
         Returns a total-order list of gold fingerings for the given staff. Fingerings with
         the same number of votes (user counts) are randomized, but in a reproducible
         manner.
+        :param score_index:
         :param staff:
         :return:
         """
-        nuggets = self._gold[staff]
+        nuggets = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
         nuggets_at = dict()
         for nugget in nuggets:
             vote_count = int(nuggets[nugget])
@@ -73,7 +122,7 @@ class DEval(ABC):
             nuggets_at[vote_count].append(nugget)
         sorted_nuggets = list()
         random.seed(a=123654)
-        for vote_count in reversed(sorted(nuggets_at)):
+        for vote_count in sorted(nuggets_at):
             if len(nuggets_at[vote_count]) == 1:
                 sorted_nuggets.append(nuggets_at[vote_count][0])
             else:
@@ -185,6 +234,18 @@ class DEval(ABC):
             return constrained_gold
         return all_gold
 
+    def _score_gold_segregated_list(self, score_index, staff="upper", last_digit=None):
+        score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
+        nuggets = list()
+        for fingering in score_gold:
+            subject_count = score_gold[fingering]
+            gold_fingers = list(fingering)
+            gold_fingers = gold_fingers[1:]
+            gold_finger_ints = list(map(int, gold_fingers))
+            for i in range(int(subject_count)):
+                nuggets.append(gold_finger_ints)
+        return nuggets
+
     def _score_gold_distinct_count(self, score_index, staff="upper", last_digit=None):
         score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
         return len(score_gold)
@@ -195,6 +256,13 @@ class DEval(ABC):
         for fingering_str in score_gold:
             total += score_gold[fingering_str]
         return total
+
+    def _score_gold_counts(self, score_index, staff="upper", last_digit=None):
+        score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
+        vote_counts = list()
+        for fingering_str in score_gold:
+            vote_counts.append(score_gold[fingering_str])
+        return vote_counts
 
     def _recall_them_all(self, score_index, staff="upper", cycle=None, last_digit=None):
         k = 25
@@ -296,20 +364,110 @@ class DEval(ABC):
 
     def _relevancy_asfarray(self, suggestions, score_index, staff="upper", last_digit=None):
         score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
+        vote_total = self._score_gold_total_count(score_index=score_index, staff=staff, last_digit=last_digit)
+        if vote_total == 0:
+            raise Exception("No gold found.")
+
         relevancy = list()
-        largest_count = 0
         for fingering in suggestions:
             if fingering in score_gold:
                 vote_count = int(score_gold[fingering])
                 relevancy.append(vote_count)
-                if vote_count > largest_count:
-                    largest_count = vote_count
             else:
                 relevancy.append(0)
 
         relevancy_asf = np.asfarray(a=relevancy)
-        if largest_count != 0:
-            relevancy_asf /= largest_count
+        relevancy_asf /= vote_total
+        return relevancy_asf
+
+    def _proximal_gains(self, suggestions, score_index, staff="upper", last_digit=None, method="natural"):
+        vote_total = self._score_gold_total_count(score_index=score_index, staff=staff, last_digit=last_digit)
+        if vote_total == 0:
+            raise Exception("No gold found.")
+
+        gold_striker_list = self.gold_list_of_handed_strike_lists(score_index, staff=staff, last_digit=last_digit)
+        gold_vote_counts = self._score_gold_counts(score_index, staff=staff, last_digit=last_digit)
+
+        pg_values = list()
+        for fingering in suggestions:
+            proximal_gain = DEval._proximal_gain(test_abcdf=fingering, gold_handed_strikers=gold_striker_list,
+                                                 gold_vote_counts=gold_vote_counts, staff=staff, method=method)
+            pg_values.append(proximal_gain)
+
+        return pg_values
+
+    @staticmethod
+    def _cpg(proximal_gains, r):
+        cumulative_gains = list()
+        total = 0
+        for i in range(r):
+            total += proximal_gains[0]
+            cumulative_gains.append(total)
+        return cumulative_gains
+        # if r == 1:
+            # return proximal_gains[r-1]
+        # return proximal_gains[r-1] + DEval._cpg(proximal_gains, r - 1)
+
+    @staticmethod
+    def _dcpg(cpg, r, phi=None, p=None):
+        dcpg = 0
+        for i in range(r):
+            if phi:
+                discount_factor = phi(r=i+1, p=p)
+            else:
+                discount_factor = 1.0/math.log2(i+2)
+            dcpg += discount_factor * cpg[i]
+        return dcpg
+
+    def _dcpg_normalizer(self, score_index, staff="upper", last_digit=None, k=10):
+        score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
+        nuggets = list(score_gold.keys())
+        sample_abcdf = nuggets[0]
+        digits = DAnnotation.abcdf_to_handed_strike_digits(sample_abcdf, staff=staff)
+        n_total = len(digits)
+        h_total = self._score_gold_total_count(score_index=score_index, staff=staff, last_digit=last_digit)
+        d_max = Constant.MAX_NATURAL_EDIT_DISTANCE
+        r_total = k
+        normalizer = r_total * h_total * n_total * d_max
+        return normalizer
+
+    def score_dcpg_at_k(self, score_index, staff="upper", cycle=None, last_digit=None, phi=None, p=None, k=10):
+        self.assert_good_gold(staff=staff)
+        if k is None:
+            suggestions, costs, details = self._recall_them_all(score_index=score_index, staff=staff,
+                                                                last_digit=last_digit, cycle=cycle)
+        else:
+            suggestions, costs, details = self.score_advice(score_index=score_index, staff=staff,
+                                                            last_digit=last_digit, cycle=cycle, k=k)
+        proximal_gains = self._proximal_gains(suggestions=suggestions, score_index=score_index,
+                                              staff=staff, last_digit=last_digit)
+        cpg = DEval._cpg(proximal_gains, r=k)
+        dcpg_at_k = DEval._dcpg(cpg=cpg, r=k, phi=phi, p=p)
+        return dcpg_at_k
+
+    def score_ndcpg_at_k(self, score_index, staff="upper", cycle=None, last_digit=None, phi=None, p=None, k=10):
+        dcpg = self.score_dcpg_at_k(score_index=score_index, staff=staff, cycle=cycle,
+                                    last_digit=last_digit, phi=phi, p=p, k=k)
+        normalizer = self._dcpg_normalizer(score_index=score_index, staff=staff, last_digit=last_digit)
+        ndcpg = dcpg / normalizer
+        return ndcpg
+
+    def _ideal_relevancy_asfarray(self, score_index, staff="upper", last_digit=None, k=10):
+        score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
+        sorted_gold = self._random_sorted_gold(score_index=score_index, staff=staff, last_digit=last_digit)
+        decreasing_gold = list(reversed(sorted_gold))
+        vote_total = self._score_gold_total_count(score_index=score_index, staff=staff, last_digit=last_digit)
+
+        relevancy = list()
+        for i in range(k):
+            if i < len(decreasing_gold):
+                next_fingering = decreasing_gold[i]
+                relevancy.append(score_gold[next_fingering])
+            else:
+                relevancy.append(0)
+
+        relevancy_asf = np.asfarray(a=relevancy)
+        relevancy_asf /= vote_total
         return relevancy_asf
 
     @staticmethod
@@ -327,8 +485,12 @@ class DEval(ABC):
 
     def score_dcg_at_k(self, score_index, staff="upper", cycle=None, last_digit=None, base="2", k=10):
         self.assert_good_gold(staff=staff)
-        suggestions, costs, details = self.score_advice(score_index=score_index, staff=staff,
-                                                        last_digit=last_digit, cycle=cycle, k=k)
+        if k is None:
+            suggestions, costs, details = self._recall_them_all(score_index=score_index, staff=staff,
+                                                                last_digit=last_digit, cycle=cycle)
+        else:
+            suggestions, costs, details = self.score_advice(score_index=score_index, staff=staff,
+                                                            last_digit=last_digit, cycle=cycle, k=k)
         relevancy = self._relevancy_asfarray(suggestions=suggestions, score_index=score_index,
                                              staff=staff, last_digit=last_digit)
         dcg_at_k = DEval._dcg(relevancy=relevancy, base=base)
@@ -336,17 +498,39 @@ class DEval(ABC):
 
     def score_ndcg_at_k(self, score_index, staff="upper", cycle=None, last_digit=None, base="2", k=10):
         self.assert_good_gold(staff=staff)
-        suggestions, costs, details = self.score_advice(score_index=score_index, staff=staff,
-                                                        last_digit=last_digit, cycle=cycle, k=k)
+        if k is None:
+            suggestions, costs, details = self._recall_them_all(score_index=score_index, staff=staff,
+                                                                last_digit=last_digit, cycle=cycle)
+        else:
+            suggestions, costs, details = self.score_advice(score_index=score_index, staff=staff,
+                                                            last_digit=last_digit, cycle=cycle, k=k)
         relevancy = self._relevancy_asfarray(suggestions=suggestions, score_index=score_index,
                                              staff=staff, last_digit=last_digit)
-        most_relevant = sorted(relevancy, reverse=True)
-        most_relevant_asf = np.asfarray(a=most_relevant)
-        dcg_ideal = self._dcg(relevancy=most_relevant_asf, base=base)
+        ideal_relevancy = self._ideal_relevancy_asfarray(score_index=score_index, staff=staff,
+                                                         last_digit=last_digit, k=len(suggestions))
+        dcg_at_k = DEval._dcg(relevancy=relevancy, base=base)
+        dcg_ideal = DEval._dcg(relevancy=ideal_relevancy, base=base)
         if not dcg_ideal:
             return 0.0
+        ndcg_at_k = dcg_at_k/dcg_ideal
+        return ndcg_at_k
 
+    def score_alpha_at_k(self, score_index, staff="upper", cycle=None, last_digit=None, base="2", k=10):
+        self.assert_good_gold(staff=staff)
+        if k is None:
+            suggestions, costs, details = self._recall_them_all(score_index=score_index, staff=staff,
+                                                                last_digit=last_digit, cycle=cycle)
+        else:
+            suggestions, costs, details = self.score_advice(score_index=score_index, staff=staff,
+                                                            last_digit=last_digit, cycle=cycle, k=k)
+        relevancy = self._relevancy_asfarray(suggestions=suggestions, score_index=score_index,
+                                             staff=staff, last_digit=last_digit)
+        ideal_relevancy = self._ideal_relevancy_asfarray(score_index=score_index, staff=staff,
+                                                         last_digit=last_digit, k=len(suggestions))
         dcg_at_k = DEval._dcg(relevancy=relevancy, base=base)
+        dcg_ideal = DEval._dcg(relevancy=ideal_relevancy, base=base)
+        if not dcg_ideal:
+            return 0.0
         ndcg_at_k = dcg_at_k/dcg_ideal
         return ndcg_at_k
 
@@ -370,4 +554,11 @@ class DEval(ABC):
     def ndcg_at_k(self, staff="upper", base="2", k=10):
         return
 
+    @abstractmethod
+    def dcpg_at_k(self, staff="upper", phi=None, p=None, k=10):
+        return
+
+    @abstractmethod
+    def ndcpg_at_k(self, staff="upper", phi=None, p=None, k=10):
+        return
 
