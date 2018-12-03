@@ -47,26 +47,47 @@ class DEval(ABC):
         self._gold['lower'] = list()
 
     @staticmethod
-    def _proximal_gain(test_abcdf, gold_handed_strikers, gold_vote_counts, staff, method="natural"):
-        testee = DAnnotation.abcdf_to_handed_strike_digits(test_abcdf, staff=staff)
-        gain = 0
+    def _max_distance_for_method(method):
         if method == "natural":
-            d_max = Constant.MAX_NATURAL_EDIT_DISTANCE
+            # d_max = Constant.MAX_NATURAL_EDIT_DISTANCE
+            # FIXME: desegregated max turns DCPG murky and useless.
+            d_max = 4
         elif method == "hamming":
             d_max = 1
         else:
             raise Exception("Not ready to measure {} gain".format(method))
+        return d_max
 
+    @staticmethod
+    def _proximal_gain(test_abcdf, gold_handed_strikers, gold_vote_counts, staff, method="natural"):
+        testee = DAnnotation.abcdf_to_handed_strike_digits(test_abcdf, staff=staff)
+        d_max = DEval._max_distance_for_method(method)
         nugget_index = 0
+        total_gain = 0
         for nugget in gold_handed_strikers:
+            nugget_gain = 0
             for i in range(len(testee)):
                 distance = DAnnotation.strike_distance_cost(gold_handed_digit=nugget[i],
                                                             test_handed_digit=testee[i],
                                                             method=method)
-                gain += (d_max - distance)
-            gain *= gold_vote_counts[nugget_index]
+                nugget_gain += (d_max - distance)
+            nugget_gain *= gold_vote_counts[nugget_index]
             nugget_index += 1
-        return gain
+            total_gain += nugget_gain
+        return total_gain
+
+    @staticmethod
+    def _normalized_proximal_gain(test_abcdf, gold_handed_strikers, gold_vote_counts, staff, method="natural"):
+        p_gain = DEval._proximal_gain(test_abcdf, gold_handed_strikers, gold_vote_counts, staff, method)
+        digits = DAnnotation.abcdf_to_handed_strike_digits(test_abcdf, staff=staff)
+        n_total = len(digits)
+        h_total = 0
+        for count in gold_vote_counts:
+            h_total += count
+        d_max = DEval._max_distance_for_method(method)
+        normalizer = h_total * n_total * d_max
+        npg = 1.0 * p_gain / normalizer
+        return npg
 
     def gold_asts(self, score_index, staff="upper", last_digit=None):
         score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
@@ -390,43 +411,43 @@ class DEval(ABC):
 
         pg_values = list()
         for fingering in suggestions:
-            proximal_gain = DEval._proximal_gain(test_abcdf=fingering, gold_handed_strikers=gold_striker_list,
-                                                 gold_vote_counts=gold_vote_counts, staff=staff, method=method)
-            pg_values.append(proximal_gain)
+            pg = DEval._proximal_gain(test_abcdf=fingering, gold_handed_strikers=gold_striker_list,
+                                      gold_vote_counts=gold_vote_counts, staff=staff, method=method)
+            pg_values.append(pg)
 
         return pg_values
 
     @staticmethod
-    def _cpg(proximal_gains, r):
+    def _cpgs(proximal_gains):
+        r = len(proximal_gains)
         cumulative_gains = list()
         total = 0
         for i in range(r):
             total += proximal_gains[0]
             cumulative_gains.append(total)
         return cumulative_gains
-        # if r == 1:
-            # return proximal_gains[r-1]
-        # return proximal_gains[r-1] + DEval._cpg(proximal_gains, r - 1)
 
     @staticmethod
-    def _dcpg(cpg, r, phi=None, p=None):
-        dcpg = 0
+    def _dcpgs(cpgs, phi=None, p=None):
+        r = len(cpgs)
+        gains = list()
         for i in range(r):
             if phi:
                 discount_factor = phi(r=i+1, p=p)
             else:
                 discount_factor = 1.0/math.log2(i+2)
-            dcpg += discount_factor * cpg[i]
-        return dcpg
+            gain = discount_factor * cpgs[i]
+            gains.append(gain)
+        return gains
 
-    def _dcpg_normalizer(self, score_index, staff="upper", last_digit=None, k=10):
+    def _dcpg_normalizer(self, score_index, staff="upper", method="natural", last_digit=None, k=10):
         score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
         nuggets = list(score_gold.keys())
         sample_abcdf = nuggets[0]
         digits = DAnnotation.abcdf_to_handed_strike_digits(sample_abcdf, staff=staff)
         n_total = len(digits)
         h_total = self._score_gold_total_count(score_index=score_index, staff=staff, last_digit=last_digit)
-        d_max = Constant.MAX_NATURAL_EDIT_DISTANCE
+        d_max = DEval._max_distance_for_method(method)
         r_total = k
         normalizer = r_total * h_total * n_total * d_max
         return normalizer
@@ -439,10 +460,11 @@ class DEval(ABC):
         else:
             suggestions, costs, details = self.score_advice(score_index=score_index, staff=staff,
                                                             last_digit=last_digit, cycle=cycle, k=k)
-        proximal_gains = self._proximal_gains(suggestions=suggestions, score_index=score_index,
-                                              staff=staff, last_digit=last_digit)
-        cpg = DEval._cpg(proximal_gains, r=k)
-        dcpg_at_k = DEval._dcpg(cpg=cpg, r=k, phi=phi, p=p)
+        prox_gains = self._proximal_gains(suggestions=suggestions, score_index=score_index,
+                                          staff=staff, last_digit=last_digit)
+        cpgs = DEval._cpgs(proximal_gains=prox_gains)
+        dcpgs = DEval._dcpgs(cpgs=cpgs, phi=phi, p=p)
+        dcpg_at_k = dcpgs[k-1]
         return dcpg_at_k
 
     def score_ndcpg_at_k(self, score_index, staff="upper", cycle=None, last_digit=None, phi=None, p=None, k=10):
