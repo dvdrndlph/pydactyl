@@ -581,7 +581,7 @@ class Dactyler(ABC):
     def report_on_advice(suggestions, costs, details):
         print("")
         for i in range(len(suggestions)):
-            print("{0}) {1}\ncost: {2} segments: {3}".format(i+1, suggestions[i], costs[i], len(details[i])))
+            print("{0}) {1}\ncost: {2} segments: {3}".format(i + 1, suggestions[i], costs[i], len(details[i])))
             for j in range(len(details[i])):
                 print(details[i][j])
             print("")

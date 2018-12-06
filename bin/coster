@@ -23,75 +23,99 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
+import pandas as pd
+import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 from pydactyl.eval.Parncutter import Parncutter
 from pydactyl.dactyler.Parncutt import Parncutt
 from pydactyl.dactyler.Parncutt import Jacobs
 from pydactyl.dactyler.Parncutt import Badgerow
 # from pydactyl.dcorpus.DCorpus import DCorpus
-from pprint import pprint
 
-def published_parncutt_evaluate(cutter, name="", spew=False):
-    dcpg_10, dcpg_10_details = cutter.dcpg_at_k(k=10)
-    ndcpg_10, ndcpg_10_details = cutter.ndcpg_at_k(k=10)
-    map_full, map_full_details = cutter.map_at_perfect_recall()
-    map_10, map_10_details = cutter.map_at_k(k=10)
-    dcg_10, dcg_10_details = cutter.dcg_at_k(k=10)
-    ndcg_10, ndcg_10_details = cutter.ndcg_at_k(k=10)
-    dcg_full, dcg_full_details = cutter.dcg_at_k(k=None)
-    ndcg_full, ndcg_full_details = cutter.ndcg_at_k(k=None)
-    results = {
-        'map_full': {'result': map_full, 'details': map_full_details},
-        'map_10': {'result': map_10, 'details': map_10_details},
-        'dcg_10': {'result': dcg_10, 'details': dcg_10_details},
-        'ndcg_10': {'result': ndcg_10, 'details': ndcg_10_details},
-        'dcg_full': {'result': dcg_full, 'details': dcg_full_details},
-        'ndcg_full': {'result': ndcg_full, 'details': ndcg_full_details},
-        'dcpg_10': {'result': dcpg_10, 'details': dcpg_10_details},
-        'ndcpg_10': {'result': ndcpg_10, 'details': ndcpg_10_details},
-    }
+
+def spew_out(name, method, result, itemized, spew=False):
     if spew:
-        print("{0} MAP@perfectR: {1}".format(name, map_full))
-        for detail in map_full_details:
-            print(detail)
-        print("{0} MAP@10: {1}".format(name, map_10))
-        for detail in map_10_details:
-            print(detail)
-        print("{0} meanDCG@10: {1}".format(name, dcg_10))
-        for detail in dcg_10_details:
-            print(detail)
-        print("{0} meanNDCG@10: {1}".format(name, ndcg_10))
-        for detail in ndcg_10_details:
-            print(detail)
-        print("{0} meanDCG@perfectR: {1}".format(name, dcg_full))
-        for detail in dcg_full_details:
-            print(detail)
-        print("{0} meanNDCG@perfectR: {1}".format(name, ndcg_full))
-        for detail in ndcg_full_details:
-            print(detail)
-        print("{0} meanDCPG@10: {1}".format(name, dcpg_10))
-        for detail in dcpg_10_details:
-            print(detail)
-        print("{0} meanNDCPG@10: {1}".format(name, ndcpg_10))
-        for detail in ndcpg_10_details:
-            print(detail)
+        print("{} {}: {} => {}".format(name, method, result, itemized))
+
+
+def published_parncutt_my_evaluate(cutter, name="", spew=False):
+    epr_10, epr_10_itemized, undef = cutter.epr_at_k(k=10)
+    spew_out(name=name, method='meanEPR@10', result=epr_10, itemized=epr_10_itemized, spew=spew)
+    # dcpg_10, dcpg_10_itemized, undef = cutter.dcpg_at_k(k=10)
+    # spew_out(name=name, method='meanDCPG@10', result=dcpg_10, itemized=dcpg_10_itemized, spew=spew)
+    ndcpg_10, ndcpg_10_itemized, undef = cutter.ndcpg_at_k(k=10)
+    spew_out(name=name, method='meanNDCPG@10', result=ndcpg_10, itemized=ndcpg_10_itemized, spew=spew)
+
+    results = {
+        'epr_10': {'result': epr_10, 'itemized': epr_10_itemized},
+        # 'dcpg_10': {'result': dcpg_10, 'itemized': dcpg_10_itemized},
+        'ndcpg_10': {'result': ndcpg_10, 'itemized': ndcpg_10_itemized},
+    }
     return results
+
+
+def published_parncutt_std_evaluate(cutter, name="", spew=False):
+    err_10, err_10_itemized, undef =  cutter.err_at_k(k=10)
+    spew_out(name=name, method='meanERR@10', result=err_10, itemized=err_10_itemized, spew=spew)
+    map_full, map_full_itemized, undef = cutter.map_at_perfect_recall()
+    spew_out(name=name, method='MAP@perfectR', result=map_full, itemized=map_full_itemized, spew=spew)
+    map_10, map_10_itemized, undef = cutter.map_at_k(k=10)
+    spew_out(name=name, method='MAP@10', result=map_10, itemized=map_10_itemized, spew=spew)
+    dcg_10, dcg_10_itemized, undef = cutter.dcg_at_k(k=10)
+    spew_out(name=name, method='meanDCG@10', result=dcg_10, itemized=dcg_10_itemized, spew=spew)
+    ndcg_10, ndcg_10_itemized, undef = cutter.ndcg_at_k(k=10)
+    spew_out(name=name, method='meanNDCG@10', result=ndcg_10, itemized=ndcg_10_itemized, spew=spew)
+    dcg_full, dcg_full_itemized, undef = cutter.dcg_at_k(k=None)
+    spew_out(name=name, method='meanDCG@perfectR', result=dcg_full, itemized=dcg_full_itemized, spew=spew)
+    ndcg_full, ndcg_full_itemized, undef = cutter.ndcg_at_k(k=None)
+    spew_out(name=name, method='meanNDCG@perfectR', result=ndcg_full, itemized=ndcg_full_itemized, spew=spew)
+    results = {
+        'err_10': {'result': err_10, 'itemized': err_10_itemized},
+        'map_full': {'result': map_full, 'itemized': map_full_itemized},
+        'map_10': {'result': map_10, 'itemized': map_10_itemized},
+        'dcg_10': {'result': dcg_10, 'itemized': dcg_10_itemized},
+        'ndcg_10': {'result': ndcg_10, 'itemized': ndcg_10_itemized},
+        'dcg_full': {'result': dcg_full, 'itemized': dcg_full_itemized},
+        'ndcg_full': {'result': ndcg_full, 'itemized': ndcg_full_itemized},
+    }
+    return results
+
+
+def graph_results(title, results):
+    plt.style.use('classic')
+    x = np.arange(7)
+    fig, ax = plt.subplots()
+    for method in results:
+        itemized = results[method]['itemized']
+        items = np.array(itemized, np.float)
+        ax.plot(x, items, label=method)
+    plt.title(title)
+    fig.subplots_adjust(bottom=0.3)
+    # ax.legend()
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), shadow=True, ncol=3)
+    plt.show()
 
 
 cutter = Parncutter()
 cutter.load_published_parncutt()
-parncutt_results = published_parncutt_evaluate(cutter=cutter, name="Parncutt", spew=True)
+parncutt_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Parncutt", spew=True)
+graph_results(title="Parncutt Published Standard Measures", results=parncutt_std_results)
+parncutt_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Parncutt", spew=True)
+graph_results(title="Parncutt Published Novel Measures", results=parncutt_my_results)
+exit(0)
 
 jacobs = Jacobs(segment_combiner="cost")
 cutter = Parncutter(dactyler=jacobs)
 cutter.load_published_parncutt()
-jacobs_results = published_parncutt_evaluate(cutter=cutter, name="Jacobs", spew=True)
+jacobs_results = published_parncutt_std_evaluate(cutter=cutter, name="Jacobs", spew=True)
+jacobs_results = published_parncutt_my_evaluate(cutter=cutter, name="Jacobs", spew=True)
 
 justin = Badgerow(segment_combiner="cost")
 cutter = Parncutter(dactyler=justin)
 cutter.load_published_parncutt()
-badgerow_results = published_parncutt_evaluate(cutter=cutter, name="Badgerow", spew=True)
+badgerow_results = published_parncutt_std_evaluate(cutter=cutter, name="Badgerow", spew=True)
+badgerow_results = published_parncutt_my_evaluate(cutter=cutter, name="Badgerow", spew=True)
 

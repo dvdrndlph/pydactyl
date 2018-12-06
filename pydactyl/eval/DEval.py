@@ -59,7 +59,7 @@ class DEval(ABC):
         return d_max
 
     @staticmethod
-    def _proximal_gain(test_abcdf, gold_handed_strikers, gold_vote_counts, staff, method="natural"):
+    def _proximal_gain(test_abcdf, gold_handed_strikers, gold_vote_counts, staff, method="hamming"):
         testee = DAnnotation.abcdf_to_handed_strike_digits(test_abcdf, staff=staff)
         d_max = DEval._max_distance_for_method(method)
         nugget_index = 0
@@ -77,7 +77,7 @@ class DEval(ABC):
         return total_gain
 
     @staticmethod
-    def _normalized_proximal_gain(test_abcdf, gold_handed_strikers, gold_vote_counts, staff, method="natural"):
+    def _normalized_proximal_gain(test_abcdf, gold_handed_strikers, gold_vote_counts, staff, method="hamming"):
         p_gain = DEval._proximal_gain(test_abcdf, gold_handed_strikers, gold_vote_counts, staff, method)
         digits = DAnnotation.abcdf_to_handed_strike_digits(test_abcdf, staff=staff)
         n_total = len(digits)
@@ -401,7 +401,8 @@ class DEval(ABC):
         relevancy_asf /= vote_total
         return relevancy_asf
 
-    def _proximal_gains(self, suggestions, score_index, staff="upper", last_digit=None, method="natural"):
+    def _proximal_gains(self, suggestions, score_index, staff="upper", last_digit=None,
+                        method="hamming", normalize=False):
         vote_total = self._score_gold_total_count(score_index=score_index, staff=staff, last_digit=last_digit)
         if vote_total == 0:
             raise Exception("No gold found.")
@@ -411,8 +412,12 @@ class DEval(ABC):
 
         pg_values = list()
         for fingering in suggestions:
-            pg = DEval._proximal_gain(test_abcdf=fingering, gold_handed_strikers=gold_striker_list,
-                                      gold_vote_counts=gold_vote_counts, staff=staff, method=method)
+            if normalize:
+                pg = DEval._normalized_proximal_gain(test_abcdf=fingering, gold_handed_strikers=gold_striker_list,
+                                                     gold_vote_counts=gold_vote_counts, staff=staff, method=method)
+            else:
+                pg = DEval._proximal_gain(test_abcdf=fingering, gold_handed_strikers=gold_striker_list,
+                                          gold_vote_counts=gold_vote_counts, staff=staff, method=method)
             pg_values.append(pg)
 
         return pg_values
@@ -440,7 +445,7 @@ class DEval(ABC):
             gains.append(gain)
         return gains
 
-    def _dcpg_normalizer(self, score_index, staff="upper", method="natural", last_digit=None, k=10):
+    def _dcpg_normalizer(self, score_index, staff="upper", method="hamming", last_digit=None, k=10):
         score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
         nuggets = list(score_gold.keys())
         sample_abcdf = nuggets[0]
@@ -452,7 +457,62 @@ class DEval(ABC):
         normalizer = r_total * h_total * n_total * d_max
         return normalizer
 
-    def score_dcpg_at_k(self, score_index, staff="upper", cycle=None, last_digit=None, phi=None, p=None, k=10):
+    @staticmethod
+    def estimated_prob_user_happy(suggestion, score_gold, h_total):
+        if suggestion not in score_gold:
+            return 0
+        prob = 1.0 * score_gold[suggestion]/h_total
+        return prob
+
+    def score_err_at_k(self, score_index, staff="upper", cycle=None, last_digit=None, phi=None, p=None, k=10):
+        self.assert_good_gold(staff=staff)
+        if k is None:
+            suggestions, costs, details = self._recall_them_all(score_index=score_index, staff=staff,
+                                                                last_digit=last_digit, cycle=cycle)
+        else:
+            suggestions, costs, details = self.score_advice(score_index=score_index, staff=staff,
+                                                            last_digit=last_digit, cycle=cycle, k=k)
+        score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
+        h_total = self._score_gold_total_count(score_index=score_index, staff=staff, last_digit=last_digit)
+        err = 0
+        prob_still_going = 1
+        for r in range(1, k+1):
+            if phi:
+                discount_factor = phi(r=r, p=p)
+            else:
+                discount_factor = 1.0/r
+            prob_found = DEval.estimated_prob_user_happy(suggestion=suggestions[r-1],
+                                                         score_gold=score_gold, h_total=h_total)
+            err += (discount_factor * prob_still_going * prob_found)
+            prob_still_going *= (1 - prob_found)
+        return err
+
+    def score_epr_at_k(self, score_index, staff="upper", cycle=None, last_digit=None,
+                       method="hamming", phi=None, p=None, k=10):
+        self.assert_good_gold(staff=staff)
+        if k is None:
+            suggestions, costs, details = self._recall_them_all(score_index=score_index, staff=staff,
+                                                                last_digit=last_digit, cycle=cycle)
+        else:
+            suggestions, costs, details = self.score_advice(score_index=score_index, staff=staff,
+                                                            last_digit=last_digit, cycle=cycle, k=k)
+        norm_prox_gains = self._proximal_gains(suggestions=suggestions, score_index=score_index, method=method,
+                                               staff=staff, last_digit=last_digit, normalize=True)
+        epr = 0
+        prob_still_going = 1
+        for r in range(1, k+1):
+            if phi:
+                discount_factor = phi(r=r, p=p)
+            else:
+                discount_factor = 1.0/r
+            prob_found = norm_prox_gains[r-1]
+            epr += (discount_factor * prob_still_going * prob_found)
+            prob_still_going *= (1 - prob_found)
+
+        return epr
+
+    def score_dcpg_at_k(self, score_index, staff="upper", cycle=None, last_digit=None,
+                        method="hamming", phi=None, p=None, k=10):
         self.assert_good_gold(staff=staff)
         if k is None:
             suggestions, costs, details = self._recall_them_all(score_index=score_index, staff=staff,
@@ -461,16 +521,17 @@ class DEval(ABC):
             suggestions, costs, details = self.score_advice(score_index=score_index, staff=staff,
                                                             last_digit=last_digit, cycle=cycle, k=k)
         prox_gains = self._proximal_gains(suggestions=suggestions, score_index=score_index,
-                                          staff=staff, last_digit=last_digit)
+                                          staff=staff, last_digit=last_digit, method=method)
         cpgs = DEval._cpgs(proximal_gains=prox_gains)
         dcpgs = DEval._dcpgs(cpgs=cpgs, phi=phi, p=p)
         dcpg_at_k = dcpgs[k-1]
         return dcpg_at_k
 
-    def score_ndcpg_at_k(self, score_index, staff="upper", cycle=None, last_digit=None, phi=None, p=None, k=10):
+    def score_ndcpg_at_k(self, score_index, staff="upper", cycle=None, last_digit=None,
+                         method="hamming", phi=None, p=None, k=10):
         dcpg = self.score_dcpg_at_k(score_index=score_index, staff=staff, cycle=cycle,
                                     last_digit=last_digit, phi=phi, p=p, k=k)
-        normalizer = self._dcpg_normalizer(score_index=score_index, staff=staff, last_digit=last_digit)
+        normalizer = self._dcpg_normalizer(score_index=score_index, staff=staff, method=method, last_digit=last_digit)
         ndcpg = dcpg / normalizer
         return ndcpg
 
@@ -577,10 +638,18 @@ class DEval(ABC):
         return
 
     @abstractmethod
-    def dcpg_at_k(self, staff="upper", phi=None, p=None, k=10):
+    def dcpg_at_k(self, staff="upper", phi=None, p=None, method="hamming", k=10):
         return
 
     @abstractmethod
-    def ndcpg_at_k(self, staff="upper", phi=None, p=None, k=10):
+    def ndcpg_at_k(self, staff="upper", phi=None, p=None, method="hamming", k=10):
+        return
+
+    @abstractmethod
+    def err_at_k(self, staff="upper", phi=None, p=None, k=10):
+        return
+
+    @abstractmethod
+    def epr_at_k(self, staff="upper", phi=None, p=None, method="hamming", k=10):
         return
 

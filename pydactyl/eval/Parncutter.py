@@ -77,6 +77,7 @@ class Parncutter(DEval):
     def map_at_perfect_recall(self, staff="upper"):
         avg_p_sum = 0
         details = list()
+        query_results = list()
         for i in range(7):
             if i == 1:
                 result = self.score_avg_p_at_perfect_recall(score_index=i, staff="upper",
@@ -87,12 +88,14 @@ class Parncutter(DEval):
             details.append(result)
             # {'relevant': tp_count, 'p_at_rank': precisions_at_rank, 'avg_p': avg_p}
             avg_p_sum += result['avg_p']
+            query_results.append(result['avg_p'])
         mean_avg_p = avg_p_sum/7
-        return mean_avg_p, details
+        return mean_avg_p, query_results, details
 
     def map_at_k(self, staff="upper", k=10):
         avg_p_sum = 0
         details = list()
+        query_results = list()
         for i in range(7):
             if i == 1:
                 result = self.score_avg_p_at_k(score_index=i, staff="upper",
@@ -103,8 +106,9 @@ class Parncutter(DEval):
             details.append(result)
             # {'relevant': tp_count, 'p_at_rank': precisions_at_rank, 'avg_p': avg_p}
             avg_p_sum += result['avg_p']
+            query_results.append(result['avg_p'])
         mean_avg_p = avg_p_sum/7
-        return mean_avg_p, details
+        return mean_avg_p, query_results, details
 
     def p_r_at_k(self, staff="upper", k=5):
         results = list()
@@ -132,7 +136,7 @@ class Parncutter(DEval):
             # {'relevant': tp_count, 'p_at_rank': precisions_at_rank, 'avg_p': avg_p}
             total_dcg += dcg_at_k
         mean = total_dcg/7
-        return mean, results
+        return mean, results, None
 
     def ndcg_at_k(self, staff="upper", base="2", k=10):
         total_ndcg = 0
@@ -145,10 +149,9 @@ class Parncutter(DEval):
                 ndcg_at_k = self.score_ndcg_at_k(score_index=i, staff="upper", base=base,
                                                  cycle=None, last_digit=last_digit[i], k=k)
             results.append(ndcg_at_k)
-            # {'relevant': tp_count, 'p_at_rank': precisions_at_rank, 'avg_p': avg_p}
             total_ndcg += ndcg_at_k
         mean = total_ndcg/7
-        return mean, results
+        return mean, results, None
 
     def dcpg_at_k(self, staff="upper", phi=None, p=None, k=10):
         total_dcpg = 0
@@ -161,10 +164,9 @@ class Parncutter(DEval):
                 dcpg_at_k = self.score_dcpg_at_k(score_index=i, staff="upper", phi=phi, p=p,
                                                  cycle=None, last_digit=last_digit[i], k=k)
             results.append(dcpg_at_k)
-            # {'relevant': tp_count, 'p_at_rank': precisions_at_rank, 'avg_p': avg_p}
             total_dcpg += dcpg_at_k
         mean = total_dcpg/7
-        return mean, results
+        return mean, results, None
 
     def ndcpg_at_k(self, staff="upper", phi=None, p=None, k=10):
         total_ndcpg = 0
@@ -177,10 +179,39 @@ class Parncutter(DEval):
                 ndcpg_at_k = self.score_ndcpg_at_k(score_index=i, staff="upper", phi=phi, p=p,
                                                    cycle=None, last_digit=last_digit[i], k=k)
             results.append(ndcpg_at_k)
-            # {'relevant': tp_count, 'p_at_rank': precisions_at_rank, 'avg_p': avg_p}
             total_ndcpg += ndcpg_at_k
         mean = total_ndcpg/7
-        return mean, results
+        return mean, results, None
+
+    def err_at_k(self, staff="upper", phi=None, p=None, k=10):
+        total_err = 0
+        results = list()
+        for i in range(7):
+            if i == 1:
+                err_at_k = self.score_err_at_k(score_index=i, staff="upper",
+                                               cycle=4, last_digit=None, phi=phi, p=p, k=k)
+            else:
+                err_at_k = self.score_err_at_k(score_index=i, staff="upper", phi=phi, p=p,
+                                               cycle=None, last_digit=last_digit[i], k=k)
+            results.append(err_at_k)
+            total_err += err_at_k
+        mean = total_err/7
+        return mean, results, None
+
+    def epr_at_k(self, staff="upper", phi=None, p=None, method="hamming", k=10):
+        total_epr = 0
+        results = list()
+        for i in range(7):
+            if i == 1:
+                epr_at_k = self.score_epr_at_k(score_index=i, staff="upper", method=method,
+                                               cycle=4, last_digit=None, phi=phi, p=p, k=k)
+            else:
+                epr_at_k = self.score_epr_at_k(score_index=i, staff="upper", phi=phi, p=p, method=method,
+                                               cycle=None, last_digit=last_digit[i], k=k)
+            results.append(epr_at_k)
+            total_epr += epr_at_k
+        mean = total_epr/7
+        return mean, results, None
 
     # def compare_jacobs(self):
     #     jacobs = Jacobs(segment_combiner="cost")
