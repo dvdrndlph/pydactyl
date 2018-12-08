@@ -84,7 +84,7 @@ def published_parncutt_std_evaluate(cutter, name="", spew=False):
     return results
 
 
-def graph_results(title, results):
+def graph_results(name, title, results):
     plt.style.use('classic')
     x = np.arange(7)
     fig, ax = plt.subplots()
@@ -94,28 +94,40 @@ def graph_results(title, results):
         ax.plot(x, items, label=method)
     plt.title(title)
     fig.subplots_adjust(bottom=0.3)
-    # ax.legend()
+    ax.set_ylim(0, 1)
     ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), shadow=True, ncol=3)
-    plt.show()
+    extension = 'pdf'
+    file_path = '../../doc/drawings/pyplots/{}.{}'.format(name, extension)
+    plt.savefig(file_path, format='pdf')
+    # plt.show()
 
 
 cutter = Parncutter()
 cutter.load_published_parncutt()
 parncutt_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Parncutt", spew=True)
-graph_results(title="Parncutt Published Standard Measures", results=parncutt_std_results)
+graph_results(name="parncutt_on_parncutt_pub_std",
+              title="Parncutt on Parncutt Published, Existing", results=parncutt_std_results)
 parncutt_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Parncutt", spew=True)
-graph_results(title="Parncutt Published Novel Measures", results=parncutt_my_results)
-exit(0)
+graph_results(name="parncutt_on_parncutt_pub_mine",
+              title="Parncutt on Parncutt Published, Novel", results=parncutt_my_results)
 
 jacobs = Jacobs(segment_combiner="cost")
 cutter = Parncutter(dactyler=jacobs)
 cutter.load_published_parncutt()
-jacobs_results = published_parncutt_std_evaluate(cutter=cutter, name="Jacobs", spew=True)
-jacobs_results = published_parncutt_my_evaluate(cutter=cutter, name="Jacobs", spew=True)
+jacobs_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Jacobs", spew=True)
+graph_results(name="jacobs_on_parncutt_pub_std",
+              title="Jacobs on Parncutt Published, Existing", results=jacobs_std_results)
+jacobs_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Jacobs", spew=True)
+graph_results(name="jacobs_on_parncutt_pub_mine",
+              title="Jacobs on Parncutt Published, Novel", results=jacobs_my_results)
 
 justin = Badgerow(segment_combiner="cost")
 cutter = Parncutter(dactyler=justin)
 cutter.load_published_parncutt()
-badgerow_results = published_parncutt_std_evaluate(cutter=cutter, name="Badgerow", spew=True)
-badgerow_results = published_parncutt_my_evaluate(cutter=cutter, name="Badgerow", spew=True)
+badgerow_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Badgerow", spew=True)
+graph_results(name="badgerow_on_parncutt_pub_std",
+              title="Badgerow on Parncutt Published, Existing", results=badgerow_std_results)
+badgerow_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Badgerow", spew=True)
+graph_results(name="badgerow_on_parncutt_pub_mine",
+              title="Badgerow on Parncutt Published, Novel", results=badgerow_my_results)
 
