@@ -86,12 +86,13 @@ def published_parncutt_std_evaluate(cutter, name="", spew=False):
 
 def graph_results(name, title, results):
     plt.style.use('classic')
-    x = np.arange(7)
+    # x = np.arange(7)
+    my_xticks = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
     fig, ax = plt.subplots()
     for method in results:
         itemized = results[method]['itemized']
         items = np.array(itemized, np.float)
-        ax.plot(x, items, label=method)
+        ax.plot(my_xticks, items, label=method)
     plt.title(title)
     fig.subplots_adjust(bottom=0.3)
     ax.set_ylim(0, 1)
@@ -107,9 +108,9 @@ cutter.load_published_parncutt()
 parncutt_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Parncutt", spew=True)
 graph_results(name="parncutt_on_parncutt_pub_std",
               title="Parncutt on Parncutt Published, Existing", results=parncutt_std_results)
-parncutt_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Parncutt", spew=True)
-graph_results(name="parncutt_on_parncutt_pub_mine",
-              title="Parncutt on Parncutt Published, Novel", results=parncutt_my_results)
+# parncutt_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Parncutt", spew=True)
+# graph_results(name="parncutt_on_parncutt_pub_mine",
+#               title="Parncutt on Parncutt Published, Novel", results=parncutt_my_results)
 
 jacobs = Jacobs(segment_combiner="cost")
 cutter = Parncutter(dactyler=jacobs)
@@ -117,9 +118,9 @@ cutter.load_published_parncutt()
 jacobs_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Jacobs", spew=True)
 graph_results(name="jacobs_on_parncutt_pub_std",
               title="Jacobs on Parncutt Published, Existing", results=jacobs_std_results)
-jacobs_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Jacobs", spew=True)
-graph_results(name="jacobs_on_parncutt_pub_mine",
-              title="Jacobs on Parncutt Published, Novel", results=jacobs_my_results)
+# jacobs_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Jacobs", spew=True)
+# graph_results(name="jacobs_on_parncutt_pub_mine",
+#               title="Jacobs on Parncutt Published, Novel", results=jacobs_my_results)
 
 justin = Badgerow(segment_combiner="cost")
 cutter = Parncutter(dactyler=justin)
@@ -127,7 +128,36 @@ cutter.load_published_parncutt()
 badgerow_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Badgerow", spew=True)
 graph_results(name="badgerow_on_parncutt_pub_std",
               title="Badgerow on Parncutt Published, Existing", results=badgerow_std_results)
-badgerow_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Badgerow", spew=True)
-graph_results(name="badgerow_on_parncutt_pub_mine",
-              title="Badgerow on Parncutt Published, Novel", results=badgerow_my_results)
+# badgerow_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Badgerow", spew=True)
+# graph_results(name="badgerow_on_parncutt_pub_mine",
+#               title="Badgerow on Parncutt Published, Novel", results=badgerow_my_results)
+
+fmt = "{},{},{},{}"
+print(fmt.format('Method', 'Parncutt', 'Jacobs', 'Badgerow'))
+for method in ['err_10', 'dcg_10', 'dcg_full']:
+    plt.style.use('classic')
+    plt.title("Results Over Published Parncutt")
+    my_xticks = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+    fig, ax = plt.subplots()
+    p_result = parncutt_std_results[method]['result']
+    p_itemized = parncutt_std_results[method]['itemized']
+    p_items = np.array(p_itemized, np.float)
+    j_result = jacobs_std_results[method]['result']
+    j_itemized = jacobs_std_results[method]['itemized']
+    j_items = np.array(j_itemized, np.float)
+    b_result = badgerow_std_results[method]['result']
+    b_itemized = badgerow_std_results[method]['itemized']
+    b_items = np.array(b_itemized, np.float)
+
+    print(fmt.format(method, p_result, j_result, b_result))
+    ax.plot(my_xticks, p_items, label="Parncutt")
+    ax.plot(my_xticks, j_items, label="Jacobs")
+    ax.plot(my_xticks, b_items, label="Badgerow")
+    fig.subplots_adjust(bottom=0.2)
+    ax.set_ylim(0, 1)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), shadow=True, ncol=3)
+    extension = 'pdf'
+    file_path = '../../doc/drawings/pyplots/{}.{}'.format(method, extension)
+    plt.savefig(file_path, format='pdf')
+    # plt.show()
 

@@ -264,13 +264,15 @@ class DAnnotation:
                     hand = strike.hand
                 digit = strike.digit
                 handed_digit = hand + str(digit)
+                if digit == "x":
+                    handed_digit = digit
                 handed_digits.append(handed_digit)
         return handed_digits
 
     @staticmethod
     def abcdf_to_handed_strike_digits(abcdf, staff="upper"):
         """
-        :return: Array of string, each of which is either "x" or is
+        :return: Array of strings, each of which is either "x" or is
                  composed of a hand ("<" or ">") identifier and a digit (1-5).
 
                  Returns None if any fingerings for the other hand
@@ -281,7 +283,7 @@ class DAnnotation:
 
     def handed_strike_digits(self, staff="upper"):
         """
-        :return: Array of string, each of which is either "x" or is
+        :return: Array of strings, each of which is either "x" or is
                  composed of a hand ("<" or ">") identifier and a digit (1-5).
 
                  Returns None if any fingerings for the other hand
@@ -331,7 +333,7 @@ class DAnnotation:
     def abcdf(self, abcdf=None, staff=None, flat=False):
         if abcdf:
             self._abcdf = abcdf
-            self._ast = DAnnotation.ast_for_abcdf(abcdf)
+            self._ast = DAnnotation.abcdf_to_ast(abcdf)
         if staff == "upper":
             return self.upper_abcdf(flat=flat)
         elif staff == "lower":
