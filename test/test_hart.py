@@ -114,33 +114,34 @@ class HartTest(unittest.TestCase):
         hart.load_corpus(d_corpus=d_corpus)
 
         reentry_hamming_evals = hart.evaluate_strike_reentry(method="hamming", staff="upper", gold_indices=[0, 1])
-        # for rhe in reentry_hamming_evals:
-            # print("RHE:{0}".format(rhe))
+        for rhe in reentry_hamming_evals:
+            print("RHE:{0}".format(rhe))
         assert reentry_hamming_evals[0] > 0, "Undetected Hamming reentry costs"
         assert reentry_hamming_evals[1] == 0, "Bad fish in Hamming reentry barrel"
 
         reentry_hamming_evals = hart.evaluate_strike_reentry(method="hamming", staff="both")
-        # for rhe in reentry_hamming_evals:
-            # print("RHE:{0}".format(rhe))
+        for rhe in reentry_hamming_evals:
+            print("RHE:{0}".format(rhe))
         assert reentry_hamming_evals[0] > 0, "Undetected Hamming reentry costs"
         assert reentry_hamming_evals[1] == 0, "Bad fish in Hamming reentry barrel"
         hamming_score = reentry_hamming_evals[0]
 
         reentry_natural_evals = hart.evaluate_strike_reentry(method="natural", staff="both")
-        # for rne in reentry_natural_evals:
-            # print("RNE:{0}".format(rne))
+        for rne in reentry_natural_evals:
+            print("RNE:{0}".format(rne))
         assert reentry_natural_evals[0] > 0, "Undetected natural reentry costs"
         assert reentry_natural_evals[1] == 0, "Bad fish in natural reentry barrel"
         natural_score = reentry_natural_evals[0]
         assert natural_score > hamming_score, "Reentry: Natural <= Hamming"
 
         reentry_pivot_evals = hart.evaluate_strike_reentry(method="pivot", staff="both")
-        # for rpe in reentry_pivot_evals:
-            # print("RPE:{0}".format(rpe))
+        for rpe in reentry_pivot_evals:
+            print("RPE:{0}".format(rpe))
         assert reentry_pivot_evals[0] > 0, "Undetected pivot reentry costs"
         assert reentry_pivot_evals[1] == 0, "Bad fish in pivot reentry barrel"
         pivot_score = reentry_pivot_evals[0]
         assert natural_score < pivot_score, "Reentry: Natural >= Pivot"
+
 
 if __name__ == "__main__":
     unittest.main()  # run all tests

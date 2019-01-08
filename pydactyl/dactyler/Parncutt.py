@@ -1332,19 +1332,19 @@ class Badgerow(Parncutt):
         if hand_1 == '>':
             if midi_1 > midi_2:  # descending
                 costs['b1w'] += (digit_2 - 2) * self._weights['b1w']
-            #     distance = self.distance(midi_1, midi_2)
-            #     min_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinRel']
-            #     if distance < min_rel_12:
-            #         costs['b1w'] += (digit_2 - 2) * self._weights['b1w']
-            # else:
+            else:
+                distance = self.distance(midi_1, midi_2)
+                min_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinRel']
+                if distance < min_rel_12:
+                    costs['b1w'] += (digit_2 - 2) * self._weights['b1w']
         else:  # Left hand
             if midi_2 > midi_1:  # ascending
                 costs['b1w'] += (digit_2 - 2) * self._weights['b1w']
-            # else:
-            #     distance = self.distance(midi_1, midi_2)
-            #     min_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinRel']
-            #     if distance < min_rel_12:
-            #         costs['b1w'] += (digit_2 - 2) * self._weights['b1w']
+            else:
+                distance = self.distance(midi_1, midi_2)
+                min_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinRel']
+                if distance < min_rel_12:
+                    costs['b1w'] += (digit_2 - 2) * self._weights['b1w']
 
     def assess_weak_to_thumb_on_black(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
         if not midi_1 or midi_1 == midi_2:
@@ -1467,7 +1467,7 @@ class Badgerow(Parncutt):
         self.assess_alternation_finger_change(costs, digit_1, midi_1, digit_3, midi_3)
 
         # New rule ("Thumb-on-Black-to-Weak")
-        # self.assess_thumb_on_black_to_weak(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+        self.assess_thumb_on_black_to_weak(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
         # New rule ("Weak-to-Thumb-on-Black")
         # self.assess_weak_to_thumb_on_black(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
 

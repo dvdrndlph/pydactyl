@@ -204,6 +204,8 @@ class DAnnotation:
         gold_digit = DAnnotation.digit_only(gold_handed_digit)
         gold_hand = DAnnotation.digit_hand(gold_handed_digit)
         if method == "hamming":
+            if gold_digit == 'x' or test_digit == 'x':
+                return 0
             if test_digit != gold_digit or test_hand != gold_hand:
                 return 1
             else:

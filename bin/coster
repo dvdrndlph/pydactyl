@@ -132,8 +132,7 @@ graph_results(name="badgerow_on_parncutt_pub_std",
 # graph_results(name="badgerow_on_parncutt_pub_mine",
 #               title="Badgerow on Parncutt Published, Novel", results=badgerow_my_results)
 
-fmt = "{},{},{},{}"
-print(fmt.format('Method', 'Parncutt', 'Jacobs', 'Badgerow'))
+summary = list()
 for method in ['err_10', 'dcg_10', 'dcg_full']:
     plt.style.use('classic')
     plt.title("Results Over Published Parncutt")
@@ -149,7 +148,6 @@ for method in ['err_10', 'dcg_10', 'dcg_full']:
     b_itemized = badgerow_std_results[method]['itemized']
     b_items = np.array(b_itemized, np.float)
 
-    print(fmt.format(method, p_result, j_result, b_result))
     ax.plot(my_xticks, p_items, label="Parncutt")
     ax.plot(my_xticks, j_items, label="Jacobs")
     ax.plot(my_xticks, b_items, label="Badgerow")
@@ -161,3 +159,17 @@ for method in ['err_10', 'dcg_10', 'dcg_full']:
     plt.savefig(file_path, format='pdf')
     # plt.show()
 
+fmt = "{},{},{},{}"
+print(fmt.format('Model', 'err_10', 'dcg_10', 'dcg_full'))
+print(fmt.format('Parncutt',
+                 parncutt_std_results['err_10']['result'],
+                 parncutt_std_results['dcg_10']['result'],
+                 parncutt_std_results['dcg_full']['result']))
+print(fmt.format('Jacobs',
+                 jacobs_std_results['err_10']['result'],
+                 jacobs_std_results['dcg_10']['result'],
+                 jacobs_std_results['dcg_full']['result']))
+print(fmt.format('Badgerow',
+                 badgerow_std_results['err_10']['result'],
+                 badgerow_std_results['dcg_10']['result'],
+                 badgerow_std_results['dcg_full']['result']))

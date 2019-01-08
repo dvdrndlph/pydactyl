@@ -653,6 +653,7 @@ class Dactyler(ABC):
             test_strike = test_sf.pf.fingering.strike
             test_hand = test_strike.hand if test_strike.hand else current_test_hand
             test_digit_str = str(test_strike.digit)
+            gold_digit = int(gold_digit_str)
 
             current_gold_hand = gold_hand
             current_test_hand = test_hand
