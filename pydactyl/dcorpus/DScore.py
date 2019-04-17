@@ -52,7 +52,7 @@ class DScore:
             if self.lower_d_part():
                 self._lower_d_part.segmenter(segmenter)
             if self.upper_d_part():
-                self._lower_d_part.segmenter(segmenter)
+                self._upper_d_part.segmenter(segmenter)
         return self._segmenter
 
     def __init__(self, music21_stream=None, segmenter=None, abc_handle=None,

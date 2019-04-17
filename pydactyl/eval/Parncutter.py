@@ -43,14 +43,13 @@ class Parncutter(DEval):
         self._conn = pymysql.connect(host='127.0.0.1', port=3306, user='didactyl', passwd='', db='didactyl2')
         self._dactyler = dactyler
 
-    def load_published_parncutt(self):
+    def load_data(self):
         query = """select exercise, abc_fragment
                      from parncutt
                     order by exercise"""
         curs = self._conn.cursor()
         curs.execute(query)
 
-        abc_content = None
         for row in curs:
             abc_content = row[1]
             self._d_corpus.append(corpus_str=abc_content)
@@ -62,17 +61,17 @@ class Parncutter(DEval):
         curs.execute(query_gold)
 
         prior_ex_id = None
-        exercise_upper_gold = dict()
+        exercise_upper_gold = list()
         for row_gold in curs:
             ex_id = int(row_gold[0])
             gold_fingering_str = '>' + str(row_gold[1])
             subject_count = row_gold[2]
             if ex_id != prior_ex_id:
-                exercise_upper_gold = dict()
+                exercise_upper_gold = list()
                 self._gold['upper'].append(exercise_upper_gold)
                 prior_ex_id = ex_id
-
-            exercise_upper_gold[gold_fingering_str] = subject_count
+            for i in range(subject_count):
+                exercise_upper_gold.append(gold_fingering_str)
 
     def map_at_perfect_recall(self, staff="upper"):
         avg_p_sum = 0
@@ -80,10 +79,10 @@ class Parncutter(DEval):
         query_results = list()
         for i in range(7):
             if i == 1:
-                result = self.score_avg_p_at_perfect_recall(score_index=i, staff="upper",
+                result = self.score_avg_p_at_perfect_recall(score_index=i, staff=staff,
                                                             cycle=4, last_digit=None)
             else:
-                result = self.score_avg_p_at_perfect_recall(score_index=i, staff="upper",
+                result = self.score_avg_p_at_perfect_recall(score_index=i, staff=staff,
                                                             cycle=None, last_digit=last_digit[i])
             details.append(result)
             # {'relevant': tp_count, 'p_at_rank': precisions_at_rank, 'avg_p': avg_p}

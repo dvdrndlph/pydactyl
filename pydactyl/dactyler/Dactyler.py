@@ -49,6 +49,7 @@ class Dactyler(ABC):
         self._log_file_path = '/tmp/dactyler_' + self.__class__.__name__ + '_' + timestamp + '.log'
         self._log = open(self._log_file_path, 'a')
         self._segmenter = segmenter
+
         # One of "cost," "normal," or "rank"
         self._segment_combiner = segment_combiner
 
@@ -619,8 +620,8 @@ class Dactyler(ABC):
         else:
             raise Exception("No corpus specified for Dactyler.")
 
-        if self.segmenter():
-            self._d_corpus.segmenter(self.segmenter())
+        if self._segmenter:
+            self._d_corpus.segmenter(self._segmenter)
 
     def score_note_count(self, score_index=0, staff="both"):
         d_score = self._d_corpus.d_score_by_index(score_index)

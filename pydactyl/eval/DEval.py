@@ -45,6 +45,9 @@ class DEval(ABC):
         self._gold = dict()
         self._gold['upper'] = list()
         self._gold['lower'] = list()
+        self._discord = dict()
+        self._discord['upper'] = dict()
+        self._discord['lower'] = dict()
 
     @staticmethod
     def _max_distance_for_method(method):
@@ -88,6 +91,13 @@ class DEval(ABC):
         normalizer = h_total * n_total * d_max
         npg = 1.0 * p_gain / normalizer
         return npg
+
+    @abstractmethod
+    def load_data(self):
+        return
+
+    def sow_discord(self):
+        return
 
     def gold_asts(self, score_index, staff="upper", last_digit=None):
         score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
@@ -233,43 +243,67 @@ class DEval(ABC):
         return data_by_cost
 
     def score_advice(self, score_index, staff="upper", cycle=None, last_digit=None, k=10):
+        # FIXME: I don't see what this method buys us. generate_advice() should do the right
+        # default thing, no?
         if cycle:
             suggestions, costs, details = \
                 self._dactyler.generate_advice(staff=staff, score_index=score_index, cycle=cycle, k=k)
         elif last_digit:
             suggestions, costs, details = \
-                self._dactyler.generate_advice(staff="upper", score_index=score_index, last_digit=last_digit, k=k)
+                self._dactyler.generate_advice(staff=staff, score_index=score_index, last_digit=last_digit, k=k)
         else:
             suggestions, costs, details = \
-                self._dactyler.generate_advice(staff="upper", score_index=score_index, k=k)
+                self._dactyler.generate_advice(staff=staff, score_index=score_index, k=k)
         return suggestions, costs, details
 
     def _score_gold(self, score_index, staff="upper", last_digit=None):
         all_gold = self._gold[staff][score_index]
         if last_digit:
             end_re = re.compile(str(last_digit) + '$')
-            constrained_gold = dict()
+            constrained_gold = list()
             for nugget in all_gold:
                 if end_re.search(nugget):
-                    constrained_gold[nugget] = all_gold[nugget]
+                    constrained_gold.append(nugget)
             return constrained_gold
         return all_gold
 
-    def _score_gold_segregated_list(self, score_index, staff="upper", last_digit=None):
+    def _segmented_gold_strike_list(self, score_index, segment_lengths, staff="upper", last_digit=None):
         score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
-        nuggets = list()
-        for fingering in score_gold:
-            subject_count = score_gold[fingering]
-            gold_fingers = list(fingering)
-            gold_fingers = gold_fingers[1:]
-            gold_finger_ints = list(map(int, gold_fingers))
-            for i in range(int(subject_count)):
-                nuggets.append(gold_finger_ints)
-        return nuggets
+        score_data = list()
+        for seg_index in range(len(segment_lengths)):
+            score_data.append(list())
+
+        for score_annotation in score_gold:
+            score_strikers = DAnnotation.abcdf_to_handed_strike_digits(score_annotation, staff=staff)
+            seg_start = 0
+            seg_end = 0
+            seg_index = 0
+            human_data = list()
+            while True:
+                segment_data = score_data[seg_index]
+                if seg_start == len(score_strikers):
+                    break
+                seg_end += segment_lengths[seg_index]
+                # phrase_data.append(score_strikers[seg_start:seg_end])
+                segment_fingerings = list()
+                for i in range(start=seg_start, stop=seg_end):
+                    segment_fingerings.append(score_strikers[i])
+                human_data.append(segment_fingerings)
+                segment_data.append(human_data)
+                seg_start = seg_end
+        # score_data[segment_index][h][n]
+        return score_data
 
     def _score_gold_distinct_count(self, score_index, staff="upper", last_digit=None):
         score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
-        return len(score_gold)
+        return len(set(score_gold))
+
+    def _segment_gold_weighted_vote_totals(self, score_index, segment_lengths, staff="upper", last_digit=None):
+        score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
+        total = 0
+        for fingering_str in score_gold:
+            total += score_gold[fingering_str]
+        return total
 
     def _score_gold_total_count(self, score_index, staff="upper", last_digit=None):
         score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
@@ -464,6 +498,112 @@ class DEval(ABC):
         prob = 1.0 * score_gold[suggestion]/h_total
         return prob
 
+    @staticmethod
+    def p_prime(suggestion, segment_gold, staff="upper"):
+        suggested_strikers = DAnnotation.abcdf_to_handed_strike_digits(suggestion, staff=staff)
+        big_h = len(segment_gold)
+        if big_h == 0:
+            return 0
+
+        sum_total = 0
+        for human_data in segment_gold:
+            big_w = 0
+            match = 1
+            for note_index in range(len(human_data)):
+                if human_data[note_index] == 'x':
+                    big_w += 1
+                elif human_data[note_index] != suggested_strikers[note_index]:
+                    match = 0
+                    break
+            sum_total += match/(big_w + 1)
+        p_prime = (1/big_h)*sum_total
+        return p_prime
+
+    @staticmethod
+    def segment_discord(segment_gold):
+        discordant_with = dict()
+        for j in range(len(segment_gold)):
+            outer_annotations = segment_gold[j]
+            discordants = dict()
+            for i in range(len(segment_gold)):
+                inner_annotations = segment_gold[i]
+                if i == j:
+                    continue
+                clashes = 0
+                for n in range(len(outer_annotations)):
+                    if not (outer_annotations[n] == inner_annotations[n] or
+                            outer_annotations[n] == 'x' or
+                            inner_annotations[n] == 'x'):
+                        clashes += 1
+                if clashes > 0:
+                    discordants[i] = clashes
+            discordant_with[j] = discordants
+        return discordant_with
+
+    @staticmethod
+    def p_double_prime(suggestion, segment_gold, segment_discord, staff="upper"):
+        suggested_strikers = DAnnotation.abcdf_to_handed_strike_digits(suggestion, staff=staff)
+        big_h = len(segment_gold)
+        if big_h == 0:
+            return 0
+
+        sum_total = 0
+        human_index = 0
+        for human_data in segment_gold:
+            big_w = 0
+            clashes = 0
+            for note_index in range(len(human_data)):
+                if human_data[note_index] == 'x':
+                    big_w += 1
+                elif human_data[note_index] != suggested_strikers[note_index]:
+                    clashes += 1
+            discordants = segment_discord[human_index]
+
+            sum_total += (1/(2**clashes))/(big_w + 1)  # + DEval.discord()
+            human_index += 1
+        p_prime = (1/big_h)*sum_total
+
+        return p_prime
+
+    def segmented_wildcard_rank_at_k(self, score_index, method="match",
+                                     staff="upper", cycle=None, last_digit=None, phi=None, p=None, k=10):
+        self.assert_good_gold(staff=staff)
+        if k is None:
+            raise Exception("Cannot yet recall all for phrases.")
+        segment_suggestions, segment_costs, segment_details, segment_lengths = \
+            self._dactyler.generate_segmented_advice(score_index=score_index, staff=staff, cycle=cycle,
+                                                     offset=0, last_digit=last_digit, k=k)
+        segment_gold_data = self._segmented_gold_strike_list(score_index=score_index, segment_lengths=segment_lengths,
+                                                             staff=staff, last_digit=last_digit)
+        err_for_segment = list()
+        # segment_gold[segment_index][h][n]
+        for seg_index in range(len(segment_gold_data)):
+            seg_gold = segment_gold_data[seg_index]
+            seg_discord = DEval.segment_discord(seg_gold)
+            err = 0
+            prob_still_going = 1
+            for r in range(1, k+1):
+                if phi:
+                    discount_factor = phi(r=r, p=p)
+                else:
+                    discount_factor = 1.0/r
+                if method == "match":
+                    prob_found = DEval.p_prime(suggestion=segment_suggestions[r-1],
+                                               segment_gold=seg_gold, staff=staff)
+                elif method == "similarity":
+                    prob_found = DEval.p_double_prime(suggestion=segment_suggestions[r-1], segment_gold=seg_gold,
+                                                      segment_discord=seg_discord, staff=staff)
+                elif method == "equity":
+                    prob_found = DEval.p_double_prime(suggestion=segment_suggestions[r-1], segment_gold=seg_gold,
+                                                      segment_discord=seg_discord, staff=staff)
+                else:
+                    raise Exception("Wildcard method {} not supported.".format(method))
+
+                err += (discount_factor * prob_still_going * prob_found)
+                prob_still_going *= (1 - prob_found)
+            err_for_segment.append(err)
+        return err_for_segment
+
     def score_err_at_k(self, score_index, staff="upper", cycle=None, last_digit=None, phi=None, p=None, k=10):
         self.assert_good_gold(staff=staff)
         if k is None:
@@ -638,11 +778,11 @@ class DEval(ABC):
         return
 
     @abstractmethod
-    def dcpg_at_k(self, staff="upper", phi=None, p=None, method="hamming", k=10):
+    def dcpg_at_k(self, staff="upper", phi=None, p=None, k=10):
         return
 
     @abstractmethod
-    def ndcpg_at_k(self, staff="upper", phi=None, p=None, method="hamming", k=10):
+    def ndcpg_at_k(self, staff="upper", phi=None, p=None, k=10):
         return
 
     @abstractmethod
