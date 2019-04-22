@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import unittest
+from pprint import pprint
 from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 
 
@@ -42,6 +43,40 @@ A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|:
 A,B,CD EFGA Bcde fgag fedc BAGF EDCB,:|A,4|:
 CDEF GABc [K:clef=treble octave=-1] defg abc'b agfe [K:clef=bass octave=-1] dcBA GFED:|C4|]
 """
+
+    WILDCARD_ABCD = """% abcDidactyl v5
+% abcD fingering 1: 2xx12341@54321321
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-13 17:24:43
+% These are complete fingerings, with any gaps filled in.
+% abcD fingering 2: 123<12341@>54321321
+% Authority:  Beringer and Dunhill (1492)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-13 17:27:28
+% These are alternate fingerings, if specified, with gaps filled in. 
+% abcD fingering 3: 12312341@54321321
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-13 17:27:28
+% These are additional alternate fingerings, with gaps filled in. 
+% This is another comment line.
+% abcDidactyl END
+X:7
+T:scales_a_major
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:7/4
+K:Amaj
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+A,B,CD EDCB,|A,4|]
+V:2
+L:1/16
+A,B,CD EDCB,|A,4|]"""
+
     FINGERING_1_UPPER = "12312341231234543213214321321&21234123123412321432132143212&12312341231234543213214321321"
     FINGERING_1_TRANS_DATE = "2016-09-13 17:24:43"
     FINGERING_1_COMMENTS = """These are complete fingerings, with any gaps filled in."""
@@ -77,6 +112,13 @@ This is another comment line."""
 
     @staticmethod
     def test_d_annotation():
+        hdr = ABCDHeader(abcd_str=ABCDHeaderTest.WILDCARD_ABCD)
+        annot = hdr.annotation(identifier=1)
+        ast = annot.parse()
+        print("")
+        pprint(ast)
+        assert ast.upper, "Failed parse"
+
         hdr = ABCDHeader(abcd_str=ABCDHeaderTest.MULTI_ANNOTATION_ABCD)
         clean_fingering = ABCDHeaderTest.FINGERING_3_LOWER.replace('&', '')
         fingering_count = len(clean_fingering)
@@ -100,6 +142,7 @@ This is another comment line."""
         clean_fingering = lower_abcdf.replace('>', '')
         clean_fingering = clean_fingering.replace('&', '')
         assert clean_fingering == opposite_digits, "Bad opposite segregated digits"
+
 
 
 if __name__ == "__main__":

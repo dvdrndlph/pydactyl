@@ -46,13 +46,6 @@ class DScore:
     def segmenter(self, segmenter=None):
         if segmenter:
             self._segmenter = segmenter
-            if type(segmenter) is ManualDSegmenter and self.abcd_header() and not segmenter.d_annotation():
-                segmenter.d_annotation(self._abcd_header.annotation())
-            self._combined_d_part.segmenter(segmenter)
-            if self.lower_d_part():
-                self._lower_d_part.segmenter(segmenter)
-            if self.upper_d_part():
-                self._upper_d_part.segmenter(segmenter)
         return self._segmenter
 
     def __init__(self, music21_stream=None, segmenter=None, abc_handle=None,
@@ -145,33 +138,30 @@ class DScore:
             return self._upper_d_part.stream()
         return None
 
-    def orderly_note_stream_segments(self, staff="both"):
+    def orderly_note_stream_segments(self, staff="both", offset=0):
+        if not self._segmenter or not self._abcd_header:
+            single_stream = self.orderly_note_stream(staff=staff, offset=offset)
+            return [single_stream]
+
+        self._segmenter.d_annotation(self._abcd_header.annotation())  # Phrases are marked in the first annotation.
         if staff == "upper":
-            return self.upper_orderly_note_stream_segments()
+            return self._segmenter.segment_to_orderly_streams(d_part=self._upper_d_part, offset=offset)
         elif staff == "lower":
-            return self.lower_orderly_note_stream_segments()
-        return self._combined_d_part.orderly_note_stream_segments()
+            return self._segmenter.segment_to_orderly_streams(d_part=self._lower_d_part, offset=offset)
+        return self._segmenter.segment_to_orderly_streams(d_part=self._combined_d_part, offset=offset)
 
-    def upper_orderly_note_stream_segments(self):
-        if self._upper_d_part:
-            return self._upper_d_part.orderly_note_stream_segments()
-        return None
-
-    def lower_orderly_note_stream_segments(self):
-        if self._lower_d_part:
-            return self._lower_d_part.orderly_note_stream_segments()
-        return None
-
-    def orderly_note_stream(self, staff="both"):
+    def orderly_note_stream(self, staff="both", offset=0):
         if staff == "upper":
-            return self.upper_orderly_note_stream()
+            return self.upper_orderly_note_stream(offset=offset)
         elif staff == "lower":
-            return self.lower_orderly_note_stream()
-        return self._combined_d_part.orderly_note_stream()
+            return self.lower_orderly_note_stream(offset=offset)
+        return self._combined_d_part.orderly_note_stream(offset=offset)
 
-    def upper_orderly_note_stream(self):
+    def upper_orderly_note_stream(self, offset=0):
         if self._upper_d_part:
-            return self._upper_d_part.orderly_note_stream()
+            return self._upper_d_part.orderly_note_stream(offset=offset)
+        else:
+            return self._combined_d_part.orderly_note_stream(offset=offset)
         return None
 
     def lower_stream(self):
@@ -179,9 +169,9 @@ class DScore:
             return self._lower_d_part.stream()
         return None
 
-    def lower_orderly_note_stream(self):
+    def lower_orderly_note_stream(self, offset=0):
         if self._lower_d_part:
-            return self._lower_d_part.orderly_note_stream()
+            return self._lower_d_part.orderly_note_stream(offset=offset)
         return None
 
     def part_count(self):

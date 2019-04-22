@@ -21,15 +21,17 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-from tatsu import parse
+from tatsu import compile
 import re
 from pydactyl.dactyler import Constant
 
 
 class DAnnotation:
     GRAMMAR = """
-        @@grammar::Calc
-
+        @@grammar :: abcDF
+        @@nameguard :: False
+        
+        start = sequence $ ;
         sequence = upper:staff ['@' lower:staff] ;
 
         staff = '&'.{line};
@@ -43,21 +45,24 @@ class DAnnotation:
         ornamental = ornaments:('(' {pedaled_fingering}+ ')') ;
 
         pedaled_fingering = soft:[soft] fingering:fingering damper:[damper] ;
-        pedaling = soft:{soft}+ 'x' damper:{damper}+ ;
+        pedaling = soft:{soft}+ wildcard damper:{damper}+ ;
 
-        fingering = strike:finger ['-' release:finger] ;
+        fingering = strike:finger ['-' release:finger]
+        | wildcard ;
         finger = hand:[hand] digit:digit ;
 
-        segmenter = "," | ";" | "." ;
+        segmenter = /[,;\.]/ ; 
         damper = '_' | '^' ;
-        soft = 'p' | 'f' ;
+        soft = /[pf]/ ;
         hand = '<' | '>' ;
-        digit = '1' | '2' | '3' | '4' | '5' | 'x' ;
+        digit = /[1-5]/ ;
+        wildcard = /x/ ;
     """
+    _parser = compile(GRAMMAR)
 
     @staticmethod
     def abcdf_to_ast(abcdf):
-        ast = parse(DAnnotation.GRAMMAR, abcdf)
+        ast = DAnnotation._parser.parse(abcdf)
         return ast
 
     def parse(self):
@@ -77,14 +82,18 @@ class DAnnotation:
                 adjusted_index = index - offset
                 return line[adjusted_index]
             offset += len(line)
+        return None
 
     def strike_digit_at_index(self, index, staff="upper"):
         sf = self.score_fingering_at_index(staff=staff, index=index)
-        strike = sf.pf.fingering.strike
-        return strike.digit
+        if isinstance(sf.pf.fingering, str):
+            return None
+        return sf.pf.fingering.strike.digit
 
     def phrase_mark_at_index(self, index, staff="upper"):
         sf = self.score_fingering_at_index(staff=staff, index=index)
+        if not sf:
+            raise Exception("No note at index {}.".format(index))
         segger = sf.segmenter
         return segger
 
@@ -94,7 +103,7 @@ class DAnnotation:
 
     def parse_lower(self):
         lower_abcdf = self.upper_abcdf()
-        return DAnnotation.ast_for_abcdf(lower_abcdf)
+        return DAnnotation.abcdf_to_ast(lower_abcdf)
 
     def score_fingering_count(self, staff="both"):
         # print(staff + ":::" + self.abcdf() + "\n")
@@ -244,7 +253,7 @@ class DAnnotation:
                  Returns None if any fingerings for the other hand
                  are detected.
         """
-        ast = parse(DAnnotation.GRAMMAR, abcdf)
+        ast = DAnnotation._parser.parse(abcdf)
         return DAnnotation.ast_to_segregated_strike_digits(ast=ast, staff=staff, hand=hand)
 
     @staticmethod
@@ -280,7 +289,7 @@ class DAnnotation:
                  Returns None if any fingerings for the other hand
                  are detected.
         """
-        ast = parse(DAnnotation.GRAMMAR, abcdf)
+        ast = DAnnotation._parser.parse(abcdf)
         return DAnnotation.ast_to_handed_strike_digits(ast=ast, staff=staff)
 
     def handed_strike_digits(self, staff="upper"):

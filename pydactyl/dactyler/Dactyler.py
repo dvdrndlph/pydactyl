@@ -108,6 +108,20 @@ class Dactyler(ABC):
                     d[key] = json_str
         return h
 
+    @staticmethod
+    def simplify_abcdf(abcdf, first_hand=None):
+        simple = ''
+        current_hand = first_hand
+        for ch in abcdf:
+            if ch == "<" or ch == ">":
+                if ch != current_hand:
+                    simple += ch
+                    current_hand = ch
+            elif not current_hand:
+                raise Exception("Underspecified abcdf: {}".format(abcdf))
+            else:
+                simple += ch
+        return simple
 
     @staticmethod
     def combine_abcdf_segments(segments):
@@ -494,16 +508,11 @@ class Dactyler(ABC):
             raise Exception("Score index out of range")
 
         d_score = d_scores[score_index]
+        # We support (segregated) left hand fingerings. By segregated, we
+        # mean the right hand is dedicated to the upper staff, and the
+        # left hand is dedicated to the lower staff.
+        segments = d_score.orderly_note_stream_segments(staff=staff, offset=offset)
 
-        if d_score.part_count() == 1:
-            d_part = d_score.combined_d_part()
-        else:
-            # We support (segregated) left hand fingerings. By segregated, we
-            # mean the right hand is dedicated to the upper staff, and the
-            # left hand is dedicated to the lower staff.
-            d_part = d_score.d_part(staff=staff)
-
-        segments = d_part.orderly_note_stream_segments(offset=offset)
         return segments
 
     def generate_segmented_advice(self, score_index=0, staff="upper", cycle=None, offset=0,
@@ -547,7 +556,9 @@ class Dactyler(ABC):
             # left hand is dedicated to the lower staff.
             d_part = d_score.d_part(staff=staff)
 
-        segments = d_part.orderly_note_stream_segments(offset=offset)
+        segments = d_score.orderly_note_stream_segments(staff=staff, offset=offset)
+        if not segments:
+            raise Exception("Score has no segments.")
         segment_index = 0
         last_segment_index = len(segments) - 1
         segment_lengths = list()
@@ -555,6 +566,8 @@ class Dactyler(ABC):
         costs_for_segment = list()
         details_for_segment = list()
         for segment in segments:
+            if not segment:
+                raise Exception("Empty segment.")
             segment_offset = 0
             segment_handed_first = None
             segment_handed_last = None

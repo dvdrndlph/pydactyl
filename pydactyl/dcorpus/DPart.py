@@ -28,13 +28,7 @@ from .DNote import DNote
 class DPart:
     def __init__(self, music21_stream, segmenter=None, staff="both"):
         self._stream = music21_stream
-        self._segmenter = segmenter
         self._staff = staff
-
-    def segmenter(self, segmenter=None):
-        if segmenter:
-            self._segmenter = segmenter
-        return self._segmenter
 
     def staff(self):
         return self._staff
@@ -67,12 +61,6 @@ class DPart:
             if len(notes_at_offset) > 1:
                 return False
         return True
-
-    def orderly_note_stream_segments(self, offset=0):
-        if self._segmenter:
-            return self._segmenter.segment_to_orderly_streams(d_part=self, offset=offset)
-        else:
-            return [self.orderly_note_stream(offset=offset)]
 
     def orderly_note_stream(self, offset=0):
         """Return part as stream of notes with no notes starting at the same
