@@ -99,7 +99,11 @@ class DCorpus:
         if corpus_path:
             corpus_type = DCorpus.corpus_type(corpus_path=corpus_path)
             if corpus_type in [Constant.CORPUS_ABC, Constant.CORPUS_ABCD]:
-                abc_file = abcFormat.ABCFile()
+                fh = open(corpus_path, "r")
+                abc_str = fh.read()
+                fh.close()
+                self._abc_strings.append(abc_str)
+                abc_file = abcFormat.ABCFile(abcVersion=(2,1,0))
                 staff_assignments = DCorpus._score_staff_assignments(abc_file_path=corpus_path)
                 abc_file.open(filename=corpus_path)
                 abc_handle = abc_file.read()
@@ -119,7 +123,8 @@ class DCorpus:
         elif corpus_str:
             corpus_type = DCorpus.corpus_type(corpus_str=corpus_str)
             if corpus_type in [Constant.CORPUS_ABC, Constant.CORPUS_ABCD]:
-                abc_file = abcFormat.ABCFile()
+                self._abc_strings.append(corpus_str)
+                abc_file = abcFormat.ABCFile(2,1,0)
                 staff_assignments = DCorpus._score_staff_assignments(abc_content=corpus_str)
                 abc_handle = abc_file.readstr(corpus_str)
             else:
@@ -172,6 +177,7 @@ class DCorpus:
 
     def __init__(self, corpus_path=None, corpus_str=None, paths=[], segmenter=None):
         self._conn = None
+        self._abc_strings = []
         self._d_scores = []
         self._segmenter = segmenter
         if corpus_path:
@@ -187,6 +193,11 @@ class DCorpus:
 
     def score_count(self):
         return len(self._d_scores)
+
+    def abc_string_by_index(self, index):
+        if index < len(self._abc_strings):
+            return self._abc_strings[index]
+        return None
 
     def d_score_by_title(self, title):
         for d_score in self._d_scores:

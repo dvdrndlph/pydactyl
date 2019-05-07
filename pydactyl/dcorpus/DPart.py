@@ -26,7 +26,7 @@ from .DNote import DNote
 
 
 class DPart:
-    def __init__(self, music21_stream, segmenter=None, staff="both"):
+    def __init__(self, music21_stream, staff="both"):
         self._stream = music21_stream
         self._staff = staff
 
@@ -80,17 +80,21 @@ class DPart:
         chords = self._stream.flat.getElementsByClass(chord.Chord)
         new_note_stream = stream.Score()
         for ch in chords:
-            chord_offset = ch.offset
+            # chord_offset = ch.offset
+            chord_offset = ch.getOffsetBySite(chords)
             note_index = 0
-            for pitch_name in ch.pitchNames:
-                new_note = note.Note(pitchName=pitch_name)
-                new_note.offset = chord_offset + note_index * short_dur.quarterLength
-                new_note_stream.append(new_note)
+            for pit in ch.pitches:
+                new_note = note.Note(pit)
+                new_note.quarterLength = ch.quarterLength
+                # new_note.offset = chord_offset + note_index * short_dur.quarterLength
+                note_offset = chord_offset + note_index * short_dur.quarterLength
+                new_note_stream.insert(note_offset, new_note)
                 note_index += 1
 
         notes = self._stream.flat.getElementsByClass(note.Note)
         for old_note in notes:
-            new_note_stream.append(old_note)
+            note_offset = old_note.getOffsetBySite(notes)
+            new_note_stream.insert(note_offset, old_note)
 
         if not offset:
             return new_note_stream

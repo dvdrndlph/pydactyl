@@ -51,14 +51,14 @@ class DScore:
     def __init__(self, music21_stream=None, segmenter=None, abc_handle=None,
                  voice_map=None, abcd_header=None):
         if music21_stream:
-            self._combined_d_part = DPart(music21_stream=music21_stream, segmenter=segmenter, staff="both")
+            self._combined_d_part = DPart(music21_stream=music21_stream, staff="both")
             self._score = music21_stream
             meta = self._score[0]
             self._title = meta.title
         elif abc_handle:
             self._title = abc_handle.getTitle()
             music21_stream = abcFormat.translate.abcToStreamScore(abc_handle)
-            self._combined_d_part = DPart(music21_stream=music21_stream, segmenter=segmenter, staff="both")
+            self._combined_d_part = DPart(music21_stream=music21_stream, staff="both")
 
             self._lower_d_part = None
             self._upper_d_part = None
@@ -90,9 +90,9 @@ class DScore:
                         lower_ah = lower_ah + voice
 
                 upper_stream = abcFormat.translate.abcToStreamScore(upper_ah)
-                self._upper_d_part = DPart(music21_stream=upper_stream, segmenter=segmenter, staff="upper")
+                self._upper_d_part = DPart(music21_stream=upper_stream, staff="upper")
                 lower_stream = abcFormat.translate.abcToStreamScore(lower_ah)
-                self._lower_d_part = DPart(music21_stream=lower_stream, segmenter=segmenter, staff="lower")
+                self._lower_d_part = DPart(music21_stream=lower_stream, staff="lower")
 
         self._abcd_header = abcd_header
         # self.abcd_header(abcd_header)

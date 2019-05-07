@@ -223,8 +223,9 @@ class Parncutt(D.Dactyler):
         }
 
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
-                 pruning_method='max', finger_spans=FINGER_SPANS):
-        super().__init__(segmenter=segmenter, segment_combiner=segment_combiner, staff_combiner=staff_combiner)
+                 pruning_method='max', finger_spans=FINGER_SPANS, version=(1,0,0)):
+        super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
+                         staff_combiner=staff_combiner, version=version)
         # self._finger_spans = FINGER_SPANS
         # if finger_spans:
         self._finger_spans = finger_spans
@@ -1070,10 +1071,10 @@ class Jacobs(Parncutt):
         return costs
 
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
-                 pruning_method='max', finger_spans=FINGER_SPANS):
+                 pruning_method='max', finger_spans=FINGER_SPANS, version=(1,0,0)):
         super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
                          staff_combiner=staff_combiner, pruning_method=pruning_method,
-                         finger_spans=finger_spans)
+                         finger_spans=finger_spans, version=version)
 
         self._key_positions = D.Dactyler.horizontal_key_positions()
         avg_distances = list()
@@ -1405,10 +1406,10 @@ class Badgerow(Parncutt):
     #             costs['bl1'] += 2 * self._weights['bl1']
 
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
-                 pruning_method='max', finger_spans=BADGEROW_FINGER_SPANS):
+                 pruning_method='max', finger_spans=BADGEROW_FINGER_SPANS, version=(1,0,0)):
         super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
                          staff_combiner=staff_combiner, pruning_method=pruning_method,
-                         finger_spans=finger_spans)
+                         finger_spans=finger_spans, version=version)
 
     def trigram_node_cost(self, midi_1, handed_digit_1, midi_2, handed_digit_2, midi_3, handed_digit_3):
         """

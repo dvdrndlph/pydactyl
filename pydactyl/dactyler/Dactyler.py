@@ -43,7 +43,8 @@ class Dactyler(ABC):
     SQUAWK_OUT_LOUD = False
     DELETE_LOG = True
 
-    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive"):
+    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive", version=None):
+        self._version = version
         self._d_corpus = None
         timestamp = datetime.now().isoformat()
         self._log_file_path = '/tmp/dactyler_' + self.__class__.__name__ + '_' + timestamp + '.log'
@@ -59,6 +60,11 @@ class Dactyler(ABC):
         self._log.close()
         if Dactyler.DELETE_LOG:
             os.remove(self._log_file_path)
+
+    def version(self, version=None):
+        if version is None:
+            return self._version
+        self._version = version
 
     def segmenter(self, segmenter=None):
         if segmenter is None:
