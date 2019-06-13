@@ -149,6 +149,9 @@ class DAnnotation:
 
         for line in lines:
             for score_fingering in line:
+                if isinstance(score_fingering.pf.fingering, str):
+                    digits.append('x')
+                    continue
                 strike = score_fingering.pf.fingering.strike
                 current_hand = strike.hand
                 digit = strike.digit
@@ -234,8 +237,8 @@ class DAnnotation:
     def segregated_strike_digits(self, staff="upper", hand=None):
         """
         :return: String of digits (1-5), assuming all fingerings are
-                 are for the specified hand (">" or right for the
-                 upper staff by default).
+                 are for the specified hand (by default, ">" or right for the
+                 upper staff and "<" or left for the lower staff).
 
                  Returns None if any fingerings for the other hand
                  are detected.
@@ -270,6 +273,9 @@ class DAnnotation:
         handed_digits = []
         for line in lines:
             for score_fingering in line:
+                if isinstance(score_fingering.pf.fingering, str):
+                    handed_digits.append('x')
+                    continue
                 strike = score_fingering.pf.fingering.strike
                 if strike.hand and strike.hand != hand:
                     hand = strike.hand

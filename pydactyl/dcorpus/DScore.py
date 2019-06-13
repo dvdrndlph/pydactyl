@@ -25,7 +25,10 @@ import re
 from music21 import *
 from pydactyl.dactyler import Constant
 from .DPart import DPart
-from .ManualDSegmenter import ManualDSegmenter
+from sklearn.metrics import cohen_kappa_score
+# from krippendorff import alpha
+# from nltk.metrics.agreement import AnnotationTask
+# from .ManualDSegmenter import ManualDSegmenter
 
 
 class DScore:
@@ -199,6 +202,64 @@ class DScore:
         if staff == 'both' and combo:
             note_count = len(combo.orderly_note_stream())
         return note_count
+
+    def cohens_kappa(self, one_id, other_id, staff="both", segregate=False, common_id=None):
+        one_annot = self._abcd_header.annotation_by_id(identifier=one_id)
+        other_annot = self._abcd_header.annotation_by_id(identifier=other_id)
+        common_annot = None
+        if common_id:
+            common_annot = self._abcd_header.annotation_by_id(identifier=common_id)
+
+        one = []
+        other = []
+        common = []
+        if staff == "lower" or staff == "both":
+            if segregate:
+                one.extend(one_annot.segregated_strike_digits(staff="lower"))
+                other.extend(other_annot.segregated_strike_digits(staff="lower"))
+                if common_id:
+                    common.extend(common_annot.segregated_strike_digits(staff="lower"))
+            else:
+                one.extend(one_annot.handed_strike_digits(staff="lower"))
+                other.extend(other_annot.handed_strike_digits(staff="lower"))
+                if common_id:
+                    common.extend(common_annot.handed_strike_digits(staff="lower"))
+        if staff == "upper" or staff == "both":
+            if segregate:
+                one.extend(one_annot.segregated_strike_digits(staff="upper"))
+                other.extend(other_annot.segregated_strike_digits(staff="upper"))
+                if common_id:
+                    common.extend(common_annot.segregated_strike_digits(staff="upper"))
+            else:
+                one.extend(one_annot.handed_strike_digits(staff="upper"))
+                other.extend(other_annot.handed_strike_digits(staff="upper"))
+                if common_id:
+                    common.extend(common_annot.handed_strike_digits(staff="upper"))
+
+        one_clean = one
+        other_clean = other
+        if common_id:
+            one_clean = []
+            other_clean = []
+            for i in range(len(common)):
+                if common[i] == 'x':
+                    one_clean.append(one[i])
+                    other_clean.append(other[i])
+
+        labels = ['1', '2', '3', '4', '5']
+        if not segregate:
+            labels = ['>1', '>2', '>3', '>4', '>5', '<1', '<2', '<3', '<4', '<5']
+        kappa = cohen_kappa_score(one_clean, other_clean, labels=labels)
+        return kappa
+
+    # def krippendorffs_alpha(self, indices=[], segregate=False):
+        # fingerings = list(upper_rh_advice)
+        # fingerings.pop(0)
+        # finger_ints = list(map(int, fingerings))
+        # exercise_upper_gold.append(finger_ints)
+        # krip = alpha(reliability_data=exercise_upper_gold, level_of_measurement='interval')
+        # exercise_upper_gold.pop()
+        # return krip
 
     def _is_fully_annotated(self, staff="both", indices=[]):
         if not self.is_annotated():

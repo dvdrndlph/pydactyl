@@ -2,23 +2,37 @@
 # import pprint
 import os
 from datetime import datetime
+# from krippendorff import alpha
+# from pprint import pprint
 from pydactyl.dactyler.Dactyler import Dactyler
 from pydactyl.dactyler.Parncutt import Parncutt, Jacobs, Badgerow
 from pydactyl.dcorpus.DCorpus import DCorpus
 # from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
-# from pprint import pprint
 
 TARGET_BASE = "/Users/dave/tb2/didactyl/dd/corpora/clementi/cooked/phrase/"
 
-# files = [
-#     "11.abcd",
-#     "21.abcd",
-#     "31.abcd",
-#     "41.abcd",
-#     "51.abcd",
-#     "61.abcd"]
-# files = ["21.abcd"]
-# paths = ["/Users/dave/tb2/didactyl/dd/corpora/clementi/cooked/{}".format(f) for f in files]
+# paths = ["/Users/dave/tb2/didactyl/dd/corpora/clementi/cooked/{}1.abcd".format(i) for i in range(1, 2)]
+interp_paths = ["/Users/dave/tb2/didactyl/dd/corpora/clementi/interp/{}1.abcd".format(i) for i in range(1, 2)]
+print(interp_paths)
+d_corpus = DCorpus(paths=interp_paths)
+d_scores = d_corpus.d_score_list()
+editor = 2
+for segregate in [True, False]:
+    if segregate:
+        print("SEGREGATED\n==========")
+    else:
+        print("\nNOT SEGREGATED\n==============")
+
+    for staff in ['upper', 'lower', 'both']:
+        plural = ''
+        if staff == 'both':
+            plural = 's'
+        score_index = 0
+        for d_score in d_scores:
+            kappa = d_score.cohens_kappa(14, 15, staff=staff, common_id=2, segregate=segregate)
+            print("Interpolate {} staff{} Section {}.1 Kappa: {}".format(staff, plural, score_index+1, kappa))
+            score_index += 1
+exit(0)
 
 phrase_ids = [
     "11_1", "11_2", "11_3",  # good
@@ -29,7 +43,7 @@ phrase_ids = [
     # "31_5", # bad, 17 semitone interval.
     "31_6",  # good
     "41_1", "41_2", "41_3", "41_4", "41_5", "41_6",  # good
-    "41_7",  # Bad for Jacobs
+    "41_7",  # Why is this good? Interval jump is 19!
     "51_1", "51_2", "51_3", "51_4", "51_5", "51_6",  # good
     "61_1", "61_2", "61_3", "61_4", "61_5", "61_6",  # good
 ]
@@ -62,7 +76,7 @@ def result_abcd(seg_suggestions, file_name, abc_content,
         sugg = Dactyler.simplify_abcdf(abcdf=seg_suggestions[i])
         abcd += "% abcD fingering {}: {}@\n".format(i+1, sugg)
         abcd += "% Authority: {}\n".format(authority)
-        abcd += "% Transcriber: Dydactyl\n"
+        abcd += "% Transcriber: Didactyl\n"
         abcd += "% Transcription date: {}\n".format(time_stamp)
     abcd += "% abcDidactyl END\n"
     abcd += abc_content
@@ -83,7 +97,6 @@ model_years = {
 }
 
 models = [parncutt, jacobs, justin]
-models = [justin]
 for model in models:
     model_name = str(type(model)).split('.')[-1]
     model_name = model_name[0:-2]

@@ -1078,7 +1078,7 @@ class Jacobs(Parncutt):
 
         self._key_positions = D.Dactyler.horizontal_key_positions()
         avg_distances = list()
-        for interval_size in range(0, 20):
+        for interval_size in range(0, 24):
             distance = 0
             for manifestation_num in range(0, 12):
                 start_midi = 21 + manifestation_num
@@ -1089,14 +1089,11 @@ class Jacobs(Parncutt):
         self._bounds_for_semitone_interval = list()
         self._bounds_for_semitone_interval.append(0)
 
-        for i in range(1, len(avg_distances) - 1):
+        for i in range(1, len(avg_distances)):
             if i == 1:
                 self._bounds_for_semitone_interval.append(0)
             else:
                 self._bounds_for_semitone_interval.append((avg_distances[i] + avg_distances[i-1])/2.0)
-
-        # print(self._key_positions)
-        # print(self._bounds_for_semitone_interval)
 
     def distance(self, from_midi, to_midi):
         from_pos = self._key_positions[from_midi]
