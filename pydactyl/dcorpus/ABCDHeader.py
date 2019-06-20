@@ -91,6 +91,25 @@ class ABCDHeader:
     def annotations(self):
         return self._annotations
 
+    def score_fingering_counts_per_id(self, staff="both"):
+        count_for_id = {}
+        for annot in self._annotations:
+            count = annot.score_fingering_count(staff=staff)
+            id = annot.abcdf_id()
+            if id in count_for_id:
+                raise Exception("Duplicate DAnnotation id: {}".format(id))
+            count_for_id[id] = count
+        return count_for_id
+
+    def assert_consistent(self, staff="both"):
+        count_for_id = self.score_fingering_counts_per_id(staff=staff)
+        count = None
+        for annot_id in count_for_id:
+            if count is None:
+                count = count_for_id[annot_id]
+            if count_for_id[annot_id] != count:
+                raise Exception("abcD header for {} is inconsistent: {}".format(staff, count_for_id))
+
     def annotation_by_id(self, identifier=1):
         for annotation in self._annotations:
             abcdf_id = annotation.abcdf_id()

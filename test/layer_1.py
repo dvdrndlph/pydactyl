@@ -12,27 +12,8 @@ from pydactyl.dcorpus.DCorpus import DCorpus
 TARGET_BASE = "/Users/dave/tb2/didactyl/dd/corpora/clementi/cooked/phrase/"
 
 # paths = ["/Users/dave/tb2/didactyl/dd/corpora/clementi/cooked/{}1.abcd".format(i) for i in range(1, 2)]
-interp_paths = ["/Users/dave/tb2/didactyl/dd/corpora/clementi/interp/{}1.abcd".format(i) for i in range(1, 2)]
+interp_paths = ["/Users/dave/tb2/didactyl/dd/corpora/clementi/interp/{}1.abcd".format(i) for i in range(1, 7)]
 print(interp_paths)
-d_corpus = DCorpus(paths=interp_paths)
-d_scores = d_corpus.d_score_list()
-editor = 2
-for segregate in [True, False]:
-    if segregate:
-        print("SEGREGATED\n==========")
-    else:
-        print("\nNOT SEGREGATED\n==============")
-
-    for staff in ['upper', 'lower', 'both']:
-        plural = ''
-        if staff == 'both':
-            plural = 's'
-        score_index = 0
-        for d_score in d_scores:
-            kappa = d_score.cohens_kappa(14, 15, staff=staff, common_id=2, segregate=segregate)
-            print("Interpolate {} staff{} Section {}.1 Kappa: {}".format(staff, plural, score_index+1, kappa))
-            score_index += 1
-exit(0)
 
 phrase_ids = [
     "11_1", "11_2", "11_3",  # good
@@ -52,6 +33,13 @@ phrase_dir = "/Users/dave/tb2/didactyl/dd/corpora/clementi/raw/phrase/{}.{}"
 phrase_paths = [phrase_dir.format(f, file_extension) for f in phrase_ids]
 
 
+def aggregate_pairs(total, newbie):
+    for key in newbie:
+        if key not in total:
+            total[key] = 0
+        total[key] += newbie[key]
+
+
 def print_results(seg_suggestions, seg_costs, seg_lengths, file_name):
     print("Advice for {}".format(file_name))
     print("==================")
@@ -66,7 +54,7 @@ def print_results(seg_suggestions, seg_costs, seg_lengths, file_name):
 
 
 def result_abcd(seg_suggestions, file_name, abc_content,
-               authority="Parncutt Model (2019)"):
+                authority="Parncutt Model (2019)"):
     now = datetime.now()
     time_stamp = now.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -82,6 +70,55 @@ def result_abcd(seg_suggestions, file_name, abc_content,
     abcd += abc_content
     return abcd
 
+
+def print_pairs(label, pairs):
+    grand_total = 0
+    last_one = None
+    header = ['']
+    rows = [header]
+    header_done = False
+    for key in sorted(pairs):
+        one, other = key.split('_')
+        if one != last_one:
+            if last_one is not None:
+                header_done = True
+            last_row = [one]
+            rows.append(last_row)
+        last_row.append(pairs[key])
+        grand_total += pairs[key]
+        if not header_done:
+            header.append(other)
+        last_one = one
+        # if pairs[key] > 0 and one != other:
+            # pair_str = " {}:{}".format(key, pairs[key])
+            # output_str += pair_str
+    print("{} Note total: {}".format(label, grand_total))
+    print("\n".join([''.join(['{:>4}'.format(item) for item in row]) for row in rows]))
+    print()
+
+
+d_corpus = DCorpus(paths=interp_paths)
+d_scores = d_corpus.d_score_list()
+editor = 2
+for staff in ['upper', 'lower', 'both']:
+    plural = ''
+    if staff == 'both':
+        plural = 's'
+    score_index = 0
+    interpolation_pairs = {}
+    annotation_pairs = {}
+    for d_score in d_scores:
+        d_score.assert_consistent_abcd(staff=staff)
+        kappa, pairs = d_score.cohens_kappa(1, 7, staff=staff)
+        aggregate_pairs(annotation_pairs, pairs)
+        print("Annotate {} staff{} Section {}.1 Kappa: {}".format(staff, plural, score_index+1, kappa))
+        kappa, pairs = d_score.cohens_kappa(14, 15, staff=staff, common_id=2)
+        aggregate_pairs(interpolation_pairs, pairs)
+        print("Interpol {} staff{} Section {}.1 Kappa: {}".format(staff, plural, score_index+1, kappa))
+        score_index += 1
+    print_pairs("Annotation pairs:", annotation_pairs)
+    print_pairs("Interpolation pairs:", interpolation_pairs)
+exit(0)
 
 parncutt = Parncutt()
 d_corpus = DCorpus(paths=phrase_paths)

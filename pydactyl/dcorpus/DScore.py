@@ -27,7 +27,7 @@ from pydactyl.dactyler import Constant
 from .DPart import DPart
 from sklearn.metrics import cohen_kappa_score
 # from krippendorff import alpha
-# from nltk.metrics.agreement import AnnotationTask
+from nltk.metrics.agreement import AnnotationTask
 # from .ManualDSegmenter import ManualDSegmenter
 
 
@@ -203,7 +203,15 @@ class DScore:
             note_count = len(combo.orderly_note_stream())
         return note_count
 
-    def cohens_kappa(self, one_id, other_id, staff="both", segregate=False, common_id=None):
+    def assert_consistent_abcd(self, staff="both"):
+        note_count = self.note_count(staff=staff)
+        first_annot = self._abcd_header.annotation(index=0)
+        sf_count = first_annot.score_fingering_count(staff=staff)
+        if sf_count != note_count:
+            raise Exception("Score fingering count does not match note count: {} != {}".format(sf_count, note_count))
+        self._abcd_header.assert_consistent(staff=staff)
+
+    def cohens_kappa(self, one_id, other_id, staff="both", common_id=None):
         one_annot = self._abcd_header.annotation_by_id(identifier=one_id)
         other_annot = self._abcd_header.annotation_by_id(identifier=other_id)
         common_annot = None
@@ -213,28 +221,16 @@ class DScore:
         one = []
         other = []
         common = []
-        if staff == "lower" or staff == "both":
-            if segregate:
-                one.extend(one_annot.segregated_strike_digits(staff="lower"))
-                other.extend(other_annot.segregated_strike_digits(staff="lower"))
-                if common_id:
-                    common.extend(common_annot.segregated_strike_digits(staff="lower"))
-            else:
-                one.extend(one_annot.handed_strike_digits(staff="lower"))
-                other.extend(other_annot.handed_strike_digits(staff="lower"))
-                if common_id:
-                    common.extend(common_annot.handed_strike_digits(staff="lower"))
         if staff == "upper" or staff == "both":
-            if segregate:
-                one.extend(one_annot.segregated_strike_digits(staff="upper"))
-                other.extend(other_annot.segregated_strike_digits(staff="upper"))
-                if common_id:
-                    common.extend(common_annot.segregated_strike_digits(staff="upper"))
-            else:
-                one.extend(one_annot.handed_strike_digits(staff="upper"))
-                other.extend(other_annot.handed_strike_digits(staff="upper"))
-                if common_id:
-                    common.extend(common_annot.handed_strike_digits(staff="upper"))
+            one.extend(one_annot.handed_strike_digits(staff="upper"))
+            other.extend(other_annot.handed_strike_digits(staff="upper"))
+            if common_id:
+                common.extend(common_annot.handed_strike_digits(staff="upper"))
+        if staff == "lower" or staff == "both":
+            one.extend(one_annot.handed_strike_digits(staff="lower"))
+            other.extend(other_annot.handed_strike_digits(staff="lower"))
+            if common_id:
+                common.extend(common_annot.handed_strike_digits(staff="lower"))
 
         one_clean = one
         other_clean = other
@@ -246,11 +242,20 @@ class DScore:
                     one_clean.append(one[i])
                     other_clean.append(other[i])
 
-        labels = ['1', '2', '3', '4', '5']
-        if not segregate:
-            labels = ['>1', '>2', '>3', '>4', '>5', '<1', '<2', '<3', '<4', '<5']
+        labels = ['>1', '>2', '>3', '>4', '>5', '<1', '<2', '<3', '<4', '<5']
+        pair_counts = {}
+        all_labels = list(labels)
+        all_labels.append('x')
+        for label_1 in all_labels:
+            for label_2 in all_labels:
+                label_pair = "{}_{}".format(label_1, label_2)
+                pair_counts[label_pair] = 0
+
+        for i in range(len(one_clean)):
+            pair_key = "{}_{}".format(one_clean[i], other_clean[i])
+            pair_counts[pair_key] += 1
         kappa = cohen_kappa_score(one_clean, other_clean, labels=labels)
-        return kappa
+        return kappa, pair_counts
 
     # def krippendorffs_alpha(self, indices=[], segregate=False):
         # fingerings = list(upper_rh_advice)
