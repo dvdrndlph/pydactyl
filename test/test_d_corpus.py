@@ -106,8 +106,8 @@ class DCorpusTest(unittest.TestCase):
     @staticmethod
     def test_annotated_corpus():
         da_corpus = DCorpus()
-        da_corpus.append_from_db(client_id='695311d7e88d5f79b4945bf45d00cc77', selection_id='21');
-        da_score = da_corpus.d_score_by_index(0);
+        da_corpus.append_from_db(client_id='695311d7e88d5f79b4945bf45d00cc77', selection_id='21')
+        da_score = da_corpus.d_score_by_index(0)
         da_title = da_score.title()
         assert da_title == 'Prelude 2 (BWV 847)', "Bad fetch by index"
         da_score = da_corpus.d_score_by_title(da_title)
