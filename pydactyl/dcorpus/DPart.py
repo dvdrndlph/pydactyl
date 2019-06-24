@@ -21,7 +21,7 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-from music21 import *
+from music21 import note, chord, stream, duration
 from .DNote import DNote
 
 
@@ -78,23 +78,42 @@ class DPart:
         short_dur.type = '2048th'
 
         chords = self._stream.flat.getElementsByClass(chord.Chord)
-        new_note_stream = stream.Score()
+        chord_stream = chords.stream()
+        notes_at_offset = {}
         for ch in chords:
-            # chord_offset = ch.offset
-            chord_offset = ch.getOffsetBySite(chords)
+            chord_offset = ch.getOffsetBySite(chord_stream)
             note_index = 0
+            notes_at_offset[chord_offset] = []
             for pit in ch.pitches:
                 new_note = note.Note(pit)
                 new_note.quarterLength = ch.quarterLength
-                # new_note.offset = chord_offset + note_index * short_dur.quarterLength
-                note_offset = chord_offset + note_index * short_dur.quarterLength
-                new_note_stream.insert(note_offset, new_note)
-                note_index += 1
+                notes_at_offset[chord_offset].append(new_note)
 
         notes = self._stream.flat.getElementsByClass(note.Note)
-        for old_note in notes:
-            note_offset = old_note.getOffsetBySite(notes)
-            new_note_stream.insert(note_offset, old_note)
+        note_list = list(notes)
+        note_stream = notes.stream()
+        for old_note in note_list:
+            note_offset = old_note.getOffsetBySite(note_stream)
+            if note_offset not in notes_at_offset:
+                notes_at_offset[note_offset] = [old_note]
+            else:
+                notes_at_offset[note_offset].append(old_note)
+
+        new_note_stream = stream.Score()
+        for note_offset in sorted(notes_at_offset):
+            notes = notes_at_offset[note_offset]
+            if len(notes) > 1:
+                sorted_notes = sorted(notes, key=lambda x: x.pitch.midi)
+            else:
+                sorted_notes = notes
+
+            note_index = 0
+            # for old_note in notes.sort(key=lambda x: x.pitch.midi):
+            for old_note in sorted_notes:
+                new_note_offset = note_offset + note_index * short_dur.quarterLength
+                new_note_stream.insert(new_note_offset, old_note)
+                # print("Note offset: {}".format(note_offset))
+                note_index += 1
 
         if not offset:
             return new_note_stream
@@ -157,4 +176,3 @@ class DPart:
 
     def stream(self):
         return self._stream
-

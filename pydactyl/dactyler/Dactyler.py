@@ -913,8 +913,9 @@ class Dactyler(ABC):
 
 
 class TrainedDactyler(Dactyler):
-    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive"):
-        super().__init__(segmenter=segmenter, segment_combiner=segment_combiner, staff_combiner=staff_combiner)
+    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive", version=None):
+        super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
+                         staff_combiner=staff_combiner, version=version)
         self._training = {}
 
     @abstractmethod

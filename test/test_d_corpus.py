@@ -97,7 +97,7 @@ class DCorpusTest(unittest.TestCase):
         disorderly_stream = d_upper.stream()
         disorderly_d_part = DPart(music21_stream=disorderly_stream)
         assert disorderly_d_part.is_orderly() is False, "orderly_note_stream() or is_orderly() is broken"
-        # disorderly_stream.show('text')
+        disorderly_stream.show('text')
         orderly_stream = d_upper.orderly_note_stream()
         orderly_d_part = DPart(music21_stream=orderly_stream)
         assert orderly_d_part.is_orderly() is True, "orderly_note_stream() or is_orderly() is broken"
@@ -148,7 +148,7 @@ class DCorpusTest(unittest.TestCase):
         for i in range(score_count):
             d_score = d_corpus.d_score_by_index(i)
             assert d_score.title() is not None, "Missing title at {0}".format(i)
-            assert d_score.is_fully_annotated(indices=[0]), "Missing annotation 1 in {0}".format(d_score.title())
+            assert d_score.is_fully_annotated(indices=[0]), "Missing annotation in {}".format(d_score.title())
 
 
 if __name__ == "__main__":

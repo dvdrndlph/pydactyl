@@ -22,7 +22,7 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 import re
-from music21 import *
+from music21 import abcFormat 
 from pydactyl.dactyler import Constant
 from .DPart import DPart
 from sklearn.metrics import cohen_kappa_score
@@ -182,9 +182,6 @@ class DScore:
             return 2
         return 1
 
-    def abcd_header(self):
-        return self._abcd_header
-
     def is_annotated(self):
         if self._abcd_header:
             return True
@@ -276,7 +273,8 @@ class DScore:
         else:
             raise Exception("Specific staff must be specified.")
 
-        note_count = len(d_part.orderly_note_stream())
+        ons = d_part.orderly_note_stream()
+        note_count = len(ons)
         annot_index = 0
         for annot in self._abcd_header.annotations():
             if indices and annot_index not in indices:
@@ -302,7 +300,7 @@ class DScore:
         combo = self.combined_d_part()
 
         if (upper and staff == "upper") or (lower and staff == "lower"):
-            return self.staff_is_fully_annotated(staff=staff, indices=indices)
+            return self._is_fully_annotated(staff=staff, indices=indices)
 
         if upper:
             is_upper_good = self._is_fully_annotated(staff="upper", indices=indices)

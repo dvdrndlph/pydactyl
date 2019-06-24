@@ -37,7 +37,7 @@ class DNote:
         return self._prior_note
 
     def __str__(self):
-        my_str = "MIDI {0}".format(self.m21_note.midi)
+        my_str = "MIDI {0}".format(self._m21_note.pitch.midi)
         return my_str
 
     note_class_is_black = {

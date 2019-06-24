@@ -24,7 +24,7 @@ __author__ = 'David Randolph'
 import re
 import pymysql
 import os
-from music21 import *
+from music21 import abcFormat, converter, corpus, stream 
 from pydactyl.dactyler import Constant
 
 from .DScore import DScore
@@ -124,7 +124,7 @@ class DCorpus:
             corpus_type = DCorpus.corpus_type(corpus_str=corpus_str)
             if corpus_type in [Constant.CORPUS_ABC, Constant.CORPUS_ABCD]:
                 self._abc_strings.append(corpus_str)
-                abc_file = abcFormat.ABCFile(2,1,0)
+                abc_file = abcFormat.ABCFile(abcVersion=(2,1,0))
                 staff_assignments = DCorpus._score_staff_assignments(abc_content=corpus_str)
                 abc_handle = abc_file.readstr(corpus_str)
             else:
