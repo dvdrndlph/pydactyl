@@ -25,6 +25,7 @@ __author__ = 'David Randolph'
 import re
 import unittest
 import TestConstant
+from music21 import note
 from pydactyl.dcorpus.DCorpus import DCorpus
 from pydactyl.dcorpus.DPart import DPart
 
@@ -32,6 +33,94 @@ BERINGER2_SCALE_CORPUS = TestConstant.BERINGER2_DIR + "/scales.abc"
 
 
 class DCorpusTest(unittest.TestCase):
+    @staticmethod
+    def test_abc2xml_2part_mono():
+        xml_str = DCorpus.abc2xml(abc_content=TestConstant.B_MINOR_ARPEGGIO)
+        assert xml_str, "Failed abc2xml transform."
+        # print(xml_str)
+        xml_strings = DCorpus.abc2xmlScores(BERINGER2_SCALE_CORPUS)
+        assert len(xml_strings) == 38, "Bad parse of multi-tune file to xml"
+        xml_strings = DCorpus.abc2xmlScores(BERINGER2_SCALE_CORPUS, skip=12, max=4)
+        assert len(xml_strings) == 4, "Bad subset parse of multi-tune file to xml"
+        d_corpus = DCorpus(corpus_str=TestConstant.B_MINOR_ARPEGGIO, as_xml=True)
+        d_score = d_corpus.d_score_by_title("arpeggios_common_b_minor")
+        part_count = d_score.part_count()
+        assert part_count == 2, "Bad part count"
+        lo, hi = d_corpus.pitch_range()
+        assert lo < hi, "Bad dcorpus pitch range"
+        d_part = d_score.combined_d_part() 
+        part_lo, part_hi = d_part.pitch_range()
+        assert part_lo < part_hi, "Bad DPart pitch range"
+        assert part_lo == lo, "Bad low pitch found"
+        assert part_hi == hi, "Bad high pitch found"
+        assert d_part is not None, "Bad DPart retrieval"
+        assert d_part.is_monophonic() is False, "Polyphony not detected"
+        d_upper = d_score.upper_d_part()
+        assert d_upper, "Bad upper DPart"
+        assert d_upper.is_monophonic() is True, "Monophonic upper part not detected"
+        d_lower = d_score.lower_d_part()
+        assert d_lower, "Bad lower DPart"
+        # lower_stream = d_lower.stream()
+        # lower_stream.show('text')
+        assert d_lower.is_monophonic() is True, "Monophonic lower part not detected"
+
+    @staticmethod
+    def test_abc2xml_2part_chords():
+        p01_path = TestConstant.WTC_CORPUS_DIR + '/prelude01.abc'
+        p09_path = TestConstant.WTC_CORPUS_DIR + '/prelude09.abc'
+        d_corpus = DCorpus(corpus_path=p01_path, as_xml=True)
+        score_count = d_corpus.score_count()
+        assert score_count == 1, "Bad score count"
+        d_corpus.append(corpus_path=p09_path, as_xml=True)
+        assert d_corpus.score_count() == 2, "Bad append"
+        titles = d_corpus.titles()
+        assert len(titles) == 2, "Bad title count"
+        d_score = d_corpus.d_score_by_index(0)
+        assert d_score.title() == 'Prelude 1 (BWV 846)', "Bad title retrieval"
+        part_count = d_score.part_count()
+        assert part_count == 2, "Bad part count"
+        d_part = d_score.combined_d_part()
+        assert d_part is not None, "Bad DPart retrieval"
+        assert d_part.is_monophonic() is False, "Polyphony not detected"
+        d_upper = d_score.upper_d_part()
+        assert d_upper, "Bad upper DPart"
+        assert d_upper.is_monophonic() is False, "Polyphonic upper part not detected"
+        d_lower = d_score.lower_d_part()
+        assert d_lower, "Bad lower DPart"
+        assert d_lower.is_monophonic() is False, "Polyphonic lower part in Prelude 1 not detected"
+        assert d_lower.is_orderly() is False, "Lower part in Prelude 1 is not orderly"
+        orderly_stream = d_lower.orderly_note_stream()
+        # orderly_stream.show('text')
+        orderly_d_part = DPart(music21_stream=orderly_stream)
+        assert orderly_d_part.is_orderly() is True, "orderly_note_stream() or is_orderly() is broken"
+
+        # Need to check what happens to tied notes
+        d_score = d_corpus.d_score_by_index(1)
+        d_upper = d_score.upper_d_part()
+        disorderly_stream = d_upper.stream()
+        disorderly_d_part = DPart(music21_stream=disorderly_stream)
+        assert disorderly_d_part.is_orderly() is False, "orderly_note_stream() or is_orderly() is broken"
+        disorderly_stream.show('text')
+        orderly_stream = d_upper.orderly_note_stream()
+        orderly_d_part = DPart(music21_stream=orderly_stream)
+        assert orderly_d_part.is_orderly() is True, "orderly_note_stream() or is_orderly() is broken"
+        # disorderly_stream.show('text')
+        # orderlies = d_lower.orderly_note_stream()
+        # print("Via XML pits:")
+        # for knot in orderlies.flat.getElementsByClass(note.Note):
+        #     print(knot.pitch.midi)
+
+        # d_corpus = DCorpus(corpus_str=TestConstant.B_MINOR_ARPEGGIO, as_xml=False)
+        # d_score = d_corpus.d_score_by_title("arpeggios_common_b_minor")
+        # d_lower = d_score.lower_d_part()
+        # abc_orderlies = d_lower.orderly_note_stream()
+        # print("Via ABC pits:")
+        # for knot in abc_orderlies.flat.getElementsByClass(note.Note):
+        #     print(knot.pitch.midi)
+
+        # for i in range(len(abc_orderlies)):
+        #     assert orderlies[i] == abc_orderlies[i], "ABC-XML mono mismatch"
+
     @staticmethod
     def test_abc_2part_mono():
         d_corpus = DCorpus(corpus_path=BERINGER2_SCALE_CORPUS)

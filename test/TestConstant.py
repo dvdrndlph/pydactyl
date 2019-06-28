@@ -455,3 +455,31 @@ V:1
 !p!egfg efde cc'bc' abga|]
 V:2
 [GB]4 z4 [GB]4 z4|]"""
+
+B_MINOR_ARPEGGIO = """% abcDidactyl v6
+% abcD fingering 1: 1231235321321124124542142&12123123213212@5421421241245542142124124&54214212124124
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2019-06-22 21:30:36
+% These are complete fingerings, with any gaps filled in.
+% abcD fingering 2: x@x
+% Authority:  Beringer and Dunhill (1900)
+% Transcriber: David Randolph
+% Transcription date: 2016-09-23 12:38:01
+% These are alternate fingerings, if specified, with gaps filled in. 
+% abcDidactyl END
+X:12
+T:arpeggios_common_b_minor
+C:Beringer and Dunhill
+%%score { ( 1 ) | ( 2 ) }
+M:3/4
+K:Bmin
+V:1 treble
+V:2 bass octave=-1
+V:1
+L:1/16
+B,DFB dfbf dBFD:|B,4|:DFBd fbd'b fdBF:|D4|:FBdf bd'f'd' bfdB:|F4||
+V:2
+L:1/16
+B,DFB [K: clef=treble octave=-1]dfbf [K: clef=bass octave=-1]dBFD:|B,4|:DFBd [K: clef=treble octave=-1]fbd'b [K: clef=bass octave=-1]fdBF:|D4|:FBdf [K: clef=treble octave=-1]bd'f'd' bfdB:|[K: clef=bass octave=-1]F4||
+"""

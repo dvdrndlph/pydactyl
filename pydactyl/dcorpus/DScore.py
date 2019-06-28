@@ -22,7 +22,7 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 import re
-from music21 import abcFormat 
+from music21 import abcFormat, stream 
 from pydactyl.dactyler import Constant
 from .DPart import DPart
 from sklearn.metrics import cohen_kappa_score
@@ -53,18 +53,24 @@ class DScore:
 
     def __init__(self, music21_stream=None, segmenter=None, abc_handle=None,
                  voice_map=None, abcd_header=None):
+        self._lower_d_part = None
+        self._upper_d_part = None
+
         if music21_stream:
             self._combined_d_part = DPart(music21_stream=music21_stream, staff="both")
             self._score = music21_stream
             meta = self._score[0]
             self._title = meta.title
+            parts = list(self._score.getElementsByClass(stream.Part))
+            if len(parts) > 1:
+                self._upper_d_part = DPart(music21_stream=parts[0], staff="upper")
+                self._lower_d_part = DPart(music21_stream=parts[1], staff="lower")
+
         elif abc_handle:
             self._title = abc_handle.getTitle()
             music21_stream = abcFormat.translate.abcToStreamScore(abc_handle)
             self._combined_d_part = DPart(music21_stream=music21_stream, staff="both")
 
-            self._lower_d_part = None
-            self._upper_d_part = None
 
             ah_array = abc_handle.splitByVoice()
             voices = []

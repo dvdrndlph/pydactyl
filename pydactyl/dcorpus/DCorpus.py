@@ -27,6 +27,8 @@ import os
 from music21 import abcFormat, converter, corpus, stream 
 from pydactyl.dactyler import Constant
 
+from pydactyl.abc2xml import abc2xml
+
 from .DScore import DScore
 from .ABCDHeader import ABCDHeader
 from .ManualDSegmenter import ManualDSegmenter
@@ -43,6 +45,31 @@ class DCorpus:
             string += line
         file.close()
         return string
+
+    # @staticmethod
+    # def abc2xml(file_path=None, abc_content=None):
+    #     if file_path:
+    #         abc_content = DCorpus.file_to_string(file_path)
+    #     global abc_header, abc_voice, abc_scoredef, abc_percmap # keep computed grammars
+    #     mxm = abc2xml.MusicXml()
+    #     abc_header, abc_voice, abc_scoredef, abc_percmap = abc2xml.abc_grammar()   
+    #     score = mxm.parse(abc_content)
+    #     xml_str = abc2xml.fixDoctype(score)
+    #     return xml_str
+
+    @staticmethod
+    def abc2xml(file_path=None, abc_content=None):
+        if file_path:
+            abc_content = DCorpus.file_to_string(file_path)
+        xml_str = abc2xml.getXml(abc_string=abc_content)
+        return xml_str
+
+    @staticmethod
+    def abc2xmlScores(file_path=None, abc_content=None, skip=None, max=None):
+        if file_path:
+            abc_content = DCorpus.file_to_string(file_path)
+        xml_strings = abc2xml.getXmlScores(abc_string=abc_content, skip=skip, max=max)
+        return xml_strings
 
     @staticmethod
     def _score_staff_assignments(abc_file_path=None, abc_content=None):
@@ -72,11 +99,11 @@ class DCorpus:
         return map_for_tune
 
     @staticmethod
-    def abcd_header(corpus_path=None, corpus_str=None):
-        if corpus_path:
-            corpus_str = DCorpus.file_to_string(file_path=corpus_path)
-        if ABCDHeader.is_abcd(corpus_str):
-            hdr = ABCDHeader(abcd_str=corpus_str)
+    def abcd_header(path=None, string=None):
+        if path:
+            string = DCorpus.file_to_string(file_path=path)
+        if ABCDHeader.is_abcd(string):
+            hdr = ABCDHeader(abcd_str=string)
             return hdr
         return None
 
@@ -86,8 +113,9 @@ class DCorpus:
             corpus_str = DCorpus.file_to_string(file_path=corpus_path)
         if ABCDHeader.is_abcd(corpus_str):
             return Constant.CORPUS_ABCD
-        else:
-            return Constant.CORPUS_ABC
+        if corpus_str[0] == '<':
+            return Constant.CORPUS_MUSIC_XML;
+        return Constant.CORPUS_ABC
         # FIXME: Support MIDI, xml, and mxl
 
     def append_dir(self, corpus_dir):
@@ -95,40 +123,45 @@ class DCorpus:
             file_path = corpus_dir + "/" + file_name
             self.append(corpus_path=file_path)
 
-    def append(self, corpus_path=None, corpus_str=None):
+    def append(self, corpus_path=None, corpus_str=None, header_path=None, header_str=None, as_xml=False):
         if corpus_path:
             corpus_type = DCorpus.corpus_type(corpus_path=corpus_path)
             if corpus_type in [Constant.CORPUS_ABC, Constant.CORPUS_ABCD]:
-                fh = open(corpus_path, "r")
-                abc_str = fh.read()
-                fh.close()
-                self._abc_strings.append(abc_str)
-                abc_file = abcFormat.ABCFile(abcVersion=(2,1,0))
-                staff_assignments = DCorpus._score_staff_assignments(abc_file_path=corpus_path)
-                abc_file.open(filename=corpus_path)
-                abc_handle = abc_file.read()
-                abc_file.close()
-            else:
-                corp = converter.parse(corpus_path)
-                if isinstance(corpus, stream.Opus):
-                    for score in corp:
-                        d_score = DScore(music21_stream=score, segmenter=self.segmenter(),
-                                         abcd_header=DCorpus.abcd_header(corpus_path=corpus_path))
-                        self._d_scores.append(d_score)
-                else:
-                    score = corp
-                    d_score = DScore(music21_stream=score, segmenter=self.segmenter(),
-                                     abcd_header=DCorpus.abcd_header(corpus_path=corpus_path))
-                    self._d_scores.append(d_score)
-        elif corpus_str:
+                corpus_str = DCorpus.file_to_string(corpus_path)
+
+        if header_path:
+            header_str = DCorpus.file_to_string(header_path)
+
+        abcd_header = None
+
+        if corpus_str:
             corpus_type = DCorpus.corpus_type(corpus_str=corpus_str)
+            if corpus_type == Constant.CORPUS_ABCD and not header_str:
+                header_str = corpus_str
+            if header_str:
+                abcd_header = DCorpus.abcd_header(string=header_str) 
+            if as_xml:
+                corpus_str = DCorpus.abc2xml(abc_content=corpus_str)
+                corpus_type = DCorpus.corpus_type(corpus_str=corpus_str)
+
             if corpus_type in [Constant.CORPUS_ABC, Constant.CORPUS_ABCD]:
+                # The abc conversion does not manage the grouping of voices inro
+                # the appropriate part (staff), so we hack around this shortcoming.
                 self._abc_strings.append(corpus_str)
                 abc_file = abcFormat.ABCFile(abcVersion=(2,1,0))
                 staff_assignments = DCorpus._score_staff_assignments(abc_content=corpus_str)
                 abc_handle = abc_file.readstr(corpus_str)
             else:
-                raise Exception("Unsupported corpus type.")
+                corp = converter.parse(corpus_str)
+                if isinstance(corp, stream.Opus):
+                    for score in corp:
+                        d_score = DScore(music21_stream=score, segmenter=self.segmenter())
+                        self._d_scores.append(d_score)
+                else:
+                    score = corp
+                    d_score = DScore(music21_stream=score, segmenter=self.segmenter(),
+                                     abcd_header=abcd_header)
+                    self._d_scores.append(d_score)
         else:
             return False
 
@@ -143,8 +176,6 @@ class DCorpus:
                 #
                 #    %%score { ( 1 ) | ( 2 ) }
                 raise Exception("All abc scores in corpus must have %%score staff assignments or none should.")
-
-            abcd_header = DCorpus.abcd_header(corpus_path=corpus_path, corpus_str=corpus_str)
 
             score_index = 0
             for score_id in ah_for_id:
@@ -175,17 +206,17 @@ class DCorpus:
                 d_score.segmenter(segmenter)
         return self._segmenter
 
-    def __init__(self, corpus_path=None, corpus_str=None, paths=[], segmenter=None):
+    def __init__(self, corpus_path=None, corpus_str=None, paths=[], segmenter=None, as_xml=False):
         self._conn = None
         self._abc_strings = []
         self._d_scores = []
         self._segmenter = segmenter
         if corpus_path:
-            self.append(corpus_path=corpus_path)
+            self.append(corpus_path=corpus_path, as_xml=as_xml)
         if corpus_str:
-            self.append(corpus_str=corpus_str)
+            self.append(corpus_str=corpus_str, as_xml=as_xml)
         for path in paths:
-            self.append(corpus_path=path)
+            self.append(corpus_path=path, as_xml=as_xml)
 
     def __del__(self):
         if self._conn:
@@ -224,7 +255,7 @@ class DCorpus:
         return self._conn
 
     def append_from_db(self, host='127.0.0.1', port=3306, user='didactyl', passwd='', db='diii2',
-                       query=None, client_id=None, selection_id=None):
+                       query=None, client_id=None, selection_id=None, as_xml=False):
         if not query and (not client_id or not selection_id):
             raise Exception("Query not specified.")
 
@@ -243,7 +274,7 @@ class DCorpus:
 
         for row in curs:
             abc_content = row[0]
-            self.append(corpus_str=abc_content)
+            self.append(corpus_str=abc_content, as_xml=as_xml)
 
         curs.close()
 
