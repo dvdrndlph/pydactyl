@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # coding=latin-1
 '''
-Copyright (C) 2012-2018: W.G. Vree
+Copyright (C) 2012-2019: W.G. Vree
 Contributions: M. Tarenskeen, N. Liberg, Paul Villiger, Janus Meuris, Larry Myerscough, 
-Dick Jackson, Jan Wybren de Jong, Mark Zealey.
+Dick Jackson, David Randolph, Jan Wybren de Jong, Mark Zealey.
 
 This program is free software; you can redistribute it and/or modify it under the terms of the
 Lesser GNU General Public License as published by the Free Software Foundation;
@@ -15,9 +15,9 @@ See the Lesser GNU General Public License for more details. <http://www.gnu.org/
 
 try:    import xml.etree.cElementTree as E
 except: import xml.etree.ElementTree as E
-import os, sys, types, re, math
+import os, sys, types, re, math, io
 
-VERSION = 139
+VERSION = 139.1
 
 python3 = sys.version_info.major > 2
 if python3:
@@ -333,11 +333,12 @@ class Music:
 
 class ABCoutput:
     pagekeys = 'scale,pageheight,pagewidth,leftmargin,rightmargin,topmargin,botmargin'.split (',')
-    def __init__ (s, fnmext, pad, X, options):
+    def __init__ (s, fnmext=None, pad=None, X=0, options=None, as_str=False):
         s.fnmext = fnmext
         s.outlist = []          # list of ABC strings
         s.title = 'T:Title'
         s.key = 'none'
+        s.as_str = as_str
         s.clefs = {}            # clefs for all abc-voices
         s.mtr = 'none'
         s.tempo = 0             # 0 -> no tempo field
@@ -353,7 +354,9 @@ class ABCoutput:
         s.shiftStem = options.s # shift note heads 3 units left
         if pad:
             _, base_name = os.path.split (fnmext)
-            s.outfile = open (os.path.join (pad, base_name), 'w')
+            s.outfile = open (os.path.join (pad, base_name), 'w') 
+        elif as_str:
+            s.outfile = io.StringIO()
         else:   s.outfile = sys.stdout
         if s.jscript: s.X = 1   # always X:1 in javascript version
         s.pageFmt = {}
@@ -362,6 +365,12 @@ class ABCoutput:
             for k, v in zip (s.pagekeys, options.p):
                 try: s.pageFmt [k] = float (v)
                 except: info ('illegal float %s for %s', (k, v)); continue
+
+    def getString(s):
+        if not s.as_str:
+            raise ValueError('Not saving ABCoutput as string.')
+        abc_str = s.outfile.getvalue()
+        return abc_str
 
     def add (s, str):
         s.outlist.append (str + '\n')   # collect all ABC output
@@ -829,7 +838,7 @@ class Parser:
         s.slurBuf = {}    # dict of open slurs keyed by slur number
         s.dirStk = {}     # {direction-type + number -> (type, voice | time)} dict for proper closing
         s.ingrace = 0     # marks a sequence of grace notes
-        s.msc = Music (options)  # global music data abstraction
+        s.msc = Music (options)  # Internal data abstraction
         s.unfold = options.u    # turn unfolding repeats on
         s.ctf = options.c       # credit text filter level
         s.gStfMap = []    # [[abc voice numbers] for all parts]
@@ -1437,9 +1446,15 @@ class Parser:
             s.tabVceMap [vabc] = xs
             s.koppen [fret] = 1  # collect noteheads for SVG defs
 
-    def parse (s, fobj):
+    def parse (s, fobj=None, xml_str=None):
         vvmapAll = {}   # collect xml->abc voice maps (vvmap) of all parts
-        e = E.parse (fobj)
+
+        if fobj is not None:
+            e = E.parse (fobj)
+        elif xml_str is not None:
+            root = E.fromstring(xml_str)
+            e = E.ElementTree(element=root)
+
         s.mkTitle (e)
         s.doDefaults (e)
         partlist = s.doPartList (e)
@@ -1503,6 +1518,62 @@ class Parser:
             abcOut.writeall ()
         else: info ('nothing written, %s has no notes ...' % abcOut.fnmext)
 
+#------------------------------------------------------
+# Added by David Randolph for retrieving transformation
+# programmatically.
+#------------------------------------------------------
+def file2string(file_path):
+    string = ''
+    file = open(file_path, "r")
+    for line in file:
+        string += line
+    file.close()
+    return string
+
+def getAbc(xml_string, X=0, options=None):
+    global abcOut
+    if not options:
+        options = getDefaultOptions()
+
+    abcOut = ABCoutput('string.abc', X=X, options=options, as_str=True)
+    abc_str = ''
+    psr = Parser(options)  # xml parser
+    try:
+        psr.parse(xml_str=xml_string)  # parse string and write result to abcOut object
+        abc_str = abcOut.getString()
+    except:
+        etype, value, traceback = sys.exc_info()
+        info ('** %s occurred: %s in %s' % (etype, value, fnmext), 0)
+
+    return abc_str
+
+def getAbcFromFile(file_path, X=0, options=None):
+    xml_string = file2string(file2string=file_path)
+    return getAbc(xml_string=xml_string, X=X, options=options)
+
+class Opts: pass
+
+def getDefaultOptions():
+    options = Opts()
+    options.b = 0
+    options.c = 0
+    options.d = 0
+    options.j = None
+    options.m = 0
+    options.n = 0
+    options.o = ''
+    options.p = ''
+    options.s = None
+    options.t = None
+    options.u = None
+    options.v = 0
+    options.v1 = None
+    options.x = None
+    options.ped = True
+    options.stm = False
+    return options
+
+
 #----------------
 # Main Program
 #----------------
@@ -1526,7 +1597,7 @@ if __name__ == '__main__':
     parser.add_option ("-j", action="store_true", help="switch for compatibility with javascript version")
     parser.add_option ("-t", action="store_true", help="translate perc- and tab-staff to ABC code with %%map, %%voicemap")
     parser.add_option ("-s", action="store_true", help="shift node heads 3 units left in a tab staff")
-    parser.add_option ("--v1", action="store_true", help="start-stop directions allways to first voice of staff")
+    parser.add_option ("--v1", action="store_true", help="start-stop directions always to first voice of staff")
     parser.add_option ("--noped", action="store_false", help="skip all pedal directions", dest='ped', default=True)
     parser.add_option ("--stems", action="store_true", help="translate stem directions", dest='stm', default=False)
     parser.add_option ("-i", action="store_true", help="read xml file from standard input")

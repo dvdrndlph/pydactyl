@@ -25,7 +25,6 @@ __author__ = 'David Randolph'
 import re
 import unittest
 import TestConstant
-from music21 import note
 from pydactyl.dcorpus.DCorpus import DCorpus
 from pydactyl.dcorpus.DPart import DPart
 
@@ -37,7 +36,9 @@ class DCorpusTest(unittest.TestCase):
     def test_abc2xml_2part_mono():
         xml_str = DCorpus.abc2xml(abc_content=TestConstant.B_MINOR_ARPEGGIO)
         assert xml_str, "Failed abc2xml transform."
-        # print(xml_str)
+        abc_str = DCorpus.xml2abc(xml_content=xml_str)
+        assert abc_str, "Failed xml2abc transform."
+        print(abc_str) 
         xml_strings = DCorpus.abc2xmlScores(BERINGER2_SCALE_CORPUS)
         assert len(xml_strings) == 38, "Bad parse of multi-tune file to xml"
         xml_strings = DCorpus.abc2xmlScores(BERINGER2_SCALE_CORPUS, skip=12, max=4)

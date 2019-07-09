@@ -2096,7 +2096,7 @@ def expand_abc_include (abctxt):
 
 #------------------------------------------------------
 # Added by David Randolph for retrieving transformation
-# programatically.
+# programmatically.
 #------------------------------------------------------
 def file2string(file_path):
     string = ''

@@ -28,6 +28,7 @@ from music21 import abcFormat, converter, corpus, stream
 from pydactyl.dactyler import Constant
 
 from pydactyl.abc2xml import abc2xml
+from pydactyl.xml2abc import xml2abc
 
 from .DScore import DScore
 from .ABCDHeader import ABCDHeader
@@ -70,6 +71,13 @@ class DCorpus:
             abc_content = DCorpus.file_to_string(file_path)
         xml_strings = abc2xml.getXmlScores(abc_string=abc_content, skip=skip, max=max)
         return xml_strings
+
+    @staticmethod
+    def xml2abc(file_path=None, xml_content=None):
+        if file_path:
+            xml_content = DCorpus.file_to_string(file_path)
+        abc_str = xml2abc.getAbc(xml_string=xml_content)
+        return abc_str
 
     @staticmethod
     def _score_staff_assignments(abc_file_path=None, abc_content=None):
