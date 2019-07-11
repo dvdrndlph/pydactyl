@@ -1543,7 +1543,7 @@ def getAbc(xml_string, X=0, options=None):
         abc_str = abcOut.getString()
     except:
         etype, value, traceback = sys.exc_info()
-        info ('** %s occurred: %s in %s' % (etype, value, fnmext), 0)
+        info('** %s occurred: %s in %s' % (etype, value, fnmext), 0)
 
     return abc_str
 
@@ -1558,6 +1558,7 @@ def getDefaultOptions():
     options.b = 0
     options.c = 0
     options.d = 0
+    options.i = False
     options.j = None
     options.m = 0
     options.n = 0

@@ -162,6 +162,30 @@ class DAnnotation:
         return digit_str
 
     @staticmethod
+    def default_hand(staff, hand=None):
+        if hand is not None:
+            default_hand = hand
+        elif staff == "upper":
+            default_hand = ">"
+        else:
+            default_hand = "<"
+        return default_hand
+
+    @staticmethod
+    def handed_strike_digits_for_score_fingering(sf, staff="upper", hand=None):
+        handed_digits = [] 
+        if isinstance(sf.pf.fingering, str):
+            handed_digits.append('x')
+        else:
+            strike = sf.pf.fingering.strike
+            current_hand = strike.hand
+            digit = strike.digit
+            if current_hand and current_hand != hand:
+                return None
+            handed_digits.append(handed_digit)
+        return handed_digits 
+
+    @staticmethod
     def hand_digit(digit, staff):
         """
         Determine the handed digit for the input digit string.

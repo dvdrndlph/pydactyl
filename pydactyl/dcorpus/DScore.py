@@ -135,6 +135,14 @@ class DScore:
             return self.lower_stream()
         return self._combined_d_part.stream()
 
+    def as_xml(self, staff="both"):
+        from music21.musicxml import m21ToXml
+        strm = self.stream(staff=staff)
+        sx = m21ToXml.ScoreExporter(strm)
+        mx_score = sx.parse()
+        xml_str = mx_score.decode('utf-8')
+        return xml_str
+
     def pitch_range(self, staff="both"):
         if staff == "upper":
             return self._upper_d_part.pitch_range()
