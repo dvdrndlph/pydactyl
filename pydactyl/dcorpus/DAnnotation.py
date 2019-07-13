@@ -23,7 +23,9 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 from tatsu import compile
 import re
+import copy
 from pydactyl.dactyler import Constant
+from pprint import pprint
 
 
 class DAnnotation:
@@ -83,6 +85,24 @@ class DAnnotation:
                 return line[adjusted_index]
             offset += len(line)
         return None
+
+    def score_fingerings(self, staff="both"):
+        if staff != "upper" and staff != "lower":
+            raise Exception("Score fingerings ordered within upper and lower staff only.")
+        if staff == "upper":
+            lines = self._ast.upper
+        else:
+            lines = self._ast.lower
+
+        # Each staff is parsed into an array of lines. Each
+        # line is an array of "score fingerings," or note
+        # fingerings with all the trimmings.
+        sfs = []
+        for line in lines:
+            for sf in line:
+                sfs.append(sf)
+        # pprint(sfs)
+        return sfs
 
     def strike_digit_at_index(self, index, staff="upper"):
         sf = self.score_fingering_at_index(staff=staff, index=index)
@@ -172,16 +192,39 @@ class DAnnotation:
         return default_hand
 
     @staticmethod
-    def handed_strike_digits_for_score_fingering(sf, staff="upper", hand=None):
+    def hand_and_digit(action, staff="upper", hand=None):
+        current_hand = action.hand
+        if not current_hand:
+            current_hand = DAnnotation.default_hand(staff=staff, hand=hand)
+        digit = action.digit
+        return current_hand, digit
+
+    @staticmethod
+    def handed_digit(action, staff="upper", hand=None):
+        current_hand, digit = DAnnotation.hand_and_digit(action, staff=staff, hand=hand)
+        handed_digit = current_hand + str(digit)
+        return handed_digit
+
+    @staticmethod
+    def strike_handed_digits_for_ornaments(orns, staff="upper", hand=None):
+        handed_digits = []
+        for orn in orns:
+            strike = orn.fingering.strike
+            handed_digit = DAnnotation.handed_digit(action=strike, staff=staff, hand=hand)
+            handed_digits.append(handed_digit)
+        return handed_digits    
+
+    @staticmethod
+    def strike_handed_digits_for_score_fingering(sf, staff="upper", hand=None):
         handed_digits = [] 
-        if isinstance(sf.pf.fingering, str):
+        if sf.orn:
+            handed_digits = DAnnotation.strike_handed_digits_for_ornaments(
+                orns=sf.orn.ornaments[1], staff="upper", hand=hand)
+        elif isinstance(sf.pf.fingering, str):
             handed_digits.append('x')
         else:
             strike = sf.pf.fingering.strike
-            current_hand = strike.hand
-            digit = strike.digit
-            if current_hand and current_hand != hand:
-                return None
+            handed_digit = DAnnotation.handed_digit(action=strike, staff=staff, hand=hand)
             handed_digits.append(handed_digit)
         return handed_digits 
 

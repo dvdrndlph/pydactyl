@@ -437,7 +437,7 @@ V:2
 
 PARNCUTT_MACHINE = dict()
 PARNCUTT_MACHINE['A'] = """% abcDidactyl v5
-% abcD fingering 1: ﻿24342313@xxxx
+% abcD fingering 1: 24342313@xxxx
 % Authority: Parncutt 1
 % Transcriber: David Randolph
 % Transcription date: 2018-06-19 17:24:43
