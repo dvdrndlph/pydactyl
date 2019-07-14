@@ -69,7 +69,7 @@ class PianoFingering(Fingering):
     """
     A music21 fingering for piano with full semantics per abcDF.
 
-    >>> annot = DAnnotation(abcdf=">1<2(34)3-14-1/5-1;12.@")
+    >>> annot = DAnnotation(abcdf=">1<2(34)3-14-2/5-1;12.@")
     >>> sf_count = annot.score_fingering_count()
     >>> sf_count
     7
@@ -103,6 +103,15 @@ class PianoFingering(Fingering):
     >>> subby = PianoFingering(score_fingering=sfs[3], hand="<")
     >>> subby.strike_digit()
     3
+    >>> subby.release_digit()
+    1
+    >>> alt = PianoFingering(score_fingering=sfs[4], hand="<")
+    >>> alt.strike_digit()
+    4
+    >>> # pprint(sfs[4])
+    >>> alt.release_digit()
+    2
+
 
     >>> corpse = DCorpus(corpus_str=HACKED_6_1_2_FINGERED)
     >>> score = corpse.d_score_by_index(0)
@@ -119,12 +128,16 @@ class PianoFingering(Fingering):
         self._softened = softened
         self._dampered = dampered
         self._strike_handed_digits = []
+        self._release_handed_digits = []
         if score_fingering is not None:
             self._score_fingering = score_fingering
-            strike_handed_digits = DAnnotation.strike_handed_digits_for_score_fingering(
+            strike_handed_digits = DAnnotation.handed_digits_for_score_fingering(
                 sf=score_fingering, staff=staff, hand=hand)
             self._strike_handed_digits = strike_handed_digits
             finger_number = DAnnotation.digit_only(strike_handed_digits[0])
+            release_handed_digits = DAnnotation.handed_digits_for_score_fingering(
+                sf=score_fingering, action="release", staff=staff, hand=hand)
+            self._release_handed_digits = release_handed_digits
         super().__init__(fingerNumber=finger_number)
 
     def softened(self, value=None):
@@ -149,7 +162,7 @@ class PianoFingering(Fingering):
         """
         The integer digit striking the pitch at the specified index.
         An ornamented note (e.g. trill) will have multiple pitches/fingerings for a
-        single note head.)
+        single note head.
         """
         shf = self._strike_handed_digits[index]
         digit = DAnnotation.digit_only(shf)
@@ -158,13 +171,48 @@ class PianoFingering(Fingering):
     def strike_hand_and_digit(self, index=0):
         return self.strike_hand(index=index), self.strike_digit(index=index)
 
+    def release_handed_digits(self):
+        rhds = []
+        index = 0
+        for rhd in self._release_handed_digits:
+            if rhd is None:
+                rhds.append(self._strike_handed_digits[index])
+            else:
+                rhds.append(rhd)
+            index += 1
+        return rhds
+
+    def release_hand(self, index=0):
+        rhd = self._release_handed_digits[index]
+        if rhd is None:
+            rhd = self._strike_handed_digits[index]
+        hand = DAnnotation.digit_hand(rhd)
+        return hand
+
+    def release_digit(self, index=0):
+        """
+        The integer digit releasing the pitch at the specified index.
+        An ornamented note (e.g. trill) will have multiple pitches/fingerings for a
+        single note head.
+        """
+        rhd = self._release_handed_digits[index]
+        if rhd is None:
+            rhd = self._strike_handed_digits[index]
+        digit = DAnnotation.digit_only(rhd)
+        return digit
+
+    def release_hand_and_digit(self, index=0):
+        return self.release_hand(index=index), self.release_digit(index=index)
+
     def ornamented(self):
         if len(self._strike_handed_digits) > 1:
             return True
         return False
 
     def last_hand_used(self):
-        pass
+        last_index = len(self._release_handed_digits)
+        last_hand = self.release_hand(index=last_index)
+        return last_hand
 
 
 if __name__ == "__main__":

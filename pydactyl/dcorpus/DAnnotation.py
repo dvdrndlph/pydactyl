@@ -193,38 +193,51 @@ class DAnnotation:
 
     @staticmethod
     def hand_and_digit(action, staff="upper", hand=None):
-        current_hand = action.hand
+        digit = None
+        if action:
+            current_hand = action.hand
+            digit = action.digit
+        else:
+            current_hand = None
         if not current_hand:
             current_hand = DAnnotation.default_hand(staff=staff, hand=hand)
-        digit = action.digit
         return current_hand, digit
 
     @staticmethod
     def handed_digit(action, staff="upper", hand=None):
         current_hand, digit = DAnnotation.hand_and_digit(action, staff=staff, hand=hand)
-        handed_digit = current_hand + str(digit)
+        if digit:
+            handed_digit = current_hand + str(digit)
+        else:
+            handed_digit = None
         return handed_digit
 
     @staticmethod
-    def strike_handed_digits_for_ornaments(orns, staff="upper", hand=None):
+    def handed_digits_for_ornaments(orns, action="strike", staff="upper", hand=None):
         handed_digits = []
         for orn in orns:
-            strike = orn.fingering.strike
-            handed_digit = DAnnotation.handed_digit(action=strike, staff=staff, hand=hand)
+            if action == "strike":
+                act = orn.fingering.strike
+            else:
+                act = orn.fingering.release
+            handed_digit = DAnnotation.handed_digit(action=act, staff=staff, hand=hand)
             handed_digits.append(handed_digit)
         return handed_digits    
 
     @staticmethod
-    def strike_handed_digits_for_score_fingering(sf, staff="upper", hand=None):
+    def handed_digits_for_score_fingering(sf, action="strike", staff="upper", hand=None):
         handed_digits = [] 
         if sf.orn:
-            handed_digits = DAnnotation.strike_handed_digits_for_ornaments(
-                orns=sf.orn.ornaments[1], staff="upper", hand=hand)
+            handed_digits = DAnnotation.handed_digits_for_ornaments(
+                orns=sf.orn.ornaments[1], action=action, staff="upper", hand=hand)
         elif isinstance(sf.pf.fingering, str):
             handed_digits.append('x')
         else:
-            strike = sf.pf.fingering.strike
-            handed_digit = DAnnotation.handed_digit(action=strike, staff=staff, hand=hand)
+            if action == "strike":
+                act = sf.pf.fingering.strike
+            else:
+                act = sf.pf.fingering.release
+            handed_digit = DAnnotation.handed_digit(action=act, staff=staff, hand=hand)
             handed_digits.append(handed_digit)
         return handed_digits 
 
