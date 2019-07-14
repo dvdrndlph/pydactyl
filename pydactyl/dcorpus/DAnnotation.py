@@ -225,11 +225,41 @@ class DAnnotation:
         return handed_digits    
 
     @staticmethod
+    def pedals_for_ornaments(orns, damper="^", soft="f"):
+        dampers = []
+        softs = []
+        for orn in orns:
+            damper = orn.damper or damper
+            dampers.append(damper)
+            soft = orn.soft or soft
+            softs.append(soft)
+        return dampers, softs
+
+    @staticmethod
+    def pedals_for_score_fingering(sf, damper="^", soft="f"):
+        dampers = []
+        softs = []
+        if sf.orn:
+            dampers, softs = DAnnotation.pedals_for_ornaments(
+                orns=sf.orn.ornaments[1], damper=damper, soft=soft)
+        elif sf.pedaling:
+            damper = sf.pedaling.damper or damper
+            soft = sf.pedaling.soft or soft
+            dampers.append(damper)
+            softs.append(soft)
+        elif sf.pf:
+            damper = sf.pf.damper or damper
+            soft = sf.pf.soft or soft
+            dampers.append(damper)
+            softs.append(soft)
+        return dampers, softs
+
+    @staticmethod
     def handed_digits_for_score_fingering(sf, action="strike", staff="upper", hand=None):
         handed_digits = [] 
         if sf.orn:
             handed_digits = DAnnotation.handed_digits_for_ornaments(
-                orns=sf.orn.ornaments[1], action=action, staff="upper", hand=hand)
+                orns=sf.orn.ornaments[1], action=action, staff=staff, hand=hand)
         elif isinstance(sf.pf.fingering, str):
             handed_digits.append('x')
         else:

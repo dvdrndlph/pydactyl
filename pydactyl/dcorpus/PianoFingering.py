@@ -68,8 +68,9 @@ V:3
 class PianoFingering(Fingering):
     """
     A music21 fingering for piano with full semantics per abcDF.
+    FIXME: Currently ignores "alt" fingerings.
 
-    >>> annot = DAnnotation(abcdf=">1<2(34)3-14-2/5-1;12.@")
+    >>> annot = DAnnotation(abcdf=">1<2(34)3-14-2/5-1;>1p5_.@")
     >>> sf_count = annot.score_fingering_count()
     >>> sf_count
     7
@@ -89,6 +90,9 @@ class PianoFingering(Fingering):
     '<'
     >>> lefty.strike_digit()
     2
+    >>> lefty.is_dampered()
+    False
+    >>> lefty.segment_boundary()
     >>> # pprint(sfs[2])
     >>> # strike_handed_digits = DAnnotation.strike_handed_digits_for_score_fingering(sf=sfs[2], staff="upper", hand="<")
     >>> orny = PianoFingering(score_fingering=sfs[2], hand="<")
@@ -108,9 +112,20 @@ class PianoFingering(Fingering):
     >>> alt = PianoFingering(score_fingering=sfs[4], hand="<")
     >>> alt.strike_digit()
     4
-    >>> # pprint(sfs[4])
     >>> alt.release_digit()
     2
+    >>> alt.segment_boundary()
+    ';'
+    >>> # pprint(sfs[6])
+    >>> ped = PianoFingering(score_fingering=sfs[6], hand=">")
+    >>> ped.strike_digit()
+    5
+    >>> ped.is_dampered()
+    True
+    >>> ped.is_softened()
+    True
+    >>> ped.segment_boundary()
+    '.'
 
 
     >>> corpse = DCorpus(corpus_str=HACKED_6_1_2_FINGERED)
@@ -123,12 +138,13 @@ class PianoFingering(Fingering):
     2
     >>> upper_part = score.d_part(staff="upper")
     """
-    def __init__(self, score_fingering=None, staff="upper",
-                 hand=None, softened=False, dampered=False):
-        self._softened = softened
-        self._dampered = dampered
+    def __init__(self, score_fingering=None, staff="upper", hand=None, soft="f", damper="^"):
+        self._softs = []
+        self._dampers = []
+
         self._strike_handed_digits = []
         self._release_handed_digits = []
+        finger_number = None
         if score_fingering is not None:
             self._score_fingering = score_fingering
             strike_handed_digits = DAnnotation.handed_digits_for_score_fingering(
@@ -138,17 +154,26 @@ class PianoFingering(Fingering):
             release_handed_digits = DAnnotation.handed_digits_for_score_fingering(
                 sf=score_fingering, action="release", staff=staff, hand=hand)
             self._release_handed_digits = release_handed_digits
+            dampers, softs = DAnnotation.pedals_for_score_fingering(
+                sf=score_fingering, damper=damper, soft=soft)
+            self._dampers = dampers
+            self._softs = softs
+
         super().__init__(fingerNumber=finger_number)
 
-    def softened(self, value=None):
-        if value is not None:
-            self._softened = value
-        return self._softened
+    def segment_boundary(self):
+        sf = self._score_fingering
+        return sf.segmenter
 
-    def dampered(self, value=None):
-        if value is not None:
-            self._dampered = value
-        return self._dampered
+    def is_softened(self, index=0):
+        if self._softs[index] == 'p':
+            return True
+        return False
+
+    def is_dampered(self, index=0):
+        if self._dampers[index] == '_':
+            return True
+        return False
 
     def strike_handed_digits(self):
         return self._strike_handed_digits
@@ -213,6 +238,12 @@ class PianoFingering(Fingering):
         last_index = len(self._release_handed_digits)
         last_hand = self.release_hand(index=last_index)
         return last_hand
+
+    def last_damper(self):
+        return self._dampers[-1]
+
+    def last_soft(self):
+        return self._softs[-1]
 
 
 if __name__ == "__main__":
