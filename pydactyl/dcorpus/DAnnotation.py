@@ -196,7 +196,7 @@ class DAnnotation:
         digit = None
         if action:
             current_hand = action.hand
-            digit = action.digit
+            digit = int(action.digit)
         else:
             current_hand = None
         if not current_hand:
@@ -213,16 +213,34 @@ class DAnnotation:
         return handed_digit
 
     @staticmethod
-    def handed_digits_for_ornaments(orns, action="strike", staff="upper", hand=None):
-        handed_digits = []
+    def hands_and_digits_for_ornaments(orns, staff="upper", hand=None):
+        """
+        Return an array of tuples specifying the fingerings for the input ornamentals.
+
+        :param orns: The list of ornamental AST elements to process.
+        :param staff: The staff ("upper" or "lower") from which sf was taken. Used to determine
+        default hand to use if not overridden by the hand parameter.
+        :param hand: The "prevailing" hand in use for fingerings prior to the score fingering
+        in the complete staff annotation sequence.
+        :return: Hash of list of (hand, digit) tuples, with keys "strike" and "release."
+        While the hand will always be set, the digit may be set to None if an "x" is
+        specified for the score fingering.
+        """
+        hands_and_digits = {'strike': [], 'release': []}
         for orn in orns:
-            if action == "strike":
-                act = orn.fingering.strike
+            act = orn.fingering.strike
+            strike_hand, strike_digit = DAnnotation.hand_and_digit(action=act, staff=staff, hand=hand)
+            hands_and_digits['strike'].append((strike_hand, strike_digit))
+            act = orn.fingering.release
+            rel_hand, rel_digit = DAnnotation.hand_and_digit(action=act, staff=staff, hand=strike_hand)
+            if not rel_digit:
+                rel_hand = strike_hand
+                rel_digit = strike_digit
+                hand = strike_hand
             else:
-                act = orn.fingering.release
-            handed_digit = DAnnotation.handed_digit(action=act, staff=staff, hand=hand)
-            handed_digits.append(handed_digit)
-        return handed_digits    
+                hand = rel_hand
+            hands_and_digits['release'].append((rel_hand, rel_digit))
+        return hands_and_digits
 
     @staticmethod
     def pedals_for_ornaments(orns, damper="^", soft="f"):
@@ -255,21 +273,39 @@ class DAnnotation:
         return dampers, softs
 
     @staticmethod
-    def handed_digits_for_score_fingering(sf, action="strike", staff="upper", hand=None):
-        handed_digits = [] 
+    def hands_and_digits_for_score_fingering(sf, staff="upper", hand=None):
+        """
+        Return an array of tuples specifying the fingerings for the input score_fingering
+
+        :param sf: The score_fingering AST to process.
+        :param staff: The staff ("upper" or "lower") from which sf was taken. Used to determine
+        default hand to use if not overridden by the hand parameter.
+        :param hand: The "prevailing" hand in use for fingerings prior to the score fingering
+        in the complete staff annotation sequence.
+        :return: Hash of lists of (hand, digit) tuples, with keys "strike" and "release."
+        While the hand will always be set, the digit may be set to None if an "x" is
+        specified for the score fingering.
+        """
+        hands_and_digits = {'strike': [], 'release': []}
         if sf.orn:
-            handed_digits = DAnnotation.handed_digits_for_ornaments(
-                orns=sf.orn.ornaments[1], action=action, staff=staff, hand=hand)
+            hands_and_digits = DAnnotation.hands_and_digits_for_ornaments(
+                orns=sf.orn.ornaments[1], staff=staff, hand=hand)
         elif isinstance(sf.pf.fingering, str):
-            handed_digits.append('x')
+            hand = DAnnotation.default_hand(staff=staff)
+            hd = (hand, None)
+            hands_and_digits['strike'].append(hd)
+            hands_and_digits['release'].append(hd)
         else:
-            if action == "strike":
-                act = sf.pf.fingering.strike
-            else:
-                act = sf.pf.fingering.release
-            handed_digit = DAnnotation.handed_digit(action=act, staff=staff, hand=hand)
-            handed_digits.append(handed_digit)
-        return handed_digits 
+            act = sf.pf.fingering.strike
+            stk_hand, stk_digit = DAnnotation.hand_and_digit(action=act, staff=staff, hand=hand)
+            hands_and_digits['strike'].append((stk_hand, stk_digit))
+            act = sf.pf.fingering.release
+            rel_hand, rel_digit = DAnnotation.hand_and_digit(action=act, staff=staff, hand=stk_hand)
+            if not rel_digit:
+                rel_hand = stk_hand
+                rel_digit = stk_digit
+            hands_and_digits['release'].append((rel_hand, rel_digit))
+        return hands_and_digits
 
     @staticmethod
     def hand_digit(digit, staff):
