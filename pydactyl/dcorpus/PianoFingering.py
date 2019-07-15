@@ -23,6 +23,7 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 
 from pprint import pprint
+from music21 import note, chord
 from music21.articulations import Fingering
 from pydactyl.dcorpus.DAnnotation import DAnnotation
 from pydactyl.dcorpus.DCorpus import DCorpus
@@ -131,16 +132,19 @@ class PianoFingering(Fingering):
     >>> x.strike_hand()
     '>'
 
-
     >>> corpse = DCorpus(corpus_str=HACKED_6_1_2_FINGERED)
     >>> score = corpse.d_score_by_index(0)
-    >>> abcdh = score.abcd_header()
-    >>> annot1 = abcdh.annotation_by_id(1)
-    >>> sf1 = annot1.score_fingering_at_index(index=0, staff="upper")
-    >>> pf = PianoFingering(score_fingering=sf1)
-    >>> pf.fingerNumber
+    >>> PianoFingering.finger_score(d_score=score, staff="both", id=1)
+    >>> upper_stream = score.stream(staff="upper")
+    >>> upper_flats = upper_stream.flat.getElementsByClass(note.Note)
+    >>> note1 = upper_flats[0]
+    >>> note1.articulations[0].strike_digit()
     2
-    >>> upper_part = score.d_part(staff="upper")
+    >>> note1.articulations[0].release_hand()
+    '>'
+    >>> note1.articulations[0].release_digit()
+    2
+
     """
     def __init__(self, score_fingering=None, staff="upper", hand=None, soft="f", damper="^"):
         self._softs = []
@@ -164,12 +168,45 @@ class PianoFingering(Fingering):
         super().__init__(fingerNumber=finger_number)
 
     @staticmethod
-    def finger_score(d_score, abcdh=None, d_annotation=None, id=1):
+    def finger_score(d_score, staff="upper", abcdh=None, d_annotation=None, id=1):
         if abcdh:
             d_annotation = abcdh.annotation_by_id(id)
         if not d_annotation:
             abcdh = d_score.abcd_header()
             d_annotation = abcdh.annotation_by_id(id)
+
+        if staff == "both" or staff == "upper":
+            PianoFingering._finger_score(d_score=d_score, d_annotation=d_annotation, staff="upper")
+        if staff == "both" or staff == "lower":
+            PianoFingering._finger_score(d_score=d_score, d_annotation=d_annotation, staff="lower")
+
+    @staticmethod
+    def _finger_score(d_score, d_annotation, staff="upper"):
+        stream = d_score.stream(staff=staff)
+        notes_and_chords = stream.flat.getElementsByClass([note.Note, chord.Chord])
+        sfs = d_annotation.score_fingerings(staff=staff)
+        sf_index = 0
+        hand = None
+        soft = 'f'
+        damper = '^'
+        for elem in notes_and_chords:
+            if isinstance(elem, chord.Chord):
+                for n in elem.notes:
+                    pf = PianoFingering(score_fingering=sfs[sf_index], staff=staff,
+                                        hand=hand, soft=soft, damper=damper)
+                    elem.articulations.append(pf)
+                    hand = pf.last_hand()
+                    soft = pf.last_soft()
+                    damper = pf.last_damper()
+                    sf_index += 1
+            else:
+                pf = PianoFingering(score_fingering=sfs[sf_index], staff=staff,
+                                    hand=hand, soft=soft, damper=damper)
+                elem.articulations.append(pf)
+                hand = pf.last_hand()
+                soft = pf.last_soft()
+                damper = pf.last_damper()
+                sf_index += 1
 
     def segment_boundary(self):
         sf = self._score_fingering
