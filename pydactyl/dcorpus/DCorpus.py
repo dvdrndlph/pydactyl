@@ -131,7 +131,7 @@ class DCorpus:
             file_path = corpus_dir + "/" + file_name
             self.append(corpus_path=file_path)
 
-    def append(self, corpus_path=None, corpus_str=None, header_path=None, header_str=None, as_xml=False):
+    def append(self, corpus_path=None, corpus_str=None, header_path=None, header_str=None, as_xml=True):
         if corpus_path:
             corpus_type = DCorpus.corpus_type(corpus_path=corpus_path)
             if corpus_type in [Constant.CORPUS_ABC, Constant.CORPUS_ABCD]:
@@ -214,7 +214,7 @@ class DCorpus:
                 d_score.segmenter(segmenter)
         return self._segmenter
 
-    def __init__(self, corpus_path=None, corpus_str=None, paths=[], segmenter=None, as_xml=False):
+    def __init__(self, corpus_path=None, corpus_str=None, paths=[], segmenter=None, as_xml=True):
         self._conn = None
         self._abc_strings = []
         self._d_scores = []

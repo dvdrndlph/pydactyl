@@ -60,7 +60,7 @@ V:4 bass
 V:1
 "^Allegro con spirito."  (F2 | %954
  .G2).G2 {FG}AGFG {/f}e4z2!p! G2 |$ .F2.F2 (GFEF d6 F2) | %956
- (F2E2G2B2) (B2C2E2A2) | [EG]4 z4 [DF]4 z4|]
+ (F2E2G2B2) (B2C2E2A2) | [GE]4 z4 [FD]4 z4|]
 V:3
 [K:bass] z|z8|z8|z8|z8|]
 """
@@ -69,7 +69,7 @@ V:3
 class PianoFingering(Fingering):
     """
     A music21 fingering for piano with full semantics per abcDF.
-    FIXME: Currently ignores "alt" fingerings.
+    FIXME: Currently ignores all "alt" fingerings.
 
     >>> annot = DAnnotation(abcdf=">1<2(34)3-14-2/5-1;>1p5_.xx@")
     >>> sf_count = annot.score_fingering_count()
@@ -94,8 +94,6 @@ class PianoFingering(Fingering):
     >>> lefty.is_dampered()
     False
     >>> lefty.segment_boundary()
-    >>> # pprint(sfs[2])
-    >>> # strike_handed_digits = DAnnotation.strike_handed_digits_for_score_fingering(sf=sfs[2], staff="upper", hand="<")
     >>> orny = PianoFingering(score_fingering=sfs[2], hand="<")
     >>> orny.ornamented()
     True
@@ -132,18 +130,40 @@ class PianoFingering(Fingering):
     >>> x.strike_hand()
     '>'
 
-    >>> corpse = DCorpus(corpus_str=HACKED_6_1_2_FINGERED)
+    >>> corpse = DCorpus(corpus_str=HACKED_6_1_2_FINGERED, as_xml=True)
     >>> score = corpse.d_score_by_index(0)
     >>> PianoFingering.finger_score(d_score=score, staff="both", id=1)
     >>> upper_stream = score.stream(staff="upper")
-    >>> upper_flats = upper_stream.flat.getElementsByClass(note.Note)
-    >>> note1 = upper_flats[0]
-    >>> note1.articulations[0].strike_digit()
-    2
-    >>> note1.articulations[0].release_hand()
+    >>> upper_notes = list(upper_stream.flat.getElementsByClass(note.Note))
+
+    Use the fingering() or fingerings() to pull the PianoFingering articulations
+    out of a note.Note.
+    >>> pf = PianoFingering.fingering(upper_notes[1])
+    >>> pf.strike_digit()
+    3
+    >>> pf.release_hand()
     '>'
-    >>> note1.articulations[0].release_digit()
+    >>> pf.release_digit()
+    3
+    >>> pf = PianoFingering.fingering(object=upper_notes[-1])
+    >>> pf.strike_hand()
+    '>'
+    >>> pf.strike_digit()
+    5
+    >>> chords = list(upper_stream.flat.getElementsByClass(chord.Chord))
+    >>> lower_fingering = PianoFingering.fingering(chords[-1], index=0)
+    >>> upper_fingering = PianoFingering.fingering(chords[-1], index=1)
+    >>> lower_fingering.strike_digit()
+    1
+    >>> upper_fingering.strike_digit()
     2
+    >>> fingerings = PianoFingering.fingerings(chords[-1])
+    >>> fingerings[1].strike_digit()
+    2
+
+    >>> # combo_stream = score.stream(staff="both")
+    >>> # combo_stream.show()
+
 
     """
     def __init__(self, score_fingering=None, staff="upper", hand=None, soft="f", damper="^"):
@@ -207,6 +227,33 @@ class PianoFingering(Fingering):
                 soft = pf.last_soft()
                 damper = pf.last_damper()
                 sf_index += 1
+
+    @staticmethod
+    def fingerings(object):
+        """
+        Extract the PianoFingering articulations from the music21 
+        (Note or Chord) object.
+        :param object: The music21 Note or Chord
+        :return: An array of PianoFingering objects as ordered in the articulations
+        list.
+        """
+        fingerings = []
+        for artic in object.articulations:
+            if isinstance(artic, PianoFingering):
+                fingerings.append(artic)
+        return fingerings
+
+    @staticmethod
+    def fingering(object, index=0):
+        """
+        Extract the PianoFingering articulation from the music21
+        (Note or Chord) object.
+        :param object: The music21 Note or Chord
+        :param index: The zero-based index of the PianoFingering to be retrieved.
+        :return: A PianoFingering object.
+        """
+        fingerings = PianoFingering.fingerings(object=object)
+        return fingerings[index]
 
     def segment_boundary(self):
         sf = self._score_fingering

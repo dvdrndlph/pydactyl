@@ -71,7 +71,6 @@ class DScore:
             music21_stream = abcFormat.translate.abcToStreamScore(abc_handle)
             self._combined_d_part = DPart(music21_stream=music21_stream, staff="both")
 
-
             ah_array = abc_handle.splitByVoice()
             voices = []
             headers = None

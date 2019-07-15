@@ -27,6 +27,10 @@ from .DNote import DNote
 
 class DPart:
     def __init__(self, music21_stream, staff="both"):
+        # All chords must have notes ordered from low to high.
+        chords = music21_stream.flat.getElementsByClass(chord.Chord)
+        for ch in chords:
+            ch.sortAscending(inPlace=True) # FIXME: Double accidentals will not sort by MIDI pitch.
         self._stream = music21_stream
         self._staff = staff
 
