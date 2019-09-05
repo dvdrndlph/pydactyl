@@ -22,11 +22,10 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
-from pprint import pprint
+# from pprint import pprint
 from music21 import note, chord
 from music21.articulations import Fingering
 from pydactyl.dcorpus.DAnnotation import DAnnotation
-from pydactyl.dcorpus.DCorpus import DCorpus
 
 HACKED_6_1_2_FINGERED = """% abcDidactyl v6
 % abcD fingering 1: >23323432145122321252213551252412@
@@ -130,6 +129,7 @@ class PianoFingering(Fingering):
     >>> x.strike_hand()
     '>'
 
+    >>> from pydactyl.dcorpus.DCorpus import DCorpus
     >>> corpse = DCorpus(corpus_str=HACKED_6_1_2_FINGERED, as_xml=True)
     >>> score = corpse.d_score_by_index(0)
     >>> PianoFingering.finger_score(d_score=score, staff="both", id=1)
@@ -163,8 +163,6 @@ class PianoFingering(Fingering):
 
     >>> # combo_stream = score.stream(staff="both")
     >>> # combo_stream.show()
-
-
     """
     def __init__(self, score_fingering=None, staff="upper", hand=None, soft="f", damper="^"):
         self._softs = []

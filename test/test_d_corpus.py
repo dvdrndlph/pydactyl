@@ -124,7 +124,7 @@ class DCorpusTest(unittest.TestCase):
 
     @staticmethod
     def test_abc_2part_mono():
-        d_corpus = DCorpus(corpus_path=BERINGER2_SCALE_CORPUS)
+        d_corpus = DCorpus(corpus_path=BERINGER2_SCALE_CORPUS, as_xml=False)
         lo, hi = d_corpus.pitch_range()
         assert lo < hi, "Bad dcorpus pitch range"
         score_count = d_corpus.score_count()

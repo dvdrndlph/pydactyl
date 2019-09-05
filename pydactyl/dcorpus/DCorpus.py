@@ -24,7 +24,7 @@ __author__ = 'David Randolph'
 import re
 import pymysql
 import os
-from music21 import abcFormat, converter, corpus, stream 
+from music21 import abcFormat, converter, stream
 from pydactyl.dactyler import Constant
 
 from pydactyl.abc2xml import abc2xml
@@ -32,7 +32,6 @@ from pydactyl.xml2abc import xml2abc
 
 from .DScore import DScore
 from .ABCDHeader import ABCDHeader
-from .ManualDSegmenter import ManualDSegmenter
 
 
 class DCorpus:

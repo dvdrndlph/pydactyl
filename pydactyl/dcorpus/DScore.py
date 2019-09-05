@@ -25,6 +25,7 @@ import re
 from music21 import abcFormat, stream 
 from pydactyl.dactyler import Constant
 from .DPart import DPart
+from .PianoFingering import PianoFingering
 from sklearn.metrics import cohen_kappa_score
 # from krippendorff import alpha
 from nltk.metrics.agreement import AnnotationTask
@@ -50,6 +51,17 @@ class DScore:
         if segmenter:
             self._segmenter = segmenter
         return self._segmenter
+
+    def finger(self, staff="both", d_annotation=None, id=1):
+        if d_annotation:
+            PianoFingering.finger_score(d_score=self, staff=staff,
+                                        d_annotation=d_annotation, id=id)
+        else:
+            PianoFingering.finger_score(d_score=self, staff=staff, id=id)
+
+    def interpolate(self, staff="both", d_annotation=None, id=1):
+        self.finger(staff=staff, d_annotation=d_annotation, id=id)
+
 
     def __init__(self, music21_stream=None, segmenter=None, abc_handle=None,
                  voice_map=None, abcd_header=None):
