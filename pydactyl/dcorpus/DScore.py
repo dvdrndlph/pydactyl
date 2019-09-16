@@ -21,13 +21,15 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
+import pprint
 import re
+import numpy as np
 from music21 import abcFormat, stream 
 from pydactyl.dactyler import Constant
 from .DPart import DPart
 from .PianoFingering import PianoFingering
 from sklearn.metrics import cohen_kappa_score
-# from krippendorff import alpha
+from krippendorff import alpha
 from nltk.metrics.agreement import AnnotationTask
 # from .ManualDSegmenter import ManualDSegmenter
 
@@ -61,7 +63,6 @@ class DScore:
 
     def interpolate(self, staff="both", d_annotation=None, id=1):
         self.finger(staff=staff, d_annotation=d_annotation, id=id)
-
 
     def __init__(self, music21_stream=None, segmenter=None, abc_handle=None,
                  voice_map=None, abcd_header=None):
@@ -279,14 +280,99 @@ class DScore:
         kappa = cohen_kappa_score(one_clean, other_clean, labels=labels)
         return kappa, pair_counts
 
-    # def krippendorffs_alpha(self, indices=[], segregate=False):
-        # fingerings = list(upper_rh_advice)
-        # fingerings.pop(0)
-        # finger_ints = list(map(int, fingerings))
-        # exercise_upper_gold.append(finger_ints)
-        # krip = alpha(reliability_data=exercise_upper_gold, level_of_measurement='interval')
-        # exercise_upper_gold.pop()
-        # return krip
+    def _note_indices_to_ignore(self, staff="both", common_id=None):
+        ignore = {}
+        if common_id:
+            common_annot = self._abcd_header.annotation_by_id(identifier=common_id)
+            note_index = 0
+            if staff == "upper" or staff == "both":
+                for hsd in common_annot.handed_strike_digits(staff="upper"):
+                    if hsd is not None and hsd != 'x':
+                        ignore[note_index] = True
+                    note_index += 1
+            if staff == "lower" or staff == "both":
+                for hsd in common_annot.handed_strike_digits(staff="lower"):
+                    if hsd is not None and hsd != 'x':
+                        ignore[note_index] = True
+                    note_index += 1
+        return ignore
+
+    def _annotation_data(self, ids=[], staff="both", common_id=None):
+        """
+        The data suitable for feeding the NLTK AnnotationTask.
+        :param ids:
+        :param staff:
+        :param common_id:
+        :return:
+        """
+        ignore = self._note_indices_to_ignore(staff=staff, common_id=common_id)
+        data = []
+        for coder_id in ids:
+            note_index = 0
+            annot = self._abcd_header.annotation_by_id(identifier=coder_id)
+            if staff == "upper" or staff == "both":
+                for hsd in annot.handed_strike_digits(staff="upper"):
+                    if hsd is not None and hsd != 'x' and note_index not in ignore:
+                        record = [coder_id, note_index, hsd]
+                        data.append(record)
+                    note_index += 1
+            if staff == "lower" or staff == "both":
+                for hsd in annot.handed_strike_digits(staff="lower"):
+                    if hsd is not None and hsd != 'x' and note_index not in ignore:
+                        record = [coder_id, note_index, hsd]
+                        data.append(record)
+                    note_index += 1
+        return data
+
+    def _reliability_data(self, ids=[], staff="both", measurement="nominal", common_id=None):
+        """
+        Data structure suitable for passing to the PyPI krippendorff module.
+        :param ids:
+        :param staff:
+        :param common_id:
+        :return:
+        """
+        ignore = self._note_indices_to_ignore(staff=staff, common_id=common_id)
+        data = []
+        for coder_id in ids:
+            coder_codings = []
+            note_index = 0
+            annot = self._abcd_header.annotation_by_id(identifier=coder_id)
+            if staff == "upper" or staff == "both":
+                for hsd in annot.handed_strike_digits(staff="upper"):
+                    if note_index in ignore:
+                        pass
+                    elif hsd is None or hsd == 'x':
+                        coder_codings.append(np.nan)
+                    else:
+                        coder_codings.append(hsd)
+                    note_index += 1
+            if staff == "lower" or staff == "both":
+                for hsd in annot.handed_strike_digits(staff="lower"):
+                    if note_index in ignore:
+                        pass
+                    elif hsd is None or hsd == 'x':
+                        coder_codings.append(np.nan)
+                    else:
+                        coder_codings.append(hsd)
+                    note_index += 1
+            data.append(coder_codings)
+        # pprint.pprint(data)
+        return data
+
+    def nltk_alpha(self, ids=[], staff="both", common_id=None):
+        data = self._annotation_data(ids=ids, staff=staff, common_id=common_id)
+        annot_task = AnnotationTask(data=data)
+        krip = annot_task.alpha()
+        return krip
+
+    def pypi_alpha(self, ids=[], staff="both", common_id=None):
+        data = self._reliability_data(ids=ids, staff=staff, common_id=common_id)
+        value_domain = ['>1', '>2', '>3', '>4', '>5']
+        if staff == "both" or staff == "left":
+            value_domain.extend(['<1', '<2', '<3', '<4', '<5'])
+        krip = alpha(reliability_data=data, level_of_measurement='nominal', value_domain=value_domain)
+        return krip
 
     def _is_fully_annotated(self, staff="both", indices=[]):
         if not self.is_annotated():

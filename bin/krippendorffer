@@ -79,7 +79,7 @@ for row_gold in curs:
 ex_index = 0
 human_alphas = list()
 for exercise_upper_gold in upper_gold:
-    krip = alpha(reliability_data=exercise_upper_gold, level_of_measurement='interval')
+    krip = alpha(reliability_data=exercise_upper_gold, level_of_measurement='nominal')
     # print(krip)
     human_alphas.append(krip)
     ex_index += 1
@@ -90,7 +90,7 @@ def krip_it(upper_rh_advice, exercise_upper_gold):
     fingerings.pop(0)
     finger_ints = list(map(int, fingerings))
     exercise_upper_gold.append(finger_ints)
-    krip = alpha(reliability_data=exercise_upper_gold, level_of_measurement='interval')
+    krip = alpha(reliability_data=exercise_upper_gold, level_of_measurement='nominal')
     exercise_upper_gold.pop()
     return krip
 

@@ -2,6 +2,7 @@
 # import pprint
 import os
 from datetime import datetime
+# from nltk.metrics.agreement import AnnotationTask
 # from krippendorff import alpha
 # from pprint import pprint
 from pydactyl.dactyler.Dactyler import Dactyler
@@ -106,18 +107,36 @@ for staff in ['upper', 'lower', 'both']:
         plural = 's'
     score_index = 0
     interpolation_pairs = {}
+    interpolation2_pairs = {}
     annotation_pairs = {}
     for d_score in d_scores:
         d_score.assert_consistent_abcd(staff=staff)
+        all_annot_ids = range(1, 14)
+        alpha = d_score.nltk_alpha(ids=all_annot_ids, staff=staff)
+        print("Annotate ALL ANNOTS {} staff{} Section {}.1 Alpha: {}".format(staff, plural, score_index+1, alpha))
+        alpha = d_score.pypi_alpha(ids=all_annot_ids, staff=staff)
+        print("Annotate ALL PYPI   {} staff{} Section {}.1 Alpha: {}".format(staff, plural, score_index+1, alpha))
+        alpha = d_score.nltk_alpha(ids=[1, 7, 9, 10, 11, 13], staff=staff)
+        print("Annotate ALL LIVING {} staff{} Section {}.1 Alpha: {}".format(staff, plural, score_index+1, alpha))
+        alpha = d_score.nltk_alpha(ids=[1, 7], staff=staff)
+        print("Annotate A&J ONLY   {} staff{} Section {}.1 Alpha: {}".format(staff, plural, score_index+1, alpha))
         kappa, pairs = d_score.cohens_kappa(1, 7, staff=staff)
         aggregate_pairs(annotation_pairs, pairs)
-        print("Annotate {} staff{} Section {}.1 Kappa: {}".format(staff, plural, score_index+1, kappa))
+        print("Annotate 1 {} staff{} Section {}.1 Kappa: {}".format(staff, plural, score_index+1, kappa))
+        alpha = d_score.nltk_alpha(ids=[14, 15], staff=staff, common_id=2)
         kappa, pairs = d_score.cohens_kappa(14, 15, staff=staff, common_id=2)
         aggregate_pairs(interpolation_pairs, pairs)
-        print("Interpol {} staff{} Section {}.1 Kappa: {}".format(staff, plural, score_index+1, kappa))
+        print("Interpol 1 {} staff{} Section {}.1 Kappa: {}".format(staff, plural, score_index+1, kappa))
+        print("Interpol 1 {} staff{} Section {}.1 Alpha: {}".format(staff, plural, score_index+1, alpha))
+        alpha = d_score.nltk_alpha(ids=[16, 17], staff=staff, common_id=3)
+        kappa, pairs = d_score.cohens_kappa(16, 17, staff=staff, common_id=3)
+        aggregate_pairs(interpolation2_pairs, pairs)
+        print("Interpol 2 {} staff{} Section {}.1 Kappa: {}".format(staff, plural, score_index+1, kappa))
+        print("Interpol 2 {} staff{} Section {}.1 Alpha: {}".format(staff, plural, score_index+1, alpha))
         score_index += 1
-    print_pairs("Annotation pairs:", annotation_pairs)
-    print_pairs("Interpolation pairs:", interpolation_pairs)
+    print_pairs("Annotation 1 pairs:", annotation_pairs)
+    print_pairs("Interpolation 1 pairs:", interpolation_pairs)
+    print_pairs("Interpolation 2 pairs:", interpolation2_pairs)
 exit(0)
 
 parncutt = Parncutt()

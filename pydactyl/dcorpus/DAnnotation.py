@@ -419,10 +419,16 @@ class DAnnotation:
         handed_digits = []
         for line in lines:
             for score_fingering in line:
-                if isinstance(score_fingering.pf.fingering, str):
+                if score_fingering.orn is not None:
+                    # We take the strike digit of the first note in the ornament
+                    # and ignore the rest.
+                    ped_f = score_fingering.orn.ornaments[1][0]
+                elif isinstance(score_fingering.pf.fingering, str):
                     handed_digits.append('x')
                     continue
-                strike = score_fingering.pf.fingering.strike
+                else:
+                    ped_f = score_fingering.pf
+                strike = ped_f.fingering.strike
                 if strike.hand and strike.hand != hand:
                     hand = strike.hand
                 digit = strike.digit
