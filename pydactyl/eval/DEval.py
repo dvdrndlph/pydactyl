@@ -145,9 +145,10 @@ class DEval(ABC):
         :return:
         """
         nuggets = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
+        distinct_nuggets = list(set(nuggets))
         nuggets_at = dict()
-        for nugget in nuggets:
-            vote_count = int(nuggets[nugget])
+        for nugget in distinct_nuggets:
+            vote_count = DEval.gold_suggestion_count(suggestion=nugget, score_gold=nuggets)
             if vote_count not in nuggets_at:
                 nuggets_at[vote_count] = list()
             nuggets_at[vote_count].append(nugget)
@@ -267,6 +268,16 @@ class DEval(ABC):
             return constrained_gold
         return all_gold
 
+    def _score_gold_votes(self, score_index, staff="upper", last_digit=None):
+        all_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
+        gold_votes = {}
+        for nugget in all_gold:
+            if nugget in gold_votes:
+                gold_votes[nugget] += 1
+            else:
+                gold_votes[nugget] = 1
+        return gold_votes
+
     def _segmented_gold_strike_list(self, score_index, segment_lengths, staff="upper", last_digit=None):
         score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
         score_data = list()
@@ -309,7 +320,7 @@ class DEval(ABC):
         score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
         total = 0
         for fingering_str in score_gold:
-            total += score_gold[fingering_str]
+            total += 1
         return total
 
     def _score_gold_counts(self, score_index, staff="upper", last_digit=None):
@@ -425,11 +436,8 @@ class DEval(ABC):
 
         relevancy = list()
         for fingering in suggestions:
-            if fingering in score_gold:
-                vote_count = int(score_gold[fingering])
-                relevancy.append(vote_count)
-            else:
-                relevancy.append(0)
+            vote_count = DEval.gold_suggestion_count(suggestion=fingering, score_gold=score_gold)
+            relevancy.append(vote_count)
 
         relevancy_asf = np.asfarray(a=relevancy)
         relevancy_asf /= vote_total
@@ -492,10 +500,19 @@ class DEval(ABC):
         return normalizer
 
     @staticmethod
+    def gold_suggestion_count(suggestion, score_gold):
+        sugg_count = 0
+        for i in range(len(score_gold)):
+            if score_gold[i] == suggestion:
+                sugg_count += 1
+        return sugg_count
+
+    @staticmethod
     def estimated_prob_user_happy(suggestion, score_gold, h_total):
-        if suggestion not in score_gold:
+        if h_total == 0:
             return 0
-        prob = 1.0 * score_gold[suggestion]/h_total
+        suggestion_count = DEval.gold_suggestion_count(suggestion=suggestion, score_gold=score_gold)
+        prob = 1.0 * suggestion_count/h_total
         return prob
 
     @staticmethod
@@ -676,7 +693,7 @@ class DEval(ABC):
         return ndcpg
 
     def _ideal_relevancy_asfarray(self, score_index, staff="upper", last_digit=None, k=10):
-        score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
+        score_gold = self._score_gold_votes(score_index=score_index, staff=staff, last_digit=last_digit)
         sorted_gold = self._random_sorted_gold(score_index=score_index, staff=staff, last_digit=last_digit)
         decreasing_gold = list(reversed(sorted_gold))
         vote_total = self._score_gold_total_count(score_index=score_index, staff=staff, last_digit=last_digit)

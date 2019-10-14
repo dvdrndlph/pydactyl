@@ -160,14 +160,18 @@ class PianoFingering(Fingering):
     >>> fingerings = PianoFingering.fingerings(chords[-1])
     >>> fingerings[1].strike_digit()
     2
-
     >>> # combo_stream = score.stream(staff="both")
     >>> # combo_stream.show()
     """
+    CONFIDENCE_EXPLICIT = 1.0
+    CONFIDENCE_CLOSED = 0.9
+    CONFIDENCE_OPEN = 0.6
+
     def __init__(self, score_fingering=None, staff="upper", hand=None, soft="f", damper="^"):
         self._softs = []
         self._dampers = []
 
+        self._confidence = PianoFingering.CONFIDENCE_EXPLICIT
         self._strike_hands_and_digits = []
         self._release_hands_and_digits = []
         finger_number = None
