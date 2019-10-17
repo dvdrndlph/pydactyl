@@ -58,7 +58,7 @@ def published_parncutt_my_evaluate(cutter, name="", spew=False):
 
 
 def published_parncutt_std_evaluate(cutter, name="", spew=False):
-    err_10, err_10_itemized, undef =  cutter.err_at_k(k=10)
+    err_10, err_10_itemized, undef = cutter.err_at_k(k=10)
     spew_out(name=name, method='meanERR@10', result=err_10, itemized=err_10_itemized, spew=spew)
     map_full, map_full_itemized, undef = cutter.map_at_perfect_recall()
     spew_out(name=name, method='MAP@perfectR', result=map_full, itemized=map_full_itemized, spew=spew)

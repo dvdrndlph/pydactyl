@@ -516,110 +516,226 @@ class DEval(ABC):
         return prob
 
     @staticmethod
-    def p_prime(suggestion, segment_gold, staff="upper"):
-        suggested_strikers = DAnnotation.abcdf_to_handed_strike_digits(suggestion, staff=staff)
-        big_h = len(segment_gold)
+    def match(one, other):
+        match = 1
+        for note_index in range(len(one)):
+            if one[note_index] == 'x' or other[note_index] == 'x':
+                pass
+            elif one[note_index] != other[note_index]:
+                match = 0
+                break
+        return match
+
+    @staticmethod
+    def clash(one, other):
+        match = DEval.match(one, other)
+        if match:
+            return 0
+        return 1
+
+    @staticmethod
+    def wildcard_count(strikes):
+        wild_count = 0
+        for note_index in range(len(strikes)):
+            if strikes[note_index] == 'x':
+                wild_count += 1
+        return wild_count
+
+    @staticmethod
+    def matches(one, other):
+        matches = 0
+        for note_index in range(len(one)):
+            if one[note_index] == 'x' or other[note_index] == 'x' or \
+               one[note_index] == other[note_index]:
+                matches += 1
+        return matches
+
+    @staticmethod
+    def clashes(one, other):
+        matches = DEval.matches(one, other)
+        clashes = len(one) - matches
+        return clashes
+
+    @staticmethod
+    def discord_1(r, h, human_clashes, system_matches):
+        big_h = len(human_clashes)
+        match = system_matches[r][h]
+        if match == 0:
+            return 0
+        discord = 0
+        for i in range(big_h):
+            r_i_clash = 1 if human_clashes[r][i] > 0 else 0
+            h_i_clash = 1 if human_clashes[h][i] > 0 else 0
+            discord += r_i_clash + h_i_clash
+        return discord
+
+    @staticmethod
+    def p_prime(method, r, suggestions, nuggets, human_clashes, system_matches):
+        if method not in ('match', 'discordant', 'similarity', 'proximity', 'proxequity'):
+            raise Exception("Wildcard method {} not supported.".format(method))
+
+        big_h = len(nuggets)
         if big_h == 0:
             return 0
 
+        big_n = len(suggestions[0])
+        if big_n == 0:
+            return 0
+
         sum_total = 0
-        for human_data in segment_gold:
-            big_w = 0
-            match = 1
-            for note_index in range(len(human_data)):
-                if human_data[note_index] == 'x':
-                    big_w += 1
-                elif human_data[note_index] != suggested_strikers[note_index]:
-                    match = 0
-                    break
-            sum_total += match/(big_w + 1)
-        p_prime = (1/big_h)*sum_total
+        for h in range(big_h):
+            big_w = DEval.wildcard_count(strikes=nuggets[h])
+            discord = 0
+            match = 1 if system_matches[r][h] > 0 else 0
+            amount = (big_n - big_w) * match
+            if method == 'match':
+                pass
+            elif method == 'discordant':
+                discord = DEval.discord_1(r=r, h=h, human_clashes=human_clashes,
+                                          system_matches=system_matches)
+            amount /= (discord + 1)
+            sum_total += amount
+
+        p_prime = sum_total/(big_h * big_n)
         return p_prime
 
     @staticmethod
-    def segment_discord(segment_gold):
-        discordant_with = dict()
-        for j in range(len(segment_gold)):
-            outer_annotations = segment_gold[j]
-            discordants = dict()
-            for i in range(len(segment_gold)):
-                inner_annotations = segment_gold[i]
+    def human_clashes(nuggets):
+        discordant = {}
+        for j in range(len(nuggets)):
+            discordant[j] = {}
+            outer_annotations = nuggets[j]
+            for i in range(len(nuggets)):
+                inner_annotations = nuggets[i]
                 if i == j:
+                    # Nobody disagrees with himself.
+                    discordant[i][j] = 0
                     continue
-                clashes = 0
-                for n in range(len(outer_annotations)):
-                    if not (outer_annotations[n] == inner_annotations[n] or
-                            outer_annotations[n] == 'x' or
-                            inner_annotations[n] == 'x'):
-                        clashes += 1
-                if clashes > 0:
-                    discordants[i] = clashes
-            discordant_with[j] = discordants
-        return discordant_with
+                clashes = DEval.clashes(outer_annotations, inner_annotations)
+                discordant[i][j] = clashes
+                discordant[j][i] = clashes
+        return discordant
 
     @staticmethod
-    def p_double_prime(suggestion, segment_gold, segment_discord, staff="upper"):
-        suggested_strikers = DAnnotation.abcdf_to_handed_strike_digits(suggestion, staff=staff)
-        big_h = len(segment_gold)
-        if big_h == 0:
-            return 0
+    def system_matches(suggestions, nuggets):
+        """
+        Fingering match counts for pairwise combinations of each system suggestion
+        with each gold-standard annotation from a human.
+        :param suggestions: System-generated complete ranked list of lists of strike handed fingerings.
+        :param nuggets: List of gold-standard (potentially sparse) advice, captured as a list of
+        strike handed fingerings.
+        :return: accordant[r][h]: Hash of hashes
+        """
+        accordant = {}
+        for r in range(len(suggestions)):
+            accordant[r] = {}
+            suggested_annotations = nuggets[r]
+            for h in range(len(nuggets)):
+                gold_annotations = nuggets[h]
+                if r == h:
+                    accordant[r][h] = len(gold_annotations)
+                    continue
+                print("huh?")
+                matches = DEval.matches(suggested_annotations, gold_annotations)
+                accordant[r][h] = matches
+        return accordant
 
-        sum_total = 0
-        human_index = 0
-        for human_data in segment_gold:
-            big_w = 0
-            clashes = 0
-            for note_index in range(len(human_data)):
-                if human_data[note_index] == 'x':
-                    big_w += 1
-                elif human_data[note_index] != suggested_strikers[note_index]:
-                    clashes += 1
-            discordants = segment_discord[human_index]
-
-            sum_total += (1/(2**clashes))/(big_w + 1)  # + DEval.discord()
-            human_index += 1
-        p_prime = (1/big_h)*sum_total
-
-        return p_prime
-
-    def segmented_wildcard_rank_at_k(self, score_index, method="match",
-                                     staff="upper", cycle=None, last_digit=None, phi=None, p=None, k=10):
-        self.assert_good_gold(staff=staff)
+    @staticmethod
+    def _wildcard_rank_at_k(system_advice, human_advice, method="match", phi=None, p=None, k=10):
+        """
+        Wildcard Rank measures of ranked system-generated advice with respect to a set
+        of potentially incomplete gold-standard human advice.
+        :param system_advice: An array of arrays of strike handed fingers in rank order produced
+        by system under test.
+        :param human_advice: An array of arrays of strike handed fingers (perhaps including "x"
+        wildcards) produced by a set of human annotators.
+        :param method: One of "match," "discordant," "similarity," "proximity," or "proxequity."
+        :param phi: Discount factor function.
+        :param p: Parameter for phi.
+        :param k: The cutoff for the rankings.
+        :return: The Expected Recipricol Rank (ERR) for the system_advice.
+        """
         if k is None:
             raise Exception("Cannot yet recall all for phrases.")
-        segment_suggestions, segment_costs, segment_details, segment_lengths = \
-            self._dactyler.generate_segmented_advice(score_index=score_index, staff=staff, cycle=cycle,
-                                                     offset=0, last_digit=last_digit, k=k)
-        segment_gold_data = self._segmented_gold_strike_list(score_index=score_index, segment_lengths=segment_lengths,
-                                                             staff=staff, last_digit=last_digit)
-        err_for_segment = list()
-        # segment_gold[segment_index][h][n]
-        for seg_index in range(len(segment_gold_data)):
-            seg_gold = segment_gold_data[seg_index]
-            seg_discord = DEval.segment_discord(seg_gold)
-            err = 0
-            prob_still_going = 1
-            for r in range(1, k+1):
-                if phi:
-                    discount_factor = phi(r=r, p=p)
-                else:
-                    discount_factor = 1.0/r
-                if method == "match":
-                    prob_found = DEval.p_prime(suggestion=segment_suggestions[r-1],
-                                               segment_gold=seg_gold, staff=staff)
-                elif method == "similarity":
-                    prob_found = DEval.p_double_prime(suggestion=segment_suggestions[r-1], segment_gold=seg_gold,
-                                                      segment_discord=seg_discord, staff=staff)
-                elif method == "equity":
-                    prob_found = DEval.p_double_prime(suggestion=segment_suggestions[r-1], segment_gold=seg_gold,
-                                                      segment_discord=seg_discord, staff=staff)
-                else:
-                    raise Exception("Wildcard method {} not supported.".format(method))
 
-                err += (discount_factor * prob_still_going * prob_found)
-                prob_still_going *= (1 - prob_found)
-            err_for_segment.append(err)
-        return err_for_segment
+        human_clashes = DEval.human_clashes(nuggets=human_advice)
+        system_matches = DEval.system_matches(suggestions=system_advice, nuggets=human_advice)
+        err = 0
+        prob_still_going = 1
+        for r in range(1, k+1):
+            if phi:
+                discount_factor = phi(r=r, p=p)
+            else:
+                discount_factor = 1.0/r
+            prob_found = DEval.p_prime(method=method, r=r, suggestions=system_advice,
+                                       nuggets=human_advice, human_clashes=human_clashes,
+                                       system_matches=system_matches)
+            err += (discount_factor * prob_still_going * prob_found)
+            prob_still_going *= (1 - prob_found)
+        return err
+
+    @staticmethod
+    def striker_lists(abcdf_list, staff):
+        striker_lists = []
+        for abcdf in abcdf_list:
+            strikers = DAnnotation.abcdf_to_handed_strike_digits(abcdf=abcdf, staff=staff)
+            striker_lists.append(strikers)
+        return striker_lists
+
+    def wildcard_rank_at_k(self, score_index, staff="upper", method="match",
+                           cycle=None, last_digit=None, phi=None, p=None, k=10):
+        self.assert_good_gold(staff=staff)
+        if k is None:
+            suggestions, costs, details = self._recall_them_all(score_index=score_index, staff=staff,
+                                                                last_digit=last_digit, cycle=cycle)
+        else:
+            suggestions, costs, details = self.score_advice(score_index=score_index, staff=staff,
+                                                            last_digit=last_digit, cycle=cycle, k=k)
+
+        system_advice = DEval.striker_lists(suggestions, staff=staff)
+        human_advice = self.gold_list_of_handed_strike_lists(score_index, staff=staff, last_digit=last_digit)
+
+        wildcard_rank = DEval._wildcard_rank_at_k(system_advice=system_advice, human_advice=human_advice,
+                                                  method=method, p=p, phi=phi, k=k)
+        return wildcard_rank
+
+    # def segmented_wildcard_rank_at_k(self, score_index, method="match",
+    #                                  staff="upper", cycle=None, last_digit=None, phi=None, p=None, k=10):
+    #     self.assert_good_gold(staff=staff)
+    #     if k is None:
+    #         raise Exception("Cannot yet recall all for phrases.")
+    #     # suggested_strikers = DAnnotation.abcdf_to_handed_strike_digits(suggestion, staff=staff)
+    #     if human_clashes is None:
+    #         human_clashes = DEval.human_clashes(nuggets=segment_gold)
+    #     if system_matches is None:
+    #         system_matches = DEval.system_matches(suggestions=suggested_strikers, nuggets=segment_gold)
+    #     segment_suggestions, segment_costs, segment_details, segment_lengths = \
+    #         self._dactyler.generate_segmented_advice(score_index=score_index, staff=staff, cycle=cycle,
+    #                                                  offset=0, last_digit=last_digit, k=k)
+    #     system_advice = []
+    #     for r in range(len(segment_suggestions)):
+    #         strikers = DAnnotation.abcdf_to_handed_strike_digits(segment_suggestion[r], staff=staff)
+    #         system_advice.append(strikers)
+    #
+    #     segment_gold_data = self._segmented_gold_strike_list(score_index=score_index, segment_lengths=segment_lengths,
+    #                                                          staff=staff, last_digit=last_digit)
+    #     err_for_segment = list()
+    #     # segment_gold[segment_index][h][n]
+    #     for segment in range(len(segment_gold_data)):
+    #         seg_gold = segment_gold_data[h]
+    #         err = 0
+    #         prob_still_going = 1
+    #         for r in range(1, k+1):
+    #             if phi:
+    #                 discount_factor = phi(r=r, p=p)
+    #             else:
+    #                 discount_factor = 1.0/r
+    #             prob_found = DEval.p_prime(method=method, suggestion=segment_suggestions[r-1],
+    #                                        segment_gold=seg_gold, staff=staff)
+    #             err += (discount_factor * prob_still_going * prob_found)
+    #             prob_still_going *= (1 - prob_found)
+    #         err_for_segment.append(err)
+    #     return err_for_segment
 
     def score_err_at_k(self, score_index, staff="upper", cycle=None, last_digit=None, phi=None, p=None, k=10):
         self.assert_good_gold(staff=staff)
