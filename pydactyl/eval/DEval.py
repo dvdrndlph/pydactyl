@@ -516,12 +516,26 @@ class DEval(ABC):
         return prob
 
     @staticmethod
+    def note_match(one, other):
+        if one == 'x' or other == 'x':
+            return 1
+        elif one != other:
+            return 0
+        return 1
+
+    @staticmethod
+    def note_clash(one, other):
+        if DEval.note_match(one, other):
+            return 1
+        return 0
+
+    @staticmethod
     def match(one, other):
         match = 1
         for note_index in range(len(one)):
-            if one[note_index] == 'x' or other[note_index] == 'x':
+            if DEval.note_match(one[note_index], other[note_index]):
                 pass
-            elif one[note_index] != other[note_index]:
+            else:
                 match = 0
                 break
         return match
@@ -545,10 +559,34 @@ class DEval(ABC):
     def matches(one, other):
         matches = 0
         for note_index in range(len(one)):
-            if one[note_index] == 'x' or other[note_index] == 'x' or \
-               one[note_index] == other[note_index]:
+            if DEval.note_match(one[note_index], other[note_index]):
                 matches += 1
         return matches
+
+    @staticmethod
+    def wclashes(one, other):
+        big_n = len(one)
+        wclashes = 0
+        for note_index in range(big_n):
+            if DEval.clash(one[note_index], other[note_index]):
+                wclashes += (big_n - note_index + 1)
+        wclashes *= 2/(big_n + 1)
+        return wclashes
+
+    @staticmethod
+    def nclash(one, other, i):
+        if not DEval.note_clash(one[i], other[i]):
+            return 0
+        big_n = len(one)
+        val = 2*(big_n - i + 1)/(big_n**2 + big_n)
+        return val
+        pass
+
+    @staticmethod
+    def equity(wclashes, r, h):
+        r_h_wclashes = wclashes[r][h]
+        similarity = 1.0 / (2**r_h_wclashes)
+        return similarity
 
     @staticmethod
     def clashes(one, other):
@@ -557,21 +595,56 @@ class DEval(ABC):
         return clashes
 
     @staticmethod
-    def discord_1(r, h, human_clashes, system_matches):
+    def proximity(delta, one, other, i):
+        pass
+
+    @staticmethod
+    def proxequity(delta, one, other, i):
+        pass
+
+    @staticmethod
+    def similarity(big_n, system_matches, r, h):
+        clashes = DEval.system_clashes(big_n=big_n, system_matches=system_matches, r=r, h=h)
+        similarity = 1.0 / (2**clashes)
+        return similarity
+
+    @staticmethod
+    def discord_3(r, h, human_wclashes, system_wclashes):
+        big_h = len(human_wclashes)
+        discord = 0
+        r_h_eq = DEval.equity(wclashes=human_wclashes, r=r, h=h)
+        for i in range(big_h):
+            r_i_eq = DEval.equity(wclashes=system_wclashes, r=r, h=i)
+            discord += r_h_eq * r_i_eq
+        return discord
+
+    @staticmethod
+    def discord_2(big_n, r, h, human_clashes, system_matches):
+        big_h = len(human_clashes)
+        discord = 0
+        r_h_sim = DEval.similarity(big_n=big_n, system_matches=system_matches, r=r, h=h)
+        for i in range(big_h):
+            r_i_sim = DEval.similarity(big_n=big_n, system_matches=system_matches, r=r, h=i)
+            discord += r_h_sim * r_i_sim
+        return discord
+
+    @staticmethod
+    def discord_1(big_n, r, h, human_clashes, system_matches):
         big_h = len(human_clashes)
         match = system_matches[r][h]
         if match == 0:
             return 0
         discord = 0
         for i in range(big_h):
-            r_i_clash = 1 if human_clashes[r][i] > 0 else 0
+            r_i_clashes = DEval.system_clashes(big_n, system_matches, r, i)
+            r_i_clash = 1 if r_i_clashes > 0 else 0
             h_i_clash = 1 if human_clashes[h][i] > 0 else 0
             discord += r_i_clash + h_i_clash
         return discord
 
     @staticmethod
-    def p_prime(method, r, suggestions, nuggets, human_clashes, system_matches):
-        if method not in ('match', 'discordant', 'similarity', 'proximity', 'proxequity'):
+    def p_prime(method, r, suggestions, nuggets, human_marks, system_marks):
+        if method not in ('match', 'discordant', 'similarity', 'equity', 'proximity', 'proxequity'):
             raise Exception("Wildcard method {} not supported.".format(method))
 
         big_h = len(nuggets)
@@ -586,13 +659,27 @@ class DEval(ABC):
         for h in range(big_h):
             big_w = DEval.wildcard_count(strikes=nuggets[h])
             discord = 0
-            match = 1 if system_matches[r][h] > 0 else 0
-            amount = (big_n - big_w) * match
+            amount = 0
+            match = 1 if system_marks[r][h] == big_n else 0
             if method == 'match':
-                pass
+                amount = (big_n - big_w) * match
             elif method == 'discordant':
-                discord = DEval.discord_1(r=r, h=h, human_clashes=human_clashes,
-                                          system_matches=system_matches)
+                amount = (big_n - big_w) * match
+                discord = DEval.discord_1(big_n=big_n, r=r, h=h,
+                                          human_clashes=human_marks,
+                                          system_matches=system_marks)
+            elif method == 'similarity':
+                sim = DEval.similarity(big_n=big_n, system_matches=system_marks, r=r, h=h)
+                amount = (big_n - big_w) * sim
+                discord = DEval.discord_2(big_n=big_n, r=r, h=h,
+                                          human_clashes=human_marks,
+                                          system_matches=system_marks)
+            elif method == 'equity':
+                equity = DEval.equity(wclashes=system_marks, r=r, h=h)
+                amount = (big_n - big_w) * equity
+                discord = DEval.discord_3(r=r, h=h,
+                                          human_wclashes=human_marks,
+                                          system_wclashes=system_marks)
             amount /= (discord + 1)
             sum_total += amount
 
@@ -601,20 +688,25 @@ class DEval(ABC):
 
     @staticmethod
     def human_clashes(nuggets):
-        discordant = {}
-        for j in range(len(nuggets)):
-            discordant[j] = {}
+        big_h = len(nuggets)
+        discordant = [[0 for i in range(big_h)] for h in range(big_h)]
+        for j in range(big_h):
             outer_annotations = nuggets[j]
             for i in range(len(nuggets)):
                 inner_annotations = nuggets[i]
                 if i == j:
                     # Nobody disagrees with himself.
-                    discordant[i][j] = 0
                     continue
                 clashes = DEval.clashes(outer_annotations, inner_annotations)
                 discordant[i][j] = clashes
                 discordant[j][i] = clashes
         return discordant
+
+    @staticmethod
+    def system_clashes(big_n, system_matches, r, h):
+        match_count = system_matches[r][h]
+        clashes = big_n - match_count
+        return clashes
 
     @staticmethod
     def system_matches(suggestions, nuggets):
@@ -635,10 +727,45 @@ class DEval(ABC):
                 if r == h:
                     accordant[r][h] = len(gold_annotations)
                     continue
-                print("huh?")
                 matches = DEval.matches(suggested_annotations, gold_annotations)
                 accordant[r][h] = matches
         return accordant
+
+    @staticmethod
+    def human_wclashes(nuggets):
+        big_h = len(nuggets)
+        discordant = [[0 for i in range(big_h)] for h in range(big_h)]
+        for j in range(len(nuggets)):
+            outer_annotations = nuggets[j]
+            for i in range(len(nuggets)):
+                inner_annotations = nuggets[i]
+                if i == j:
+                    # Nobody disagrees with himself.
+                    continue
+                wclashes = DEval.wclashes(outer_annotations, inner_annotations)
+                discordant[i][j] = wclashes
+                discordant[j][i] = wclashes
+        return discordant
+
+    @staticmethod
+    def system_wclashes(suggestions, nuggets):
+        """
+        Fingering weighted clash counts for pairwise combinations of each system suggestion
+        with each gold-standard annotation from a human.
+        :param suggestions: System-generated complete ranked list of lists of strike handed fingerings.
+        :param nuggets: List of gold-standard (potentially sparse) advice, captured as a list of
+        strike handed fingerings.
+        :return: discordant[r][h]: Hash of hashes
+        """
+        discordant = {}
+        for r in range(len(suggestions)):
+            discordant[r] = {}
+            suggested_annotations = nuggets[r]
+            for h in range(len(nuggets)):
+                gold_annotations = nuggets[h]
+                wclashes = DEval.wclashes(suggested_annotations, gold_annotations)
+                discordant[r][h] = wclashes
+        return discordant
 
     @staticmethod
     def _wildcard_rank_at_k(system_advice, human_advice, method="match", phi=None, p=None, k=10):
@@ -658,8 +785,16 @@ class DEval(ABC):
         if k is None:
             raise Exception("Cannot yet recall all for phrases.")
 
-        human_clashes = DEval.human_clashes(nuggets=human_advice)
-        system_matches = DEval.system_matches(suggestions=system_advice, nuggets=human_advice)
+        if method in ("match", "discordant", "similarity"):
+            human_marks = DEval.human_clashes(nuggets=human_advice)
+            system_marks = DEval.system_matches(suggestions=system_advice,
+                                                nuggets=human_advice)
+        # elif method == 'equity':
+        else:
+            human_marks = DEval.human_wclashes(nuggets=human_advice)
+            system_marks = DEval.system_wclashes(suggestions=system_advice,
+                                                 nuggets=human_advice)
+
         err = 0
         prob_still_going = 1
         for r in range(1, k+1):
@@ -667,9 +802,9 @@ class DEval(ABC):
                 discount_factor = phi(r=r, p=p)
             else:
                 discount_factor = 1.0/r
-            prob_found = DEval.p_prime(method=method, r=r, suggestions=system_advice,
-                                       nuggets=human_advice, human_clashes=human_clashes,
-                                       system_matches=system_matches)
+            prob_found = DEval.p_prime(method=method, r=r-1, suggestions=system_advice,
+                                       nuggets=human_advice, human_marks=human_marks,
+                                       system_marks=system_marks)
             err += (discount_factor * prob_still_going * prob_found)
             prob_still_going *= (1 - prob_found)
         return err
@@ -682,8 +817,8 @@ class DEval(ABC):
             striker_lists.append(strikers)
         return striker_lists
 
-    def wildcard_rank_at_k(self, score_index, staff="upper", method="match",
-                           cycle=None, last_digit=None, phi=None, p=None, k=10):
+    def score_wildcard_rank_at_k(self, score_index, staff="upper", method="match",
+                                 cycle=None, last_digit=None, phi=None, p=None, k=10):
         self.assert_good_gold(staff=staff)
         if k is None:
             suggestions, costs, details = self._recall_them_all(score_index=score_index, staff=staff,
@@ -697,7 +832,8 @@ class DEval(ABC):
 
         wildcard_rank = DEval._wildcard_rank_at_k(system_advice=system_advice, human_advice=human_advice,
                                                   method=method, p=p, phi=phi, k=k)
-        return wildcard_rank
+        c_N = len(suggestions[0])
+        return wildcard_rank, c_N
 
     # def segmented_wildcard_rank_at_k(self, score_index, method="match",
     #                                  staff="upper", cycle=None, last_digit=None, phi=None, p=None, k=10):
@@ -924,5 +1060,9 @@ class DEval(ABC):
 
     @abstractmethod
     def epr_at_k(self, staff="upper", phi=None, p=None, method="hamming", k=10):
+        return
+
+    @abstractmethod
+    def wxr_at_k(self, staff="upper", phi=None, p=None, method="hamming", k=10):
         return
 

@@ -202,15 +202,33 @@ class Parncutter(DEval):
         results = list()
         for i in range(7):
             if i == 1:
-                epr_at_k = self.score_epr_at_k(score_index=i, staff="upper", method=method,
+                epr_at_k = self.score_epr_at_k(score_index=i, staff=staff, method=method,
                                                cycle=4, last_digit=None, phi=phi, p=p, k=k)
             else:
-                epr_at_k = self.score_epr_at_k(score_index=i, staff="upper", phi=phi, p=p, method=method,
+                epr_at_k = self.score_epr_at_k(score_index=i, staff=staff, phi=phi, p=p, method=method,
                                                cycle=None, last_digit=last_digit[i], k=k)
             results.append(epr_at_k)
             total_epr += epr_at_k
         mean = total_epr/7
         return mean, results, None
+
+    def wxr_at_k(self, staff="upper", phi=None, p=None, method="match", k=10):
+        total_wxr = 0
+        big_m = 0
+        results = list()
+        for i in range(7):
+            if i == 1:
+                wxr_at_k, c_N = self.score_wildcard_rank_at_k(score_index=i, staff=staff, method=method,
+                                                              cycle=4, last_digit=None, phi=phi, p=p, k=k)
+            else:
+                wxr_at_k, c_N = self.score_wildcard_rank_at_k(score_index=i, staff=staff, phi=phi, p=p, method=method,
+                                                              cycle=None, last_digit=last_digit[i], k=k)
+            results.append(wxr_at_k)
+            total_wxr += c_N * wxr_at_k
+            big_m += c_N
+        mean = total_wxr/big_m
+        return mean, results, None
+
 
     # def compare_jacobs(self):
     #     jacobs = Jacobs(segment_combiner="cost")

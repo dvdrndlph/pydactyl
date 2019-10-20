@@ -42,17 +42,29 @@ def spew_out(name, method, result, itemized, spew=False):
 
 
 def published_parncutt_my_evaluate(cutter, name="", spew=False):
-    epr_10, epr_10_itemized, undef = cutter.epr_at_k(k=10)
-    spew_out(name=name, method='meanEPR@10', result=epr_10, itemized=epr_10_itemized, spew=spew)
+    # epr_10, epr_10_itemized, undef = cutter.epr_at_k(k=10)
+    # spew_out(name=name, method='meanEPR@10', result=epr_10, itemized=epr_10_itemized, spew=spew)
     # dcpg_10, dcpg_10_itemized, undef = cutter.dcpg_at_k(k=10)
     # spew_out(name=name, method='meanDCPG@10', result=dcpg_10, itemized=dcpg_10_itemized, spew=spew)
-    ndcpg_10, ndcpg_10_itemized, undef = cutter.ndcpg_at_k(k=10)
-    spew_out(name=name, method='meanNDCPG@10', result=ndcpg_10, itemized=ndcpg_10_itemized, spew=spew)
+    # ndcpg_10, ndcpg_10_itemized, undef = cutter.ndcpg_at_k(k=10)
+    # spew_out(name=name, method='meanNDCPG@10', result=ndcpg_10, itemized=ndcpg_10_itemized, spew=spew)
+    nwmr_10, wmr_10_itemized, undef = cutter.wxr_at_k(k=10, method="match")
+    spew_out(name=name, method='wmr@10', result=nwmr_10, itemized=wmr_10_itemized, spew=spew)
+    nwdr_10, wdr_10_itemized, undef = cutter.wxr_at_k(k=10, method="discordant")
+    spew_out(name=name, method='wdr@10', result=nwdr_10, itemized=wdr_10_itemized, spew=spew)
+    nwsr_10, wsr_10_itemized, undef = cutter.wxr_at_k(k=10, method="similarity")
+    spew_out(name=name, method='wsr@10', result=nwsr_10, itemized=wsr_10_itemized, spew=spew)
+    nwer_10, wer_10_itemized, undef = cutter.wxr_at_k(k=10, method="equity")
+    spew_out(name=name, method='wer@10', result=nwer_10, itemized=wer_10_itemized, spew=spew)
 
     results = {
-        'epr_10': {'result': epr_10, 'itemized': epr_10_itemized},
+        # 'epr_10': {'result': epr_10, 'itemized': epr_10_itemized},
         # 'dcpg_10': {'result': dcpg_10, 'itemized': dcpg_10_itemized},
-        'ndcpg_10': {'result': ndcpg_10, 'itemized': ndcpg_10_itemized},
+        # 'ndcpg_10': {'result': ndcpg_10, 'itemized': ndcpg_10_itemized},
+        'nwmr_10': {'result': nwmr_10, 'itemized': wmr_10_itemized},
+        'nwdr_10': {'result': nwdr_10, 'itemized': wdr_10_itemized},
+        'nwsr_10': {'result': nwsr_10, 'itemized': wsr_10_itemized},
+        'nwer_10': {'result': nwer_10, 'itemized': wer_10_itemized},
     }
     return results
 
@@ -105,12 +117,13 @@ def graph_results(name, title, results):
 
 cutter = Parncutter()
 cutter.load_data()
+parncutt_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Parncutt", spew=True)
+graph_results(name="parncutt_on_parncutt_pub_mine",
+              title="Parncutt on Parncutt Published, Novel", results=parncutt_my_results)
+exit(0)
 parncutt_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Parncutt", spew=True)
 graph_results(name="parncutt_on_parncutt_pub_std",
               title="Parncutt on Parncutt Published, Existing", results=parncutt_std_results)
-# parncutt_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Parncutt", spew=True)
-# graph_results(name="parncutt_on_parncutt_pub_mine",
-#               title="Parncutt on Parncutt Published, Novel", results=parncutt_my_results)
 
 jacobs = Jacobs(segment_combiner="cost")
 cutter = Parncutter(dactyler=jacobs)
@@ -118,9 +131,9 @@ cutter.load_data()
 jacobs_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Jacobs", spew=True)
 graph_results(name="jacobs_on_parncutt_pub_std",
               title="Jacobs on Parncutt Published, Existing", results=jacobs_std_results)
-# jacobs_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Jacobs", spew=True)
-# graph_results(name="jacobs_on_parncutt_pub_mine",
-#               title="Jacobs on Parncutt Published, Novel", results=jacobs_my_results)
+jacobs_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Jacobs", spew=True)
+graph_results(name="jacobs_on_parncutt_pub_mine",
+              title="Jacobs on Parncutt Published, Novel", results=jacobs_my_results)
 
 justin = Badgerow(segment_combiner="cost")
 cutter = Parncutter(dactyler=justin)
@@ -128,9 +141,9 @@ cutter.load_data()
 badgerow_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Badgerow", spew=True)
 graph_results(name="badgerow_on_parncutt_pub_std",
               title="Badgerow on Parncutt Published, Existing", results=badgerow_std_results)
-# badgerow_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Badgerow", spew=True)
-# graph_results(name="badgerow_on_parncutt_pub_mine",
-#               title="Badgerow on Parncutt Published, Novel", results=badgerow_my_results)
+badgerow_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Badgerow", spew=True)
+graph_results(name="badgerow_on_parncutt_pub_mine",
+              title="Badgerow on Parncutt Published, Novel", results=badgerow_my_results)
 
 summary = list()
 for method in ['err_10', 'dcg_10', 'dcg_full']:
