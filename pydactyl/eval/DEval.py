@@ -27,15 +27,63 @@ from krippendorff import alpha
 import re
 import random
 import numpy as np
-import matplotlib.pyplot as plt
-import sklearn.cluster as cluster
-import seaborn as sns
-import time
+# import matplotlib.pyplot as plt
+# import sklearn.cluster as cluster
+# import seaborn as sns
+# import time
 import math
 from pydactyl.dcorpus.DCorpus import DCorpus
-from pydactyl.dactyler import Constant
-from pydactyl.dcorpus.DNote import DNote
+# from pydactyl.dactyler import Constant
+# from pydactyl.dcorpus.DNote import DNote
 from pydactyl.dcorpus.DAnnotation import DAnnotation
+
+PERFECT_WILD_GOLD = [
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', 'x',  'x',  '>4', 'x'],
+    ['x', '>2',  '>3', '>4', 'x'],
+    ['>1', '>2', '>3', '>4', '>5'],
+]
+PERFECT_COMPLETE_GOLD = [
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+]
+PERFECT_SYSTEM = [
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+]
+THREE_BUNCHES_COMPLETE_GOLD = [
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>2', '>3', '>1', '>2', '>3'],
+    ['>2', '>3', '>1', '>2', '>3'],
+    ['>2', '>3', '>1', '>2', '>3'],
+    ['>2', '>3', '>4', '>1', '>2'],
+    ['>2', '>3', '>4', '>1', '>2'],
+]
+THREE_BUNCHES_COMPLETE_SYSTEM = [
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>1', '>2', '>3', '>4', '>5'],
+    ['>2', '>3', '>1', '>2', '>3'],
+    ['>2', '>3', '>1', '>2', '>3'],
+    ['>2', '>3', '>1', '>2', '>3'],
+    ['>2', '>3', '>4', '>1', '>2'],
+    ['>2', '>3', '>4', '>1', '>2'],
+]
 
 
 class DEval(ABC):
@@ -624,8 +672,8 @@ class DEval(ABC):
         discord = 0
         r_h_sim = DEval.similarity(big_n=big_n, system_matches=system_matches, r=r, h=h)
         for i in range(big_h):
-            r_i_sim = DEval.similarity(big_n=big_n, system_matches=system_matches, r=r, h=i)
-            discord += r_h_sim * r_i_sim
+            r_i_clashes = DEval.system_clashes(big_n, system_matches, r, i)
+            discord += r_h_sim * r_i_clashes
         return discord
 
     @staticmethod
@@ -718,11 +766,13 @@ class DEval(ABC):
         strike handed fingerings.
         :return: accordant[r][h]: Hash of hashes
         """
+        k = len(suggestions)
+        big_h = len(nuggets)
         accordant = {}
-        for r in range(len(suggestions)):
+        for r in range(k):
             accordant[r] = {}
-            suggested_annotations = nuggets[r]
-            for h in range(len(nuggets)):
+            suggested_annotations = suggestions[r]
+            for h in range(big_h):
                 gold_annotations = nuggets[h]
                 if r == h:
                     accordant[r][h] = len(gold_annotations)
@@ -760,7 +810,7 @@ class DEval(ABC):
         discordant = {}
         for r in range(len(suggestions)):
             discordant[r] = {}
-            suggested_annotations = nuggets[r]
+            suggested_annotations = suggestions[r]
             for h in range(len(nuggets)):
                 gold_annotations = nuggets[h]
                 wclashes = DEval.wclashes(suggested_annotations, gold_annotations)
@@ -776,11 +826,19 @@ class DEval(ABC):
         by system under test.
         :param human_advice: An array of arrays of strike handed fingers (perhaps including "x"
         wildcards) produced by a set of human annotators.
-        :param method: One of "match," "discordant," "similarity," "proximity," or "proxequity."
+        :param method: One of "match," "discordant," "similarity," "equity," "proximity," or "proxequity."
         :param phi: Discount factor function.
         :param p: Parameter for phi.
         :param k: The cutoff for the rankings.
         :return: The Expected Recipricol Rank (ERR) for the system_advice.
+
+        >>> DEval._wildcard_rank_at_k(method="similarity", system_advice=THREE_BUNCHES_COMPLETE_SYSTEM, human_advice=THREE_BUNCHES_COMPLETE_GOLD)
+        1.0
+        >>> wsr = DEval._wildcard_rank_at_k(system_advice=PERFECT_SYSTEM, human_advice=PERFECT_WILD_GOLD)
+        >>> print("{:.5}".format(wsr))
+        0.86305
+        >>> DEval._wildcard_rank_at_k(method="similarity", system_advice=PERFECT_SYSTEM, human_advice=PERFECT_COMPLETE_GOLD)
+        1.0
         """
         if k is None:
             raise Exception("Cannot yet recall all for phrases.")
