@@ -23,8 +23,9 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
-import pandas as pd
+from scipy import stats
 import numpy as np
+import pandas as pd
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -194,3 +195,25 @@ print(fmt.format('Badgerow',
                  badgerow_std_results['err2_10']['result'],
                  badgerow_std_results['ndcg_10']['result'],
                  badgerow_std_results['ndcg_full']['result']))
+
+for eval_method in ('err_10', 'err2_10'):
+    results = {'Parncutt': parncutt_std_results[eval_method]['itemized'],
+               'Jacobs': [float(i) for i in jacobs_std_results[eval_method]['itemized']],
+               'Badgerow': [float(i) for i in badgerow_std_results[eval_method]['itemized']]}
+    df = pd.DataFrame.from_dict(results)
+    print()
+    print(eval_method)
+    liner = ["=" for i in range(len(eval_method))]
+    print("".join(liner))
+    print(df)
+    print(df[['Parncutt', 'Jacobs', 'Badgerow']].describe())
+    p_jp = stats.ttest_rel(df['Jacobs'], df['Parncutt'])
+    p_bp = stats.ttest_rel(df['Badgerow'], df['Parncutt'])
+    p_bj = stats.ttest_rel(df['Badgerow'], df['Jacobs'])
+    print()
+    diff_jp = jacobs_std_results[eval_method]['result'] - parncutt_std_results[eval_method]['result']
+    print("J-P diff: {} ({})".format(diff_jp, p_jp))
+    diff_bp = badgerow_std_results[eval_method]['result'] - parncutt_std_results[eval_method]['result']
+    print("B-P diff: {} ({})".format(diff_bp, p_bp))
+    diff_bj = badgerow_std_results[eval_method]['result'] - parncutt_std_results[eval_method]['result']
+    print("J-B diff: {} ({})".format(diff_bj, p_bj))
