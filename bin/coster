@@ -148,6 +148,7 @@ graph_results(name="badgerow_on_parncutt_pub_std",
 # graph_results(name="badgerow_on_parncutt_pub_mine",
               # title="Badgerow on Parncutt Published, Novel", results=badgerow_my_results)
 
+alpha_items = [0.229324, 0.580852, 0.319432, 0.591431, 0.552646, 0.907207, 0.482368]
 summary = list()
 for method in ['err_10', 'err2_10', 'ndcg_10', 'ndcg_full']:
     plt.style.use('classic')
@@ -164,6 +165,7 @@ for method in ['err_10', 'err2_10', 'ndcg_10', 'ndcg_full']:
     b_itemized = badgerow_std_results[method]['itemized']
     b_items = np.array(b_itemized, np.float)
 
+    # ax.plot(my_xticks, alpha_items, label="Alpha")
     ax.plot(my_xticks, p_items, label="Parncutt")
     ax.plot(my_xticks, j_items, label="Jacobs")
     ax.plot(my_xticks, b_items, label="Badgerow")

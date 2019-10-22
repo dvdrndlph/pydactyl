@@ -640,13 +640,47 @@ class DEval(ABC):
         return prob
 
     @staticmethod
-    def estimated_prob_user_happy(suggestion, score_gold):
+    def strict_prob_user_happy(suggestion, score_gold):
+        # Wildcards not supported
         big_h = len(score_gold)
         if big_h == 0:
             return 0.0
         suggestion_count = DEval.gold_sd_list_count(suggestion=suggestion, score_gold=score_gold)
         prob = 1.0 * suggestion_count/big_h
         return prob
+
+    @staticmethod
+    def estimated_prob_user_happy(suggestion, score_gold):
+        # Wildcard matches are all good. If no wildcards in gold standard,
+        # equivalent to strict_prob_user_happy().
+        big_n = len(suggestion)
+        big_h = len(score_gold)
+        if big_h == 0:
+            return 0.0
+        numerator = 0
+        denominator = 0
+        purity = DEval._gold_purity(suggestion=suggestion, score_gold=score_gold)
+        for h in range(len(purity)):
+            match_count = len(purity[h]['match_indices'])
+            wildcard_count = len(purity[h]['wildcard_indices'])
+            if wildcard_count == big_n:
+                # Not probative, skip.
+                pass
+            if match_count == big_n:
+                numerator += 1
+                denominator += 1
+            elif wildcard_count + match_count == big_n:
+                # Perfect match for non-wildcards, so we mute the size of its impact
+                # to the number of non-wildcards.
+                numerator += match_count / big_n
+                denominator += match_count / big_n
+            else:
+                denominator += 1
+        if denominator == 0:
+            return 0.0
+        prob = 1.0 * numerator/denominator
+        return prob
+
 
     @staticmethod
     def note_match(one, other):
@@ -978,43 +1012,38 @@ class DEval(ABC):
         c_N = len(suggestions[0])
         return wildcard_rank, c_N
 
-    # def segmented_wildcard_rank_at_k(self, score_index, method="match",
-    #                                  staff="upper", cycle=None, last_digit=None, phi=None, p=None, k=10):
-    #     self.assert_good_gold(staff=staff)
-    #     if k is None:
-    #         raise Exception("Cannot yet recall all for phrases.")
-    #     # suggested_strikers = DAnnotation.abcdf_to_handed_strike_digits(suggestion, staff=staff)
-    #     if human_clashes is None:
-    #         human_clashes = DEval.human_clashes(nuggets=segment_gold)
-    #     if system_matches is None:
-    #         system_matches = DEval.system_matches(suggestions=suggested_strikers, nuggets=segment_gold)
-    #     segment_suggestions, segment_costs, segment_details, segment_lengths = \
-    #         self._dactyler.generate_segmented_advice(score_index=score_index, staff=staff, cycle=cycle,
-    #                                                  offset=0, last_digit=last_digit, k=k)
-    #     system_advice = []
-    #     for r in range(len(segment_suggestions)):
-    #         strikers = DAnnotation.abcdf_to_handed_strike_digits(segment_suggestion[r], staff=staff)
-    #         system_advice.append(strikers)
-    #
-    #     segment_gold_data = self._segmented_gold_strike_list(score_index=score_index, segment_lengths=segment_lengths,
-    #                                                          staff=staff, last_digit=last_digit)
-    #     err_for_segment = list()
-    #     # segment_gold[segment_index][h][n]
-    #     for segment in range(len(segment_gold_data)):
-    #         seg_gold = segment_gold_data[h]
-    #         err = 0
-    #         prob_still_going = 1
-    #         for r in range(1, k+1):
-    #             if phi:
-    #                 discount_factor = phi(r=r, p=p)
-    #             else:
-    #                 discount_factor = 1.0/r
-    #             prob_found = DEval.p_prime(method=method, suggestion=segment_suggestions[r-1],
-    #                                        segment_gold=seg_gold, staff=staff)
-    #             err += (discount_factor * prob_still_going * prob_found)
-    #             prob_still_going *= (1 - prob_found)
-    #         err_for_segment.append(err)
-    #     return err_for_segment
+    def segmented_err_at_k(self, score_index, method="match",
+                           staff="upper", cycle=None, last_digit=None, phi=None, p=None, k=10):
+        self.assert_good_gold(staff=staff)
+        if k is None:
+            raise Exception("Cannot yet recall all for phrases.")
+        segment_suggestions, segment_costs, segment_details, segment_lengths = \
+            self._dactyler.generate_segmented_advice(score_index=score_index, staff=staff, cycle=cycle,
+                                                     offset=0, last_digit=last_digit, k=k)
+        system_advice = []
+        for r in range(len(segment_suggestions)):
+            strikers = DAnnotation.abcdf_to_handed_strike_digits(segment_suggestion[r], staff=staff)
+            system_advice.append(strikers)
+
+        segment_gold_data = self._segmented_gold_strike_list(score_index=score_index, segment_lengths=segment_lengths,
+                                                             staff=staff, last_digit=last_digit)
+        err_for_segment = list()
+        # segment_gold[segment_index][h][n]
+        for segment in range(len(segment_gold_data)):
+            seg_gold = segment_gold_data[h]
+            err = 0
+            prob_still_going = 1
+            for r in range(1, k+1):
+                if phi:
+                    discount_factor = phi(r=r, p=p)
+                else:
+                    discount_factor = 1.0/r
+                prob_found = DEval.p_prime(method=method, suggestion=segment_suggestions[r-1],
+                                           segment_gold=seg_gold, staff=staff)
+                err += (discount_factor * prob_still_going * prob_found)
+                prob_still_going *= (1 - prob_found)
+            err_for_segment.append(err)
+        return err_for_segment
 
     def score_err_at_k(self, score_index, prob_function,
                        staff="upper", cycle=None, last_digit=None, phi=None, p=None, k=10):
