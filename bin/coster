@@ -30,6 +30,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from pydactyl.eval.Parncutter import Parncutter
+from pydactyl.eval.DEval import DEval
 from pydactyl.dactyler.Parncutt import Parncutt
 from pydactyl.dactyler.Parncutt import Jacobs
 from pydactyl.dactyler.Parncutt import Badgerow
@@ -70,6 +71,8 @@ def published_parncutt_my_evaluate(cutter, name="", spew=False):
 
 
 def published_parncutt_std_evaluate(cutter, name="", spew=False):
+    err2_10, err2_10_itemized, undef = cutter.err_at_k(k=10, prob_function=DEval.extended_prob_user_happy)
+    spew_out(name=name, method='meanERR2@10', result=err2_10, itemized=err2_10_itemized, spew=spew)
     err_10, err_10_itemized, undef = cutter.err_at_k(k=10)
     spew_out(name=name, method='meanERR@10', result=err_10, itemized=err_10_itemized, spew=spew)
     map_full, map_full_itemized, undef = cutter.map_at_perfect_recall()
@@ -85,12 +88,13 @@ def published_parncutt_std_evaluate(cutter, name="", spew=False):
     ndcg_full, ndcg_full_itemized, undef = cutter.ndcg_at_k(k=None)
     spew_out(name=name, method='meanNDCG@perfectR', result=ndcg_full, itemized=ndcg_full_itemized, spew=spew)
     results = {
+        'err2_10': {'result': err2_10, 'itemized': err2_10_itemized},
         'err_10': {'result': err_10, 'itemized': err_10_itemized},
         'map_full': {'result': map_full, 'itemized': map_full_itemized},
         'map_10': {'result': map_10, 'itemized': map_10_itemized},
-        'dcg_10': {'result': dcg_10, 'itemized': dcg_10_itemized},
+        # 'dcg_10': {'result': dcg_10, 'itemized': dcg_10_itemized},
         'ndcg_10': {'result': ndcg_10, 'itemized': ndcg_10_itemized},
-        'dcg_full': {'result': dcg_full, 'itemized': dcg_full_itemized},
+        # 'dcg_full': {'result': dcg_full, 'itemized': dcg_full_itemized},
         'ndcg_full': {'result': ndcg_full, 'itemized': ndcg_full_itemized},
     }
     return results
@@ -117,10 +121,9 @@ def graph_results(name, title, results):
 
 cutter = Parncutter()
 cutter.load_data()
-parncutt_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Parncutt", spew=True)
-graph_results(name="parncutt_on_parncutt_pub_mine",
-              title="Parncutt on Parncutt Published, Novel", results=parncutt_my_results)
-exit(0)
+# parncutt_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Parncutt", spew=True)
+# graph_results(name="parncutt_on_parncutt_pub_mine",
+              # title="Parncutt on Parncutt Published, Novel", results=parncutt_my_results)
 parncutt_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Parncutt", spew=True)
 graph_results(name="parncutt_on_parncutt_pub_std",
               title="Parncutt on Parncutt Published, Existing", results=parncutt_std_results)
@@ -131,9 +134,9 @@ cutter.load_data()
 jacobs_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Jacobs", spew=True)
 graph_results(name="jacobs_on_parncutt_pub_std",
               title="Jacobs on Parncutt Published, Existing", results=jacobs_std_results)
-jacobs_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Jacobs", spew=True)
-graph_results(name="jacobs_on_parncutt_pub_mine",
-              title="Jacobs on Parncutt Published, Novel", results=jacobs_my_results)
+# jacobs_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Jacobs", spew=True)
+# graph_results(name="jacobs_on_parncutt_pub_mine",
+              # title="Jacobs on Parncutt Published, Novel", results=jacobs_my_results)
 
 justin = Badgerow(segment_combiner="cost")
 cutter = Parncutter(dactyler=justin)
@@ -141,12 +144,12 @@ cutter.load_data()
 badgerow_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Badgerow", spew=True)
 graph_results(name="badgerow_on_parncutt_pub_std",
               title="Badgerow on Parncutt Published, Existing", results=badgerow_std_results)
-badgerow_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Badgerow", spew=True)
-graph_results(name="badgerow_on_parncutt_pub_mine",
-              title="Badgerow on Parncutt Published, Novel", results=badgerow_my_results)
+# badgerow_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Badgerow", spew=True)
+# graph_results(name="badgerow_on_parncutt_pub_mine",
+              # title="Badgerow on Parncutt Published, Novel", results=badgerow_my_results)
 
 summary = list()
-for method in ['err_10', 'dcg_10', 'dcg_full']:
+for method in ['err_10', 'err2_10', 'ndcg_10', 'ndcg_full']:
     plt.style.use('classic')
     plt.title("Results Over Published Parncutt")
     my_xticks = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
@@ -173,16 +176,19 @@ for method in ['err_10', 'dcg_10', 'dcg_full']:
     # plt.show()
 
 fmt = "{},{},{},{}"
-print(fmt.format('Model', 'err_10', 'dcg_10', 'dcg_full'))
+print(fmt.format('Model', 'err_10', 'err2_10', 'ndcg_10', 'ndcg_full'))
 print(fmt.format('Parncutt',
                  parncutt_std_results['err_10']['result'],
-                 parncutt_std_results['dcg_10']['result'],
-                 parncutt_std_results['dcg_full']['result']))
+                 parncutt_std_results['err2_10']['result'],
+                 parncutt_std_results['ndcg_10']['result'],
+                 parncutt_std_results['ndcg_full']['result']))
 print(fmt.format('Jacobs',
                  jacobs_std_results['err_10']['result'],
-                 jacobs_std_results['dcg_10']['result'],
-                 jacobs_std_results['dcg_full']['result']))
+                 jacobs_std_results['err2_10']['result'],
+                 jacobs_std_results['ndcg_10']['result'],
+                 jacobs_std_results['ndcg_full']['result']))
 print(fmt.format('Badgerow',
                  badgerow_std_results['err_10']['result'],
-                 badgerow_std_results['dcg_10']['result'],
-                 badgerow_std_results['dcg_full']['result']))
+                 badgerow_std_results['err2_10']['result'],
+                 badgerow_std_results['ndcg_10']['result'],
+                 badgerow_std_results['ndcg_full']['result']))

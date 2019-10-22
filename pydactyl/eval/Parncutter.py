@@ -182,15 +182,17 @@ class Parncutter(DEval):
         mean = total_ndcpg/7
         return mean, results, None
 
-    def err_at_k(self, staff="upper", phi=None, p=None, k=10):
+    def err_at_k(self, staff="upper", prob_function=DEval.estimated_prob_user_happy,
+                 phi=None, p=None, k=10):
         total_err = 0
         results = list()
         for i in range(7):
             if i == 1:
-                err_at_k = self.score_err_at_k(score_index=i, staff="upper",
-                                               cycle=4, last_digit=None, phi=phi, p=p, k=k)
+                err_at_k = self.score_err_at_k(score_index=i, prob_function=prob_function,
+                                               staff="upper", cycle=4, last_digit=None, phi=phi, p=p, k=k)
             else:
-                err_at_k = self.score_err_at_k(score_index=i, staff="upper", phi=phi, p=p,
+                err_at_k = self.score_err_at_k(score_index=i, prob_function=prob_function,
+                                               staff="upper", phi=phi, p=p,
                                                cycle=None, last_digit=last_digit[i], k=k)
             results.append(err_at_k)
             total_err += err_at_k

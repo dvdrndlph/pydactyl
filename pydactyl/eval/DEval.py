@@ -87,6 +87,13 @@ THREE_BUNCHES_COMPLETE_SYSTEM = [
 
 
 class DEval(ABC):
+    _NEARLY_INTERCHANGEABLE = {
+        ('>2', '>3'), ('>3','>2'),
+        ('<2', '<3'), ('<3', '<2'),
+        ('>4', '>5'), ('>5', '>4'),
+        ('<4', '<5'), ('<5', '<4'),
+    }
+
     def __init__(self):
         self._dactyler = None
         self._d_corpus = DCorpus()
@@ -556,11 +563,89 @@ class DEval(ABC):
         return sugg_count
 
     @staticmethod
-    def estimated_prob_user_happy(suggestion, score_gold, h_total):
-        if h_total == 0:
-            return 0
-        suggestion_count = DEval.gold_suggestion_count(suggestion=suggestion, score_gold=score_gold)
-        prob = 1.0 * suggestion_count/h_total
+    def gold_sd_list_count(suggestion, score_gold):
+        sugg_count = 0
+        for j in range(len(score_gold)):
+            matches = True
+            for i in range(len(score_gold[j])):
+                if score_gold[j][i] != suggestion[i]:
+                    matches = False
+                    break
+            if matches:
+                sugg_count += 1
+        return sugg_count
+
+    @staticmethod
+    def _gold_purity(suggestion, score_gold):
+        nuggets_data = []
+        for gold_index in range(len(score_gold)):
+            nugget_data = {
+                'match_indices': [],
+                'wildcard_indices': [],
+                'interchangeable_indices': []
+            }
+            for note_index in range(len(score_gold[gold_index])):
+                goldie = score_gold[gold_index][note_index]
+                tip = suggestion[note_index]
+                if goldie == tip:
+                    nugget_data['match_indices'].append(note_index)
+                if goldie == 'x':
+                    nugget_data['wildcard_indices'].append(note_index)
+                if (goldie, tip) in DEval._NEARLY_INTERCHANGEABLE:
+                    nugget_data['interchangeable_indices'].append(note_index)
+            nuggets_data.append(nugget_data)
+        return nuggets_data
+
+    @staticmethod
+    def extended_prob_user_happy(suggestion, score_gold):
+        """
+
+        :param suggestion:
+        :param score_gold:
+        :return:
+        """
+        big_n = len(suggestion)
+        big_h = len(score_gold)
+        if big_h == 0:
+            return 0.0
+        numerator = 0
+        denominator = 0
+        purity = DEval._gold_purity(suggestion=suggestion, score_gold=score_gold)
+        for h in range(len(purity)):
+            match_count = len(purity[h]['match_indices'])
+            wildcard_count = len(purity[h]['wildcard_indices'])
+            interchangeable_count = len(purity[h]['interchangeable_indices'])
+            if wildcard_count == big_n:
+                # Not probative, skip.
+                pass
+            if match_count == big_n:
+                numerator += 1
+                denominator += 1
+            elif match_count + interchangeable_count == big_n:
+                numerator += (match_count + interchangeable_count/2**interchangeable_count) / big_n
+                denominator += 1
+            elif wildcard_count + match_count == big_n:
+                # Perfect match for non-wildcards, so we mute the size of its impact
+                # to the number of non-wildcards.
+                numerator += match_count / big_n
+                denominator += match_count / big_n
+            elif wildcard_count + match_count + interchangeable_count == big_n:
+                numerator += (match_count + interchangeable_count/2**interchangeable_count) / big_n
+                denominator += (match_count + interchangeable_count) / big_n
+            else:
+                denominator += 1
+        if denominator == 0:
+            return 0.0
+        prob = 1.0 * numerator/denominator
+        return prob
+
+    @staticmethod
+    def estimated_prob_user_happy(suggestion, score_gold):
+        big_h = len(score_gold)
+        if big_h == 0:
+            return 0.0
+        suggestion_count = DEval.gold_sd_list_count(suggestion=suggestion, score_gold=score_gold)
+        prob = 1.0 * suggestion_count/big_h
         return prob
 
     @staticmethod
@@ -931,7 +1016,8 @@ class DEval(ABC):
     #         err_for_segment.append(err)
     #     return err_for_segment
 
-    def score_err_at_k(self, score_index, staff="upper", cycle=None, last_digit=None, phi=None, p=None, k=10):
+    def score_err_at_k(self, score_index, prob_function,
+                       staff="upper", cycle=None, last_digit=None, phi=None, p=None, k=10):
         self.assert_good_gold(staff=staff)
         if k is None:
             suggestions, costs, details = self._recall_them_all(score_index=score_index, staff=staff,
@@ -939,8 +1025,10 @@ class DEval(ABC):
         else:
             suggestions, costs, details = self.score_advice(score_index=score_index, staff=staff,
                                                             last_digit=last_digit, cycle=cycle, k=k)
-        score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
-        h_total = self._score_gold_total_count(score_index=score_index, staff=staff, last_digit=last_digit)
+        # score_gold = self._score_gold(score_index=score_index, staff=staff, last_digit=last_digit)
+        # h_total = self._score_gold_total_count(score_index=score_index, staff=staff, last_digit=last_digit)
+        system_advice = DEval.striker_lists(suggestions, staff=staff)
+        human_advice = self.gold_list_of_handed_strike_lists(score_index, staff=staff, last_digit=last_digit)
         err = 0
         prob_still_going = 1
         for r in range(1, k+1):
@@ -948,8 +1036,8 @@ class DEval(ABC):
                 discount_factor = phi(r=r, p=p)
             else:
                 discount_factor = 1.0/r
-            prob_found = DEval.estimated_prob_user_happy(suggestion=suggestions[r-1],
-                                                         score_gold=score_gold, h_total=h_total)
+            prob_found = prob_function(suggestion=system_advice[r-1],
+                                       score_gold=human_advice)
             err += (discount_factor * prob_still_going * prob_found)
             prob_still_going *= (1 - prob_found)
         return err
