@@ -38,10 +38,11 @@ last_digit = {
 
 
 class Parncutter(DEval):
-    def __init__(self, dactyler=Parncutt(segment_combiner="cost")):
+    def __init__(self, dactyler=Parncutt(segment_combiner="cost"), corpus="parncutt_published"):
         super().__init__()
         self._conn = pymysql.connect(host='127.0.0.1', port=3306, user='didactyl', passwd='', db='didactyl2')
         self._dactyler = dactyler
+        self._corpus = corpus
 
     def load_data(self):
         query = """select exercise, abc_fragment
@@ -55,9 +56,17 @@ class Parncutter(DEval):
             self._d_corpus.append(corpus_str=abc_content)
         self._dactyler.load_corpus(d_corpus=self._d_corpus)
 
-        query_gold = """select exercise, fingering, subject_count
-                          from parncutt_published
-                         order by exercise"""
+        query_gold = """
+            select exercise,
+                   parncutt_fingering as fingering,
+                   total as subject_count
+              from parncutt_binary"""
+        if self._corpus == "parncutt_published":
+            query_gold = """
+                select exercise, fingering, subject_count
+                  from parncutt_published
+                 order by exercise"""
+
         curs.execute(query_gold)
 
         prior_ex_id = None

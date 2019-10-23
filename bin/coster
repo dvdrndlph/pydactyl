@@ -37,6 +37,8 @@ from pydactyl.dactyler.Parncutt import Jacobs
 from pydactyl.dactyler.Parncutt import Badgerow
 # from pydactyl.dcorpus.DCorpus import DCorpus
 
+CORPUS = "parncutt_published"
+# CORPUS = "dii"
 
 def spew_out(name, method, result, itemized, spew=False):
     if spew:
@@ -115,12 +117,12 @@ def graph_results(name, title, results):
     ax.set_ylim(0, 1)
     ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), shadow=True, ncol=3)
     extension = 'pdf'
-    file_path = '../../doc/drawings/pyplots/{}.{}'.format(name, extension)
-    plt.savefig(file_path, format='pdf')
+    file_path = '../../doc/drawings/pyplots/{}_{}.{}'.format(CORPUS, name, extension)
+    plt.savefig(file_path, format=extension)
     # plt.show()
 
 
-cutter = Parncutter()
+cutter = Parncutter(corpus=CORPUS)
 cutter.load_data()
 # parncutt_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Parncutt", spew=True)
 # graph_results(name="parncutt_on_parncutt_pub_mine",
@@ -130,7 +132,7 @@ graph_results(name="parncutt_on_parncutt_pub_std",
               title="Parncutt on Parncutt Published, Existing", results=parncutt_std_results)
 
 jacobs = Jacobs(segment_combiner="cost")
-cutter = Parncutter(dactyler=jacobs)
+cutter = Parncutter(corpus=CORPUS, dactyler=jacobs)
 cutter.load_data()
 jacobs_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Jacobs", spew=True)
 graph_results(name="jacobs_on_parncutt_pub_std",
@@ -140,7 +142,7 @@ graph_results(name="jacobs_on_parncutt_pub_std",
               # title="Jacobs on Parncutt Published, Novel", results=jacobs_my_results)
 
 justin = Badgerow(segment_combiner="cost")
-cutter = Parncutter(dactyler=justin)
+cutter = Parncutter(corpus=CORPUS, dactyler=justin)
 cutter.load_data()
 badgerow_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Badgerow", spew=True)
 graph_results(name="badgerow_on_parncutt_pub_std",
@@ -174,8 +176,8 @@ for method in ['err_10', 'err2_10', 'ndcg_10', 'ndcg_full']:
     ax.set_ylim(0, 1)
     ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), shadow=True, ncol=3)
     extension = 'pdf'
-    file_path = '../../doc/drawings/pyplots/{}.{}'.format(method, extension)
-    plt.savefig(file_path, format='pdf')
+    file_path = '../../doc/drawings/pyplots/{}_{}.{}'.format(CORPUS, method, extension)
+    plt.savefig(file_path, format=extension)
     # plt.show()
 
 fmt = "{},{},{},{}"
