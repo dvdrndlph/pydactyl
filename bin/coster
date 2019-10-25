@@ -37,8 +37,13 @@ from pydactyl.dactyler.Parncutt import Jacobs
 from pydactyl.dactyler.Parncutt import Badgerow
 # from pydactyl.dcorpus.DCorpus import DCorpus
 
-CORPUS = "parncutt_published"
-# CORPUS = "dii"
+# CORPUS = "parncutt_published"
+CORPUS = "dii"
+if CORPUS == 'parncutt_published':
+    CORPUS_DISPLAY = "Parncutt Published"
+else:
+    CORPUS_DISPLAY = "Didactyl Parncutt"
+
 
 def spew_out(name, method, result, itemized, spew=False):
     if spew:
@@ -121,35 +126,34 @@ def graph_results(name, title, results):
     plt.savefig(file_path, format=extension)
     # plt.show()
 
-
 cutter = Parncutter(corpus=CORPUS)
 cutter.load_data()
 # parncutt_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Parncutt", spew=True)
 # graph_results(name="parncutt_on_parncutt_pub_mine",
-              # title="Parncutt on Parncutt Published, Novel", results=parncutt_my_results)
+              # title="Parncutt on {}, Novel".format(CORPUS_DISPLAY), results=parncutt_my_results)
 parncutt_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Parncutt", spew=True)
 graph_results(name="parncutt_on_parncutt_pub_std",
-              title="Parncutt on Parncutt Published, Existing", results=parncutt_std_results)
+              title="Parncutt on {}".format(CORPUS_DISPLAY), results=parncutt_std_results)
 
 jacobs = Jacobs(segment_combiner="cost")
 cutter = Parncutter(corpus=CORPUS, dactyler=jacobs)
 cutter.load_data()
 jacobs_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Jacobs", spew=True)
 graph_results(name="jacobs_on_parncutt_pub_std",
-              title="Jacobs on Parncutt Published, Existing", results=jacobs_std_results)
+              title="Jacobs on {}".format(CORPUS_DISPLAY), results=jacobs_std_results)
 # jacobs_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Jacobs", spew=True)
 # graph_results(name="jacobs_on_parncutt_pub_mine",
-              # title="Jacobs on Parncutt Published, Novel", results=jacobs_my_results)
+              # title="Jacobs on {}, Novel".format(CORPUS_DISPLAY), results=jacobs_my_results)
 
 justin = Badgerow(segment_combiner="cost")
 cutter = Parncutter(corpus=CORPUS, dactyler=justin)
 cutter.load_data()
 badgerow_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Badgerow", spew=True)
 graph_results(name="badgerow_on_parncutt_pub_std",
-              title="Badgerow on Parncutt Published, Existing", results=badgerow_std_results)
+              title="Badgerow on {}".format(CORPUS_DISPLAY), results=badgerow_std_results)
 # badgerow_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Badgerow", spew=True)
 # graph_results(name="badgerow_on_parncutt_pub_mine",
-              # title="Badgerow on Parncutt Published, Novel", results=badgerow_my_results)
+              # title="Badgerow on {}, Novel".format(CORPUS_DISPLAY), results=badgerow_my_results)
 
 alpha_items = [0.229324, 0.580852, 0.319432, 0.591431, 0.552646, 0.907207, 0.482368]
 summary = list()
