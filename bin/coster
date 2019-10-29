@@ -32,18 +32,13 @@ import matplotlib.pyplot as plt
 
 from pydactyl.eval.Parncutter import Parncutter
 from pydactyl.eval.DEval import DEval
-from pydactyl.dactyler.Parncutt import Parncutt
 from pydactyl.dactyler.Parncutt import Jacobs
 from pydactyl.dactyler.Parncutt import Badgerow
-# from pydactyl.dcorpus.DCorpus import DCorpus
 
-# CORPUS = "parncutt_published"
-CORPUS = "dii"
-if CORPUS == 'parncutt_published':
-    CORPUS_DISPLAY = "Parncutt Published"
-else:
-    CORPUS_DISPLAY = "Didactyl Parncutt"
-
+DISPLAY = {
+    'parncutt_published': 'Parncutt Published',
+    'american_parncutt': 'American Parncutt'
+}
 
 def spew_out(name, method, result, itemized, spew=False):
     if spew:
@@ -108,7 +103,7 @@ def published_parncutt_std_evaluate(cutter, name="", spew=False):
     return results
 
 
-def graph_results(name, title, results):
+def graph_results(name, title, results, corpus):
     plt.style.use('classic')
     # x = np.arange(7)
     my_xticks = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
@@ -122,104 +117,149 @@ def graph_results(name, title, results):
     ax.set_ylim(0, 1)
     ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), shadow=True, ncol=3)
     extension = 'pdf'
-    file_path = '../../doc/drawings/pyplots/{}_{}.{}'.format(CORPUS, name, extension)
+    file_path = '../../doc/drawings/pyplots/{}_{}.{}'.format(corpus, name, extension)
     plt.savefig(file_path, format=extension)
     # plt.show()
 
-cutter = Parncutter(corpus=CORPUS)
-cutter.load_data()
-# parncutt_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Parncutt", spew=True)
-# graph_results(name="parncutt_on_parncutt_pub_mine",
-              # title="Parncutt on {}, Novel".format(CORPUS_DISPLAY), results=parncutt_my_results)
-parncutt_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Parncutt", spew=True)
-graph_results(name="parncutt_on_parncutt_pub_std",
-              title="Parncutt on {}".format(CORPUS_DISPLAY), results=parncutt_std_results)
 
-jacobs = Jacobs(segment_combiner="cost")
-cutter = Parncutter(corpus=CORPUS, dactyler=jacobs)
-cutter.load_data()
-jacobs_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Jacobs", spew=True)
-graph_results(name="jacobs_on_parncutt_pub_std",
-              title="Jacobs on {}".format(CORPUS_DISPLAY), results=jacobs_std_results)
-# jacobs_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Jacobs", spew=True)
-# graph_results(name="jacobs_on_parncutt_pub_mine",
-              # title="Jacobs on {}, Novel".format(CORPUS_DISPLAY), results=jacobs_my_results)
+def process_corpus(corpus):
+    cutter = Parncutter(corpus=corpus)
+    cutter.load_data()
+    # parncutt_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Parncutt", spew=True)
+    # graph_results(name="parncutt_on_parncutt_pub_mine", corpus=corpus,
+                  # title="Parncutt on {}, Novel".format(DISPLAY[corpus]), results=parncutt_my_results)
+    parncutt_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Parncutt", spew=True)
+    graph_results(name="parncutt_on_parncutt_pub_std", corpus=corpus,
+                  title="Parncutt on {}".format(DISPLAY[corpus]), results=parncutt_std_results)
 
-justin = Badgerow(segment_combiner="cost")
-cutter = Parncutter(corpus=CORPUS, dactyler=justin)
-cutter.load_data()
-badgerow_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Badgerow", spew=True)
-graph_results(name="badgerow_on_parncutt_pub_std",
-              title="Badgerow on {}".format(CORPUS_DISPLAY), results=badgerow_std_results)
-# badgerow_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Badgerow", spew=True)
-# graph_results(name="badgerow_on_parncutt_pub_mine",
-              # title="Badgerow on {}, Novel".format(CORPUS_DISPLAY), results=badgerow_my_results)
+    jacobs = Jacobs(segment_combiner="cost")
+    cutter = Parncutter(corpus=corpus, dactyler=jacobs)
+    cutter.load_data()
+    jacobs_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Jacobs", spew=True)
+    graph_results(name="jacobs_on_parncutt_pub_std", corpus=corpus,
+                  title="Jacobs on {}".format(DISPLAY[corpus]), results=jacobs_std_results)
+    # jacobs_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Jacobs", spew=True)
+    # graph_results(name="jacobs_on_parncutt_pub_mine", corpus=corpus,
+                  # title="Jacobs on {}, Novel".format(DISPLAY[corpus]), results=jacobs_my_results)
 
-alpha_items = [0.229324, 0.580852, 0.319432, 0.591431, 0.552646, 0.907207, 0.482368]
-summary = list()
-for method in ['err_10', 'err2_10', 'ndcg_10', 'ndcg_full']:
-    plt.style.use('classic')
-    plt.title("Results Over Published Parncutt")
-    my_xticks = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
-    fig, ax = plt.subplots()
-    p_result = parncutt_std_results[method]['result']
-    p_itemized = parncutt_std_results[method]['itemized']
-    p_items = np.array(p_itemized, np.float)
-    j_result = jacobs_std_results[method]['result']
-    j_itemized = jacobs_std_results[method]['itemized']
-    j_items = np.array(j_itemized, np.float)
-    b_result = badgerow_std_results[method]['result']
-    b_itemized = badgerow_std_results[method]['itemized']
-    b_items = np.array(b_itemized, np.float)
+    justin = Badgerow(segment_combiner="cost")
+    cutter = Parncutter(corpus=corpus, dactyler=justin)
+    cutter.load_data()
+    badgerow_std_results = published_parncutt_std_evaluate(cutter=cutter, name="Badgerow", spew=True)
+    graph_results(name="badgerow_on_parncutt_pub_std", corpus=corpus,
+                  title="Badgerow on {}".format(DISPLAY[corpus]), results=badgerow_std_results)
+    # badgerow_my_results = published_parncutt_my_evaluate(cutter=cutter, name="Badgerow", spew=True)
+    # graph_results(name="badgerow_on_parncutt_pub_mine", corpus=corpus,
+                  # title="Badgerow on {}, Novel".format(DISPLAY[corpus]), results=badgerow_my_results)
 
-    # ax.plot(my_xticks, alpha_items, label="Alpha")
-    ax.plot(my_xticks, p_items, label="Parncutt")
-    ax.plot(my_xticks, j_items, label="Jacobs")
-    ax.plot(my_xticks, b_items, label="Badgerow")
-    fig.subplots_adjust(bottom=0.2)
-    ax.set_ylim(0, 1)
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), shadow=True, ncol=3)
-    extension = 'pdf'
-    file_path = '../../doc/drawings/pyplots/{}_{}.{}'.format(CORPUS, method, extension)
-    plt.savefig(file_path, format=extension)
-    # plt.show()
+    alpha_items = [0.229324, 0.580852, 0.319432, 0.591431, 0.552646, 0.907207, 0.482368]
+    if corpus == 'american_parncutt':
+        alpha_items = [0.346886, 0.504542, 0.352549, 0.584485, 0.517459, 0.684327, 0.460866]
 
-fmt = "{},{},{},{}"
-print(fmt.format('Model', 'err_10', 'err2_10', 'ndcg_10', 'ndcg_full'))
-print(fmt.format('Parncutt',
-                 parncutt_std_results['err_10']['result'],
-                 parncutt_std_results['err2_10']['result'],
-                 parncutt_std_results['ndcg_10']['result'],
-                 parncutt_std_results['ndcg_full']['result']))
-print(fmt.format('Jacobs',
-                 jacobs_std_results['err_10']['result'],
-                 jacobs_std_results['err2_10']['result'],
-                 jacobs_std_results['ndcg_10']['result'],
-                 jacobs_std_results['ndcg_full']['result']))
-print(fmt.format('Badgerow',
-                 badgerow_std_results['err_10']['result'],
-                 badgerow_std_results['err2_10']['result'],
-                 badgerow_std_results['ndcg_10']['result'],
-                 badgerow_std_results['ndcg_full']['result']))
+    summary = list()
+    for method in ['err_10', 'err2_10', 'ndcg_10', 'ndcg_full']:
+        plt.style.use('classic')
+        plt.title("Results Over {}".format(corpus))
+        my_xticks = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+        fig, ax = plt.subplots()
+        p_result = parncutt_std_results[method]['result']
+        p_itemized = parncutt_std_results[method]['itemized']
+        p_items = np.array(p_itemized, np.float)
+        j_result = jacobs_std_results[method]['result']
+        j_itemized = jacobs_std_results[method]['itemized']
+        j_items = np.array(j_itemized, np.float)
+        b_result = badgerow_std_results[method]['result']
+        b_itemized = badgerow_std_results[method]['itemized']
+        b_items = np.array(b_itemized, np.float)
 
-for eval_method in ('err_10', 'err2_10'):
-    results = {'Parncutt': parncutt_std_results[eval_method]['itemized'],
-               'Jacobs': [float(i) for i in jacobs_std_results[eval_method]['itemized']],
-               'Badgerow': [float(i) for i in badgerow_std_results[eval_method]['itemized']]}
-    df = pd.DataFrame.from_dict(results)
-    print()
-    print(eval_method)
-    liner = ["=" for i in range(len(eval_method))]
-    print("".join(liner))
-    print(df)
-    print(df[['Parncutt', 'Jacobs', 'Badgerow']].describe())
-    p_jp = stats.ttest_rel(df['Jacobs'], df['Parncutt'])
-    p_bp = stats.ttest_rel(df['Badgerow'], df['Parncutt'])
-    p_bj = stats.ttest_rel(df['Badgerow'], df['Jacobs'])
-    print()
-    diff_jp = jacobs_std_results[eval_method]['result'] - parncutt_std_results[eval_method]['result']
-    print("J-P diff: {} ({})".format(diff_jp, p_jp))
-    diff_bp = badgerow_std_results[eval_method]['result'] - parncutt_std_results[eval_method]['result']
-    print("B-P diff: {} ({})".format(diff_bp, p_bp))
-    diff_bj = badgerow_std_results[eval_method]['result'] - parncutt_std_results[eval_method]['result']
-    print("J-B diff: {} ({})".format(diff_bj, p_bj))
+        ax.plot(my_xticks, alpha_items, linestyle=":", color="gray", label="Alpha")
+        ax.plot(my_xticks, p_items, label="Parncutt")
+        ax.plot(my_xticks, j_items, label="Jacobs")
+        ax.plot(my_xticks, b_items, label="Badgerow")
+        fig.subplots_adjust(bottom=0.2)
+        ax.set_ylim(0, 1)
+        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), shadow=True, ncol=3)
+        extension = 'pdf'
+        file_path = '../../doc/drawings/pyplots/{}_{}.{}'.format(corpus, method, extension)
+        plt.savefig(file_path, format=extension)
+        # plt.show()
+
+    fmt = "{},{},{},{}"
+    print(fmt.format('Model', 'err_10', 'err2_10', 'ndcg_10', 'ndcg_full'))
+    print(fmt.format('Parncutt',
+                     parncutt_std_results['err_10']['result'],
+                     parncutt_std_results['err2_10']['result'],
+                     parncutt_std_results['ndcg_10']['result'],
+                     parncutt_std_results['ndcg_full']['result']))
+    print(fmt.format('Jacobs',
+                     jacobs_std_results['err_10']['result'],
+                     jacobs_std_results['err2_10']['result'],
+                     jacobs_std_results['ndcg_10']['result'],
+                     jacobs_std_results['ndcg_full']['result']))
+    print(fmt.format('Badgerow',
+                     badgerow_std_results['err_10']['result'],
+                     badgerow_std_results['err2_10']['result'],
+                     badgerow_std_results['ndcg_10']['result'],
+                     badgerow_std_results['ndcg_full']['result']))
+
+    dat = {
+        'parncutt': parncutt_std_results,
+        'jacobs': jacobs_std_results,
+        'badgerow': badgerow_std_results
+    }
+    for eval_method in ('err_10', 'err2_10'):
+        results = {'Parncutt': parncutt_std_results[eval_method]['itemized'],
+                   'Jacobs': [float(i) for i in jacobs_std_results[eval_method]['itemized']],
+                   'Badgerow': [float(i) for i in badgerow_std_results[eval_method]['itemized']]}
+        df = pd.DataFrame.from_dict(results)
+        print()
+        print(eval_method)
+        liner = ["=" for i in range(len(eval_method))]
+        print("".join(liner))
+        print(df)
+        print(df[['Parncutt', 'Jacobs', 'Badgerow']].describe())
+        dat['p_jp'] = stats.ttest_rel(df['Jacobs'], df['Parncutt'])
+        dat['p_bp'] = stats.ttest_rel(df['Badgerow'], df['Parncutt'])
+        dat['p_bj'] = stats.ttest_rel(df['Badgerow'], df['Jacobs'])
+        print()
+        diff_jp = jacobs_std_results[eval_method]['result'] - parncutt_std_results[eval_method]['result']
+        print("J-P diff: {} ({})".format(diff_jp, dat['p_jp']))
+        diff_bp = badgerow_std_results[eval_method]['result'] - parncutt_std_results[eval_method]['result']
+        print("B-P diff: {} ({})".format(diff_bp, dat['p_bp']))
+        diff_bj = badgerow_std_results[eval_method]['result'] - parncutt_std_results[eval_method]['result']
+        print("J-B diff: {} ({})".format(diff_bj, dat['p_bj']))
+    return dat
+
+
+def corpus_delta(pp_dat, ap_dat):
+    for eval_method in ('err_10', 'err2_10'):
+        results = {
+            'Parncutt PP': pp_dat['parncutt'][eval_method]['itemized'],
+            'Parncutt AP': ap_dat['parncutt'][eval_method]['itemized'],
+            'Jacobs PP': pp_dat['jacobs'][eval_method]['itemized'],
+            'Jacobs AP': ap_dat['jacobs'][eval_method]['itemized'],
+            'Badgerow PP': pp_dat['badgerow'][eval_method]['itemized'],
+            'Badgerow AP': ap_dat['badgerow'][eval_method]['itemized']
+        }
+        df = pd.DataFrame.from_dict(results)
+        print()
+        print(eval_method)
+        liner = ["=" for i in range(len(eval_method))]
+        print("".join(liner))
+        print(df)
+        dat = dict()
+        dat['p_pp'] = stats.ttest_rel(df['Parncutt AP'], df['Parncutt PP'])
+        dat['p_bb'] = stats.ttest_rel(df['Badgerow AP'], df['Badgerow PP'])
+        dat['p_jj'] = stats.ttest_rel(df['Jacobs AP'], df['Jacobs PP'])
+        print()
+        diff_pp = ap_dat['parncutt'][eval_method]['result'] - pp_dat['parncutt'][eval_method]['result']
+        print("Parncutt AP-PP diff: {} ({})".format(diff_pp, dat['p_pp']))
+        diff_bb = ap_dat['badgerow'][eval_method]['result'] - pp_dat['badgerow'][eval_method]['result']
+        print("Badgerow AP-PP diff: {} ({})".format(diff_bb, dat['p_bb']))
+        diff_jj = ap_dat['jacobs'][eval_method]['result'] - pp_dat['jacobs'][eval_method]['result']
+        print("Jacobs AP-PP diff: {} ({})".format(diff_jj, dat['p_jj']))
+
+
+pp_dat = process_corpus(corpus='parncutt_published')
+ap_dat = process_corpus(corpus='american_parncutt')
+corpus_delta(pp_dat=pp_dat, ap_dat=ap_dat)

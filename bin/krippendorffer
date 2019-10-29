@@ -30,6 +30,9 @@ from pydactyl.dcorpus.DCorpus import DCorpus
 from krippendorff import alpha
 import pymysql
 
+corpse = "parncutt_published"
+corpse = "american_parncutt"
+
 last_digit = {
     0: 3,
     # B is cyclic pattern
@@ -56,9 +59,15 @@ for row in curs:
     # print(abc_content)
     d_corpus.append(corpus_str=abc_content)
 
-query_gold = """select exercise, fingering, subject_count
-                  from parncutt_published
-                  order by exercise"""
+# Parncutt Published
+# query_gold = """select exercise, fingering, subject_count
+#                   from parncutt_published
+#                   order by exercise"""
+# American Parncutt (ours)
+query_gold = """select exercise,
+                   parncutt_fingering as fingering,
+                   total as subject_count
+              from parncutt_binary"""
 curs.execute(query_gold)
 upper_gold = list()
 last_ex_id = None
@@ -79,11 +88,11 @@ for row_gold in curs:
 ex_index = 0
 human_alphas = list()
 for exercise_upper_gold in upper_gold:
+    print(len(exercise_upper_gold))
     krip = alpha(reliability_data=exercise_upper_gold, level_of_measurement='nominal')
     # print(krip)
     human_alphas.append(krip)
     ex_index += 1
-
 
 def krip_it(upper_rh_advice, exercise_upper_gold):
     fingerings = list(upper_rh_advice)
@@ -108,7 +117,7 @@ for i in range(7):
     parncutt_alphas.append(krip)
     # print(upper_rh_advice)
     if i == 1:
-        suggestions, costs, details = parncutt.generate_advice(staff="upper", score_index=i, cycle=4, k=20)
+        suggestions, costs, details = parncutt.generate_advice(staff="upper", score_index=i, cycle=4, k=30)
     else:
         suggestions, costs, details = parncutt.generate_advice(staff="upper", score_index=i, last_digit=last_digit[i], k=30)
 
