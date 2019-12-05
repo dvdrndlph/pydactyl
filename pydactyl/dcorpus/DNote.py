@@ -201,5 +201,4 @@ class AnnotatedDNote(DNote):
             if prior_ad_note.strike_digit() == 1 and self.strike_digit() != 1 and \
                     not self.is_descending():
                 return True
-
         return False

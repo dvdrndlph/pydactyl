@@ -90,6 +90,8 @@ class DEval(ABC):
     _NEARLY_INTERCHANGEABLE = {
         ('>2', '>3'), ('>3','>2'),
         ('<2', '<3'), ('<3', '<2'),
+        ('>3', '>4'), ('>4','>3'),
+        ('<3', '<4'), ('<4', '<3'),
         ('>4', '>5'), ('>5', '>4'),
         ('<4', '<5'), ('<5', '<4'),
     }
@@ -580,30 +582,69 @@ class DEval(ABC):
         nuggets_data = []
         for gold_index in range(len(score_gold)):
             nugget_data = {
-                'match_indices': [],
-                'wildcard_indices': [],
-                'interchangeable_indices': []
+                'match_indices': {},
+                'wildcard_indices': {},
+                'proxy_indices': {}
             }
             for note_index in range(len(score_gold[gold_index])):
                 goldie = score_gold[gold_index][note_index]
                 tip = suggestion[note_index]
                 if goldie == tip:
-                    nugget_data['match_indices'].append(note_index)
+                    nugget_data['match_indices'][note_index] = True
                 if goldie == 'x':
-                    nugget_data['wildcard_indices'].append(note_index)
+                    nugget_data['wildcard_indices'][note_index] = True
                 if (goldie, tip) in DEval._NEARLY_INTERCHANGEABLE:
-                    nugget_data['interchangeable_indices'].append(note_index)
+                    nugget_data['proxy_indices'][note_index] = True
             nuggets_data.append(nugget_data)
         return nuggets_data
 
     @staticmethod
-    def extended_prob_user_happy(suggestion, score_gold):
-        """
+    def equity_prob_user_happy(suggestion, score_gold, pure=False):
+        big_n = len(suggestion)
+        big_h = len(score_gold)
+        if big_h == 0:
+            return 0.0
+        numerator = 0
+        all_blanks = 0
+        purity = DEval._gold_purity(suggestion=suggestion, score_gold=score_gold)
+        for h in range(len(purity)):
+            match_count = len(purity[h]['match_indices'])
+            wildcard_count = len(purity[h]['wildcard_indices'])
+            proxy_count = len(purity[h]['proxy_indices'])
+            if wildcard_count == big_n:
+                # Not probative, skip.
+                all_blanks += 1
+            elif pure and wildcard_count + match_count + proxy_count != big_n:
+                # All note fingerings not "close."
+                pass
+            elif match_count == big_n:
+                numerator += match_count
+            else:
+                mats = purity[h]['match_indices']
+                wilds = purity[h]['wildcard_indices']
+                proxies = purity[h]['proxy_indices']
+                total = 0
+                wclashes = 0
+                for n in range(big_n):
+                    if n in mats or n in wilds:
+                        total += 1
+                    elif n in proxies:
+                        total += 1 - 1/2**n
+                    elif not pure:
+                        # We have a clash. Add its weight.
+                        wclashes += (big_n - n + 1)
+                if not pure:
+                    wclashes = wclashes * 2/(big_n + 1)
+                    total /= 2**wclashes
+                numerator += total
+        denominator = (big_h - all_blanks) * big_n
+        if denominator == 0:
+            return 0.0
+        prob = 1.0 * numerator/denominator
+        return prob
 
-        :param suggestion:
-        :param score_gold:
-        :return:
-        """
+    @staticmethod
+    def proxy_prob_user_happy(suggestion, score_gold, equal=False):
         big_n = len(suggestion)
         big_h = len(score_gold)
         if big_h == 0:
@@ -614,30 +655,41 @@ class DEval(ABC):
         for h in range(len(purity)):
             match_count = len(purity[h]['match_indices'])
             wildcard_count = len(purity[h]['wildcard_indices'])
-            interchangeable_count = len(purity[h]['interchangeable_indices'])
+            proxy_count = len(purity[h]['proxy_indices'])
             if wildcard_count == big_n:
                 # Not probative, skip.
                 pass
             if match_count == big_n:
                 numerator += 1
                 denominator += 1
-            elif match_count + interchangeable_count == big_n:
-                numerator += (match_count + interchangeable_count/2**interchangeable_count) / big_n
+            elif match_count + proxy_count == big_n:
+                if equal:
+                    numerator += 1
+                else:
+                    numerator += (match_count + proxy_count/2**proxy_count) / big_n
                 denominator += 1
             elif wildcard_count + match_count == big_n:
                 # Perfect match for non-wildcards, so we mute the size of its impact
                 # to the number of non-wildcards.
                 numerator += match_count / big_n
                 denominator += match_count / big_n
-            elif wildcard_count + match_count + interchangeable_count == big_n:
-                numerator += (match_count + interchangeable_count/2**interchangeable_count) / big_n
-                denominator += (match_count + interchangeable_count) / big_n
+            elif wildcard_count + match_count + proxy_count == big_n:
+                numerator += (match_count + proxy_count/2**proxy_count) / big_n
+                denominator += (match_count + proxy_count) / big_n
             else:
                 denominator += 1
         if denominator == 0:
             return 0.0
         prob = 1.0 * numerator/denominator
         return prob
+
+    @staticmethod
+    def equal_proxy_prob_user_happy(suggestion, score_gold):
+        return DEval.proxy_prob_user_happy(suggestion=suggestion, score_gold=score_gold, equal=True)
+
+    @staticmethod
+    def pure_equity_prob_user_happy(suggestion, score_gold):
+        return DEval.equity_prob_user_happy(suggestion=suggestion, score_gold=score_gold, pure=True)
 
     @staticmethod
     def strict_prob_user_happy(suggestion, score_gold):

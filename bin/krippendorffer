@@ -32,6 +32,7 @@ import pymysql
 
 corpse = "parncutt_published"
 corpse = "american_parncutt"
+corpse = "american_parncutt_pure"
 
 last_digit = {
     0: 3,
@@ -60,14 +61,21 @@ for row in curs:
     d_corpus.append(corpus_str=abc_content)
 
 # Parncutt Published
-# query_gold = """select exercise, fingering, subject_count
-#                   from parncutt_published
-#                   order by exercise"""
-# American Parncutt (ours)
-query_gold = """select exercise,
-                   parncutt_fingering as fingering,
-                   total as subject_count
-              from parncutt_binary"""
+query_gold = """select exercise, fingering, subject_count
+                  from parncutt_published
+                  order by exercise"""
+if corpse == "american_parncutt":
+    # American Parncutt (ours)
+    query_gold = """select exercise,
+                       parncutt_fingering as fingering,
+                       total as subject_count
+                  from parncutt_binary"""
+if corpse == "american_parncutt_pure":
+    # American Parncutt Unassisted (ours)
+    query_gold = """select exercise, parncutt as fingering, count(*) as subject_count
+                      from parncutt_american_pure
+                     group by exercise, parncutt"""
+
 curs.execute(query_gold)
 upper_gold = list()
 last_ex_id = None

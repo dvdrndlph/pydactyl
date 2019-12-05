@@ -150,6 +150,9 @@ class PianoFingering(Fingering):
     '>'
     >>> pf.strike_digit()
     5
+    >>> bh = pf.bigram_hash()
+    >>> bh['direction']
+    1
     >>> chords = list(upper_stream.flat.getElementsByClass(chord.Chord))
     >>> lower_fingering = PianoFingering.fingering(chords[-1], index=0)
     >>> upper_fingering = PianoFingering.fingering(chords[-1], index=1)
@@ -167,13 +170,20 @@ class PianoFingering(Fingering):
     CONFIDENCE_CLOSED = 0.9
     CONFIDENCE_OPEN = 0.6
 
-    def __init__(self, score_fingering=None, staff="upper", hand=None, soft="f", damper="^"):
+    ASCENDING = 1
+    DESCENDING = -1
+    LATERAL = 0
+    HAND_CHANGE = 999
+
+    def __init__(self, score_fingering=None, staff="upper", hand=None, soft="f", damper="^",
+                 prior_sf=None, direction=0):
         self._softs = []
         self._dampers = []
 
         self._confidence = PianoFingering.CONFIDENCE_EXPLICIT
         self._strike_hands_and_digits = []
         self._release_hands_and_digits = []
+        self._prior_hands_and_digits = []
         finger_number = None
         if score_fingering is not None:
             self._score_fingering = score_fingering
@@ -186,6 +196,14 @@ class PianoFingering(Fingering):
                 sf=score_fingering, damper=damper, soft=soft)
             self._dampers = dampers
             self._softs = softs
+            self._prior_sf = prior_sf
+            hands_and_digits = DAnnotation.hands_and_digits_for_score_fingering(
+                sf=prior_sf, staff=staff, hand=hand)
+            if hands_and_digits:
+                self._prior_hands_and_digits = hands_and_digits['release']
+            else:
+                self._prior_hands_and_digits = None
+            self._direction = direction
 
         super().__init__(fingerNumber=finger_number)
 
@@ -203,6 +221,17 @@ class PianoFingering(Fingering):
             PianoFingering._finger_score(d_score=d_score, d_annotation=d_annotation, staff="lower")
 
     @staticmethod
+    def _pitch_direction(prior_note, current_note):
+        if prior_note:
+            prior_midi = prior_note.pitches[0].midi
+            current_midi = current_note.pitches[0].midi
+            if current_midi > prior_midi:
+                return PianoFingering.ASCENDING
+            elif current_midi < prior_midi:
+                return PianoFingering.DESCENDING
+        return PianoFingering.LATERAL
+
+    @staticmethod
     def _finger_score(d_score, d_annotation, staff="upper"):
         stream = d_score.stream(staff=staff)
         notes_and_chords = stream.flat.getElementsByClass([note.Note, chord.Chord])
@@ -211,23 +240,32 @@ class PianoFingering(Fingering):
         hand = None
         soft = 'f'
         damper = '^'
+        prior_sf = None
+        prior_note = None
+        direction = 0
         for elem in notes_and_chords:
             if isinstance(elem, chord.Chord):
                 for n in elem.notes:
-                    pf = PianoFingering(score_fingering=sfs[sf_index], staff=staff,
-                                        hand=hand, soft=soft, damper=damper)
+                    pf = PianoFingering(score_fingering=sfs[sf_index], staff=staff, hand=hand,
+                                        soft=soft, damper=damper, prior_sf=prior_sf, direction=direction)
                     elem.articulations.append(pf)
                     hand = pf.last_hand()
                     soft = pf.last_soft()
                     damper = pf.last_damper()
+                    direction = PianoFingering._pitch_direction(prior_note=prior_note, current_note=n)
+                    prior_sf = sfs[sf_index]
+                    prior_note = n
                     sf_index += 1
             else:
-                pf = PianoFingering(score_fingering=sfs[sf_index], staff=staff,
-                                    hand=hand, soft=soft, damper=damper)
+                pf = PianoFingering(score_fingering=sfs[sf_index], staff=staff, hand=hand,
+                                    soft=soft, damper=damper, prior_sf=prior_sf, direction=direction)
                 elem.articulations.append(pf)
                 hand = pf.last_hand()
                 soft = pf.last_soft()
                 damper = pf.last_damper()
+                direction = PianoFingering._pitch_direction(prior_note=prior_note, current_note=elem)
+                prior_sf = sfs[sf_index]
+                prior_note = elem
                 sf_index += 1
 
     @staticmethod
@@ -323,6 +361,26 @@ class PianoFingering(Fingering):
 
     def last_soft(self):
         return self._softs[-1]
+
+    def bigram_hash(self, index=0):
+        """
+        Elements of the "semantically enriched" bigram label for the pitch at
+        the specified index. An ornamented note (e.g. trill) will have multiple
+        pitches/fingerings for a single note head. Returns None if no digit
+        is assigned (but rather a wildcard or "x") to either bigram element.
+        """
+        (strike_hand, strike_digit) = self._strike_hands_and_digits[index]
+        (prior_hand, prior_digit) = self._prior_hands_and_digits[index]
+        bits = {
+            'from': prior_digit,
+            'to': strike_digit,
+            'from_hand': prior_hand,
+            'to_hand': strike_hand,
+            'direction': self._direction
+        }
+        if 'x' in (prior_digit, strike_digit):
+            return None
+        return bits
 
 
 if __name__ == "__main__":

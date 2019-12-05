@@ -37,7 +37,8 @@ from pydactyl.dactyler.Parncutt import Badgerow
 
 DISPLAY = {
     'parncutt_published': 'Parncutt Published',
-    'american_parncutt': 'American Parncutt'
+    'american_parncutt': 'American Parncutt',
+    'american_parncutt_pure': 'American Parncutt Unassisted'
 }
 
 def spew_out(name, method, result, itemized, spew=False):
@@ -74,7 +75,7 @@ def published_parncutt_my_evaluate(cutter, name="", spew=False):
 
 
 def published_parncutt_std_evaluate(cutter, name="", spew=False):
-    err2_10, err2_10_itemized, undef = cutter.err_at_k(k=10, prob_function=DEval.extended_prob_user_happy)
+    err2_10, err2_10_itemized, undef = cutter.err_at_k(k=10, prob_function=DEval.proxy_prob_user_happy)
     spew_out(name=name, method='meanERR2@10', result=err2_10, itemized=err2_10_itemized, spew=spew)
     err_10, err_10_itemized, undef = cutter.err_at_k(k=10)
     spew_out(name=name, method='meanERR@10', result=err_10, itemized=err_10_itemized, spew=spew)
@@ -155,6 +156,8 @@ def process_corpus(corpus):
     alpha_items = [0.229324, 0.580852, 0.319432, 0.591431, 0.552646, 0.907207, 0.482368]
     if corpus == 'american_parncutt':
         alpha_items = [0.346886, 0.504542, 0.352549, 0.584485, 0.517459, 0.684327, 0.460866]
+    if corpus == 'american_parncutt_pure':
+        alpha_items = [0.293053, 0.504542, 0.352549, 0.584485, 0.521553, 0.684327, 0.460866]
 
     summary = list()
     for method in ['err_10', 'err2_10', 'ndcg_10', 'ndcg_full']:
@@ -261,5 +264,5 @@ def corpus_delta(pp_dat, ap_dat):
 
 
 pp_dat = process_corpus(corpus='parncutt_published')
-ap_dat = process_corpus(corpus='american_parncutt')
+ap_dat = process_corpus(corpus='american_parncutt_pure')
 corpus_delta(pp_dat=pp_dat, ap_dat=ap_dat)

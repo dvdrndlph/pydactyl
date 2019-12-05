@@ -61,6 +61,11 @@ class Parncutter(DEval):
                    parncutt_fingering as fingering,
                    total as subject_count
               from parncutt_binary"""
+        if self._corpus == "american_parncutt_pure":
+            query_gold = """
+                select exercise, parncutt as fingering, count(*) as subject_count
+                  from parncutt_american_pure
+                 group by exercise, parncutt"""
         if self._corpus == "parncutt_published":
             query_gold = """
                 select exercise, fingering, subject_count

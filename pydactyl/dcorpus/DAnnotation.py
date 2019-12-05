@@ -286,6 +286,9 @@ class DAnnotation:
         While the hand will always be set, the digit may be set to None if an "x" is
         specified for the score fingering.
         """
+        if sf is None:
+            return None
+
         hands_and_digits = {'strike': [], 'release': []}
         if sf.orn:
             hands_and_digits = DAnnotation.hands_and_digits_for_ornaments(
