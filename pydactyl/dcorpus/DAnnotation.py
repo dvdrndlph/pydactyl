@@ -311,6 +311,25 @@ class DAnnotation:
         return hands_and_digits
 
     @staticmethod
+    def ast_to_strike_release_data(ast, staff="upper"):
+        if staff not in ("upper", "lower"):
+            raise Exception("Invalid input: staff must be 'upper' or 'lower'.")
+
+        if staff == "upper":
+            lines = ast.upper
+            hand = ">"
+        else:
+            lines = ast.lower
+            hand = "<"
+        sr_data = []
+        for line in lines:
+            for score_fingering in line:
+                hands_and_digits = DAnnotation.hands_and_digits_for_score_fingering(
+                    sf=score_fingering, staff=staff)
+                sr_data.append(hands_and_digits)
+        return sr_data
+
+    @staticmethod
     def hand_digit(digit, staff):
         """
         Determine the handed digit for the input digit string.
@@ -463,6 +482,17 @@ class DAnnotation:
         """
         ast = self.parse()
         return DAnnotation.ast_to_handed_strike_digits(ast=ast, staff=staff)
+
+    def strike_release_data(self, staff="upper"):
+        """
+        :return: Array of strings, each of which is either "x" or is
+                 composed of a hand ("<" or ">") identifier and a digit (1-5).
+
+                 Returns None if any fingerings for the other hand
+                 are detected.
+        """
+        ast = self.parse()
+        return DAnnotation.ast_to_strike_release_data(ast=ast, staff=staff)
 
     def __init__(self, abcdf=None, authority=None, authority_year=None, transcriber=None,
                  transcription_date=None, abcdf_id=None, comments=''):

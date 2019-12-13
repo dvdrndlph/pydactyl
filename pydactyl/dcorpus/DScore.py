@@ -26,12 +26,20 @@ import re
 import numpy as np
 from music21 import abcFormat, stream 
 from pydactyl.dactyler import Constant
+from .DNote import DNote
 from .DPart import DPart
 from .PianoFingering import PianoFingering
 from sklearn.metrics import cohen_kappa_score
 from krippendorff import alpha
 from nltk.metrics.agreement import AnnotationTask
 # from .ManualDSegmenter import ManualDSegmenter
+
+# The locations of the various data in a bigram string
+FROM_HAND_INDEX = 0
+FROM_DIGIT_INDEX = 1
+DIRECTION_INDEX = 2
+TO_HAND_INDEX = 3
+TO_DIGIT_INDEX = 4
 
 
 class DScore:
@@ -297,7 +305,194 @@ class DScore:
                     note_index += 1
         return ignore
 
-    def _annotation_data(self, ids=[], staff="both", common_id=None):
+    @staticmethod
+    def _is_good_bigram_sr_action(action):
+        if action is None:
+            return False
+        if action[0] not in ('>', '<'):
+            return False
+        if action[1] not in (1, 2, 3, 4, 5):
+            return False
+        return True
+
+    @staticmethod
+    def _bigram_is_underspecified(sr_data, note_index):
+        if sr_data is None:
+            return True
+        elif note_index != 0:
+            prior_srd = sr_data[note_index - 1]
+            if not DScore._is_good_bigram_sr_action(prior_srd['release']):
+                return True
+        else:
+            if not DScore._is_good_bigram_sr_action(sr_data['strike']):
+                return True
+        return False
+
+    def _bigram_note_indices_to_ignore(self, staff="upper", common_id=None):
+        if staff not in ('upper', 'lower'):
+            raise Exception("Bigram metrics work on one staff at a time.")
+
+        ignore = {}
+        if common_id:
+            common_annot = self._abcd_header.annotation_by_id(identifier=common_id)
+            note_index = 0
+            for srd in common_annot.handed_strike_digits(staff=staff):
+                if DScore._bigram_is_underspecified(sr_data=srd, note_index=note_index):
+                    ignore[note_index] = True
+                note_index += 1
+        return ignore
+
+    def _bigram_annotation_data(self, ids=[], staff="upper", common_id=None, offset=0):
+        """
+        Data for feeding bigram tags to the NLTK AnnotationTask.
+        :param ids:
+        :param staff:
+        :param common_id:
+        :return:
+        """
+        if staff == "upper":
+            d_part = self.upper_d_part()
+        elif staff == "lower":
+            d_part = self.lower_d_part()
+        else:
+            raise Exception("Specific staff must be specified.")
+
+        ordered_notes = d_part.orderly_d_notes(offset=offset)
+        ignore = self._bigram_note_indices_to_ignore(staff=staff, common_id=common_id)
+        data = []
+        for coder_id in ids:
+            note_index = 0
+            annot = self._abcd_header.annotation_by_id(identifier=coder_id)
+            for sr_data in annot.strike_release_data(staff=staff):
+                if note_index in ignore or DScore._bigram_is_underspecified(sr_data=sr_data, note_index=note_index):
+                    pass
+                else:
+                    d_note = ordered_notes[note_index]
+                    direction = 0
+                    prior_sr = None
+                    if note_index != 0:
+                        prior_sr = sr_data[note_index - 1]
+                        if d_note.is_ascending():
+                            direction = 1
+                        elif d_note.is_descending():
+                            direction = -1
+                    sr = sr_data[note_index]
+                    record = {'coder_id': coder_id,
+                              'note_index': note_index,
+                              'direction': direction,
+                              'prior_sr': prior_sr,
+                              'sr': sr}
+                    data.append(record)
+                note_index += 1
+        return data
+
+    @staticmethod
+    def _all_same_hand(one, other):
+        if one[FROM_HAND_INDEX] == one[TO_HAND_INDEX] and \
+                one[TO_HAND_INDEX] == other[FROM_HAND_INDEX] and \
+                other[FROM_HAND_INDEX] == other[TO_HAND_INDEX]:
+            return True
+        return False
+
+    @staticmethod
+    def _ascending(bigram_str):
+        direction = bigram_str[DIRECTION_INDEX]
+        if direction == DNote.ASCENDING_CHAR:
+            return True
+        return False
+
+    @staticmethod
+    def _descending(bigram_str):
+        direction = bigram_str[DIRECTION_INDEX]
+        if direction == DNote.DESCENDING_CHAR:
+            return True
+        return False
+
+    @staticmethod
+    def _pivot_clash(one, other):
+        """
+        Assumes all hands are the same.
+        """
+        hand = one[FROM_HAND_INDEX]
+        direction = one[DIRECTION_INDEX]
+        if direction == DNote.LATERAL_CHAR:
+            return False
+
+        a = int(one[FROM_HAND_INDEX])
+        b = int(one[TO_HAND_INDEX])
+        x = int(other[FROM_HAND_INDEX])
+        y = int(other[TO_HAND_INDEX])
+        if hand == '>':  # pivotclash_RH
+            if (DScore._ascending(one) and 1 in (b, y) and b != y) or \
+                    (DScore._descending(one) and 1 in (a, x) and a != x):
+                return True
+        elif hand == '<':  # pivotclash_LH
+            if (DScore._descending(one) and 1 in (b, y) and b != y) or \
+                    (DScore._ascending(one) and 1 in (a, x) and a != x):
+                return True
+        return False
+
+    @staticmethod
+    def _wpclashes(seq_X, seq_Y):
+        pass
+
+    @staticmethod
+    def _aligned(seq_X, seq_Y):
+        pass
+
+    @staticmethod
+    def bigram_label_distance(one, other, t=1, p=1, n_bar=16):
+        # hfdhf or ^=hf
+        if len(one) != len(other):
+            raise Exception("Bigram labels to compare must be the same length.")
+        if one[DIRECTION_INDEX] != other[DIRECTION_INDEX]:
+            raise Exception("Mismatched pitch direction in bigrams being compared.")
+        if not DScore._all_same_hand(one, other):
+            return 1.0/p
+
+        b = int(one[TO_DIGIT_INDEX])
+        y = int(other[TO_DIGIT_INDEX])
+        if one[FROM_HAND_INDEX] == '^':
+            distance = abs(b - y)/(t * n_bar)
+            return distance
+
+        if DScore._pivot_clash(one, other):
+            return 1.0/p
+
+        a = int(one[FROM_DIGIT_INDEX])
+        x = int(other[FROM_DIGIT_INDEX])
+        distance = (abs(a - x) + abs(b - y)) / (t * n_bar)
+        return distance
+
+    def _nltk_bigram_annotation_data(self, ids=[], staff="upper", common_id=None, offset=0):
+        """
+        Data for feeding the NLTK AnnotationTask.
+        :param ids:
+        :param staff:
+        :param common_id:
+        :return:
+        """
+        nltk_data = []
+        data = self._bigram_annotation_data(ids=ids, staff=staff, common_id=common_id, offset=offset)
+        is_first = True
+        for datum in data:
+            direction_int = datum['direction']
+            direction_str = DNote.DIRECTION_MAP[direction_int]
+            if is_first:
+                prior_hand = '^'
+                prior_digit = '^'
+                is_first = False
+            else:
+                prior_hand = datum['prior_sr']['release'][0]
+                prior_digit = datum['prior_sr']['release'][1]
+            hand = datum['sr']['strike'][0]
+            digit = datum['sr']['strike'][1]
+            label = "{}{}{}{}{}".format(prior_hand, prior_digit, direction_str, hand, digit)
+            record = [datum['coder_id'], datum['note_index'], label]
+            nltk_data.append(record)
+        return nltk_data
+
+    def _nltk_annotation_data(self, ids=[], staff="both", common_id=None):
         """
         The data suitable for feeding the NLTK AnnotationTask.
         :param ids:
@@ -361,7 +556,13 @@ class DScore:
         return data
 
     def nltk_alpha(self, ids=[], staff="both", common_id=None):
-        data = self._annotation_data(ids=ids, staff=staff, common_id=common_id)
+        data = self._nltk_annotation_data(ids=ids, staff=staff, common_id=common_id)
+        annot_task = AnnotationTask(data=data)
+        krip = annot_task.alpha()
+        return krip
+
+    def nltk_bigram_alpha(self, ids=[], staff="both", common_id=None):
+        data = self._nltk_annotation_data(ids=ids, staff=staff, common_id=common_id)
         annot_task = AnnotationTask(data=data)
         krip = annot_task.alpha()
         return krip

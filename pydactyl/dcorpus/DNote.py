@@ -26,6 +26,21 @@ import music21
 
 
 class DNote:
+    ASCENDING = 1
+    DESCENDING = -1
+    LATERAL = 0
+    ASCENDING_CHAR = '/'
+    DESCENDING_CHAR = "\\"
+    LATERAL_CHAR = '-'
+    DIRECTION_MAP = {
+        ASCENDING_CHAR: ASCENDING,
+        ASCENDING: ASCENDING_CHAR,
+        DESCENDING_CHAR: DESCENDING,
+        DESCENDING: DESCENDING_CHAR,
+        LATERAL: LATERAL_CHAR,
+        LATERAL_CHAR: LATERAL
+    }
+
     def __init__(self, m21_note, prior_note=None):
         self._m21_note = m21_note
         self._prior_note = prior_note
@@ -163,16 +178,25 @@ class DNote:
 
 
 class AnnotatedDNote(DNote):
-    def __init__(self, m21_note, prior_note=None, strike_hand=None, strike_digit=None):
+    def __init__(self, m21_note, prior_note=None, strike_hand=None, strike_digit=None,
+                 release_hand=None, release_digit=None):
         super().__init__(m21_note=m21_note, prior_note=prior_note)
         self._strike_hand = strike_hand
         self._strike_digit = strike_digit
+        self._release_hand = release_hand
+        self._release_digit = release_digit
 
     def strike_hand(self):
         return self._strike_hand
 
     def strike_digit(self):
         return self._strike_digit
+
+    def release_hand(self):
+        return self._release_hand
+
+    def release_digit(self):
+        return self._release_digit
 
     def tuple_str(self):
         return "%s:%s" % (self.midi(), self.strike_digit())
