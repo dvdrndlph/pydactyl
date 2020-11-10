@@ -87,6 +87,9 @@ class Parncutter(DEval):
             for i in range(subject_count):
                 exercise_upper_gold.append(gold_fingering_str)
 
+    def print_abcdf_files(self, target_dir="/tmp"):
+        return
+
     def map_at_perfect_recall(self, staff="upper"):
         avg_p_sum = 0
         details = list()

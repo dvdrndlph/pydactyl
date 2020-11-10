@@ -62,6 +62,11 @@ class DAnnotation:
     """
     _parser = compile(GRAMMAR)
 
+    FINGERING_STR = 'abcD fingering '
+    AUTHORITY_STR = '% Authority: '
+    TRANSCRIBER_STR = '% Transcriber: '
+    TRANSCRIPTION_DATE_STR = '% Transcription date: '
+
     @staticmethod
     def abcdf_to_ast(abcdf):
         ast = DAnnotation._parser.parse(abcdf)
@@ -506,6 +511,18 @@ class DAnnotation:
             self.abcdf(abcdf)
         self._abcdf_id = abcdf_id
         self._comments = comments
+
+    def __str__(self):
+        annot_str = DAnnotation.FINGERING_STR + self.abcdf() + "\n"
+        if self._authority:
+            annot_str += DAnnotation.AUTHORITY_STR + self._authority
+            if self._authority_year:
+                annot_str += '(' + self._authority_year + ')' + "\n"
+        if self._transcriber:
+            annot_str += DAnnotation.TRANSCRIBER_STR + self._transcriber + "\n"
+        if self._transcription_date:
+            annot_str += DAnnotation.TRANSCRIPTION_DATE_STR + self._transcription_date + "\n"
+        return annot_str
 
     def authority(self, authority=None):
         if authority:

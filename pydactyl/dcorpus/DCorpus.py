@@ -115,6 +115,27 @@ class DCorpus:
         return None
 
     @staticmethod
+    def abcd_header_str(path=None, string=None):
+        hdr = DCorpus.abcd_header(path=path, string=string)
+        hdr_str = hdr.__str__()
+        return hdr_str
+
+    @staticmethod
+    def abc_body_str(path=None, string=None):
+        if path:
+            string = DCorpus.file_to_string(file_path=path)
+        body_str = ''
+        past_hdr = False
+        if not ABCDHeader.is_abcd(string):
+            past_hdr = True
+        for line in iter(string.splitlines()):
+            if past_hdr:
+                body_str += line + "\n"
+            elif line == ABCDHeader.TERMINAL_STR:
+                past_hdr = True
+        return body_str
+
+    @staticmethod
     def corpus_type(corpus_path=None, corpus_str=None):
         if corpus_path:
             corpus_str = DCorpus.file_to_string(file_path=corpus_path)
@@ -140,25 +161,33 @@ class DCorpus:
             header_str = DCorpus.file_to_string(header_path)
 
         abcd_header = None
+        abc_body = ''
 
         if corpus_str:
             corpus_type = DCorpus.corpus_type(corpus_str=corpus_str)
             if corpus_type == Constant.CORPUS_ABCD and not header_str:
                 header_str = corpus_str
             if header_str:
-                abcd_header = DCorpus.abcd_header(string=header_str) 
+                abcd_header = DCorpus.abcd_header(string=header_str)
+
+            if corpus_type in [Constant.CORPUS_ABC, Constant.CORPUS_ABCD]:
+                abc_body = DCorpus.abc_body_str(string=corpus_str)
+
             if as_xml:
                 corpus_str = DCorpus.abc2xml(abc_content=corpus_str)
                 corpus_type = DCorpus.corpus_type(corpus_str=corpus_str)
 
             if corpus_type in [Constant.CORPUS_ABC, Constant.CORPUS_ABCD]:
-                # The abc conversion does not manage the grouping of voices inro
+                # NOTE: We only do this if we are not using the XML transform.
+                # THIS IS NOT RECOMMENDED.
+                # The abc conversion does not manage the grouping of voices into
                 # the appropriate part (staff), so we hack around this shortcoming.
                 self._abc_strings.append(corpus_str)
                 abc_file = abcFormat.ABCFile(abcVersion=(2,1,0))
                 staff_assignments = DCorpus._score_staff_assignments(abc_content=corpus_str)
                 abc_handle = abc_file.readstr(corpus_str)
             else:
+                # THIS IS WHERE WE SHOULD BE.
                 corp = converter.parse(corpus_str)
                 if isinstance(corp, stream.Opus):
                     for score in corp:
@@ -167,12 +196,13 @@ class DCorpus:
                 else:
                     score = corp
                     d_score = DScore(music21_stream=score, segmenter=self.segmenter(),
-                                     abcd_header=abcd_header)
+                                     abcd_header=abcd_header, abc_body=abc_body)
                     self._d_scores.append(d_score)
         else:
             return False
 
         if corpus_type in [Constant.CORPUS_ABC, Constant.CORPUS_ABCD]:
+            # WARNING: abc parsing is NOT recommended
             ah_for_id = abc_handle.splitByReferenceNumber()
             if len(staff_assignments) > 0 and len(staff_assignments) != len(ah_for_id):
                 # We must know how to map all voices to a staff. Either all scores (tunes)
@@ -187,10 +217,10 @@ class DCorpus:
             score_index = 0
             for score_id in ah_for_id:
                 if len(staff_assignments) > 0:
-                    d_score = DScore(abc_handle=ah_for_id[score_id], abcd_header=abcd_header,
+                    d_score = DScore(abc_handle=ah_for_id[score_id], abcd_header=abcd_header, abc_body=abc_body,
                                      voice_map=staff_assignments[score_index], segmenter=self.segmenter())
                 else:
-                    d_score = DScore(abc_handle=ah_for_id[score_id], abcd_header=abcd_header,
+                    d_score = DScore(abc_handle=ah_for_id[score_id], abcd_header=abcd_header, abc_body=abc_body,
                                      segmenter=self.segmenter())
                 self._d_scores.append(d_score)
                 score_index += 1

@@ -26,6 +26,7 @@ import re
 import numpy as np
 from music21 import abcFormat, stream 
 from pydactyl.dactyler import Constant
+from nltk.metrics.distance import binary_distance
 from .DNote import DNote
 from .DPart import DPart
 from .PianoFingering import PianoFingering
@@ -43,6 +44,10 @@ TO_DIGIT_INDEX = 4
 
 
 class DScore:
+    _bigram_t = 1
+    _bigram_p = 1
+    _bigram_big_n_bar = 16
+
     @staticmethod
     def _voice_id(abc_voice):
         reggie = r'^V:\s*(\d+)'
@@ -73,9 +78,10 @@ class DScore:
         self.finger(staff=staff, d_annotation=d_annotation, id=id)
 
     def __init__(self, music21_stream=None, segmenter=None, abc_handle=None,
-                 voice_map=None, abcd_header=None):
+                 voice_map=None, abcd_header=None, abc_body=''):
         self._lower_d_part = None
         self._upper_d_part = None
+        self._abc_body = abc_body
 
         if music21_stream:
             self._combined_d_part = DPart(music21_stream=music21_stream, staff="both")
@@ -124,9 +130,31 @@ class DScore:
                 self._lower_d_part = DPart(music21_stream=lower_stream, staff="lower")
 
         self._abcd_header = abcd_header
-        # self.abcd_header(abcd_header)
         self._segmenter = None
         self.segmenter(segmenter)
+
+    def __str__(self):
+        abcd_str = self._abcd_header.__str__()
+        abcd_str += self._abc_body
+        return abcd_str
+
+    @staticmethod
+    def bigram_t(t=None):
+        if DScore._bigram_t is not None:
+            DScore._bigram_t = t
+        return DScore._bigram_t
+
+    @staticmethod
+    def bigram_p(p=None):
+        if DScore._bigram_p is not None:
+            DScore._bigram_p = p
+        return DScore._bigram_p
+
+    @staticmethod
+    def bigram_big_n_bar(big_n_bar=None):
+        if DScore._bigram_big_n_bar is not None:
+            DScore._bigram_big_n_bar = big_n_bar
+        return DScore._bigram_big_n_bar
 
     def is_monophonic(self):
         return self._combined_d_part.is_monophonic()
@@ -412,6 +440,7 @@ class DScore:
     def _pivot_clash(one, other):
         """
         Assumes all hands are the same.
+        >>> uno = ">1"
         """
         hand = one[FROM_HAND_INDEX]
         direction = one[DIRECTION_INDEX]
@@ -433,15 +462,45 @@ class DScore:
         return False
 
     @staticmethod
-    def _wpclashes(seq_X, seq_Y):
-        pass
+    def _wpclashes(seq_x, seq_y, rotation=0):
+        if rotation != 0:
+            raise Exception("Rotation in radians (to temper or increase) equity effects not supported yet.")
+            # We use Integral_0^4 -1x/2 + 2
+            # Could adjust to Integral_0^4 -1x/4 + 3/2, but I am tired of knobs to support my
+            # dime-store cognitive modeling of "equity." Alex could help here.
+
+        big_n = len(seq_y)
+        if len(seq_x) != big_n:
+            raise Exception("Weighted pivot clashes not supported for unbalanced bigram label sequences.")
+        wpclashes = 0
+        for n in range(big_n):
+            if DScore._pivot_clash(seq_x[n], seq_y[n]):
+                clash_weight = big_n - n + 1
+                wpclashes += clash_weight
+        wpclashes *= (big_n / (2 * (big_n + 1)))  # Normalize between 0 and N
+        return wpclashes
 
     @staticmethod
-    def _aligned(seq_X, seq_Y):
-        pass
+    def _pivot_clash_discount(sys_seq, human_seq, base=16):
+        wpclashes = DScore._wpclashes(seq_x=sys_seq, seq_y=human_seq)
+        val = 1.0 / (base**wpclashes)
+        return val
 
     @staticmethod
-    def bigram_label_distance(one, other, t=1, p=1, n_bar=16):
+    def _aligned(seq_x, seq_y):
+        if len(seq_x) != len(seq_y):
+            raise Exception("Alignment check not supported for unbalanced bigram label sequences.")
+        for i in range(len(seq_x)):
+            if DScore._pivot_clash(seq_x[i], seq_y[i]):
+                return False
+        return True
+
+    @staticmethod
+    def bigram_label_distance(one, other):
+        t = DScore.bigram_t()
+        p = DScore.bigram_p()
+        n_bar = DScore.bigram_big_n_bar()
+
         # hfdhf or ^=hf
         if len(one) != len(other):
             raise Exception("Bigram labels to compare must be the same length.")
@@ -464,7 +523,23 @@ class DScore:
         distance = (abs(a - x) + abs(b - y)) / (t * n_bar)
         return distance
 
-    def _nltk_bigram_annotation_data(self, ids=[], staff="upper", common_id=None, offset=0):
+    @staticmethod
+    def _bigram_datum_to_label(datum, is_first=False):
+        direction_int = datum['direction']
+        direction_str = DNote.DIRECTION_MAP[direction_int]
+        if is_first:
+            prior_hand = '^'
+            prior_digit = '^'
+        else:
+            prior_hand = datum['prior_sr']['release'][0]
+            prior_digit = datum['prior_sr']['release'][1]
+        hand = datum['sr']['strike'][0]
+        digit = datum['sr']['strike'][1]
+        label = "{}{}{}{}{}".format(prior_hand, prior_digit, direction_str, hand, digit)
+        record = [datum['coder_id'], datum['note_index'], label]
+        return record
+
+    def _nltk_bigram_staff_annotation_data(self, ids=[], staff="upper", common_id=None, offset=0):
         """
         Data for feeding the NLTK AnnotationTask.
         :param ids:
@@ -472,27 +547,53 @@ class DScore:
         :param common_id:
         :return:
         """
+        if staff not in ('upper', 'lower'):
+            raise Exception("Annotation data collected one staff at a time.")
+
         nltk_data = []
         data = self._bigram_annotation_data(ids=ids, staff=staff, common_id=common_id, offset=offset)
         is_first = True
         for datum in data:
-            direction_int = datum['direction']
-            direction_str = DNote.DIRECTION_MAP[direction_int]
             if is_first:
-                prior_hand = '^'
-                prior_digit = '^'
+                label = DScore._bigram_datum_to_label(datum=datum, is_first=is_first)
                 is_first = False
             else:
-                prior_hand = datum['prior_sr']['release'][0]
-                prior_digit = datum['prior_sr']['release'][1]
-            hand = datum['sr']['strike'][0]
-            digit = datum['sr']['strike'][1]
-            label = "{}{}{}{}{}".format(prior_hand, prior_digit, direction_str, hand, digit)
+                label = DScore._bigram_datum_to_label(datum=datum)
             record = [datum['coder_id'], datum['note_index'], label]
             nltk_data.append(record)
         return nltk_data
 
-    def _nltk_annotation_data(self, ids=[], staff="both", common_id=None):
+    def _pypi_bigram_staff_annotation_data(self, ids=[], staff="upper", common_id=None, offset=0):
+        """
+        Data for feeding the PyPI krippendorff module.
+        :param ids:
+        :param staff:
+        :param common_id:
+        :return:
+        """
+        if staff not in ('upper', 'lower'):
+            raise Exception("Annotation data collected one staff at a time.")
+
+        pypi_data = []
+        data = self._bigram_annotation_data(ids=ids, staff=staff, common_id=common_id, offset=offset)
+        is_first = True
+        human_id = None
+        human_data = {}
+        for datum in data:
+            if is_first:
+                label = DScore._bigram_datum_to_label(datum=datum, is_first=is_first)
+                is_first = False
+            else:
+                label = DScore._bigram_datum_to_label(datum=datum)
+            if datum['coder_id'] != human_id:
+                human_data = {}
+                human_id = datum['coder_id']
+                pypi_data.append(human_data)
+            human_data[datum['note_index']] = label
+        pypi_data.append(human_data)
+        return pypi_data
+
+    def _nltk_staff_annotation_data(self, ids=[], staff="upper", measurement='nominal', common_id=None):
         """
         The data suitable for feeding the NLTK AnnotationTask.
         :param ids:
@@ -500,26 +601,22 @@ class DScore:
         :param common_id:
         :return:
         """
+        if staff not in ('upper', 'lower'):
+            raise Exception("Annotation data collected one staff at a time.")
+
         ignore = self._note_indices_to_ignore(staff=staff, common_id=common_id)
         data = []
         for coder_id in ids:
             note_index = 0
             annot = self._abcd_header.annotation_by_id(identifier=coder_id)
-            if staff == "upper" or staff == "both":
-                for hsd in annot.handed_strike_digits(staff="upper"):
-                    if hsd is not None and hsd != 'x' and note_index not in ignore:
-                        record = [coder_id, note_index, hsd]
-                        data.append(record)
-                    note_index += 1
-            if staff == "lower" or staff == "both":
-                for hsd in annot.handed_strike_digits(staff="lower"):
-                    if hsd is not None and hsd != 'x' and note_index not in ignore:
-                        record = [coder_id, note_index, hsd]
-                        data.append(record)
-                    note_index += 1
+            for hsd in annot.handed_strike_digits(staff=staff):
+                if hsd is not None and hsd != 'x' and note_index not in ignore:
+                    record = [coder_id, note_index, hsd]
+                    data.append(record)
+                note_index += 1
         return data
 
-    def _reliability_data(self, ids=[], staff="both", measurement="nominal", common_id=None):
+    def _pypi_staff_annotation_data(self, ids=[], staff="upper", common_id=None):
         """
         Data structure suitable for passing to the PyPI krippendorff module.
         :param ids:
@@ -530,48 +627,86 @@ class DScore:
         ignore = self._note_indices_to_ignore(staff=staff, common_id=common_id)
         data = []
         for coder_id in ids:
-            coder_codings = []
+            coder_codings = list()
             note_index = 0
             annot = self._abcd_header.annotation_by_id(identifier=coder_id)
-            if staff == "upper" or staff == "both":
-                for hsd in annot.handed_strike_digits(staff="upper"):
-                    if note_index in ignore:
-                        pass
-                    elif hsd is None or hsd == 'x':
-                        coder_codings.append(np.nan)
-                    else:
-                        coder_codings.append(hsd)
-                    note_index += 1
-            if staff == "lower" or staff == "both":
-                for hsd in annot.handed_strike_digits(staff="lower"):
-                    if note_index in ignore:
-                        pass
-                    elif hsd is None or hsd == 'x':
-                        coder_codings.append(np.nan)
-                    else:
-                        coder_codings.append(hsd)
-                    note_index += 1
+            for hsd in annot.handed_strike_digits(staff=staff):
+                if note_index in ignore:
+                    pass
+                elif hsd is None or hsd == 'x':
+                    coder_codings.append(np.nan)
+                else:
+                    coder_codings.append(hsd)
+                note_index += 1
             data.append(coder_codings)
         # pprint.pprint(data)
         return data
 
-    def nltk_alpha(self, ids=[], staff="both", common_id=None):
-        data = self._nltk_annotation_data(ids=ids, staff=staff, common_id=common_id)
-        annot_task = AnnotationTask(data=data)
-        krip = annot_task.alpha()
+    def _staff_annotation_data(self, ids=[], staff="upper", lib="nltk", label="unigram", common_id=None):
+        if staff not in ('upper', 'lower'):
+            raise Exception("Annotation data collected one staff at a time.")
+        if label == "bigram":
+            if lib == 'nltk':
+                data = self._nltk_bigram_staff_annotation_data(ids=ids, staff=staff, common_id=common_id)
+            else:
+                data = self._pypi_bigram_staff_annotation_data(ids=ids, staff=staff, common_id=common_id)
+        else:
+            if lib == 'nltk':
+                data = self._nltk_staff_annotation_data(ids=ids, staff=staff, common_id=common_id)
+            else:
+                data = self._pypi_staff_annotation_data(ids=ids, staff=staff, common_id=common_id)
+        return data
+
+    def _annotation_data(self, ids=[], staff="both", lib="nltk", label='unigram', common_id=None):
+        """
+        Separated data structures suitable for passing to the PyPI krippendorff module.
+        :param ids:
+        :param staff:
+        :param common_id:
+        :return:
+        """
+        staff_data = dict()
+        upper_data = None
+        lower_data = None
+        if staff == "upper" or staff == "both":
+            upper_data = self._staff_annotation_data(ids=ids, staff="upper", lib=lib, label=label, common_id=common_id)
+        if staff == "lower" or staff == "both":
+            lower_data = self._staff_annotation_data(ids=ids, staff="lower", lib=lib, label=label, common_id=common_id)
+        staff_data['upper'] = upper_data
+        staff_data['lower'] = lower_data
+        # pprint.pprint(data)
+        return staff_data
+
+    def alpha(self, ids=[], staff="upper", common_id=None, lib='nltk', label='bigram', distance=None):
+        if staff not in ('upper', 'lower'):
+            raise Exception("Alpha measure only applicable one staff at a time.")
+
+        data = self._staff_annotation_data(ids=ids, staff=staff, lib=lib, label=label, common_id=common_id)
+        if distance is None and label == "bigram":
+            distance = DScore.bigram_label_distance
+
+        if lib == 'nltk':
+            if distance is None:
+                distance = binary_distance
+            annot_task = AnnotationTask(data=data, distance=distance)
+            krip = annot_task.alpha()
+        else:
+            if distance is None:
+                distance = 'nominal'
+            krip = alpha(reliability_data=data, level_of_measurement=distance)
+
         return krip
 
-    def nltk_bigram_alpha(self, ids=[], staff="both", common_id=None):
-        data = self._nltk_annotation_data(ids=ids, staff=staff, common_id=common_id)
-        annot_task = AnnotationTask(data=data)
-        krip = annot_task.alpha()
-        return krip
+    def pypi_alpha_old(self, ids=[], staff="both", common_id=None, label='bigram', distance=binary_distance):
+        if staff not in ('upper', 'lower'):
+            raise Exception("PyPI krippendorff alpha only applicable one staff at a time.")
 
-    def pypi_alpha(self, ids=[], staff="both", common_id=None):
-        data = self._reliability_data(ids=ids, staff=staff, common_id=common_id)
-        value_domain = ['>1', '>2', '>3', '>4', '>5']
-        if staff == "both" or staff == "left":
-            value_domain.extend(['<1', '<2', '<3', '<4', '<5'])
+        if label == 'bigram':
+            data = self._bigram_reliability_data(ids=ids, staff=staff, common_id=common_id)
+        else:
+            data = self._reliability_data(ids=ids, staff=staff, common_id=common_id)
+
+        value_domain = ['>1', '>2', '>3', '>4', '>5', '<1', '<2', '<3', '<4', '<5']
         krip = alpha(reliability_data=data, level_of_measurement='nominal', value_domain=value_domain)
         return krip
 

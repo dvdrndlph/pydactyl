@@ -26,10 +26,13 @@ from .DAnnotation import DAnnotation
 
 
 class ABCDHeader:
+    ABCD_VER = '6'
     COMMENT_RE = r'^%\s*(.*)'
     TITLE_RE = r'^%\s*abcDidactyl v(\d+)'
+    TITLE_STR = '% abcDidactyl v' + ABCD_VER
     FINGERING_RE = r'^%\s*abcD fingering (\d+):\s*(.*)'
     TERMINAL_RE = r'^%\s*abcDidactyl END'
+    TERMINAL_STR = '% abcDidactyl END'
     AUTHORITY_RE = r'^%\s*Authority:\s*([^\(]+)\s*(\((\d+)\))?'
     TRANSCRIBER_RE = r'^%\s*Transcriber:\s*(.*)'
     TRANSCRIPTION_DATE_RE = r'^%\s*Transcription date:\s*((\d\d\d\d\-\d\d\-\d\d)\s*(\d\d:\d\d:\d\d)?)'
@@ -81,6 +84,13 @@ class ABCDHeader:
             matt = re.search(ABCDHeader.COMMENT_RE, line)
             if matt:
                 annotation.add_comment_line(matt.group(1))
+
+    def __str__(self):
+        abcd_str = ABCDHeader.TITLE_STR + "\n"
+        for annot in self._annotations:
+            abcd_str += annot.__str__()
+        abcd_str += ABCDHeader.TERMINAL_STR + "\n"
+        return abcd_str
 
     def version(self):
         return self._version
