@@ -45,7 +45,10 @@ class ABCDHeader:
                 return True
         return False
 
-    def __init__(self, abcd_str):
+    def append_annotation(self, d_annotation):
+        self._annotations.append(d_annotation)
+
+    def __init__(self, abcd_str=''):
         self._annotations = []
 
         annotation = DAnnotation()

@@ -56,17 +56,22 @@ class Parncutter(DEval):
             self._d_corpus.append(corpus_str=abc_content)
         self._dactyler.load_corpus(d_corpus=self._d_corpus)
 
+        # Fetch all of the fingerings for the Parncutt corpus collected from our
+        # (North) American cohort of pianists.
         query_gold = """
             select exercise,
                    parncutt_fingering as fingering,
                    total as subject_count
               from parncutt_binary"""
         if self._corpus == "american_parncutt_pure":
+            # Exclude any fingerings when the pianist was provided (Czerny) advice.
+            # (Include only advice that came in with no assistance and is therefore "pure."
             query_gold = """
                 select exercise, parncutt as fingering, count(*) as subject_count
                   from parncutt_american_pure
                  group by exercise, parncutt"""
         if self._corpus == "parncutt_published":
+            # The fingerings reported in the Parncutt paper.
             query_gold = """
                 select exercise, fingering, subject_count
                   from parncutt_published

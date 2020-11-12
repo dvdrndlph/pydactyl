@@ -30,9 +30,50 @@ from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dcorpus.DScore import DScore
 from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 
+
 da_corpus = DCorpus()
-da_corpus.append_from_db(client_id='695311d7e88d5f79b4945bf45d00cc77', selection_id='21')
+# da_corpus.append_from_db(client_id='695311d7e88d5f79b4945bf45d00cc77', selection_id='21')
+# da_score = da_corpus.d_score_by_index(0)
+# da_title = da_score.title()
+# print(da_title)
+# print(da_score)
+
+piece_query = '''
+    select exercise as piece_id,
+           abc_fragment as abc_str
+      from parncutt
+     order by exercise'''
+
+all_american_query = '''
+    select parncutt_fingering as fingering,
+           total as weight,
+           'Various Didactyl' as 'authority',
+           'Pydactyl' as 'transcriber'
+      from parncutt_binary
+     where exercise = {}
+     order by weight desc'''
+
+pure_american_query = '''
+    select parncutt as fingering,
+           'Various Didactyl' as 'authority',
+           'Pydactyl' as 'transcriber',
+           count(*) as weight
+      from parncutt_american_pure
+     where exercise = {} 
+     group by parncutt
+     order by weight desc'''
+
+parncutt_published_query = '''
+    select fingering,
+           'Various Didactyl' as 'authority',
+           'Pydactyl' as 'transcriber',
+           subject_count as weight
+      from parncutt_published
+     where exercise = {}
+     order by weight desc'''
+
+da_corpus.assemble_and_append_from_db(piece_query=piece_query, fingering_query=parncutt_published_query)
 da_score = da_corpus.d_score_by_index(0)
 da_title = da_score.title()
-print(da_title)
+# print(da_title)
 print(da_score)

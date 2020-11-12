@@ -62,7 +62,7 @@ class DAnnotation:
     """
     _parser = compile(GRAMMAR)
 
-    FINGERING_STR = 'abcD fingering '
+    FINGERING_STR = '% abcD fingering '
     AUTHORITY_STR = '% Authority: '
     TRANSCRIBER_STR = '% Transcriber: '
     TRANSCRIPTION_DATE_STR = '% Transcription date: '
@@ -513,15 +513,20 @@ class DAnnotation:
         self._comments = comments
 
     def __str__(self):
-        annot_str = DAnnotation.FINGERING_STR + self.abcdf() + "\n"
+        abcdf_id = 1
+        if self._abcdf_id:
+            abcdf_id = self._abcdf_id
+        annot_str = DAnnotation.FINGERING_STR + str(abcdf_id) + ': ' + self.abcdf() + "\n"
         if self._authority:
-            annot_str += DAnnotation.AUTHORITY_STR + self._authority
+            annot_str += DAnnotation.AUTHORITY_STR + self._authority + "\n"
             if self._authority_year:
                 annot_str += '(' + self._authority_year + ')' + "\n"
         if self._transcriber:
             annot_str += DAnnotation.TRANSCRIBER_STR + self._transcriber + "\n"
         if self._transcription_date:
             annot_str += DAnnotation.TRANSCRIPTION_DATE_STR + self._transcription_date + "\n"
+        if self._comments:
+            annot_str += '% ' + self.comments() + "\n"
         return annot_str
 
     def authority(self, authority=None):
@@ -584,4 +589,6 @@ class DAnnotation:
         return self._comments.rstrip()
 
     def add_comment_line(self, comment):
-        self._comments += comment + "\n"
+        if self._comments:
+            self._comments += "\n"
+        self._comments += comment.rstrip()
