@@ -31,7 +31,7 @@ from pydactyl.dcorpus.DScore import DScore
 from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 
 
-da_corpus = DCorpus()
+# da_corpus = DCorpus()
 # da_corpus.append_from_db(client_id='695311d7e88d5f79b4945bf45d00cc77', selection_id='21')
 # da_score = da_corpus.d_score_by_index(0)
 # da_title = da_score.title()
@@ -44,7 +44,9 @@ piece_query = '''
       from parncutt
      order by exercise'''
 
-all_american_query = '''
+query = {}
+
+query['all_american'] = '''
     select parncutt_fingering as fingering,
            total as weight,
            'Various Didactyl' as 'authority',
@@ -53,17 +55,18 @@ all_american_query = '''
      where exercise = {}
      order by weight desc'''
 
-pure_american_query = '''
+query['pure_american'] = '''
     select parncutt as fingering,
            'Various Didactyl' as 'authority',
            'Pydactyl' as 'transcriber',
            count(*) as weight
       from parncutt_american_pure
      where exercise = {} 
+       and Advised = 'No'
      group by parncutt
      order by weight desc'''
 
-parncutt_published_query = '''
+query['parncutt_published'] = '''
     select fingering,
            'Various Didactyl' as 'authority',
            'Pydactyl' as 'transcriber',
@@ -72,8 +75,15 @@ parncutt_published_query = '''
      where exercise = {}
      order by weight desc'''
 
-da_corpus.assemble_and_append_from_db(piece_query=piece_query, fingering_query=parncutt_published_query)
-da_score = da_corpus.d_score_by_index(0)
-da_title = da_score.title()
-# print(da_title)
-print(da_score)
+target_dir = "/Users/dave/corpus/"
+for corpus_name in ['all_american', 'pure_american', 'parncutt_published']:
+    da_corpus = DCorpus()
+    da_corpus.assemble_and_append_from_db(piece_query=piece_query, fingering_query=query[corpus_name])
+    for da_score in da_corpus.d_score_list():
+        file_name = da_score.title().split()[0]
+        file_path = target_dir + corpus_name + '_' + file_name + '.abcd'
+        print("Creating " + file_path)
+        with open(file_path, 'w') as f:
+            f.write(str(da_score))
+        # print(da_score)
+    print("\n")

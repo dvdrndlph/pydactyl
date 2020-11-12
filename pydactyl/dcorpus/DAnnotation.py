@@ -510,7 +510,8 @@ class DAnnotation:
         if abcdf:
             self.abcdf(abcdf)
         self._abcdf_id = abcdf_id
-        self._comments = comments
+        self._comments = ''
+        self.comments(comments=comments)
 
     def __str__(self):
         abcdf_id = 1
@@ -526,7 +527,7 @@ class DAnnotation:
         if self._transcription_date:
             annot_str += DAnnotation.TRANSCRIPTION_DATE_STR + self._transcription_date + "\n"
         if self._comments:
-            annot_str += '% ' + self.comments() + "\n"
+            annot_str += self.commented_comments() + "\n"
         return annot_str
 
     def authority(self, authority=None):
@@ -582,6 +583,16 @@ class DAnnotation:
         if abcdf_id:
             self._abcdf_id = abcdf_id
         return self._abcdf_id
+
+    def commented_comments(self):
+        lines = self._comments.splitlines(True)
+        commented_lines = []
+        for line in lines:
+            if not re.match('^% ', line):
+                line = '% ' + line
+            commented_lines.append(line)
+        comment_str = "".join(commented_lines)
+        return comment_str
 
     def comments(self, comments=None):
         if comments:
