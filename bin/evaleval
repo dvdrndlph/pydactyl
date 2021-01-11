@@ -1,0 +1,104 @@
+#!/usr/bin/env python
+__author__ = 'David Randolph'
+# Copyright (c) 2020 David A. Randolph.
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without
+# restriction, including without limitation the rights to use,
+# copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following
+# conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+
+import copy
+from pydactyl.dcorpus.DCorpus import DCorpus
+from pydactyl.dcorpus.PianoFingering import PianoFingering
+from pydactyl.dcorpus.DEvaluation import DEvaluation
+
+from pydactyl.dcorpus.DScore import DScore
+from pydactyl.dcorpus.ABCDHeader import ABCDHeader
+
+
+# da_corpus = DCorpus()
+# da_corpus.append_from_db(client_id='695311d7e88d5f79b4945bf45d00cc77', selection_id='21')
+# da_score = da_corpus.d_score_by_index(0)
+# da_title = da_score.title()
+# print(da_title)
+# print(da_score)
+
+piece_query = '''
+    select exercise as piece_id,
+           abc_fragment as abc_str
+      from parncutt
+     order by exercise'''
+
+query = {}
+
+query['all_american'] = '''
+    select parncutt_fingering as fingering,
+           total as weight,
+           'Various Didactyl' as 'authority',
+           'Pydactyl' as 'transcriber'
+      from parncutt_binary
+     where exercise = {}
+     order by weight desc'''
+
+query['pure_american'] = '''
+    select parncutt as fingering,
+           'Various Didactyl' as 'authority',
+           'Pydactyl' as 'transcriber',
+           count(*) as weight
+      from parncutt_american_pure
+     where exercise = {} 
+       and Advised = 'No'
+     group by parncutt
+     order by weight desc'''
+
+query['parncutt_published'] = '''
+    select fingering,
+           'Various Didactyl' as 'authority',
+           'Pydactyl' as 'transcriber',
+           subject_count as weight
+      from parncutt_published
+     where exercise = {}
+     order by weight desc'''
+
+target_dir = "/Users/dave/corpus/"
+for corpus_name in ['all_american', 'pure_american', 'parncutt_published']:
+    da_corpus = DCorpus()
+    da_corpus.assemble_and_append_from_db(piece_query=piece_query, fingering_query=query[corpus_name])
+    staff = 'upper'
+
+    for da_score in da_corpus.d_score_list():
+        print(da_score)
+        system_scores = []
+        human_score = copy.deepcopy(da_score)
+        note_count = human_score.note_count(staff=staff)
+        abcdh = da_score.abcd_header()
+        last_annot_id = abcdh.annotation_count()
+        print("last id: {}".format(last_annot_id))
+        PianoFingering.finger_score(d_score=human_score, staff=staff, id=last_annot_id)
+        for i in range(5):
+            system_scores.append(copy.deepcopy(da_score))
+            PianoFingering.finger_score(d_score=system_scores[i], staff=staff, id=i+1)
+        evil = DEvaluation(human_score=human_score, system_scores=system_scores, staff=staff)
+        for i in range(4):
+            rank = i + 1
+            hamming = evil.hamming_at_rank(rank=rank)
+            norm_hamming = evil.normalized_hamming_at_rank(rank=rank)
+            print("Hamming at rank {} for {}-note sequence is {} (normalized to {})".format(rank, note_count,
+                                                                                            hamming, norm_hamming))
+    print("\n")

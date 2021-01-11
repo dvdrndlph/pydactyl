@@ -1074,13 +1074,14 @@ class DEval(ABC):
                                                      offset=0, last_digit=last_digit, k=k)
         system_advice = []
         for r in range(len(segment_suggestions)):
-            strikers = DAnnotation.abcdf_to_handed_strike_digits(segment_suggestion[r], staff=staff)
+            strikers = DAnnotation.abcdf_to_handed_strike_digits(segment_suggestions[r], staff=staff)
             system_advice.append(strikers)
 
         segment_gold_data = self._segmented_gold_strike_list(score_index=score_index, segment_lengths=segment_lengths,
                                                              staff=staff, last_digit=last_digit)
         err_for_segment = list()
         # segment_gold[segment_index][h][n]
+        h = 0
         for segment in range(len(segment_gold_data)):
             seg_gold = segment_gold_data[h]
             err = 0
