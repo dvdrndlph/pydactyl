@@ -76,11 +76,17 @@ query['parncutt_published'] = '''
      where exercise = {}
      order by weight desc'''
 
+
+def uniform_decay(big_n, n): return big_n - n + 1
+def no_decay(big_n, n): return 1
+
+
 target_dir = "/Users/dave/corpus/"
 for corpus_name in ['all_american', 'pure_american', 'parncutt_published']:
     da_corpus = DCorpus()
     da_corpus.assemble_and_append_from_db(piece_query=piece_query, fingering_query=query[corpus_name])
     staff = 'upper'
+
 
     for da_score in da_corpus.d_score_list():
         print(da_score)
@@ -95,10 +101,16 @@ for corpus_name in ['all_american', 'pure_american', 'parncutt_published']:
             system_scores.append(copy.deepcopy(da_score))
             PianoFingering.finger_score(d_score=system_scores[i], staff=staff, id=i+1)
         evil = DEvaluation(human_score=human_score, system_scores=system_scores, staff=staff)
+        evil.print_pivot_count_report()
         for i in range(4):
             rank = i + 1
             hamming = evil.hamming_at_rank(rank=rank)
             norm_hamming = evil.normalized_hamming_at_rank(rank=rank)
+            pivot_clashes = evil.pivot_clashes_at_rank(rank=rank)
+            uniform_rho = evil.pivot_clashes_at_rank(rank=rank, decay_function=uniform_decay)
             print("Hamming at rank {} for {}-note sequence is {} (normalized to {})".format(rank, note_count,
                                                                                             hamming, norm_hamming))
+            print("Pivot clashes at rank {} for {}-note sequence is {})".format(rank, note_count, pivot_clashes))
+            print("Uniform rho at rank {} for {}-note sequence is {})".format(rank, note_count, uniform_rho))
+
     print("\n")

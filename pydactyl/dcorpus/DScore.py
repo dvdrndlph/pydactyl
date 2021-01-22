@@ -227,7 +227,6 @@ class DScore:
             return self._upper_d_part.orderly_note_stream(offset=offset)
         else:
             return self._combined_d_part.orderly_note_stream(offset=offset)
-        return None
 
     def lower_stream(self):
         if self._lower_d_part:

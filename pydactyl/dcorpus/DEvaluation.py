@@ -94,8 +94,91 @@ class DEvaluation:
         return normed_distance
 
     @staticmethod
+    def _pivot(pf_a, pf_b, direction):
+        if direction == 0:
+            return False
+        if pf_a.strike_hand() != pf_b.strike_hand():
+            return False # No pivot with different hands involved.
+        if direction > 0: # Ascending
+            if pf_b.strike_digit() != 1:
+                return False
+            if pf_a.strike_digit() != pf_b.strike_digit():
+                return True
+        else: # Descending
+            if pf_a.strike_digit() != 1:
+                return False
+            if pf_a.strike_digit() != pf_b.strike_digit():
+                return True
+        return False
+
+    @staticmethod
+    def _pivot_clash(pf_a, pf_b, pf_x, pf_y, direction):
+        is_one_pivot = DEvaluation._pivot(pf_a, pf_b, direction)
+        is_other_pivot = DEvaluation._pivot(pf_x, pf_y, direction)
+        if is_one_pivot != is_other_pivot:
+            return True
+        return False
+
+    @staticmethod
+    def _get_basic_bigram_info(one_stream, index):
+        if index >= len(one_stream):
+            raise Exception("Stream index is out of range")
+
+        a_pf = PianoFingering.fingering(one_stream[index])
+        b_pf = PianoFingering.fingering(one_stream[index + 1])
+        this_note = one_stream[index]
+        next_note = one_stream[index + 1]
+        this_midi = this_note.pitch.midi
+        next_midi = next_note.pitch.midi
+        direction = next_midi - this_midi
+        return a_pf, b_pf, direction
+
     def pivot_clashes_at_rank(self, rank, decay_function=None):
         index = rank - 1
         one_stream = self._human_note_stream
-        other_stream = self._system_note_stream[index]
-        return 0
+        other_stream = self._system_note_streams[index]
+        big_n = len(one_stream)
+
+        normalizing_factor = 1
+        if decay_function:
+            denom = 0
+            for n in range(big_n):
+                n += 1
+                denom += decay_function(big_n=big_n, n=n)
+            if denom == 0:
+                raise Exception("Bad decay function specified")
+            normalizing_factor = big_n / denom
+
+        clashes = 0.0
+        for i in range(big_n - 1): # the last note position cannot have a clash.
+            a_pf, b_pf, direction = DEvaluation._get_basic_bigram_info(one_stream, i)
+            x_pf, y_pf, direction = DEvaluation._get_basic_bigram_info(other_stream, i)
+            is_clash = DEvaluation._pivot_clash(a_pf, b_pf, x_pf, y_pf, direction)
+            if is_clash:
+                if decay_function:
+                    clashes += decay_function(big_n=big_n, n=i+1)
+                else:
+                    clashes += 1
+        normalized_clashes = normalizing_factor * clashes
+        return normalized_clashes
+
+    @staticmethod
+    def _count_pivots_in_fingered_stream(one_stream):
+        big_n = len(one_stream)
+        pivot_count = 0
+        for i in range(big_n - 1): # the last note position cannot have a clash.
+            pf_a, pf_b, direction = DEvaluation._get_basic_bigram_info(one_stream, i)
+            if DEvaluation._pivot(pf_a, pf_b, direction):
+                pivot_count += 1
+        return pivot_count
+
+    def print_pivot_count_report(self):
+        human_stream = self._human_note_stream
+        human_count = DEvaluation._count_pivots_in_fingered_stream(human_stream)
+        print("PIVOT COUNTS")
+        print("Human: {}".format(human_count))
+        for i in range(len(self._system_note_streams)):
+            system_stream = self._system_note_streams[i]
+            pivot_count = DEvaluation._count_pivots_in_fingered_stream(system_stream)
+            print("Sys {}: {}".format(i + 1, human_count))
+        print("\n")

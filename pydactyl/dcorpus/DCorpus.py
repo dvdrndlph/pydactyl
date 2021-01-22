@@ -317,7 +317,7 @@ class DCorpus:
         curs.close()
 
     def assemble_and_append_from_db(self, host='127.0.0.1', port=3306, user='didactyl', passwd='', db='didactyl2',
-                                    piece_query=None, fingering_query=None, as_xml=False):
+                                    piece_query=None, fingering_query=None, as_xml=True):
         if not piece_query:
             raise Exception("Piece query with piece_id and abc_str columns not specified.")
         piece_conn = pymysql.connect(host=host, port=port, user=user, passwd=passwd, db=db)
