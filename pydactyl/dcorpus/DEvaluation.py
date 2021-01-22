@@ -65,7 +65,7 @@ class DEvaluation:
         return False
 
     @staticmethod
-    def _delta(one_note, other_note):
+    def hamming_delta(one_note, other_note):
         one_pf = PianoFingering.fingering(one_note)
         other_pf = PianoFingering.fingering(other_note)
         if one_pf.strike_digit() != other_pf.strike_digit():
@@ -80,18 +80,31 @@ class DEvaluation:
             raise Exception("Mismatched orderly note streams")
         distance = 0
         for i in range(len(one_stream)):
-            distance += DEvaluation._delta(one_stream[i], other_stream[i])
+            distance += DEvaluation.hamming_delta(one_stream[i], other_stream[i])
         return distance
 
     def hamming_at_rank(self, rank):
-        index = rank - 1
-        distance = DEvaluation.hamming(self._human_note_stream, self._system_note_streams[index])
+        distance = self.big_delta_at_rank(rank=rank)
         return distance
 
     def normalized_hamming_at_rank(self, rank):
         big_n = self._human_score.note_count(staff=self._staff)
         normed_distance = self.hamming_at_rank(rank=rank) / big_n
         return normed_distance
+
+    def big_delta_at_rank(self, rank, delta_function=None):
+        if delta_function is None:
+            delta_function = DEvaluation.hamming_delta
+        index = rank - 1
+        human_stream = self._human_note_stream
+        system_stream = self._system_note_streams[index]
+        if len(human_stream) != len(system_stream):
+            raise Exception("Mismatched orderly note streams")
+        distance = 0
+        for i in range(len(human_stream)):
+            distance += delta_function(one_note=human_stream[i], other_note=system_stream[i])
+        return distance
+
 
     @staticmethod
     def _pivot(pf_a, pf_b, direction):

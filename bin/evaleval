@@ -87,7 +87,6 @@ for corpus_name in ['all_american', 'pure_american', 'parncutt_published']:
     da_corpus.assemble_and_append_from_db(piece_query=piece_query, fingering_query=query[corpus_name])
     staff = 'upper'
 
-
     for da_score in da_corpus.d_score_list():
         print(da_score)
         system_scores = []
@@ -105,6 +104,9 @@ for corpus_name in ['all_american', 'pure_american', 'parncutt_published']:
         for i in range(4):
             rank = i + 1
             hamming = evil.hamming_at_rank(rank=rank)
+            also_hamming = evil.big_delta_at_rank(rank=rank)
+            if hamming != also_hamming:
+                raise Exception("Something's broken.")
             norm_hamming = evil.normalized_hamming_at_rank(rank=rank)
             pivot_clashes = evil.pivot_clashes_at_rank(rank=rank)
             uniform_rho = evil.pivot_clashes_at_rank(rank=rank, decay_function=uniform_decay)
