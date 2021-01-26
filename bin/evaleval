@@ -26,7 +26,7 @@ __author__ = 'David Randolph'
 import copy
 from pydactyl.dcorpus.DCorpus import DCorpus
 from pydactyl.dcorpus.PianoFingering import PianoFingering
-from pydactyl.dcorpus.DEvaluation import DEvaluation
+from pydactyl.dcorpus.DEvaluation import DEvaluation, DEvalFunction
 
 from pydactyl.dcorpus.DScore import DScore
 from pydactyl.dcorpus.ABCDHeader import ABCDHeader
@@ -108,10 +108,14 @@ for corpus_name in ['parncutt_published']:
                 raise Exception("Something's broken.")
             norm_hamming = evil.normalized_hamming_at_rank(rank=rank)
             pivot_clashes = evil.pivot_clashes_at_rank(rank=rank)
-            uniform_rho = evil.pivot_clashes_at_rank(rank=rank, decay_function=DEvaluation.uniform_decay)
+            uniform_rho = evil.pivot_clashes_at_rank(rank=rank, decay_function=DEvalFunction.decay_uniform)
+            p_stop = evil.prob_stop_at_rank(rank=rank)
+            trigram_p_stop = evil.trigram_prob_stop_at_rank(rank=rank, full_context=True)
             print("Hamming at rank {} for {}-note sequence is {} (normalized to {})".format(rank, note_count,
                                                                                             hamming, norm_hamming))
             print("Pivot clashes at rank {} for {}-note sequence is {})".format(rank, note_count, pivot_clashes))
             print("Uniform rho at rank {} for {}-note sequence is {})".format(rank, note_count, uniform_rho))
+            print("P(stop) at rank {} for {}-note sequence is {})".format(rank, note_count, p_stop))
+            print("Trigram P(stop) at rank {} for {}-note sequence is {})".format(rank, note_count, trigram_p_stop))
 
     print("\n")

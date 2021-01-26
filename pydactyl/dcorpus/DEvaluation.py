@@ -27,6 +27,107 @@ from music21 import note, chord
 from music21.articulations import Fingering
 from pydactyl.dcorpus.PianoFingering import PianoFingering
 
+
+class DEvalFunction:
+    @staticmethod
+    def delta_long_short(one_note, other_note):
+        one_pf = PianoFingering.fingering(one_note)
+        other_pf = PianoFingering.fingering(other_note)
+        if one_pf.strike_hand() != other_pf.strike_hand():
+            return 1.0
+        one_digit = one_pf.strike_digit()
+        other_digit = other_pf.strike_digit()
+        if one_digit == other_digit:
+            return 0.0
+        if (one_digit in (2, 3) and other_digit in (2, 3)) or \
+                (one_digit in (3, 4) and other_digit in (3, 4)):
+            return 3.0/4.0
+        return 0
+
+    @staticmethod
+    def delta_prime(one_note, other_note):
+        one_pf = PianoFingering.fingering(one_note)
+        other_pf = PianoFingering.fingering(other_note)
+        if one_pf.strike_hand() != other_pf.strike_hand():
+            return 1.0
+        one_digit = one_pf.strike_digit()
+        other_digit = other_pf.strike_digit()
+        if one_digit == other_digit:
+            return 0.0
+        if (one_digit in (2, 3) and other_digit in (2, 3)) or \
+                (one_digit in (3, 4) and other_digit in (3, 4)):
+            return 1.0/2.0
+        if (one_digit in (1, 2) and other_digit in (1, 2)) or \
+                (one_digit in (4, 5) and other_digit in (4, 5)):
+            return 3.0/4.0
+        return 0
+
+    @staticmethod
+    def delta_hamming(one_note, other_note):
+        one_pf = PianoFingering.fingering(one_note)
+        other_pf = PianoFingering.fingering(other_note)
+        if one_pf.strike_digit() != other_pf.strike_digit():
+            return 1
+        elif one_pf.strike_hand() != other_pf.strike_hand():
+            return 1
+        return 0
+
+    @staticmethod
+    def _is_unigram_match(one_note_stream, other_note_stream, index):
+        if index not in one_note_stream and index not in other_note_stream:
+            return True
+        if index not in one_note_stream or index not in other_note_stream:
+            raise Exception("Mismatched note streams")
+
+        one_note = one_note_stream[index]
+        other_note = other_note_stream[index]
+        one_pf = PianoFingering.fingering(one_note)
+        other_pf = PianoFingering.fingering(other_note)
+        if one_pf.strike_hand() != other_pf.strike_hand():
+            return False
+        if one_pf.strike_digit() == other_pf.strike_digit():
+            return True
+        return False
+
+    @staticmethod
+    def delta_trigram(one_note_stream, other_note_stream, index, delta_prime_function=None):
+        note_count = len(one_note_stream)
+        check_count = len(other_note_stream)
+        if note_count != check_count:
+            raise Exception("Note stream count mismatch")
+        if index >= note_count + 2:
+            raise Exception("Note stream index out of range")
+
+        if not DEvalFunction._is_unigram_match(one_note_stream, other_note_stream, index):
+            return 1.0
+        if not DEvalFunction._is_unigram_match(one_note_stream, other_note_stream, index - 2):
+            return 1.0
+        if DEvalFunction._is_unigram_match(one_note_stream, other_note_stream, index - 1):
+            return 0.0
+
+        one_note = one_note_stream[index - 1]
+        other_note = other_note_stream[index - 1]
+        if delta_prime_function is not None:
+            return delta_prime_function(one_note=one_note, other_note=other_note)
+        return 1.0
+
+    @staticmethod
+    def decay_uniform(big_n, n):
+        return big_n - n + 1
+
+    @staticmethod
+    def decay_none(big_n, n):
+        return 1
+
+    @staticmethod
+    def rho_power2(rho_value):
+        return math.pow(2, rho_value)
+
+    @staticmethod
+    def rho_plus1(rho_value):
+        return rho_value + 1.0
+
+
 class DEvaluation:
     """
     Class to determine how well each of the top ranked outputs of a model
@@ -40,10 +141,6 @@ class DEvaluation:
         self._system_scores = []
         self._system_note_streams = []
         self.system_scores(system_scores)
-
-    @staticmethod
-    def _long_short_delta(one_pf, other_note):
-        return 0
 
     def human_score(self, d_score=None):
         if d_score:
@@ -65,31 +162,6 @@ class DEvaluation:
             return True
         return False
 
-    @staticmethod
-    def long_short_delta(one_note, other_note):
-        one_pf = PianoFingering.fingering(one_note)
-        other_pf = PianoFingering.fingering(other_note)
-        if one_pf.strike_hand() != other_pf.strike_hand():
-            return 1.0
-        one_digit = one_pf.strike_digit()
-        other_digit = other_pf.strike_digit()
-        if one_digit == other_digit:
-            return 0.0
-        if (one_digit in (2, 3) and other_digit in (2, 3)) or \
-           (one_digit in (3, 4) and other_digit in (3, 4)):
-            return 3.0/4.0
-        return 0
-
-    @staticmethod
-    def hamming_delta(one_note, other_note):
-        one_pf = PianoFingering.fingering(one_note)
-        other_pf = PianoFingering.fingering(other_note)
-        if one_pf.strike_digit() != other_pf.strike_digit():
-            return 1
-        elif one_pf.strike_hand() != other_pf.strike_hand():
-            return 1
-        return 0
-
     def hamming_at_rank(self, rank):
         distance = self.big_delta_at_rank(rank=rank)
         return distance
@@ -99,16 +171,32 @@ class DEvaluation:
         normed_distance = self.hamming_at_rank(rank=rank) / big_n
         return normed_distance
 
-    def uniform_decay(big_n, n):
-        return big_n - n + 1
+    def trigram_big_delta_at_rank(self, rank, delta_function=DEvalFunction.delta_trigram,
+                                  decay_function=None, full_context=False):
+        index = rank - 1
+        human_stream = self._human_note_stream
+        system_stream = self._system_note_streams[index]
+        if len(human_stream) != len(system_stream):
+            raise Exception("Mismatched orderly note streams")
 
-    def no_decay(big_n, n):
-        return 1
+        big_n = self._human_score.note_count(staff=self._staff)
+        if full_context:
+            # Evaluate each note in its full trigram context.
+            # (Each note participates in three trigram comparisons.)
+            big_n += 2
 
-    def big_delta_at_rank(self, rank, delta_function=None, decay_function=None):
-        if delta_function is None:
-            delta_function = DEvaluation.hamming_delta
+        normalizing_factor = DEvaluation._normalizing_factor(big_n=big_n, decay_function=decay_function)
+        distance = 0
+        for i in range(big_n):
+            decay_weight = 1
+            if decay_function:
+                decay_weight = decay_function(big_n=big_n, n=i+1)
+            delta_value = delta_function(one_note_stream=human_stream, other_note_stream=system_stream, index=i)
+            distance += decay_weight * delta_value
+        big_delta = normalizing_factor * distance
+        return big_delta
 
+    def big_delta_at_rank(self, rank, delta_function=DEvalFunction.delta_hamming, decay_function=None):
         index = rank - 1
         human_stream = self._human_note_stream
         system_stream = self._system_note_streams[index]
@@ -265,10 +353,32 @@ class DEvaluation:
             print("Sys {}: {} Count: {}".format(i + 1, system_contour, system_count))
         print("\n")
 
-    def prob_stop_at_rank(self, rank, delta_function=None, rho_decay_function=None, big_delta_decay_function=None):
+    def prob_stop_at_rank(self, rank,
+                          delta_function=DEvalFunction.delta_hamming,
+                          big_delta_decay_function=DEvalFunction.decay_uniform,
+                          rho_function=DEvalFunction.rho_power2,
+                          rho_decay_function=DEvalFunction.decay_uniform):
         big_delta_value = self.big_delta_at_rank(rank=rank, delta_function=delta_function,
                                                  decay_function=big_delta_decay_function)
         big_n = self._human_score.note_count(staff=self._staff)
         rho_value = self.rho_at_rank(rank=rank, decay_function=rho_decay_function)
-        prob_at_rank = (1.0 - (big_delta_value / big_n)) / (math.pow(2, rho_value))
+        prob_at_rank = 1.0 - (big_delta_value / big_n)
+        if rho_function:
+            prob_at_rank /= rho_function(rho_value)
+        return prob_at_rank
+
+    def trigram_prob_stop_at_rank(self, rank, full_context=False,
+                                  delta_function=DEvalFunction.delta_trigram,
+                                  big_delta_decay_function=DEvalFunction.decay_uniform,
+                                  rho_function=DEvalFunction.rho_power2,
+                                  rho_decay_function=DEvalFunction.decay_uniform):
+        big_delta_value = self.trigram_big_delta_at_rank(rank=rank, delta_function=delta_function,
+                                                         decay_function=big_delta_decay_function)
+        big_n = self._human_score.note_count(staff=self._staff)
+        if full_context:
+            big_n += 2
+        rho_value = self.rho_at_rank(rank=rank, decay_function=rho_decay_function)
+        prob_at_rank = 1.0 - (big_delta_value / big_n)
+        if rho_function:
+            prob_at_rank /= rho_function(rho_value)
         return prob_at_rank
