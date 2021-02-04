@@ -30,6 +30,16 @@ from pydactyl.dcorpus.PianoFingering import PianoFingering
 
 class DEvalFunction:
     @staticmethod
+    def delta_hamming(one_note, other_note):
+        one_pf = PianoFingering.fingering(one_note)
+        other_pf = PianoFingering.fingering(other_note)
+        if one_pf.strike_digit() != other_pf.strike_digit():
+            return 1
+        elif one_pf.strike_hand() != other_pf.strike_hand():
+            return 1
+        return 0
+
+    @staticmethod
     def delta_long_short(one_note, other_note):
         one_pf = PianoFingering.fingering(one_note)
         other_pf = PianoFingering.fingering(other_note)
@@ -45,7 +55,31 @@ class DEvalFunction:
         return 0
 
     @staticmethod
-    def delta_prime(one_note, other_note):
+    def delta_prime(one_note, other_note, epsilon=1.0):
+        """
+        Return the edit distance between two fingered trigrams, assuming notes
+        one and three are fingered the same, given the two fingered middle notes.
+        :param one_note: A fingered middle note of a trigram.
+        :param other_note: Another fingered middle note of the same sequence..
+        :return: 0.0 if fingerings are the same, 1.0 - epsilon if fingerings are
+                 arbitrary per theory notion that adjacent long fingers are
+                 essentially interchangeable, 1.0 otherwise.
+        """
+        one_pf = PianoFingering.fingering(one_note)
+        other_pf = PianoFingering.fingering(other_note)
+        if one_pf.strike_hand() != other_pf.strike_hand():
+            return 1.0
+        one_digit = one_pf.strike_digit()
+        other_digit = other_pf.strike_digit()
+        if one_digit == other_digit:
+            return 0.0
+        if (one_digit in (2, 3) and other_digit in (2, 3)) or \
+                (one_digit in (3, 4) and other_digit in (3, 4)):
+            return 1 - epsilon
+        return 1.0
+
+    @staticmethod
+    def delta_prime_refined(one_note, other_note):
         one_pf = PianoFingering.fingering(one_note)
         other_pf = PianoFingering.fingering(other_note)
         if one_pf.strike_hand() != other_pf.strike_hand():
@@ -60,24 +94,16 @@ class DEvalFunction:
         if (one_digit in (1, 2) and other_digit in (1, 2)) or \
                 (one_digit in (4, 5) and other_digit in (4, 5)):
             return 3.0/4.0
-        return 0
-
-    @staticmethod
-    def delta_hamming(one_note, other_note):
-        one_pf = PianoFingering.fingering(one_note)
-        other_pf = PianoFingering.fingering(other_note)
-        if one_pf.strike_digit() != other_pf.strike_digit():
-            return 1
-        elif one_pf.strike_hand() != other_pf.strike_hand():
-            return 1
-        return 0
+        return 1.0
 
     @staticmethod
     def _is_unigram_match(one_note_stream, other_note_stream, index):
-        if index not in one_note_stream and index not in other_note_stream:
-            return True
-        if index not in one_note_stream or index not in other_note_stream:
+        if len(one_note_stream) != len(other_note_stream):
             raise Exception("Mismatched note streams")
+        if index < 0:
+            return True
+        if index >= len(one_note_stream):
+            return True
 
         one_note = one_note_stream[index]
         other_note = other_note_stream[index]
@@ -110,6 +136,17 @@ class DEvalFunction:
         if delta_prime_function is not None:
             return delta_prime_function(one_note=one_note, other_note=other_note)
         return 1.0
+
+    @staticmethod
+    def delta_trigram_with_prime(one_note_stream, other_note_stream, index):
+        return DEvalFunction.delta_trigram(one_note_stream=one_note_stream, other_note_stream=other_note_stream,
+                                           index=index, delta_prime_function=DEvalFunction.delta_prime)
+
+    @staticmethod
+    def delta_trigram_with_refined_prime(one_note_stream, other_note_stream, index):
+        return DEvalFunction.delta_trigram(one_note_stream=one_note_stream, other_note_stream=other_note_stream,
+                                           index=index, delta_prime_function=DEvalFunction.delta_prime_refined)
+
 
     @staticmethod
     def decay_uniform(big_n, n):
@@ -162,17 +199,19 @@ class DEvaluation:
             return True
         return False
 
-    def hamming_at_rank(self, rank):
+    def hamming_at_rank(self, rank, normalized=False):
         distance = self.big_delta_at_rank(rank=rank)
+        if normalized:
+            big_n = self._human_score.note_count(staff=self._staff)
+            normed_distance = self.hamming_at_rank(rank=rank) / big_n
+            return normed_distance
         return distance
 
     def normalized_hamming_at_rank(self, rank):
-        big_n = self._human_score.note_count(staff=self._staff)
-        normed_distance = self.hamming_at_rank(rank=rank) / big_n
-        return normed_distance
+        return self.hamming_at_rank(rank=rank, normalized=True)
 
     def trigram_big_delta_at_rank(self, rank, delta_function=DEvalFunction.delta_trigram,
-                                  decay_function=None, full_context=False):
+                                  decay_function=None, full_context=False, normalized=False):
         index = rank - 1
         human_stream = self._human_note_stream
         system_stream = self._system_note_streams[index]
@@ -185,6 +224,7 @@ class DEvaluation:
             # (Each note participates in three trigram comparisons.)
             big_n += 2
 
+        # We need to normalize measure so that big_delta <= big_n.
         normalizing_factor = DEvaluation._normalizing_factor(big_n=big_n, decay_function=decay_function)
         distance = 0
         for i in range(big_n):
@@ -194,6 +234,10 @@ class DEvaluation:
             delta_value = delta_function(one_note_stream=human_stream, other_note_stream=system_stream, index=i)
             distance += decay_weight * delta_value
         big_delta = normalizing_factor * distance
+
+        if normalized:
+            # Caller wants value normalized between 0 and 1.
+            big_delta /= big_n
         return big_delta
 
     def big_delta_at_rank(self, rank, delta_function=DEvalFunction.delta_hamming, decay_function=None):
@@ -295,7 +339,7 @@ class DEvaluation:
     def _count_pivots_in_fingered_stream(one_stream):
         big_n = len(one_stream)
         pivot_count = 0
-        for i in range(big_n - 1): # the last note position cannot have a clash.
+        for i in range(big_n - 1):  # the last note position cannot have a clash.
             pf_a, pf_b, direction = DEvaluation._get_basic_bigram_info(one_stream, i)
             if DEvaluation._is_pivot(pf_a, pf_b, direction):
                 pivot_count += 1
@@ -373,6 +417,7 @@ class DEvaluation:
                                   rho_function=DEvalFunction.rho_power2,
                                   rho_decay_function=DEvalFunction.decay_uniform):
         big_delta_value = self.trigram_big_delta_at_rank(rank=rank, delta_function=delta_function,
+                                                         full_context=full_context,
                                                          decay_function=big_delta_decay_function)
         big_n = self._human_score.note_count(staff=self._staff)
         if full_context:
