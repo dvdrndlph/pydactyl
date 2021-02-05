@@ -55,7 +55,7 @@ class DEvalFunction:
         return 0
 
     @staticmethod
-    def delta_prime(one_note, other_note, epsilon=1.0):
+    def interchangeable_distance(one_note, other_note, epsilon=1.0):
         """
         Return the edit distance between two fingered trigrams, assuming notes
         one and three are fingered the same, given the two fingered middle notes.
@@ -75,25 +75,7 @@ class DEvalFunction:
             return 0.0
         if (one_digit in (2, 3) and other_digit in (2, 3)) or \
                 (one_digit in (3, 4) and other_digit in (3, 4)):
-            return 1 - epsilon
-        return 1.0
-
-    @staticmethod
-    def delta_prime_refined(one_note, other_note):
-        one_pf = PianoFingering.fingering(one_note)
-        other_pf = PianoFingering.fingering(other_note)
-        if one_pf.strike_hand() != other_pf.strike_hand():
-            return 1.0
-        one_digit = one_pf.strike_digit()
-        other_digit = other_pf.strike_digit()
-        if one_digit == other_digit:
-            return 0.0
-        if (one_digit in (2, 3) and other_digit in (2, 3)) or \
-                (one_digit in (3, 4) and other_digit in (3, 4)):
-            return 1.0/2.0
-        if (one_digit in (1, 2) and other_digit in (1, 2)) or \
-                (one_digit in (4, 5) and other_digit in (4, 5)):
-            return 3.0/4.0
+            return 1.0 - epsilon
         return 1.0
 
     @staticmethod
@@ -116,7 +98,7 @@ class DEvalFunction:
         return False
 
     @staticmethod
-    def delta_trigram(one_note_stream, other_note_stream, index, delta_prime_function=None):
+    def tau(one_note_stream, other_note_stream, index, interchange_function=None, epsilon=1.0):
         note_count = len(one_note_stream)
         check_count = len(other_note_stream)
         if note_count != check_count:
@@ -133,20 +115,57 @@ class DEvalFunction:
 
         one_note = one_note_stream[index - 1]
         other_note = other_note_stream[index - 1]
-        if delta_prime_function is not None:
-            return delta_prime_function(one_note=one_note, other_note=other_note)
+        if interchange_function is not None:
+            return interchange_function(one_note=one_note, other_note=other_note, epsilon=epsilon)
         return 1.0
 
     @staticmethod
-    def delta_trigram_with_prime(one_note_stream, other_note_stream, index):
-        return DEvalFunction.delta_trigram(one_note_stream=one_note_stream, other_note_stream=other_note_stream,
-                                           index=index, delta_prime_function=DEvalFunction.delta_prime)
+    def tau_trigram(one_note_stream, other_note_stream, index, epsilon=0.0):
+        return DEvalFunction.tau(one_note_stream=one_note_stream, other_note_stream=other_note_stream,
+                                 index=index, interchange_function=None, epsilon=epsilon)
 
     @staticmethod
-    def delta_trigram_with_refined_prime(one_note_stream, other_note_stream, index):
-        return DEvalFunction.delta_trigram(one_note_stream=one_note_stream, other_note_stream=other_note_stream,
-                                           index=index, delta_prime_function=DEvalFunction.delta_prime_refined)
+    def tau_nuanced(one_note_stream, other_note_stream, index, interchange_function=None, epsilon=1.0):
+        if interchange_function is None:
+            interchange_function = DEvalFunction.interchangeable_distance
+        return DEvalFunction.tau(one_note_stream=one_note_stream, other_note_stream=other_note_stream,
+                                 index=index, interchange_function=interchange_function, epsilon=epsilon)
 
+    @staticmethod
+    def tau_relaxed(one_note_stream, other_note_stream, index, interchange_function=None, epsilon=1.0):
+        if interchange_function is None:
+            interchange_function = DEvalFunction.interchangeable_distance
+        note_count = len(one_note_stream)
+        check_count = len(other_note_stream)
+        if note_count != check_count:
+            raise Exception("Note stream count mismatch")
+        if index >= note_count + 2:
+            raise Exception("Note stream index out of range")
+
+        nuance_at_n = DEvalFunction.tau_nuanced(one_note_stream=one_note_stream,
+                                                other_note_stream=other_note_stream,
+                                                index=index, epsilon=epsilon,
+                                                interchange_function=interchange_function)
+        if nuance_at_n == 0:
+            return 0.0
+        if nuance_at_n == 1:
+            return 1.0
+
+        nuance_minus_1 = DEvalFunction.tau_nuanced(one_note_stream=one_note_stream,
+                                                   other_note_stream=other_note_stream,
+                                                   index=index-1, epsilon=epsilon,
+                                                   interchange_function=interchange_function)
+        if nuance_minus_1 == 1:
+            return 1.0
+
+        nuance_minus_2 = DEvalFunction.tau_nuanced(one_note_stream=one_note_stream,
+                                                   other_note_stream=other_note_stream,
+                                                   index=index - 2, epsilon=epsilon,
+                                                   interchange_function=interchange_function)
+        if nuance_minus_2 == 1:
+            return 1.0
+
+        return 1.0 - epsilon
 
     @staticmethod
     def decay_uniform(big_n, n):
@@ -210,7 +229,7 @@ class DEvaluation:
     def normalized_hamming_at_rank(self, rank):
         return self.hamming_at_rank(rank=rank, normalized=True)
 
-    def trigram_big_delta_at_rank(self, rank, delta_function=DEvalFunction.delta_trigram,
+    def trigram_big_delta_at_rank(self, rank, tau_function=DEvalFunction.tau_relaxed, epsilon=1.0,
                                   decay_function=None, full_context=False, normalized=False):
         index = rank - 1
         human_stream = self._human_note_stream
@@ -231,8 +250,9 @@ class DEvaluation:
             decay_weight = 1
             if decay_function:
                 decay_weight = decay_function(big_n=big_n, n=i+1)
-            delta_value = delta_function(one_note_stream=human_stream, other_note_stream=system_stream, index=i)
-            distance += decay_weight * delta_value
+            tau_value = tau_function(one_note_stream=human_stream, other_note_stream=system_stream,
+                                     epsilon=epsilon, index=i)
+            distance += decay_weight * tau_value
         big_delta = normalizing_factor * distance
 
         if normalized:
@@ -399,11 +419,11 @@ class DEvaluation:
 
     def prob_stop_at_rank(self, rank,
                           delta_function=DEvalFunction.delta_hamming,
-                          big_delta_decay_function=DEvalFunction.decay_uniform,
-                          rho_function=DEvalFunction.rho_power2,
+                          decay_function=None,
+                          rho_function=None,
                           rho_decay_function=DEvalFunction.decay_uniform):
         big_delta_value = self.big_delta_at_rank(rank=rank, delta_function=delta_function,
-                                                 decay_function=big_delta_decay_function)
+                                                 decay_function=decay_function)
         big_n = self._human_score.note_count(staff=self._staff)
         rho_value = self.rho_at_rank(rank=rank, decay_function=rho_decay_function)
         prob_at_rank = 1.0 - (big_delta_value / big_n)
@@ -411,14 +431,13 @@ class DEvaluation:
             prob_at_rank /= rho_function(rho_value)
         return prob_at_rank
 
-    def trigram_prob_stop_at_rank(self, rank, full_context=False,
-                                  delta_function=DEvalFunction.delta_trigram,
-                                  big_delta_decay_function=DEvalFunction.decay_uniform,
-                                  rho_function=DEvalFunction.rho_power2,
+    def trigram_prob_stop_at_rank(self, rank, full_context=False, epsilon=1.0,
+                                  tau_function=DEvalFunction.tau_trigram,
+                                  decay_function=None, rho_function=None,
                                   rho_decay_function=DEvalFunction.decay_uniform):
-        big_delta_value = self.trigram_big_delta_at_rank(rank=rank, delta_function=delta_function,
-                                                         full_context=full_context,
-                                                         decay_function=big_delta_decay_function)
+        big_delta_value = self.trigram_big_delta_at_rank(rank=rank, tau_function=tau_function,
+                                                         full_context=full_context, epsilon=epsilon,
+                                                         decay_function=decay_function)
         big_n = self._human_score.note_count(staff=self._staff)
         if full_context:
             big_n += 2

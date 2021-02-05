@@ -76,25 +76,33 @@ query['parncutt_published'] = '''
      where exercise = {}
      order by weight desc'''
 
-
+staff = 'upper'
+full_context = True
 target_dir = "/Users/dave/corpus/"
-# for corpus_name in ['all_american', 'pure_american', 'parncutt_published']:
-for corpus_name in ['parncutt_published']:
+rank_results = []
+err_results = []
+for corpus_name in ['all_american', 'pure_american', 'parncutt_published']:
+# for corpus_name in ['parncutt_published']:
     da_corpus = DCorpus()
     da_corpus.assemble_and_append_from_db(piece_query=piece_query, fingering_query=query[corpus_name])
-    staff = 'upper'
-    full_context = False
 
+    headings = ['corpus', 'title', 'note_count', 'rank', 'hamming', 'norm_hamming',
+                'pvt_clsh', 'rho_no_decay', 'rho_uni_decay',
+                'p_stop', 'tri_p_stop', 'nuan_p_stop', 'rlx_p_stop',
+                'tri_D', 'nuan_D', 'rlx_D',
+                'norm_tri_D', 'norm_nuan_D', 'norm_rlx_D']
+    result = {}
     for da_score in da_corpus.d_score_list():
         system_scores = []
         human_score = copy.deepcopy(da_score)
+        title = human_score.title()
         note_count = human_score.note_count(staff=staff)
-        if note_count != 4:
-            continue  # Focus on only exercise with pivots (which has 4 notes)
+        # if note_count != 4:
+            # continue  # Focus on only exercise with pivots (which has 4 notes)
         print(da_score)
         abcdh = da_score.abcd_header()
         last_annot_id = abcdh.annotation_count()
-        print("last id: {}".format(last_annot_id))
+        # print("last id: {}".format(last_annot_id))
         PianoFingering.finger_score(d_score=human_score, staff=staff, id=last_annot_id)
         for i in range(5):
             system_scores.append(copy.deepcopy(da_score))
@@ -102,34 +110,55 @@ for corpus_name in ['parncutt_published']:
         evil = DEvaluation(human_score=human_score, system_scores=system_scores, staff=staff)
         evil.print_pivot_count_report()
         for i in range(5):
+            result = {}
+            result['corpus'] = corpus_name
+            result['title'] = title
+            result['note_count'] = note_count
             rank = i + 1
-            hamming = evil.hamming_at_rank(rank=rank)
-            also_hamming = evil.big_delta_at_rank(rank=rank)
-            if hamming != also_hamming:
-                raise Exception("Something's broken.")
-            norm_hamming = evil.normalized_hamming_at_rank(rank=rank)
+            result['rank'] = rank
+            result['hamming'] = evil.hamming_at_rank(rank=rank)
+            result['norm_hamming'] = evil.normalized_hamming_at_rank(rank=rank)
 
-            trigram = evil.trigram_big_delta_at_rank(rank=rank, full_context=full_context)
-            norm_trigram = evil.trigram_big_delta_at_rank(rank=rank, full_context=full_context, normalized=True)
-            trigram_prime = evil.trigram_big_delta_at_rank(rank=rank, trigram_prime=DEvalFunction.delta_prime,
-                                                           full_context=full_context)
-            norm_trigram_complete = evil.trigram_big_delta_at_rank(rank=rank, trigram_prime=DEvalFunction.delta_prime,
-                                                                   full_context=full_context, normalized=True)
+            result['tri_D'] = evil.trigram_big_delta_at_rank(rank=rank, full_context=full_context,
+                                                             tau_function=DEvalFunction.tau_trigram)
+            result['norm_tri_D'] = evil.trigram_big_delta_at_rank(rank=rank, full_context=full_context, normalized=True,
+                                                                  tau_function=DEvalFunction.tau_trigram)
+            result['nuan_D'] = evil.trigram_big_delta_at_rank(rank=rank, full_context=full_context,
+                                                                 tau_function=DEvalFunction.tau_nuanced)
+            result['norm_nuan_D'] = evil.trigram_big_delta_at_rank(rank=rank, full_context=full_context, normalized=True,
+                                                                   tau_function=DEvalFunction.tau_nuanced)
+            result['rlx_D'] = evil.trigram_big_delta_at_rank(rank=rank, full_context=full_context,
+                                                             tau_function=DEvalFunction.tau_relaxed)
+            result['norm_rlx_D'] = evil.trigram_big_delta_at_rank(rank=rank, full_context=full_context, normalized=True,
+                                                                  tau_function=DEvalFunction.tau_relaxed)
 
-            pivot_clashes = evil.pivot_clashes_at_rank(rank=rank)
-            uniform_rho = evil.pivot_clashes_at_rank(rank=rank, decay_function=DEvalFunction.decay_uniform)
-            no_decay_rho = evil.pivot_clashes_at_rank(rank=rank, decay_function=None)
-            p_stop = evil.prob_stop_at_rank(rank=rank, rho_decay_function=None, big_delta_decay_function=None)
-            trigram_p_stop = evil.trigram_prob_stop_at_rank(rank=rank, rho_decay_function=None,
-                                                            big_delta_decay_function=None, full_context=True)
-            print("Hamming at rank {} for {}-note sequence is {} (normalized to {})".format(rank, note_count,
-                                                                                            hamming, norm_hamming))
-            print("Trigram BD at rank {} for {}-note sequence is {} (normalized to {})".
-                  format(rank, note_count, trigram_hamming, norm_trigram_hamming))
-            print("Pivot clashes at rank {} for {}-note sequence is {})".format(rank, note_count, pivot_clashes))
-            print("No-decay rho at rank {} for {}-note sequence is {})".format(rank, note_count, no_decay_rho))
-            print("Uniform rho at rank {} for {}-note sequence is {})".format(rank, note_count, uniform_rho))
-            print("P(stop) at rank {} for {}-note sequence is {})".format(rank, note_count, p_stop))
-            print("Trigram P(stop) at rank {} for {}-note sequence is {})".format(rank, note_count, trigram_p_stop))
+            result['pvt_clsh'] = evil.pivot_clashes_at_rank(rank=rank)
+            result['rho_uni_decay'] = evil.pivot_clashes_at_rank(rank=rank, decay_function=DEvalFunction.decay_uniform)
+            result['rho_no_decay'] = evil.pivot_clashes_at_rank(rank=rank)
+            result['p_stop'] = evil.prob_stop_at_rank(rank=rank, rho_decay_function=None, decay_function=None)
+            result['tri_p_stop'] = evil.trigram_prob_stop_at_rank(rank=rank, full_context=full_context)
+            result['nuan_p_stop'] = evil.trigram_prob_stop_at_rank(rank=rank, tau_function=DEvalFunction.tau_nuanced,
+                                                                  full_context=full_context)
+            result['rlx_p_stop'] = evil.trigram_prob_stop_at_rank(rank=rank, tau_function=DEvalFunction.tau_relaxed,
+                                                                  full_context=full_context)
 
-    print("\n")
+            rank_results.append(result)
+            # print("Hamming at rank {} for {}-note sequence is {} (normalized to {})".format(rank, note_count,
+            #                                                                                 hamming, norm_hamming))
+            # print("Trigram BD at rank {} for {}-note sequence is {} (normalized to {})".
+            #       format(rank, note_count, trigram, norm_trigram))
+            # print("Pivot clashes at rank {} for {}-note sequence is {})".format(rank, note_count, pivot_clashes))
+            # print("No-decay rho at rank {} for {}-note sequence is {})".format(rank, note_count, no_decay_rho))
+            # print("Uniform rho at rank {} for {}-note sequence is {})".format(rank, note_count, uniform_rho))
+            # print("P(stop) at rank {} for {}-note sequence is {})".format(rank, note_count, p_stop))
+            # print("Trigram P(stop) at rank {} for {}-note sequence is {})".format(rank, note_count, trigram_p_stop))
+
+print(rank_results)
+for field in headings:
+    print(field, end=',')
+print()
+for res in rank_results:
+    for field in headings:
+        print(res[field], end=',')
+    print()
+print("\n")
