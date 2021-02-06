@@ -125,16 +125,13 @@ class DEvalFunction:
                                  index=index, interchange_function=None, epsilon=epsilon)
 
     @staticmethod
-    def tau_nuanced(one_note_stream, other_note_stream, index, interchange_function=None, epsilon=1.0):
-        if interchange_function is None:
-            interchange_function = DEvalFunction.interchangeable_distance
+    def tau_nuanced(one_note_stream, other_note_stream, index, epsilon=1.0):
+        interchange_function = DEvalFunction.interchangeable_distance
         return DEvalFunction.tau(one_note_stream=one_note_stream, other_note_stream=other_note_stream,
                                  index=index, interchange_function=interchange_function, epsilon=epsilon)
 
     @staticmethod
-    def tau_relaxed(one_note_stream, other_note_stream, index, interchange_function=None, epsilon=1.0):
-        if interchange_function is None:
-            interchange_function = DEvalFunction.interchangeable_distance
+    def tau_relaxed(one_note_stream, other_note_stream, index, epsilon=1.0):
         note_count = len(one_note_stream)
         check_count = len(other_note_stream)
         if note_count != check_count:
@@ -144,8 +141,7 @@ class DEvalFunction:
 
         nuance_at_n = DEvalFunction.tau_nuanced(one_note_stream=one_note_stream,
                                                 other_note_stream=other_note_stream,
-                                                index=index, epsilon=epsilon,
-                                                interchange_function=interchange_function)
+                                                index=index, epsilon=epsilon)
         if nuance_at_n == 0:
             return 0.0
         if nuance_at_n == 1:
@@ -153,15 +149,13 @@ class DEvalFunction:
 
         nuance_minus_1 = DEvalFunction.tau_nuanced(one_note_stream=one_note_stream,
                                                    other_note_stream=other_note_stream,
-                                                   index=index-1, epsilon=epsilon,
-                                                   interchange_function=interchange_function)
+                                                   index=index-1, epsilon=epsilon)
         if nuance_minus_1 == 1:
             return 1.0
 
         nuance_minus_2 = DEvalFunction.tau_nuanced(one_note_stream=one_note_stream,
                                                    other_note_stream=other_note_stream,
-                                                   index=index - 2, epsilon=epsilon,
-                                                   interchange_function=interchange_function)
+                                                   index=index - 2, epsilon=epsilon)
         if nuance_minus_2 == 1:
             return 1.0
 
@@ -183,13 +177,33 @@ class DEvalFunction:
     def rho_plus1(rho_value):
         return rho_value + 1.0
 
+    @staticmethod
+    def phi_inverse(rank):
+        return 1/rank
 
 class DEvaluation:
     """
     Class to determine how well each of the top ranked outputs of a model
     system perform against a given gold-standard human.
     """
-    def __init__(self, human_score=None, system_scores=[], staff="both"):
+    def __init__(self, human_score=None, system_scores=[], staff="both",
+                 delta_function=DEvalFunction.delta_hamming,
+                 tau_function=DEvalFunction.tau_trigram,
+                 decay_function=DEvalFunction.decay_none,
+                 rho_function=None, rho_decay_function=DEvalFunction.decay_none,
+                 epsilon=1.0, phi=DEvalFunction.phi_inverse, full_context=True):
+        """
+        Initialize a new DEvaluation object.
+        :param human_score:
+        :param system_scores:
+        :param staff:
+        :param delta_function:
+        :param tau_function:
+        :param decay_function:
+        :param rho_function:
+        :param rho_decay_function:
+        :param epsilon:
+        """
         self._staff = staff
         self._human_score = None
         self._human_note_stream = None
@@ -197,6 +211,68 @@ class DEvaluation:
         self._system_scores = []
         self._system_note_streams = []
         self.system_scores(system_scores)
+        self._delta_function = delta_function
+        self._tau_function = tau_function
+        self._decay_function = decay_function
+        self._rho_function = rho_function
+        self._rho_decay_function = rho_decay_function
+        self._epsilon = epsilon
+        self._phi = phi
+        self._full_context = full_context
+
+    def parameterize(self, delta_function=DEvalFunction.delta_hamming,
+                     tau_function=DEvalFunction.tau_trigram,
+                     decay_function = DEvalFunction.decay_none,
+                     rho_function = None, rho_decay_function = DEvalFunction.decay_none,
+                     epsilon=1.0, phi=DEvalFunction.phi_inverse, full_context=True):
+        self._delta_function = delta_function
+        self._tau_function = tau_function
+        self._decay_function = decay_function
+        self._rho_function = rho_function
+        self._rho_decay_function = rho_decay_function
+        self._epsilon = epsilon
+        self._phi = phi
+        self._full_context = full_context
+
+    def delta_function(self, delta_function=None):
+        if delta_function:
+            self._delta_function = delta_function
+        return self._delta_function
+
+    def tau_function(self, tau_function=None):
+        if tau_function:
+            self._tau_function = tau_function
+        return self._tau_function
+
+    def decay_function(self, decay_function=None):
+        if decay_function:
+            self._decay_function = decay_function
+        return self._decay_function
+
+    def rho_function(self, rho_function=None):
+        if rho_function:
+            self._rho_function = rho_function
+        return self._rho_function
+
+    def rho_decay_function(self, rho_decay_function=None):
+        if rho_decay_function:
+            self._rho_decay_function = rho_decay_function
+        return self._rho_decay_function
+
+    def epsilon(self, epsilon=None):
+        if epsilon:
+            self._epsilon = epsilon
+        return self._epsilon
+
+    def phi(self, phi=None):
+        if phi:
+            self._phi = phi
+        return self._phi
+
+    def full_context(self, full_context=None):
+        if full_context:
+            self._phi = full_context
+        return self._full_context
 
     def human_score(self, d_score=None):
         if d_score:
@@ -229,8 +305,7 @@ class DEvaluation:
     def normalized_hamming_at_rank(self, rank):
         return self.hamming_at_rank(rank=rank, normalized=True)
 
-    def trigram_big_delta_at_rank(self, rank, tau_function=DEvalFunction.tau_relaxed, epsilon=1.0,
-                                  decay_function=None, full_context=False, normalized=False):
+    def trigram_big_delta_at_rank(self, rank, normalized=False):
         index = rank - 1
         human_stream = self._human_note_stream
         system_stream = self._system_note_streams[index]
@@ -238,20 +313,20 @@ class DEvaluation:
             raise Exception("Mismatched orderly note streams")
 
         big_n = self._human_score.note_count(staff=self._staff)
-        if full_context:
+        if self._full_context:
             # Evaluate each note in its full trigram context.
             # (Each note participates in three trigram comparisons.)
             big_n += 2
 
         # We need to normalize measure so that big_delta <= big_n.
-        normalizing_factor = DEvaluation._normalizing_factor(big_n=big_n, decay_function=decay_function)
+        normalizing_factor = DEvaluation._normalizing_factor(big_n=big_n, decay_function=self._decay_function)
         distance = 0
         for i in range(big_n):
             decay_weight = 1
-            if decay_function:
-                decay_weight = decay_function(big_n=big_n, n=i+1)
-            tau_value = tau_function(one_note_stream=human_stream, other_note_stream=system_stream,
-                                     epsilon=epsilon, index=i)
+            if self._decay_function:
+                decay_weight = self._decay_function(big_n=big_n, n=i+1)
+            tau_value = self._tau_function(one_note_stream=human_stream, other_note_stream=system_stream,
+                                           epsilon=self._epsilon, index=i)
             distance += decay_weight * tau_value
         big_delta = normalizing_factor * distance
 
@@ -260,7 +335,7 @@ class DEvaluation:
             big_delta /= big_n
         return big_delta
 
-    def big_delta_at_rank(self, rank, delta_function=DEvalFunction.delta_hamming, decay_function=None):
+    def big_delta_at_rank(self, rank):
         index = rank - 1
         human_stream = self._human_note_stream
         system_stream = self._system_note_streams[index]
@@ -268,13 +343,13 @@ class DEvaluation:
             raise Exception("Mismatched orderly note streams")
 
         big_n = self._human_score.note_count(staff=self._staff)
-        normalizing_factor = DEvaluation._normalizing_factor(big_n=big_n, decay_function=decay_function)
+        normalizing_factor = DEvaluation._normalizing_factor(big_n=big_n, decay_function=self._decay_function)
         distance = 0
         for i in range(big_n):
             decay_weight = 1
-            if decay_function:
-                decay_weight = decay_function(big_n=big_n, n=i+1)
-            delta_value = delta_function(one_note=human_stream[i], other_note=system_stream[i])
+            if self._decay_function:
+                decay_weight = self._decay_function(big_n=big_n, n=i+1)
+            delta_value = self._delta_function(one_note=human_stream[i], other_note=system_stream[i])
             distance += decay_weight * delta_value
         big_delta = normalizing_factor * distance
         return big_delta
@@ -332,12 +407,12 @@ class DEvaluation:
             normalizing_factor = big_n / denom
         return normalizing_factor
 
-    def pivot_clashes_at_rank(self, rank, decay_function=None):
+    def pivot_clashes_at_rank(self, rank):
         index = rank - 1
         one_stream = self._human_note_stream
         other_stream = self._system_note_streams[index]
         big_n = len(one_stream)
-        normalizing_factor = DEvaluation._normalizing_factor(big_n=big_n, decay_function=decay_function)
+        normalizing_factor = DEvaluation._normalizing_factor(big_n=big_n, decay_function=self._decay_function)
 
         clashes = 0.0
         for i in range(big_n - 1): # the last note position cannot have a clash.
@@ -345,15 +420,15 @@ class DEvaluation:
             x_pf, y_pf, direction = DEvaluation._get_basic_bigram_info(other_stream, i)
             is_clash = DEvaluation._is_pivot_clash(a_pf, b_pf, x_pf, y_pf, direction)
             if is_clash:
-                if decay_function:
-                    clashes += decay_function(big_n=big_n, n=i+1)
+                if self._decay_function:
+                    clashes += self._decay_function(big_n=big_n, n=i+1)
                 else:
                     clashes += 1
         normalized_clashes = normalizing_factor * clashes
         return normalized_clashes
 
-    def rho_at_rank(self, rank, decay_function=None):
-        return self.pivot_clashes_at_rank(rank=rank, decay_function=decay_function)
+    def rho_at_rank(self, rank):
+        return self.pivot_clashes_at_rank(rank=rank)
 
     @staticmethod
     def _count_pivots_in_fingered_stream(one_stream):
@@ -411,38 +486,41 @@ class DEvaluation:
         print("Human: {} Count: {}".format(human_contour, human_count))
         for i in range(len(self._system_note_streams)):
             system_stream = self._system_note_streams[i]
-            # system_abcdf = DEvaluation.abcdf_for_note_stream(system_stream)
             system_contour = DEvaluation.finger_contour_for_note_stream(system_stream)
             system_count = DEvaluation._count_pivots_in_fingered_stream(system_stream)
             print("Sys {}: {} Count: {}".format(i + 1, system_contour, system_count))
         print("\n")
 
-    def prob_stop_at_rank(self, rank,
-                          delta_function=DEvalFunction.delta_hamming,
-                          decay_function=None,
-                          rho_function=None,
-                          rho_decay_function=DEvalFunction.decay_uniform):
-        big_delta_value = self.big_delta_at_rank(rank=rank, delta_function=delta_function,
-                                                 decay_function=decay_function)
+    def prob_satisfied(self, rank):
+        big_delta_value = self.big_delta_at_rank(rank=rank)
         big_n = self._human_score.note_count(staff=self._staff)
-        rho_value = self.rho_at_rank(rank=rank, decay_function=rho_decay_function)
+        rho_value = self.rho_at_rank(rank=rank)
         prob_at_rank = 1.0 - (big_delta_value / big_n)
-        if rho_function:
-            prob_at_rank /= rho_function(rho_value)
+        if self._rho_function:
+            prob_at_rank /= self._rho_function(rho_value)
         return prob_at_rank
 
-    def trigram_prob_stop_at_rank(self, rank, full_context=False, epsilon=1.0,
-                                  tau_function=DEvalFunction.tau_trigram,
-                                  decay_function=None, rho_function=None,
-                                  rho_decay_function=DEvalFunction.decay_uniform):
-        big_delta_value = self.trigram_big_delta_at_rank(rank=rank, tau_function=tau_function,
-                                                         full_context=full_context, epsilon=epsilon,
-                                                         decay_function=decay_function)
+    def trigram_prob_satisfied(self, rank):
+        big_delta_value = self.trigram_big_delta_at_rank(rank=rank)
         big_n = self._human_score.note_count(staff=self._staff)
-        if full_context:
+        if self._full_context:
             big_n += 2
-        rho_value = self.rho_at_rank(rank=rank, decay_function=rho_decay_function)
+        rho_value = self.rho_at_rank(rank=rank)
         prob_at_rank = 1.0 - (big_delta_value / big_n)
-        if rho_function:
-            prob_at_rank /= rho_function(rho_value)
+        if self._rho_function:
+            prob_at_rank /= self._rho_function(rho_value)
         return prob_at_rank
+
+    def expected_reciprocal_rank(self, trigram=False):
+        system_score_count = len(self._system_scores)
+        prob_still_going = 1.0
+        err = 0.0
+        for r in range(system_score_count):
+            if trigram:
+                prob_happy = self.trigram_prob_satisfied(rank=r)
+            else:
+                prob_happy = self.prob_satisfied(rank=r)
+            discount_factor = self._phi(rank=r)
+            err += (discount_factor * prob_still_going * prob_happy)
+            prob_still_going *= (1 - prob_happy)
+        return err

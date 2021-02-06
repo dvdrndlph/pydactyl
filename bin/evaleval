@@ -88,7 +88,7 @@ for corpus_name in ['all_american', 'pure_american', 'parncutt_published']:
 
     headings = ['corpus', 'title', 'note_count', 'rank', 'hamming', 'norm_hamming',
                 'pvt_clsh', 'rho_no_decay', 'rho_uni_decay',
-                'p_stop', 'tri_p_stop', 'nuan_p_stop', 'rlx_p_stop',
+                'p_sat', 'tri_p_sat', 'nuan_p_sat', 'rlx_p_sat',
                 'tri_D', 'nuan_D', 'rlx_D',
                 'norm_tri_D', 'norm_nuan_D', 'norm_rlx_D']
     result = {}
@@ -107,7 +107,8 @@ for corpus_name in ['all_american', 'pure_american', 'parncutt_published']:
         for i in range(5):
             system_scores.append(copy.deepcopy(da_score))
             PianoFingering.finger_score(d_score=system_scores[i], staff=staff, id=i+1)
-        evil = DEvaluation(human_score=human_score, system_scores=system_scores, staff=staff)
+        evil = DEvaluation(human_score=human_score, system_scores=system_scores,
+                           staff=staff, full_context=full_context)
         evil.print_pivot_count_report()
         for i in range(5):
             result = {}
@@ -118,29 +119,26 @@ for corpus_name in ['all_american', 'pure_american', 'parncutt_published']:
             result['rank'] = rank
             result['hamming'] = evil.hamming_at_rank(rank=rank)
             result['norm_hamming'] = evil.normalized_hamming_at_rank(rank=rank)
-
-            result['tri_D'] = evil.trigram_big_delta_at_rank(rank=rank, full_context=full_context,
-                                                             tau_function=DEvalFunction.tau_trigram)
-            result['norm_tri_D'] = evil.trigram_big_delta_at_rank(rank=rank, full_context=full_context, normalized=True,
-                                                                  tau_function=DEvalFunction.tau_trigram)
-            result['nuan_D'] = evil.trigram_big_delta_at_rank(rank=rank, full_context=full_context,
-                                                                 tau_function=DEvalFunction.tau_nuanced)
-            result['norm_nuan_D'] = evil.trigram_big_delta_at_rank(rank=rank, full_context=full_context, normalized=True,
-                                                                   tau_function=DEvalFunction.tau_nuanced)
-            result['rlx_D'] = evil.trigram_big_delta_at_rank(rank=rank, full_context=full_context,
-                                                             tau_function=DEvalFunction.tau_relaxed)
-            result['norm_rlx_D'] = evil.trigram_big_delta_at_rank(rank=rank, full_context=full_context, normalized=True,
-                                                                  tau_function=DEvalFunction.tau_relaxed)
-
             result['pvt_clsh'] = evil.pivot_clashes_at_rank(rank=rank)
-            result['rho_uni_decay'] = evil.pivot_clashes_at_rank(rank=rank, decay_function=DEvalFunction.decay_uniform)
             result['rho_no_decay'] = evil.pivot_clashes_at_rank(rank=rank)
-            result['p_stop'] = evil.prob_stop_at_rank(rank=rank, rho_decay_function=None, decay_function=None)
-            result['tri_p_stop'] = evil.trigram_prob_stop_at_rank(rank=rank, full_context=full_context)
-            result['nuan_p_stop'] = evil.trigram_prob_stop_at_rank(rank=rank, tau_function=DEvalFunction.tau_nuanced,
-                                                                  full_context=full_context)
-            result['rlx_p_stop'] = evil.trigram_prob_stop_at_rank(rank=rank, tau_function=DEvalFunction.tau_relaxed,
-                                                                  full_context=full_context)
+            result['p_sat'] = evil.prob_satisfied(rank=rank)
+
+            result['tri_D'] = evil.trigram_big_delta_at_rank(rank=rank)
+            result['norm_tri_D'] = evil.trigram_big_delta_at_rank(rank=rank)
+            result['tri_p_sat'] = evil.trigram_prob_satisfied(rank=rank)
+
+            evil.tau_function(DEvalFunction.tau_nuanced)
+            result['nuan_D'] = evil.trigram_big_delta_at_rank(rank=rank)
+            result['norm_nuan_D'] = evil.trigram_big_delta_at_rank(rank=rank, normalized=True)
+            result['nuan_p_sat'] = evil.trigram_prob_satisfied(rank=rank)
+
+            evil.tau_function(DEvalFunction.tau_relaxed)
+            result['rlx_D'] = evil.trigram_big_delta_at_rank(rank=rank)
+            result['norm_rlx_D'] = evil.trigram_big_delta_at_rank(rank=rank, normalized=True)
+            result['rlx_p_sat'] = evil.trigram_prob_satisfied(rank=rank)
+
+            evil.rho_decay_function(DEvalFunction.decay_uniform)
+            result['rho_uni_decay'] = evil.pivot_clashes_at_rank(rank=rank)
 
             rank_results.append(result)
             # print("Hamming at rank {} for {}-note sequence is {} (normalized to {})".format(rank, note_count,
