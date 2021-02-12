@@ -34,13 +34,13 @@ class DEvalFunction:
         one_pf = PianoFingering.fingering(one_note)
         other_pf = PianoFingering.fingering(other_note)
         if one_pf.strike_digit() != other_pf.strike_digit():
-            return 1
+            return 1.0
         elif one_pf.strike_hand() != other_pf.strike_hand():
-            return 1
-        return 0
+            return 1.0
+        return 0.0
 
     @staticmethod
-    def delta_long_short(one_note, other_note):
+    def delta_long_short(one_note, other_note, epsilon=0.5):
         one_pf = PianoFingering.fingering(one_note)
         other_pf = PianoFingering.fingering(other_note)
         if one_pf.strike_hand() != other_pf.strike_hand():
@@ -51,8 +51,8 @@ class DEvalFunction:
             return 0.0
         if (one_digit in (2, 3) and other_digit in (2, 3)) or \
                 (one_digit in (3, 4) and other_digit in (3, 4)):
-            return 3.0/4.0
-        return 0
+            return 1.0 - epsilon
+        return 1.0
 
     @staticmethod
     def interchangeable_distance(one_note, other_note, epsilon=1.0):
@@ -294,17 +294,6 @@ class DEvaluation:
             return True
         return False
 
-    def hamming_at_rank(self, rank, normalized=False):
-        distance = self.big_delta_at_rank(rank=rank)
-        if normalized:
-            big_n = self._human_score.note_count(staff=self._staff)
-            normed_distance = self.hamming_at_rank(rank=rank) / big_n
-            return normed_distance
-        return distance
-
-    def normalized_hamming_at_rank(self, rank):
-        return self.hamming_at_rank(rank=rank, normalized=True)
-
     def trigram_big_delta_at_rank(self, rank, normalized=False):
         index = rank - 1
         human_stream = self._human_note_stream
@@ -335,7 +324,7 @@ class DEvaluation:
             big_delta /= big_n
         return big_delta
 
-    def big_delta_at_rank(self, rank):
+    def big_delta_at_rank(self, rank, normalized=False):
         index = rank - 1
         human_stream = self._human_note_stream
         system_stream = self._system_note_streams[index]
@@ -352,6 +341,10 @@ class DEvaluation:
             delta_value = self._delta_function(one_note=human_stream[i], other_note=system_stream[i])
             distance += decay_weight * delta_value
         big_delta = normalizing_factor * distance
+
+        if normalized:
+            # Caller wants value normalized between 0 and 1.
+            big_delta /= big_n
         return big_delta
 
     @staticmethod
@@ -515,7 +508,7 @@ class DEvaluation:
         system_score_count = len(self._system_scores)
         prob_still_going = 1.0
         err = 0.0
-        for r in range(system_score_count):
+        for r in range(1, system_score_count + 1):
             if trigram:
                 prob_happy = self.trigram_prob_satisfied(rank=r)
             else:

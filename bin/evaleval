@@ -81,24 +81,27 @@ full_context = True
 target_dir = "/Users/dave/corpus/"
 rank_results = []
 err_results = []
+rank_headings = ['corpus', 'title', 'notes', 'rank', 'hmg', 'norm_hmg',
+                 'ls', 'norm_ls',
+                 'pvt_clsh', 'rho_no_d', 'rho_uni_d',
+                 'p_sat', 'tri_p_sat', 'nua_p_sat', 'rlx_p_sat',
+                 'tri_D', 'nua_D', 'rlx_D',
+                 'norm_tri_D', 'norm_nua_D', 'norm_rlx_D']
+err_headings = ['corpus', 'title', 'notes',
+                'hmg', 'ls', 'tri', 'tri_nua', 'tri_rlx']
+
+result = {}
 for corpus_name in ['all_american', 'pure_american', 'parncutt_published']:
 # for corpus_name in ['parncutt_published']:
     da_corpus = DCorpus()
     da_corpus.assemble_and_append_from_db(piece_query=piece_query, fingering_query=query[corpus_name])
-
-    headings = ['corpus', 'title', 'note_count', 'rank', 'hamming', 'norm_hamming',
-                'pvt_clsh', 'rho_no_decay', 'rho_uni_decay',
-                'p_sat', 'tri_p_sat', 'nuan_p_sat', 'rlx_p_sat',
-                'tri_D', 'nuan_D', 'rlx_D',
-                'norm_tri_D', 'norm_nuan_D', 'norm_rlx_D']
-    result = {}
     for da_score in da_corpus.d_score_list():
         system_scores = []
         human_score = copy.deepcopy(da_score)
         title = human_score.title()
         note_count = human_score.note_count(staff=staff)
-        # if note_count != 4:
-            # continue  # Focus on only exercise with pivots (which has 4 notes)
+        if note_count != 4:
+            continue  # Focus on only exercise with pivots (which has 4 notes)
         print(da_score)
         abcdh = da_score.abcd_header()
         last_annot_id = abcdh.annotation_count()
@@ -114,23 +117,27 @@ for corpus_name in ['all_american', 'pure_american', 'parncutt_published']:
             result = {}
             result['corpus'] = corpus_name
             result['title'] = title
-            result['note_count'] = note_count
+            result['notes'] = note_count
             rank = i + 1
             result['rank'] = rank
-            result['hamming'] = evil.hamming_at_rank(rank=rank)
-            result['norm_hamming'] = evil.normalized_hamming_at_rank(rank=rank)
+            result['hmg'] = evil.big_delta_at_rank(rank=rank)
+            result['norm_hmg'] = evil.big_delta_at_rank(rank=rank, normalized=True)
             result['pvt_clsh'] = evil.pivot_clashes_at_rank(rank=rank)
-            result['rho_no_decay'] = evil.pivot_clashes_at_rank(rank=rank)
+            result['rho_no_d'] = evil.pivot_clashes_at_rank(rank=rank)
             result['p_sat'] = evil.prob_satisfied(rank=rank)
+
+            evil.delta_function(DEvalFunction.delta_long_short)
+            result['ls'] = evil.big_delta_at_rank(rank=rank)
+            result['norm_ls'] = evil.big_delta_at_rank(rank=rank, normalized=True)
 
             result['tri_D'] = evil.trigram_big_delta_at_rank(rank=rank)
             result['norm_tri_D'] = evil.trigram_big_delta_at_rank(rank=rank)
             result['tri_p_sat'] = evil.trigram_prob_satisfied(rank=rank)
 
             evil.tau_function(DEvalFunction.tau_nuanced)
-            result['nuan_D'] = evil.trigram_big_delta_at_rank(rank=rank)
-            result['norm_nuan_D'] = evil.trigram_big_delta_at_rank(rank=rank, normalized=True)
-            result['nuan_p_sat'] = evil.trigram_prob_satisfied(rank=rank)
+            result['nua_D'] = evil.trigram_big_delta_at_rank(rank=rank)
+            result['norm_nua_D'] = evil.trigram_big_delta_at_rank(rank=rank, normalized=True)
+            result['nua_p_sat'] = evil.trigram_prob_satisfied(rank=rank)
 
             evil.tau_function(DEvalFunction.tau_relaxed)
             result['rlx_D'] = evil.trigram_big_delta_at_rank(rank=rank)
@@ -138,25 +145,41 @@ for corpus_name in ['all_american', 'pure_american', 'parncutt_published']:
             result['rlx_p_sat'] = evil.trigram_prob_satisfied(rank=rank)
 
             evil.rho_decay_function(DEvalFunction.decay_uniform)
-            result['rho_uni_decay'] = evil.pivot_clashes_at_rank(rank=rank)
-
+            result['rho_uni_d'] = evil.pivot_clashes_at_rank(rank=rank)
             rank_results.append(result)
-            # print("Hamming at rank {} for {}-note sequence is {} (normalized to {})".format(rank, note_count,
-            #                                                                                 hamming, norm_hamming))
-            # print("Trigram BD at rank {} for {}-note sequence is {} (normalized to {})".
-            #       format(rank, note_count, trigram, norm_trigram))
-            # print("Pivot clashes at rank {} for {}-note sequence is {})".format(rank, note_count, pivot_clashes))
-            # print("No-decay rho at rank {} for {}-note sequence is {})".format(rank, note_count, no_decay_rho))
-            # print("Uniform rho at rank {} for {}-note sequence is {})".format(rank, note_count, uniform_rho))
-            # print("P(stop) at rank {} for {}-note sequence is {})".format(rank, note_count, p_stop))
-            # print("Trigram P(stop) at rank {} for {}-note sequence is {})".format(rank, note_count, trigram_p_stop))
 
-print(rank_results)
-for field in headings:
+        evil.parameterize()  # Reset to defaults
+        err_result = {}
+        err_result['corpus'] = corpus_name
+        err_result['title'] = title
+        err_result['notes'] = note_count
+
+        err_result['hmg'] = evil.expected_reciprocal_rank()
+        evil.delta_function(DEvalFunction.delta_long_short)
+        err_result['ls'] = evil.expected_reciprocal_rank()
+
+        err_result['tri'] = evil.expected_reciprocal_rank(trigram=True)
+        evil.tau_function(DEvalFunction.tau_nuanced)
+        err_result['tri_nua'] = evil.expected_reciprocal_rank(trigram=True)
+        evil.tau_function(DEvalFunction.tau_relaxed)
+        err_result['tri_rlx'] = evil.expected_reciprocal_rank(trigram=True)
+
+        err_results.append(err_result)
+
+# print(rank_results)
+for field in rank_headings:
     print(field, end=',')
 print()
 for res in rank_results:
-    for field in headings:
+    for field in rank_headings:
+        print(res[field], end=',')
+    print()
+print("\n")
+for field in err_headings:
+    print(field, end=',')
+print()
+for res in err_results:
+    for field in err_headings:
         print(res[field], end=',')
     print()
 print("\n")
