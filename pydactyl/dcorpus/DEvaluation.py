@@ -181,6 +181,7 @@ class DEvalFunction:
     def phi_inverse(rank):
         return 1/rank
 
+
 class DEvaluation:
     """
     Class to determine how well each of the top ranked outputs of a model
@@ -222,8 +223,8 @@ class DEvaluation:
 
     def parameterize(self, delta_function=DEvalFunction.delta_hamming,
                      tau_function=DEvalFunction.tau_trigram,
-                     decay_function = DEvalFunction.decay_none,
-                     rho_function = None, rho_decay_function = DEvalFunction.decay_none,
+                     decay_function=DEvalFunction.decay_none,
+                     rho_function=None, rho_decay_function=DEvalFunction.decay_none,
                      epsilon=1.0, phi=DEvalFunction.phi_inverse, full_context=True):
         self._delta_function = delta_function
         self._tau_function = tau_function
@@ -235,29 +236,19 @@ class DEvaluation:
         self._full_context = full_context
 
     def delta_function(self, delta_function=None):
-        if delta_function:
-            self._delta_function = delta_function
-        return self._delta_function
+        self._delta_function = delta_function
 
     def tau_function(self, tau_function=None):
-        if tau_function:
-            self._tau_function = tau_function
-        return self._tau_function
+        self._tau_function = tau_function
 
     def decay_function(self, decay_function=None):
-        if decay_function:
-            self._decay_function = decay_function
-        return self._decay_function
+        self._decay_function = decay_function
 
     def rho_function(self, rho_function=None):
-        if rho_function:
-            self._rho_function = rho_function
-        return self._rho_function
+        self._rho_function = rho_function
 
     def rho_decay_function(self, rho_decay_function=None):
-        if rho_decay_function:
-            self._rho_decay_function = rho_decay_function
-        return self._rho_decay_function
+        self._rho_decay_function = rho_decay_function
 
     def epsilon(self, epsilon=None):
         if epsilon:

@@ -39,13 +39,34 @@ from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 # print(da_title)
 # print(da_score)
 
-piece_query = '''
+
+full_abc_query = '''
+    select exercise as piece_id,
+           abc_full as abc_str
+      from parncutt
+     order by exercise'''
+
+fragment_abc_query = '''
     select exercise as piece_id,
            abc_fragment as abc_str
       from parncutt
      order by exercise'''
 
 query = {}
+
+query['full_american'] = '''
+    select f.upper_staff as fingering,
+           count(*) as weight,
+           'Various Didactyl' as 'authority',
+           'Pydactyl' as 'transcriber'
+      from finger f
+     inner join parncutt p
+        on f.exercise = p.exercise
+     where f.exercise = {}
+       and f.upper_staff is not null
+       and length(f.upper_staff) = p.length_full
+     group by f.upper_staff
+     order by weight desc'''
 
 query['all_american'] = '''
     select parncutt_fingering as fingering,
@@ -88,11 +109,15 @@ rank_headings = ['corpus', 'title', 'notes', 'rank', 'hmg', 'norm_hmg',
                  'tri_D', 'nua_D', 'rlx_D',
                  'norm_tri_D', 'norm_nua_D', 'norm_rlx_D']
 err_headings = ['corpus', 'title', 'notes',
-                'hmg', 'ls', 'tri', 'tri_nua', 'tri_rlx']
+                'hmg', 'hmg_rho', 'ls', 'ls_rho',
+                'tri', 'tri_rho', 'tri_nua', 'tri_nua_rho', 'tri_rlx', 'tri_rlx_rho']
 
 result = {}
-for corpus_name in ['all_american', 'pure_american', 'parncutt_published']:
-# for corpus_name in ['parncutt_published']:
+# for corpus_name in ['all_american', 'pure_american', 'parncutt_published', 'full_americank']:
+for corpus_name in ['full_american']:
+    piece_query = fragment_abc_query
+    if corpus_name == 'full_american':
+        piece_query = full_abc_query
     da_corpus = DCorpus()
     da_corpus.assemble_and_append_from_db(piece_query=piece_query, fingering_query=query[corpus_name])
     for da_score in da_corpus.d_score_list():
@@ -100,9 +125,10 @@ for corpus_name in ['all_american', 'pure_american', 'parncutt_published']:
         human_score = copy.deepcopy(da_score)
         title = human_score.title()
         note_count = human_score.note_count(staff=staff)
-        if note_count != 4:
-            continue  # Focus on only exercise with pivots (which has 4 notes)
-        print(da_score)
+        # if note_count != 4:
+            # continue  # Focus on only exercise with pivots (which has 4 notes)
+        # print(da_score)
+        print("{} in {}".format(title, corpus_name))
         abcdh = da_score.abcd_header()
         last_annot_id = abcdh.annotation_count()
         # print("last id: {}".format(last_annot_id))
@@ -157,13 +183,24 @@ for corpus_name in ['all_american', 'pure_american', 'parncutt_published']:
         err_result['hmg'] = evil.expected_reciprocal_rank()
         evil.delta_function(DEvalFunction.delta_long_short)
         err_result['ls'] = evil.expected_reciprocal_rank()
+        evil.rho_function(DEvalFunction.rho_power2)
+        err_result['ls_rho'] = evil.expected_reciprocal_rank()
+        evil.delta_function(DEvalFunction.delta_hamming)
+        err_result['hmg_rho'] = evil.expected_reciprocal_rank()
 
+        evil.rho_function(None)
         err_result['tri'] = evil.expected_reciprocal_rank(trigram=True)
         evil.tau_function(DEvalFunction.tau_nuanced)
         err_result['tri_nua'] = evil.expected_reciprocal_rank(trigram=True)
         evil.tau_function(DEvalFunction.tau_relaxed)
         err_result['tri_rlx'] = evil.expected_reciprocal_rank(trigram=True)
 
+        evil.rho_function(DEvalFunction.rho_power2)
+        err_result['tri_rlx_rho'] = evil.expected_reciprocal_rank(trigram=True)
+        evil.tau_function(DEvalFunction.tau_nuanced)
+        err_result['tri_nua_rho'] = evil.expected_reciprocal_rank(trigram=True)
+        evil.tau_function(DEvalFunction.tau_trigram)
+        err_result['tri_rho'] = evil.expected_reciprocal_rank(trigram=True)
         err_results.append(err_result)
 
 # print(rank_results)
@@ -180,6 +217,12 @@ for field in err_headings:
 print()
 for res in err_results:
     for field in err_headings:
-        print(res[field], end=',')
+        if field in ['corpus', 'title']:
+            print("{:<20s}".format(res[field]), end=',')
+        elif field in ['notes']:
+            print(res[field], end=',')
+            # print("{:>3d}".format(res[field]), end=',')
+        else:
+            print("{:6.4f}".format(float(res[field])), end=',')
     print()
 print("\n")
