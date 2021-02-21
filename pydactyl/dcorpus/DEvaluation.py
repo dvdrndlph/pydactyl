@@ -29,6 +29,9 @@ from pydactyl.dcorpus.PianoFingering import PianoFingering
 
 
 class DEvalFunction:
+    delta_epsilon = 0.5
+    tau_epsilon = 0.99
+
     @staticmethod
     def delta_hamming(one_note, other_note):
         one_pf = PianoFingering.fingering(one_note)
@@ -40,7 +43,10 @@ class DEvalFunction:
         return 0.0
 
     @staticmethod
-    def delta_adjacent_long(one_note, other_note, epsilon=0.5):
+    def delta_adjacent_long(one_note, other_note, epsilon=None):
+        if epsilon is None:
+            epsilon = DEvalFunction.delta_epsilon
+
         one_pf = PianoFingering.fingering(one_note)
         other_pf = PianoFingering.fingering(other_note)
         if one_pf.strike_hand() != other_pf.strike_hand():
@@ -133,15 +139,17 @@ class DEvalFunction:
                                                 index=middle_index+1, proxy_test=proxy_test)
 
     @staticmethod
-    def tau_trigram(one_note_stream, other_note_stream, index, epsilon=0.0):
+    def tau_trigram(one_note_stream, other_note_stream, index):
         if DEvalFunction.is_trigram_equal(one_note_stream, other_note_stream, index=index):
             return 0.0
         return 1.0
 
     @staticmethod
-    def tau_nuanced(one_note_stream, other_note_stream, index, proxy_test=None, epsilon=1.0):
+    def tau_nuanced(one_note_stream, other_note_stream, index, proxy_test=None, epsilon=None):
         if proxy_test is None:
             proxy_test = DEvalFunction.is_adjacent_long
+        if epsilon is None:
+            epsilon = DEvalFunction.tau_epsilon
 
         note_count = len(one_note_stream)
         check_count = len(other_note_stream)
@@ -160,9 +168,11 @@ class DEvalFunction:
         return 1.0
 
     @staticmethod
-    def tau_relaxed(one_note_stream, other_note_stream, index, proxy_test=None, epsilon=1.0):
+    def tau_relaxed(one_note_stream, other_note_stream, index, proxy_test=None, epsilon=None):
         if proxy_test is None:
             proxy_test = DEvalFunction.is_adjacent_long
+        if epsilon is None:
+            epsilon = DEvalFunction.tau_epsilon
 
         note_count = len(one_note_stream)
         check_count = len(other_note_stream)
@@ -214,7 +224,8 @@ class DEvaluation:
                  tau_function=DEvalFunction.tau_trigram,
                  decay_function=DEvalFunction.decay_none,
                  rho_function=None, rho_decay_function=DEvalFunction.decay_none,
-                 epsilon=1.0, phi=DEvalFunction.phi_inverse, full_context=True):
+                 delta_epsilon=0.5, tau_epsilon=0.99,
+                 phi=DEvalFunction.phi_inverse, full_context=True):
         """
         Initialize a new DEvaluation object.
         :param human_score:
@@ -239,7 +250,10 @@ class DEvaluation:
         self._decay_function = decay_function
         self._rho_function = rho_function
         self._rho_decay_function = rho_decay_function
-        self._epsilon = epsilon
+        self._delta_epsilon = delta_epsilon
+        DEvalFunction.delta_epsilon = delta_epsilon
+        self._tau_epsilon = tau_epsilon
+        DEvalFunction.tau_epsilon = tau_epsilon
         self._phi = phi
         self._full_context = full_context
 
@@ -247,13 +261,17 @@ class DEvaluation:
                      tau_function=DEvalFunction.tau_trigram,
                      decay_function=DEvalFunction.decay_none,
                      rho_function=None, rho_decay_function=DEvalFunction.decay_none,
-                     epsilon=1.0, phi=DEvalFunction.phi_inverse, full_context=True):
+                     delta_epsilon=0.5, tau_epsilon=0.99,
+                     phi=DEvalFunction.phi_inverse, full_context=True):
         self._delta_function = delta_function
         self._tau_function = tau_function
         self._decay_function = decay_function
         self._rho_function = rho_function
         self._rho_decay_function = rho_decay_function
-        self._epsilon = epsilon
+        self._delta_epsilon = delta_epsilon
+        DEvalFunction.delta_epsilon = delta_epsilon
+        self._tau_epsilon = tau_epsilon
+        DEvalFunction.tau_epsilon = tau_epsilon
         self._phi = phi
         self._full_context = full_context
 
@@ -272,10 +290,17 @@ class DEvaluation:
     def rho_decay_function(self, rho_decay_function=None):
         self._rho_decay_function = rho_decay_function
 
-    def epsilon(self, epsilon=None):
-        if epsilon:
-            self._epsilon = epsilon
-        return self._epsilon
+    def delta_epsilon(self, delta_epsilon=None):
+        if delta_epsilon:
+            self._delta_epsilon = delta_epsilon
+            DEvalFunction.delta_epsilon = delta_epsilon
+        return self._delta_epsilon
+
+    def tau_epsilon(self, tau_epsilon=None):
+        if tau_epsilon:
+            self._tau_epsilon = tau_epsilon
+            DEvalFunction.tau_epsilon = tau_epsilon
+        return self._tau_epsilon
 
     def phi(self, phi=None):
         if phi:
@@ -328,7 +353,7 @@ class DEvaluation:
             if self._decay_function:
                 decay_weight = self._decay_function(big_n=big_n, n=i+1)
             tau_value = self._tau_function(one_note_stream=human_stream, other_note_stream=system_stream,
-                                           epsilon=self._epsilon, index=i)
+                                           index=i)
             distance += decay_weight * tau_value
         big_delta = normalizing_factor * distance
 

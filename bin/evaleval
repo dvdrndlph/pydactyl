@@ -113,8 +113,8 @@ err_headings = ['corpus', 'title', 'notes',
                 'tri', 'tri_rho', 'tri_nua', 'tri_nua_rho', 'tri_rlx', 'tri_rlx_rho', 'tri_clvrst']
 
 result = {}
-# for corpus_name in ['all_american', 'pure_american', 'parncutt_published', 'full_american']:
-for corpus_name in ['parncutt_published']:
+for corpus_name in ['all_american', 'pure_american', 'parncutt_published', 'full_american']:
+# for corpus_name in ['parncutt_published']:
     piece_query = fragment_abc_query
     if corpus_name == 'full_american':
         piece_query = full_abc_query
