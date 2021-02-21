@@ -40,7 +40,7 @@ class DEvalFunction:
         return 0.0
 
     @staticmethod
-    def delta_long_short(one_note, other_note, epsilon=0.5):
+    def delta_adjacent_long(one_note, other_note, epsilon=0.5):
         one_pf = PianoFingering.fingering(one_note)
         other_pf = PianoFingering.fingering(other_note)
         if one_pf.strike_hand() != other_pf.strike_hand():
@@ -55,31 +55,32 @@ class DEvalFunction:
         return 1.0
 
     @staticmethod
-    def interchangeable_distance(one_note, other_note, epsilon=1.0):
+    def is_adjacent_long(one_note, other_note):
         """
-        Return the edit distance between two fingered trigrams, assuming notes
-        one and three are fingered the same, given the two fingered middle notes.
+        Determine if two fingerings of the input notes are interchangeable
+        because they are adjacent long fingers of the same hand.
         :param one_note: A fingered middle note of a trigram.
         :param other_note: Another fingered middle note of the same sequence..
-        :return: 0.0 if fingerings are the same, 1.0 - epsilon if fingerings are
+        :return: True iff they are interchangeable. False otherwise, even if
+                 finger used is the same.
                  arbitrary per theory notion that adjacent long fingers are
                  essentially interchangeable, 1.0 otherwise.
         """
         one_pf = PianoFingering.fingering(one_note)
         other_pf = PianoFingering.fingering(other_note)
         if one_pf.strike_hand() != other_pf.strike_hand():
-            return 1.0
+            return False
         one_digit = one_pf.strike_digit()
         other_digit = other_pf.strike_digit()
         if one_digit == other_digit:
-            return 0.0
+            return False
         if (one_digit in (2, 3) and other_digit in (2, 3)) or \
                 (one_digit in (3, 4) and other_digit in (3, 4)):
-            return 1.0 - epsilon
-        return 1.0
+            return True
+        return False
 
     @staticmethod
-    def _is_unigram_match(one_note_stream, other_note_stream, index):
+    def is_unigram_match(one_note_stream, other_note_stream, index):
         if len(one_note_stream) != len(other_note_stream):
             raise Exception("Mismatched note streams")
         if index < 0:
@@ -98,40 +99,50 @@ class DEvalFunction:
         return False
 
     @staticmethod
-    def tau(one_note_stream, other_note_stream, index, interchange_function=None, epsilon=1.0):
-        note_count = len(one_note_stream)
-        check_count = len(other_note_stream)
-        if note_count != check_count:
-            raise Exception("Note stream count mismatch")
-        if index >= note_count + 2:
-            raise Exception("Note stream index out of range")
+    def is_trigram_equal(one_note_stream, other_note_stream, index):
+        start = index - 2
+        stop = index + 1
+        for i in range(start, stop):
+            if not DEvalFunction.is_unigram_match(one_note_stream, other_note_stream, index=i):
+                return False
+        return True
 
-        if not DEvalFunction._is_unigram_match(one_note_stream, other_note_stream, index):
-            return 1.0
-        if not DEvalFunction._is_unigram_match(one_note_stream, other_note_stream, index - 2):
-            return 1.0
-        if DEvalFunction._is_unigram_match(one_note_stream, other_note_stream, index - 1):
-            return 0.0
+    @staticmethod
+    def is_trigram_similar(one_note_stream, other_note_stream, index, proxy_test=None):
+        if proxy_test is None:
+            raise Exception("No nuance without an interchange_test function.")
 
-        one_note = one_note_stream[index - 1]
-        other_note = other_note_stream[index - 1]
-        if interchange_function is not None:
-            return interchange_function(one_note=one_note, other_note=other_note, epsilon=epsilon)
-        return 1.0
+        if DEvalFunction.is_trigram_equal(one_note_stream, other_note_stream, index=index):
+            return True
+
+        if not DEvalFunction.is_unigram_match(one_note_stream, other_note_stream, index=index-2):
+            return False
+        if not DEvalFunction.is_unigram_match(one_note_stream, other_note_stream, index=index):
+            return False
+
+        middle_index = index - 1
+        if proxy_test(one_note_stream[middle_index], other_note_stream[middle_index]):
+            return True
+        return False
+
+    @staticmethod
+    def is_similar_at(one_note_stream, other_note_stream, middle_index, proxy_test=None):
+        if DEvalFunction.is_unigram_match(one_note_stream, other_note_stream, index=middle_index):
+            return True
+        return DEvalFunction.is_trigram_similar(one_note_stream, other_note_stream,
+                                                index=middle_index+1, proxy_test=proxy_test)
 
     @staticmethod
     def tau_trigram(one_note_stream, other_note_stream, index, epsilon=0.0):
-        return DEvalFunction.tau(one_note_stream=one_note_stream, other_note_stream=other_note_stream,
-                                 index=index, interchange_function=None, epsilon=epsilon)
+        if DEvalFunction.is_trigram_equal(one_note_stream, other_note_stream, index=index):
+            return 0.0
+        return 1.0
 
     @staticmethod
-    def tau_nuanced(one_note_stream, other_note_stream, index, epsilon=1.0):
-        interchange_function = DEvalFunction.interchangeable_distance
-        return DEvalFunction.tau(one_note_stream=one_note_stream, other_note_stream=other_note_stream,
-                                 index=index, interchange_function=interchange_function, epsilon=epsilon)
+    def tau_nuanced(one_note_stream, other_note_stream, index, proxy_test=None, epsilon=1.0):
+        if proxy_test is None:
+            proxy_test = DEvalFunction.is_adjacent_long
 
-    @staticmethod
-    def tau_relaxed(one_note_stream, other_note_stream, index, epsilon=1.0):
         note_count = len(one_note_stream)
         check_count = len(other_note_stream)
         if note_count != check_count:
@@ -139,25 +150,36 @@ class DEvalFunction:
         if index >= note_count + 2:
             raise Exception("Note stream index out of range")
 
-        nuance_at_n = DEvalFunction.tau_nuanced(one_note_stream=one_note_stream,
-                                                other_note_stream=other_note_stream,
-                                                index=index, epsilon=epsilon)
-        if nuance_at_n == 0:
+        if DEvalFunction.is_trigram_equal(one_note_stream, other_note_stream, index=index):
             return 0.0
-        if nuance_at_n == 1:
-            return 1.0
 
-        nuance_minus_1 = DEvalFunction.tau_nuanced(one_note_stream=one_note_stream,
-                                                   other_note_stream=other_note_stream,
-                                                   index=index-1, epsilon=epsilon)
-        if nuance_minus_1 == 1:
-            return 1.0
+        if DEvalFunction.is_trigram_similar(one_note_stream, other_note_stream, index=index,
+                                            proxy_test=proxy_test):
+            return 1.0 - epsilon
 
-        nuance_minus_2 = DEvalFunction.tau_nuanced(one_note_stream=one_note_stream,
-                                                   other_note_stream=other_note_stream,
-                                                   index=index - 2, epsilon=epsilon)
-        if nuance_minus_2 == 1:
-            return 1.0
+        return 1.0
+
+    @staticmethod
+    def tau_relaxed(one_note_stream, other_note_stream, index, proxy_test=None, epsilon=1.0):
+        if proxy_test is None:
+            proxy_test = DEvalFunction.is_adjacent_long
+
+        note_count = len(one_note_stream)
+        check_count = len(other_note_stream)
+        if note_count != check_count:
+            raise Exception("Note stream count mismatch")
+        if index >= note_count + 2:
+            raise Exception("Note stream index out of range")
+
+        if DEvalFunction.is_trigram_equal(one_note_stream, other_note_stream, index=index):
+            return 0.0
+
+        start = index - 2
+        stop = index + 1
+        for i in range(start, stop):
+            if not DEvalFunction.is_similar_at(one_note_stream, other_note_stream,
+                                               middle_index=i, proxy_test=proxy_test):
+                return 1.0
 
         return 1.0 - epsilon
 

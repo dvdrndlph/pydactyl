@@ -103,18 +103,18 @@ target_dir = "/Users/dave/corpus/"
 rank_results = []
 err_results = []
 rank_headings = ['corpus', 'title', 'notes', 'rank', 'hmg', 'norm_hmg',
-                 'ls', 'norm_ls',
+                 'al', 'norm_al',
                  'pvt_clsh', 'rho_no_d', 'rho_uni_d',
                  'p_sat', 'tri_p_sat', 'nua_p_sat', 'rlx_p_sat',
                  'tri_D', 'nua_D', 'rlx_D',
                  'norm_tri_D', 'norm_nua_D', 'norm_rlx_D']
 err_headings = ['corpus', 'title', 'notes',
-                'hmg', 'hmg_rho', 'ls', 'ls_rho',
-                'tri', 'tri_rho', 'tri_nua', 'tri_nua_rho', 'tri_rlx', 'tri_rlx_rho']
+                'hmg', 'hmg_rho', 'al', 'al_rho', 'clvrst',
+                'tri', 'tri_rho', 'tri_nua', 'tri_nua_rho', 'tri_rlx', 'tri_rlx_rho', 'tri_clvrst']
 
 result = {}
-# for corpus_name in ['all_american', 'pure_american', 'parncutt_published', 'full_americank']:
-for corpus_name in ['full_american']:
+# for corpus_name in ['all_american', 'pure_american', 'parncutt_published', 'full_american']:
+for corpus_name in ['parncutt_published']:
     piece_query = fragment_abc_query
     if corpus_name == 'full_american':
         piece_query = full_abc_query
@@ -152,12 +152,12 @@ for corpus_name in ['full_american']:
             result['rho_no_d'] = evil.pivot_clashes_at_rank(rank=rank)
             result['p_sat'] = evil.prob_satisfied(rank=rank)
 
-            evil.delta_function(DEvalFunction.delta_long_short)
-            result['ls'] = evil.big_delta_at_rank(rank=rank)
-            result['norm_ls'] = evil.big_delta_at_rank(rank=rank, normalized=True)
+            evil.delta_function(DEvalFunction.delta_adjacent_long)
+            result['al'] = evil.big_delta_at_rank(rank=rank)
+            result['norm_al'] = evil.big_delta_at_rank(rank=rank, normalized=True)
 
             result['tri_D'] = evil.trigram_big_delta_at_rank(rank=rank)
-            result['norm_tri_D'] = evil.trigram_big_delta_at_rank(rank=rank)
+            result['norm_tri_D'] = evil.trigram_big_delta_at_rank(rank=rank, normalized=True)
             result['tri_p_sat'] = evil.trigram_prob_satisfied(rank=rank)
 
             evil.tau_function(DEvalFunction.tau_nuanced)
@@ -173,18 +173,18 @@ for corpus_name in ['full_american']:
             evil.rho_decay_function(DEvalFunction.decay_uniform)
             result['rho_uni_d'] = evil.pivot_clashes_at_rank(rank=rank)
             rank_results.append(result)
+            evil.parameterize()  # Reset to defaults.
 
-        evil.parameterize()  # Reset to defaults
         err_result = {}
         err_result['corpus'] = corpus_name
         err_result['title'] = title
         err_result['notes'] = note_count
 
         err_result['hmg'] = evil.expected_reciprocal_rank()
-        evil.delta_function(DEvalFunction.delta_long_short)
-        err_result['ls'] = evil.expected_reciprocal_rank()
+        evil.delta_function(DEvalFunction.delta_adjacent_long)
+        err_result['al'] = evil.expected_reciprocal_rank()
         evil.rho_function(DEvalFunction.rho_power2)
-        err_result['ls_rho'] = evil.expected_reciprocal_rank()
+        err_result['al_rho'] = evil.expected_reciprocal_rank()
         evil.delta_function(DEvalFunction.delta_hamming)
         err_result['hmg_rho'] = evil.expected_reciprocal_rank()
 
@@ -201,6 +201,12 @@ for corpus_name in ['full_american']:
         err_result['tri_nua_rho'] = evil.expected_reciprocal_rank(trigram=True)
         evil.tau_function(DEvalFunction.tau_trigram)
         err_result['tri_rho'] = evil.expected_reciprocal_rank(trigram=True)
+
+        evil.parameterize(delta_function=DEvalFunction.delta_adjacent_long, tau_function=DEvalFunction.tau_relaxed,
+                          decay_function=DEvalFunction.decay_uniform,
+                          rho_function=DEvalFunction.rho_power2, rho_decay_function=DEvalFunction.decay_uniform)
+        err_result['clvrst'] = evil.expected_reciprocal_rank()
+        err_result['tri_clvrst'] = evil.expected_reciprocal_rank(trigram=True)
         err_results.append(err_result)
 
 # print(rank_results)
@@ -223,6 +229,6 @@ for res in err_results:
             print(res[field], end=',')
             # print("{:>3d}".format(res[field]), end=',')
         else:
-            print("{:6.4f}".format(float(res[field])), end=',')
+            print("{:7.5f}".format(float(res[field])), end=',')
     print()
 print("\n")
