@@ -202,12 +202,17 @@ class DEvalFunction:
         return 1
 
     @staticmethod
-    def rho_power2(rho_value):
+    def mu_power2(rho_value, big_n):
         return math.pow(2, rho_value)
 
     @staticmethod
-    def rho_plus1(rho_value):
+    def mu_plus1(rho_value, big_n):
         return rho_value + 1.0
+
+    @staticmethod
+    def mu_scale(rho_value, big_n):
+        base = 1.0 + 1/big_n
+        return math.pow(base, rho_value)
 
     @staticmethod
     def phi_inverse(rank):
@@ -223,7 +228,7 @@ class DEvaluation:
                  delta_function=DEvalFunction.delta_hamming,
                  tau_function=DEvalFunction.tau_trigram,
                  decay_function=DEvalFunction.decay_none,
-                 rho_function=None, rho_decay_function=DEvalFunction.decay_none,
+                 mu_function=None, rho_decay_function=DEvalFunction.decay_none,
                  delta_epsilon=0.5, tau_epsilon=0.99,
                  phi=DEvalFunction.phi_inverse, full_context=True):
         """
@@ -234,7 +239,7 @@ class DEvaluation:
         :param delta_function:
         :param tau_function:
         :param decay_function:
-        :param rho_function:
+        :param mu_function:
         :param rho_decay_function:
         :param epsilon:
         """
@@ -248,7 +253,7 @@ class DEvaluation:
         self._delta_function = delta_function
         self._tau_function = tau_function
         self._decay_function = decay_function
-        self._rho_function = rho_function
+        self._mu_function = mu_function
         self._rho_decay_function = rho_decay_function
         self._delta_epsilon = delta_epsilon
         DEvalFunction.delta_epsilon = delta_epsilon
@@ -260,13 +265,13 @@ class DEvaluation:
     def parameterize(self, delta_function=DEvalFunction.delta_hamming,
                      tau_function=DEvalFunction.tau_trigram,
                      decay_function=DEvalFunction.decay_none,
-                     rho_function=None, rho_decay_function=DEvalFunction.decay_none,
+                     mu_function=None, rho_decay_function=DEvalFunction.decay_none,
                      delta_epsilon=0.5, tau_epsilon=0.99,
                      phi=DEvalFunction.phi_inverse, full_context=True):
         self._delta_function = delta_function
         self._tau_function = tau_function
         self._decay_function = decay_function
-        self._rho_function = rho_function
+        self._mu_function = mu_function
         self._rho_decay_function = rho_decay_function
         self._delta_epsilon = delta_epsilon
         DEvalFunction.delta_epsilon = delta_epsilon
@@ -284,8 +289,8 @@ class DEvaluation:
     def decay_function(self, decay_function=None):
         self._decay_function = decay_function
 
-    def rho_function(self, rho_function=None):
-        self._rho_function = rho_function
+    def mu_function(self, mu_function=None):
+        self._mu_function = mu_function
 
     def rho_decay_function(self, rho_decay_function=None):
         self._rho_decay_function = rho_decay_function
@@ -527,8 +532,8 @@ class DEvaluation:
         big_n = self._human_score.note_count(staff=self._staff)
         rho_value = self.rho_at_rank(rank=rank)
         prob_at_rank = 1.0 - (big_delta_value / big_n)
-        if self._rho_function:
-            prob_at_rank /= self._rho_function(rho_value)
+        if self._mu_function:
+            prob_at_rank /= self._mu_function(rho_value=rho_value, big_n=big_n)
         return prob_at_rank
 
     def trigram_prob_satisfied(self, rank):
@@ -538,8 +543,8 @@ class DEvaluation:
             big_n += 2
         rho_value = self.rho_at_rank(rank=rank)
         prob_at_rank = 1.0 - (big_delta_value / big_n)
-        if self._rho_function:
-            prob_at_rank /= self._rho_function(rho_value)
+        if self._mu_function:
+            prob_at_rank /= self._mu_function(rho_value=rho_value, big_n=big_n)
         return prob_at_rank
 
     def expected_reciprocal_rank(self, trigram=False):
