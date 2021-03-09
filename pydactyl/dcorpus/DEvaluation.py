@@ -23,6 +23,7 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 
 import math
+import copy
 from music21 import note, chord
 from music21.articulations import Fingering
 from pydactyl.dcorpus.PianoFingering import PianoFingering
@@ -560,3 +561,11 @@ class DEvaluation:
             err += (discount_factor * prob_still_going * prob_happy)
             prob_still_going *= (1 - prob_happy)
         return err
+
+    @staticmethod
+    def get_pseudo_model_scores(d_score, staff="upper"):
+        system_scores = []
+        for i in range(5):
+            system_scores.append(copy.deepcopy(d_score))
+            PianoFingering.finger_score(d_score=system_scores[i], staff=staff, id=i+1)
+        return system_scores
