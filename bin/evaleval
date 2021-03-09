@@ -117,8 +117,8 @@ err_headings.extend(err_methods)
 weight_re = r"^Weight:\s*(\d+)$"
 
 result = {}
-# for corpus_name in ['all_american', 'pure_american', 'parncutt_published', 'full_american']:
-for corpus_name in ['parncutt_published']:
+for corpus_name in ['all_american', 'pure_american', 'parncutt_published', 'full_american']:
+# for corpus_name in ['parncutt_published']:
     piece_query = fragment_abc_query
     if corpus_name == 'full_american':
         piece_query = full_abc_query
@@ -283,17 +283,18 @@ print("===================")
 for field in headings:
     print(field, end=',')
 print()
-note_total = 0
+note_total = {}
 weighted_sum_of_avg_err = {}
 for (c, t) in corpus_title_err:
     if c not in weighted_sum_of_avg_err:
         weighted_sum_of_avg_err[c] = {}
+        note_total[c] = 0
     res = corpus_title_err[(c, t)]
     print("{:<20s}".format(c), end=',')
     print("{:<20s}".format(t), end=',')
     print(res['notes'], end=',')
     print(res['people'], end=',')
-    note_total += res['notes']
+    note_total[c] += res['notes']
 
     for meth in err_methods:
         if meth not in weighted_sum_of_avg_err[c]:
@@ -318,6 +319,7 @@ for corpus in weighted_sum_of_avg_err:
     print("{}".format(corpus), end=',')
     for method in weighted_sum_of_avg_err[corpus]:
         corpus_avg_err = weighted_sum_of_avg_err[corpus][method]
-        corpus_avg_err /= note_total
+        corpus_avg_err /= note_total[corpus]
         print("{:7.5f}".format(corpus_avg_err), end=',')
-
+    print()
+print()
