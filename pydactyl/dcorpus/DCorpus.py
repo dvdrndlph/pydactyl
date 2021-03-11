@@ -152,7 +152,9 @@ class DCorpus:
             file_path = corpus_dir + "/" + file_name
             self.append(corpus_path=file_path)
 
-    def append(self, corpus_path=None, corpus_str=None, header_path=None, header_str=None, as_xml=True):
+    def append(self, corpus_path=None, corpus_str=None, d_score=None, header_path=None, header_str=None, as_xml=True):
+        corpus_type = None
+
         if corpus_path:
             corpus_type = DCorpus.corpus_type(corpus_path=corpus_path)
             if corpus_type in [Constant.CORPUS_ABC, Constant.CORPUS_ABCD]:
@@ -163,6 +165,9 @@ class DCorpus:
 
         abcd_header = None
         abc_body = ''
+
+        if d_score:
+            self._d_scores.append(d_score)
 
         if corpus_str:
             corpus_type = DCorpus.corpus_type(corpus_str=corpus_str)
@@ -331,7 +336,6 @@ class DCorpus:
                                           cursorclass=pymysql.cursors.DictCursor)
             finger_curs = finger_conn.cursor()
             finger_curs.execute(fingering_query.format(piece_id))
-            header_str = ''
             header = ABCDHeader()
             abcdf_id = 1
             for f in finger_curs:

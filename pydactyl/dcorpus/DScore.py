@@ -764,6 +764,20 @@ class DScore:
                 return False
         return True
 
+    def annotation_count(self):
+        anns = self._abcd_header.annotations()
+        ann_count = len(anns)
+        return ann_count
+
+    def remove_annotations(self):
+        ah = self._abcd_header
+        ah.remove_annotations()
+
+    def annotate(self, d_annotation):
+        ah = self._abcd_header
+        ah.append_annotation(d_annotation=d_annotation)
+
+
     def abcdf(self, index=0, identifier=None, staff="both"):
         if not self._abcd_header:
             return None

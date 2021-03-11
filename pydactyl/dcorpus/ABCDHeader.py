@@ -137,6 +137,32 @@ class ABCDHeader:
             return None
         return self._annotations[index]
 
+    def remove_annotation_by_id(self, identifier=1):
+        index = 0
+        is_found = False
+        for annotation in self._annotations:
+            abcdf_id = annotation.abcdf_id()
+            if str(abcdf_id) == str(identifier):
+                is_found = True
+                break
+            index += 1
+        if not is_found:
+            return False
+        return self.remove_annotation(index=index)
+
+    def remove_annotation(self, index=0, identifier=None):
+        if identifier is not None:
+            return self.annotation_by_id(identifier=identifier)
+        if index >= len(self._annotations):
+            return False
+        del self._annotations[index]
+        return True
+
+    def remove_annotations(self):
+        ann_count = len(self._annotations)
+        for i in range(ann_count):
+            self.remove_annotation(index=0)
+
     def abcdf(self, index=0, identifier=None, staff="both"):
         if staff == "both":
             if identifier is not None:

@@ -563,9 +563,20 @@ class DEvaluation:
         return err
 
     @staticmethod
-    def get_pseudo_model_scores(d_score, staff="upper"):
+    def get_best_pseudo_model_scores(d_score, staff="upper"):
         system_scores = []
         for i in range(5):
             system_scores.append(copy.deepcopy(d_score))
             PianoFingering.finger_score(d_score=system_scores[i], staff=staff, id=i+1)
         return system_scores
+
+    @staticmethod
+    def get_worst_pseudo_model_scores(d_score, staff="upper"):
+        ann_count = d_score.annotation_count()
+        system_scores = []
+        for i in range(ann_count - 1, ann_count - 6, -1):
+            system_scores.append(copy.deepcopy(d_score))
+            PianoFingering.finger_score(d_score=system_scores[i], staff=staff, id=i+1)
+        return system_scores
+
+

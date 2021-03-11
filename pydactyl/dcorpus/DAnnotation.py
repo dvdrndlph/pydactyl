@@ -500,7 +500,7 @@ class DAnnotation:
         return DAnnotation.ast_to_strike_release_data(ast=ast, staff=staff)
 
     def __init__(self, abcdf=None, authority=None, authority_year=None, transcriber=None,
-                 transcription_date=None, abcdf_id=None, comments=''):
+                 transcription_date=None, abcdf_id=1, comments=''):
         self._authority = authority
         self._authority_year = authority_year
         self._transcriber = transcriber

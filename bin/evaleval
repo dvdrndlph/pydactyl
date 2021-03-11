@@ -25,9 +25,14 @@ __author__ = 'David Randolph'
 
 import copy
 import re
-from pydactyl.dcorpus.DCorpus import DCorpus
+from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
 from pydactyl.dcorpus.PianoFingering import PianoFingering
 from pydactyl.dcorpus.DEvaluation import DEvaluation, DEvalFunction
+from pydactyl.dactyler.Parncutt import Parncutt
+from pydactyl.dactyler.Parncutt import Jacobs
+from pydactyl.dactyler.Parncutt import Badgerow
+from pydactyl.dactyler.Random import Random
+
 
 from pydactyl.dcorpus.DScore import DScore
 from pydactyl.dcorpus.ABCDHeader import ABCDHeader
@@ -39,6 +44,116 @@ from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 # da_title = da_score.title()
 # print(da_title)
 # print(da_score)
+
+def get_system_scores(model_name, d_score, staff="upper"):
+    k = 5
+    if model_name == 'ideal':
+        return DEvaluation.get_best_pseudo_model_scores(d_score=da_score, staff=staff)
+    else:
+        d_corpus = DCorpus()
+        d_corpus.append(d_score=d_score)
+        if model_name == 'random':
+            model = Random()
+        elif model_name == 'parncutt':
+            model = Parncutt()
+        elif model_name == 'jacobs':
+            model = Jacobs()
+        elif model_name == 'badge':
+            model = Badgerow()
+
+        model.load_corpus(d_corpus=d_corpus)
+        advice = model.generate_advice(staff=staff, score_index=0, k=k)
+        print(advice)
+
+        sys_scores = []
+        for r in (range(k)):
+            sys_score = copy.deepcopy(da_score)
+            sys_score.remove_annotations()
+            abcdf = advice[0][r]
+            ann = DAnnotation(abcdf=abcdf, authority=model_name)
+            sys_score.annotate(d_annotation=ann)
+            PianoFingering.finger_score(d_score=sys_score, staff=staff)
+            sys_scores.append(sys_score)
+        return sys_scores
+
+
+def get_err_result_set(evil, corpus_name, model_name, title, note_count, annot_id, weight):
+    err_result = {}
+
+    err_result['corpus'] = corpus_name
+    err_result['model'] = model_name
+    err_result['title'] = title
+    err_result['notes'] = note_count
+    err_result['ann_id'] = annot_id
+    err_result['weight'] = weight
+
+    err_result['hmg'] = evil.expected_reciprocal_rank()
+    evil.delta_function(DEvalFunction.delta_adjacent_long)
+    err_result['al'] = evil.expected_reciprocal_rank()
+    evil.mu_function(DEvalFunction.mu_scale)
+    err_result['al_rho'] = evil.expected_reciprocal_rank()
+    evil.delta_function(DEvalFunction.delta_hamming)
+    err_result['hmg_rho'] = evil.expected_reciprocal_rank()
+
+    evil.mu_function(None)
+    err_result['tri'] = evil.expected_reciprocal_rank(trigram=True)
+    evil.tau_function(DEvalFunction.tau_nuanced)
+    err_result['tri_nua'] = evil.expected_reciprocal_rank(trigram=True)
+    evil.tau_function(DEvalFunction.tau_relaxed)
+    err_result['tri_rlx'] = evil.expected_reciprocal_rank(trigram=True)
+
+    evil.mu_function(DEvalFunction.mu_scale)
+    err_result['tri_rlx_rho'] = evil.expected_reciprocal_rank(trigram=True)
+    evil.tau_function(DEvalFunction.tau_nuanced)
+    err_result['tri_nua_rho'] = evil.expected_reciprocal_rank(trigram=True)
+    evil.tau_function(DEvalFunction.tau_trigram)
+    err_result['tri_rho'] = evil.expected_reciprocal_rank(trigram=True)
+
+    evil.parameterize(delta_function=DEvalFunction.delta_adjacent_long, tau_function=DEvalFunction.tau_relaxed,
+                      decay_function=DEvalFunction.decay_uniform,
+                      mu_function=DEvalFunction.mu_scale, rho_decay_function=DEvalFunction.decay_uniform)
+    err_result['clvrst'] = evil.expected_reciprocal_rank()
+    err_result['tri_clvrst'] = evil.expected_reciprocal_rank(trigram=True)
+    return err_result
+
+
+def get_result_set(evil, corpus_name, model_name, title, note_count, annot_id, weight, rank):
+    result = {}
+
+    result['corpus'] = corpus_name
+    result['model'] = model_name
+    result['title'] = title
+    result['notes'] = note_count
+    result['ann_id'] = annot_id
+    result['weight'] = weight
+    result['rank'] = rank
+
+    result['hmg'] = evil.big_delta_at_rank(rank=rank)
+    result['norm_hmg'] = evil.big_delta_at_rank(rank=rank, normalized=True)
+    result['rho_no_d'] = evil.pivot_clashes_at_rank(rank=rank)
+    result['p_sat'] = evil.prob_satisfied(rank=rank)
+
+    evil.delta_function(DEvalFunction.delta_adjacent_long)
+    result['al'] = evil.big_delta_at_rank(rank=rank)
+    result['norm_al'] = evil.big_delta_at_rank(rank=rank, normalized=True)
+
+    result['tri_D'] = evil.trigram_big_delta_at_rank(rank=rank)
+    result['norm_tri_D'] = evil.trigram_big_delta_at_rank(rank=rank, normalized=True)
+    result['tri_p_sat'] = evil.trigram_prob_satisfied(rank=rank)
+
+    evil.tau_function(DEvalFunction.tau_nuanced)
+    result['nua_D'] = evil.trigram_big_delta_at_rank(rank=rank)
+    result['norm_nua_D'] = evil.trigram_big_delta_at_rank(rank=rank, normalized=True)
+    result['nua_p_sat'] = evil.trigram_prob_satisfied(rank=rank)
+
+    evil.tau_function(DEvalFunction.tau_relaxed)
+    result['rlx_D'] = evil.trigram_big_delta_at_rank(rank=rank)
+    result['norm_rlx_D'] = evil.trigram_big_delta_at_rank(rank=rank, normalized=True)
+    result['rlx_p_sat'] = evil.trigram_prob_satisfied(rank=rank)
+
+    evil.rho_decay_function(DEvalFunction.decay_uniform)
+    result['rho_uni_d'] = evil.rho_at_rank(rank=rank)
+    return result
 
 
 full_abc_query = '''
@@ -103,7 +218,7 @@ full_context = True
 target_dir = "/Users/dave/corpus/"
 rank_results = []
 err_results = []
-rank_headings = ['corpus', 'title', 'notes', 'ann_id', 'weight', 'rank', 'hmg', 'norm_hmg',
+rank_headings = ['corpus', 'model', 'title', 'notes', 'ann_id', 'weight', 'rank', 'hmg', 'norm_hmg',
                  'al', 'norm_al',
                  'rho_no_d', 'rho_uni_d',
                  'p_sat', 'tri_p_sat', 'nua_p_sat', 'rlx_p_sat',
@@ -111,116 +226,59 @@ rank_headings = ['corpus', 'title', 'notes', 'ann_id', 'weight', 'rank', 'hmg', 
                  'norm_tri_D', 'norm_nua_D', 'norm_rlx_D']
 err_methods = [ 'hmg', 'hmg_rho', 'al', 'al_rho', 'clvrst',
                 'tri', 'tri_rho', 'tri_nua', 'tri_nua_rho', 'tri_rlx', 'tri_rlx_rho', 'tri_clvrst']
-err_headings = ['corpus', 'title', 'notes', 'ann_id', 'weight']
+err_headings = ['corpus', 'model', 'title', 'notes', 'ann_id', 'weight']
 err_headings.extend(err_methods)
 
 weight_re = r"^Weight:\s*(\d+)$"
 
 result = {}
-for corpus_name in ['all_american', 'pure_american', 'parncutt_published', 'full_american']:
-# for corpus_name in ['parncutt_published']:
-    piece_query = fragment_abc_query
-    if corpus_name == 'full_american':
-        piece_query = full_abc_query
-    da_corpus = DCorpus()
-    da_corpus.assemble_and_append_from_db(piece_query=piece_query, fingering_query=query[corpus_name])
-    for da_score in da_corpus.d_score_list():
-        system_scores = DEvaluation.get_pseudo_model_scores(d_score=da_score, staff=staff)
-        title = da_score.title()
-        note_count = da_score.note_count(staff=staff)
-        # if note_count != 4:
-            # continue  # Focus on only exercise with pivots (which has 4 notes)
-        # print(da_score)
-        print("{} in {}".format(title, corpus_name))
-        abcdh = da_score.abcd_header()
-        last_annot_id = abcdh.annotation_count()
-        # print("last id: {}".format(last_annot_id))
-        annot_id = 1
-        for annot_id in range(1, last_annot_id+1):
-            result = {}
-            result['ann_id'] = annot_id
+# for corpus_name in ['all_american', 'pure_american', 'parncutt_published', 'full_american']:
+for corpus_name in ['parncutt_published']:
+    # for model_name in ['ideal', 'badge', 'jacobs', 'parncutt', 'random']:
+    for model_name in ['random']:
+        piece_query = fragment_abc_query
+        if corpus_name == 'full_american':
+            piece_query = full_abc_query
+        da_corpus = DCorpus()
+        da_corpus.assemble_and_append_from_db(piece_query=piece_query, fingering_query=query[corpus_name])
+        for da_score in da_corpus.d_score_list():
+            system_scores = get_system_scores(model_name='random', d_score=da_score, staff=staff)
 
-            annot = abcdh.annotation_by_id(annot_id)
-            comment = annot.comments()
-            mat = re.match(weight_re, comment)
-            weight = int(mat.group(1))
-            result['weight'] = weight
+            title = da_score.title()
+            note_count = da_score.note_count(staff=staff)
+            # if note_count != 4:
+                # continue  # Focus on only exercise with pivots (which has 4 notes)
+            # print(da_score)
+            print("{} in {}".format(title, corpus_name))
+            abcdh = da_score.abcd_header()
+            last_annot_id = abcdh.annotation_count()
+            # print("last id: {}".format(last_annot_id))
+            annot_id = 1
+            for annot_id in range(1, last_annot_id+1):
 
-            human_score = copy.deepcopy(da_score)
-            PianoFingering.finger_score(d_score=human_score, staff=staff, id=annot_id)
+                annot = abcdh.annotation_by_id(annot_id)
+                comment = annot.comments()
+                mat = re.match(weight_re, comment)
+                weight = int(mat.group(1))
 
-            evil = DEvaluation(human_score=human_score, system_scores=system_scores,
-                               staff=staff, full_context=full_context)
-            evil.print_pivot_count_report()
-            for i in range(5):
-                result['corpus'] = corpus_name
-                result['title'] = title
-                result['notes'] = note_count
-                rank = i + 1
-                result['rank'] = rank
-                result['hmg'] = evil.big_delta_at_rank(rank=rank)
-                result['norm_hmg'] = evil.big_delta_at_rank(rank=rank, normalized=True)
-                result['rho_no_d'] = evil.pivot_clashes_at_rank(rank=rank)
-                result['p_sat'] = evil.prob_satisfied(rank=rank)
+                human_score = copy.deepcopy(da_score)
+                PianoFingering.finger_score(d_score=human_score, staff=staff, id=annot_id)
 
-                evil.delta_function(DEvalFunction.delta_adjacent_long)
-                result['al'] = evil.big_delta_at_rank(rank=rank)
-                result['norm_al'] = evil.big_delta_at_rank(rank=rank, normalized=True)
+                evil = DEvaluation(human_score=human_score, system_scores=system_scores,
+                                   staff=staff, full_context=full_context)
+                evil.print_pivot_count_report()
 
-                result['tri_D'] = evil.trigram_big_delta_at_rank(rank=rank)
-                result['norm_tri_D'] = evil.trigram_big_delta_at_rank(rank=rank, normalized=True)
-                result['tri_p_sat'] = evil.trigram_prob_satisfied(rank=rank)
-
-                evil.tau_function(DEvalFunction.tau_nuanced)
-                result['nua_D'] = evil.trigram_big_delta_at_rank(rank=rank)
-                result['norm_nua_D'] = evil.trigram_big_delta_at_rank(rank=rank, normalized=True)
-                result['nua_p_sat'] = evil.trigram_prob_satisfied(rank=rank)
-
-                evil.tau_function(DEvalFunction.tau_relaxed)
-                result['rlx_D'] = evil.trigram_big_delta_at_rank(rank=rank)
-                result['norm_rlx_D'] = evil.trigram_big_delta_at_rank(rank=rank, normalized=True)
-                result['rlx_p_sat'] = evil.trigram_prob_satisfied(rank=rank)
-
-                evil.rho_decay_function(DEvalFunction.decay_uniform)
-                result['rho_uni_d'] = evil.rho_at_rank(rank=rank)
-                rank_results.append(result)
-                evil.parameterize()  # Reset to defaults.
-
-            err_result = {}
-            err_result['corpus'] = corpus_name
-            err_result['title'] = title
-            err_result['notes'] = note_count
-            err_result['ann_id'] = annot_id
-            err_result['weight'] = weight
-
-            err_result['hmg'] = evil.expected_reciprocal_rank()
-            evil.delta_function(DEvalFunction.delta_adjacent_long)
-            err_result['al'] = evil.expected_reciprocal_rank()
-            evil.mu_function(DEvalFunction.mu_scale)
-            err_result['al_rho'] = evil.expected_reciprocal_rank()
-            evil.delta_function(DEvalFunction.delta_hamming)
-            err_result['hmg_rho'] = evil.expected_reciprocal_rank()
-
-            evil.mu_function(None)
-            err_result['tri'] = evil.expected_reciprocal_rank(trigram=True)
-            evil.tau_function(DEvalFunction.tau_nuanced)
-            err_result['tri_nua'] = evil.expected_reciprocal_rank(trigram=True)
-            evil.tau_function(DEvalFunction.tau_relaxed)
-            err_result['tri_rlx'] = evil.expected_reciprocal_rank(trigram=True)
-
-            evil.mu_function(DEvalFunction.mu_scale)
-            err_result['tri_rlx_rho'] = evil.expected_reciprocal_rank(trigram=True)
-            evil.tau_function(DEvalFunction.tau_nuanced)
-            err_result['tri_nua_rho'] = evil.expected_reciprocal_rank(trigram=True)
-            evil.tau_function(DEvalFunction.tau_trigram)
-            err_result['tri_rho'] = evil.expected_reciprocal_rank(trigram=True)
-
-            evil.parameterize(delta_function=DEvalFunction.delta_adjacent_long, tau_function=DEvalFunction.tau_relaxed,
-                              decay_function=DEvalFunction.decay_uniform,
-                              mu_function=DEvalFunction.mu_scale, rho_decay_function=DEvalFunction.decay_uniform)
-            err_result['clvrst'] = evil.expected_reciprocal_rank()
-            err_result['tri_clvrst'] = evil.expected_reciprocal_rank(trigram=True)
-            err_results.append(err_result)
+                for i in range(5):
+                    rank = i + 1
+                    result = get_result_set(evil, corpus_name=corpus_name, model_name=model_name,
+                                            title=title, note_count=note_count,
+                                            annot_id=annot_id, weight=weight, rank=rank)
+                    rank_results.append(result)
+                    evil.parameterize()  # Reset to defaults.
+                err_result = get_err_result_set(evil, corpus_name=corpus_name, model_name=model_name,
+                                                title=title, note_count=note_count,
+                                                annot_id=annot_id, weight=weight)
+                err_results.append(err_result)
 
 # print(rank_results)
 for field in rank_headings:
@@ -239,6 +297,8 @@ for res in err_results:
     for field in err_headings:
         if field in ['corpus', 'title']:
             print("{:<20s}".format(res[field]), end=',')
+        elif field in ['model']:
+            print("{:<8s}".format(res[field]), end=',')
         elif field in ['notes', 'ann_id', 'weight']:
             print(res[field], end=',')
             # print("{:>3d}".format(res[field]), end=',')
@@ -246,36 +306,30 @@ for res in err_results:
             print("{:7.5f}".format(float(res[field])), end=',')
     print()
 
-corpus_title_err = {}
-corpus_err = {}
+cmt_err = {}
 norm_err = {}
 
 corpus = ''
 title = ''
+model = ''
 
 for res in err_results:
-    if res['corpus'] != corpus:
+    if res['corpus'] != corpus or res['model'] != model or res['title'] != title:
         corpus = res['corpus']
-        title = res['title']
-    elif res['title'] != title:
+        model = res['model']
         title = res['title']
 
-    if (corpus, title) not in corpus_title_err:
-        corpus_title_err[(corpus, title)] = {'sums':{}, 'people': 0, 'notes': res['notes']}
+    if (corpus, model, title) not in cmt_err:
+        cmt_err[(corpus, model, title)] = {'sums':{}, 'people': 0, 'notes': res['notes']}
         for method in err_methods:
-            corpus_title_err[(corpus, title)]['sums'][method] = 0
-    if corpus not in corpus_err:
-        corpus_err[corpus] = {'sums': {}, 'people': 0, 'notes': res['notes']}
-        for method in err_methods:
-            corpus_err[corpus]['sums'][method] = 0
+            cmt_err[(corpus, model, title)]['sums'][method] = 0
 
-    corpus_title_err[(corpus, title)]['people'] += res['weight']
+    cmt_err[(corpus, model, title)]['people'] += res['weight']
     for meth in err_methods:
-        corpus_title_err[(corpus, title)]['sums'][meth] += res[meth] * res['weight']
-        corpus_err[corpus]['sums'][meth] += res[meth] * res['weight']
+        cmt_err[(corpus, model, title)]['sums'][meth] += res[meth] * res['weight']
 
-print(corpus_title_err)
-headings = ['corpus', 'title', 'notes', 'people']
+print(cmt_err)
+headings = ['corpus', 'model', 'title', 'notes', 'people']
 headings.extend(err_methods)
 
 print("\n\nMean ERR per phrase")
@@ -285,23 +339,24 @@ for field in headings:
 print()
 note_total = {}
 weighted_sum_of_avg_err = {}
-for (c, t) in corpus_title_err:
-    if c not in weighted_sum_of_avg_err:
-        weighted_sum_of_avg_err[c] = {}
-        note_total[c] = 0
-    res = corpus_title_err[(c, t)]
-    print("{:<20s}".format(c), end=',')
-    print("{:<20s}".format(t), end=',')
+for (corpus, model, title) in cmt_err:
+    if (corpus, model) not in weighted_sum_of_avg_err:
+        weighted_sum_of_avg_err[(corpus, model)] = {}
+        note_total[(corpus, model)] = 0
+    res = cmt_err[(corpus, model, title)]
+    print("{:<20s}".format(corpus), end=',')
+    print("{:<8s}".format(model), end=',')
+    print("{:<20s}".format(title), end=',')
     print(res['notes'], end=',')
     print(res['people'], end=',')
-    note_total[c] += res['notes']
+    note_total[(corpus, model)] += res['notes']
 
     for meth in err_methods:
-        if meth not in weighted_sum_of_avg_err[c]:
-            weighted_sum_of_avg_err[c][meth] = 0
+        if meth not in weighted_sum_of_avg_err[(corpus, model)]:
+            weighted_sum_of_avg_err[(corpus, model)][meth] = 0
         phrase_avg_err = float(res['sums'][meth])/res['people']
         print("{:7.5f}".format(phrase_avg_err), end=',')
-        weighted_sum_of_avg_err[c][meth] += phrase_avg_err * res['notes']
+        weighted_sum_of_avg_err[(corpus, model)][meth] += phrase_avg_err * res['notes']
     print()
 
 print("\n")
@@ -315,11 +370,11 @@ for field in headings:
     print(field, end=',')
 print()
 # print(weighted_sum_of_avg_err)
-for corpus in weighted_sum_of_avg_err:
+for (corpus, model) in weighted_sum_of_avg_err:
     print("{}".format(corpus), end=',')
-    for method in weighted_sum_of_avg_err[corpus]:
-        corpus_avg_err = weighted_sum_of_avg_err[corpus][method]
-        corpus_avg_err /= note_total[corpus]
+    for method in weighted_sum_of_avg_err[(corpus, model)]:
+        corpus_avg_err = weighted_sum_of_avg_err[(corpus, model)][method]
+        corpus_avg_err /= note_total[(corpus, model)]
         print("{:7.5f}".format(corpus_avg_err), end=',')
     print()
 print()
