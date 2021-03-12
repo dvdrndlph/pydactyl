@@ -233,17 +233,16 @@ weight_re = r"^Weight:\s*(\d+)$"
 
 result = {}
 # for corpus_name in ['all_american', 'pure_american', 'parncutt_published', 'full_american']:
-for corpus_name in ['parncutt_published']:
+for corpus_name in ['full_american', 'parncutt_published']:
     # for model_name in ['ideal', 'badge', 'jacobs', 'parncutt', 'random']:
-    for model_name in ['random']:
+    for model_name in ['ideal', 'jacobs', 'parncutt', 'random']:
         piece_query = fragment_abc_query
         if corpus_name == 'full_american':
             piece_query = full_abc_query
         da_corpus = DCorpus()
         da_corpus.assemble_and_append_from_db(piece_query=piece_query, fingering_query=query[corpus_name])
         for da_score in da_corpus.d_score_list():
-            system_scores = get_system_scores(model_name='random', d_score=da_score, staff=staff)
-
+            system_scores = get_system_scores(model_name=model_name, d_score=da_score, staff=staff)
             title = da_score.title()
             note_count = da_score.note_count(staff=staff)
             # if note_count != 4:
@@ -255,7 +254,6 @@ for corpus_name in ['parncutt_published']:
             # print("last id: {}".format(last_annot_id))
             annot_id = 1
             for annot_id in range(1, last_annot_id+1):
-
                 annot = abcdh.annotation_by_id(annot_id)
                 comment = annot.comments()
                 mat = re.match(weight_re, comment)
@@ -361,17 +359,18 @@ for (corpus, model, title) in cmt_err:
 
 print("\n")
 
-headings = ['corpus']
+headings = ['corpus', 'model']
 headings.extend(err_methods)
 
-print("\n\nMean ERR for corpus")
-print("===================")
+print("\n\nMean ERR for corpus and model")
+print("=============================")
 for field in headings:
     print(field, end=',')
 print()
 # print(weighted_sum_of_avg_err)
 for (corpus, model) in weighted_sum_of_avg_err:
     print("{}".format(corpus), end=',')
+    print("{}".format(model), end=',')
     for method in weighted_sum_of_avg_err[(corpus, model)]:
         corpus_avg_err = weighted_sum_of_avg_err[(corpus, model)][method]
         corpus_avg_err /= note_total[(corpus, model)]
