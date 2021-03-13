@@ -300,14 +300,14 @@ for res in rank_results:
     for field in rank_headings:
         print(res[field], end=',')
     print()
-print("\n")
-for field in err_headings:
-    print(field, end=',')
-print()
 rank_results_file.close()
+sys.stdout = stdout_org
 
 err_results_file = open(output_dir + '/err_results.csv', 'w')
 sys.stdout = err_results_file
+for field in err_headings:
+    print(field, end=',')
+print()
 for res in err_results:
     for field in err_headings:
         if field in ['corpus', 'title']:
