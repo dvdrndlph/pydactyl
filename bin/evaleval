@@ -25,6 +25,7 @@ __author__ = 'David Randolph'
 
 import copy
 import re
+import sys
 from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
 from pydactyl.dcorpus.PianoFingering import PianoFingering
 from pydactyl.dcorpus.DEvaluation import DEvaluation, DEvalFunction
@@ -44,6 +45,8 @@ from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 # da_title = da_score.title()
 # print(da_title)
 # print(da_score)
+
+output_dir = '/Users/dave/tb2/doc/smc2021/data'
 
 def get_system_scores(model_name, d_score, staff="upper"):
     k = 5
@@ -232,6 +235,9 @@ err_headings.extend(err_methods)
 weight_re = r"^Weight:\s*(\d+)$"
 
 result = {}
+
+pivot_rpt_file = open(output_dir + '/pivot_reports.txt', 'w')
+
 # for corpus_name in ['all_american', 'pure_american', 'parncutt_published', 'full_american']:
 for corpus_name in ['full_american', 'parncutt_published']:
     # for model_name in ['ideal', 'badge', 'jacobs', 'parncutt', 'random']:
@@ -248,7 +254,7 @@ for corpus_name in ['full_american', 'parncutt_published']:
             # if note_count != 4:
                 # continue  # Focus on only exercise with pivots (which has 4 notes)
             # print(da_score)
-            print("{} in {}".format(title, corpus_name))
+            print("{} in {}".format(title, corpus_name), file=pivot_rpt_file)
             abcdh = da_score.abcd_header()
             last_annot_id = abcdh.annotation_count()
             # print("last id: {}".format(last_annot_id))
@@ -264,7 +270,9 @@ for corpus_name in ['full_american', 'parncutt_published']:
 
                 evil = DEvaluation(human_score=human_score, system_scores=system_scores,
                                    staff=staff, full_context=full_context)
-                evil.print_pivot_count_report()
+                pvt_heading = "{} over {} {} human {}".format(model_name, corpus_name, title, annot_id)
+                pivot_report = evil.pivot_count_report(heading=pvt_heading)
+                print(pivot_report, file=pivot_rpt_file)
 
                 for i in range(5):
                     rank = i + 1
@@ -278,6 +286,12 @@ for corpus_name in ['full_american', 'parncutt_published']:
                                                 annot_id=annot_id, weight=weight)
                 err_results.append(err_result)
 
+pivot_rpt_file.close()
+
+rank_results_file = open(output_dir + '/rank_results.csv', 'w')
+stdout_org = sys.stdout
+sys.stdout = rank_results_file
+
 # print(rank_results)
 for field in rank_headings:
     print(field, end=',')
@@ -290,7 +304,10 @@ print("\n")
 for field in err_headings:
     print(field, end=',')
 print()
+rank_results_file.close()
 
+err_results_file = open(output_dir + '/err_results.csv', 'w')
+sys.stdout = err_results_file
 for res in err_results:
     for field in err_headings:
         if field in ['corpus', 'title']:
@@ -303,6 +320,8 @@ for res in err_results:
         else:
             print("{:7.5f}".format(float(res[field])), end=',')
     print()
+err_results_file.close()
+sys.stdout = stdout_org
 
 cmt_err = {}
 norm_err = {}
@@ -326,12 +345,11 @@ for res in err_results:
     for meth in err_methods:
         cmt_err[(corpus, model, title)]['sums'][meth] += res[meth] * res['weight']
 
-print(cmt_err)
 headings = ['corpus', 'model', 'title', 'notes', 'people']
 headings.extend(err_methods)
 
-print("\n\nMean ERR per phrase")
-print("===================")
+mean_err_phrase_results_file = open(output_dir + '/mean_err_phrase_results.csv', 'w')
+sys.stdout = mean_err_phrase_results_file
 for field in headings:
     print(field, end=',')
 print()
@@ -356,14 +374,15 @@ for (corpus, model, title) in cmt_err:
         print("{:7.5f}".format(phrase_avg_err), end=',')
         weighted_sum_of_avg_err[(corpus, model)][meth] += phrase_avg_err * res['notes']
     print()
-
-print("\n")
+mean_err_phrase_results_file.close()
+sys.stdout = stdout_org
 
 headings = ['corpus', 'model']
 headings.extend(err_methods)
 
-print("\n\nMean ERR for corpus and model")
-print("=============================")
+mean_err_results_file = open(output_dir + '/mean_err_results.csv', 'w')
+sys.stdout = mean_err_results_file
+
 for field in headings:
     print(field, end=',')
 print()
@@ -377,3 +396,6 @@ for (corpus, model) in weighted_sum_of_avg_err:
         print("{:7.5f}".format(corpus_avg_err), end=',')
     print()
 print()
+
+mean_err_results_file.close()
+sys.stdout = stdout_org

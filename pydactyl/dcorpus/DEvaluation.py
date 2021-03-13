@@ -514,19 +514,26 @@ class DEvaluation:
             prior_note = note
         return contour_string
 
-    def print_pivot_count_report(self):
+    def pivot_count_report(self, heading=None, echo=True):
+        report_str = ''
         human_stream = self._human_note_stream
         # human_abcdf = DEvaluation.abcdf_for_note_stream(human_stream)
         human_contour = DEvaluation.finger_contour_for_note_stream(human_stream)
         human_count = DEvaluation._count_pivots_in_fingered_stream(human_stream)
-        print("PIVOT COUNTS")
-        print("Human: {} Count: {}".format(human_contour, human_count))
+        if heading:
+            report_str += heading + "\n"
+        report_str += "PIVOT COUNTS\n"
+        report_str += "Human: {} Count: {}".format(human_contour, human_count) + "\n"
+
         for i in range(len(self._system_note_streams)):
             system_stream = self._system_note_streams[i]
             system_contour = DEvaluation.finger_contour_for_note_stream(system_stream)
             system_count = DEvaluation._count_pivots_in_fingered_stream(system_stream)
-            print("Sys {}: {} Count: {}".format(i + 1, system_contour, system_count))
-        print("\n")
+            report_str += "Sys {}: {} Count: {}".format(i + 1, system_contour, system_count) + "\n"
+        report_str += "\n"
+        if echo:
+            print(report_str)
+        return report_str
 
     def prob_satisfied(self, rank):
         big_delta_value = self.big_delta_at_rank(rank=rank)
