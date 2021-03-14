@@ -24,6 +24,7 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 
 from scipy import stats
+from statsmodels.stats.multicomp import pairwise_tukeyhsd, MultiComparison
 import sys
 import csv
 import numpy as np
@@ -148,19 +149,62 @@ for corpus_name in corpora:
         print("{} {} represents {} notes with {} human annotations.".
               format(corpus_name, model_name, note_count, human_annotation_id))
 
-# Okay, we want to use Spearman's rank correlation coefficient to establish that
-# all methods rank the models in the same order. So we need
+# Okay, we use an ANOVA test to establish that the variances we see among all the
+# model means for each method are real and (we hope) statistically significant.
 for meth in methods:
     for corpus_name in corpora:
         samples = []
         for model_name in best_to_worst_models:
             samples.append(err_vals[meth][(corpus_name, model_name)])
-        # statistic, p_val = stats.f_oneway(samples)
-        # print("{}, {}".format(statistic, p_val))
+        statistic, p_val = stats.f_oneway(*samples)
+        print("ANOVA for {} method over corpus {}, F={}, p={}".format(meth, corpus_name, statistic, p_val))
 
-for corpus_name in corpora:
-    is_greater, is_sig_greater, p_val = \
-        ttest_greater_than(little=err_vals['hmg'][(corpus_name, 'random')],
-                           big=err_vals['hmg'][(corpus_name, 'ideal')])
-    print(is_sig_greater)
-    print(p_val)
+# With a green light from ANOVA, we proceed to post-hoc Tukey test to
+# say something about pairwise comparisons.
+for meth in methods:
+    for corpus_name in corpora:
+        df = pd.DataFrame()
+        for model_name in best_to_worst_models:
+            df[model_name] = err_vals[meth][(corpus_name, model_name)]
+
+        # Stack the data (and rename columns):
+        stacked_data = df.stack().reset_index()
+        stacked_data = stacked_data.rename(columns={'level_0': 'id',
+                                                    'level_1': 'model',
+                                                    0: 'result'})
+        mc = MultiComparison(stacked_data['result'], stacked_data['model'])
+        print("Tukey for {} method over corpus {}:".format(meth, corpus_name))
+        print(mc.tukeyhsd().summary())
+        print()
+
+# Combining the corpora....
+combined_vals = {}
+for meth in methods:
+    df = pd.DataFrame()
+    for corpus_name in corpora:
+        for model_name in best_to_worst_models:
+            if model_name not in combined_vals:
+                combined_vals[model_name] = []
+            combined_vals[model_name].extend(err_vals[meth][(corpus_name, model_name)])
+    for model_name in best_to_worst_models:
+        print("{} has {} vals".format(model_name, len(combined_vals[model_name])))
+        df[model_name] = combined_vals[model_name]
+    # Stack the data (and rename columns):
+    stacked_data = df.stack().reset_index()
+    stacked_data = stacked_data.rename(columns={'level_0': 'id',
+                                                'level_1': 'model',
+                                                0: 'result'})
+    mc = MultiComparison(stacked_data['result'], stacked_data['model'])
+    print("Tukey for '{}' method over all data:".format(meth))
+    print(mc.tukeyhsd().summary())
+    print()
+
+# Spearman's rank correlation coefficient to establish that
+# all methods rank the models in the same order. So we need
+
+# for corpus_name in corpora:
+#     is_greater, is_sig_greater, p_val = \
+#         ttest_greater_than(little=err_vals['hmg'][(corpus_name, 'random')],
+#                            big=err_vals['hmg'][(corpus_name, 'ideal')])
+#     print(is_sig_greater)
+#     print(p_val)
