@@ -337,7 +337,7 @@ for res in err_results:
         title = res['title']
 
     if (corpus, model, title) not in cmt_err:
-        cmt_err[(corpus, model, title)] = {'sums':{}, 'people': 0, 'notes': res['notes']}
+        cmt_err[(corpus, model, title)] = {'sums': {}, 'people': 0, 'notes': res['notes']}
         for method in err_methods:
             cmt_err[(corpus, model, title)]['sums'][method] = 0
 
@@ -354,11 +354,23 @@ for field in headings:
     print(field, end=',')
 print()
 note_total = {}
-weighted_sum_of_avg_err = {}
+phrase_count = {}
+# mean_err_phrase is the mean of all ERR measures assigned on a particular phrase across all people.
+# weighted_err_per_person aggregates all individual ERR scores weighted by the
+# length of the phrase used to generate each of them. If we divide this
+# aggregate by the sum total notes, we get the sum total ERR weighted by
+# phrase length. If we divide this by the total number of annotations, we get weighted_mean_err.
+# If we ignore the weighting by phrase length (notes) and treat each ERR measure the same, we get mean_err.
+# mean_err seems easier to deal with for statistical analysis.
+#
+weighted_err_per_person = {}
+err_per_person = {}
 for (corpus, model, title) in cmt_err:
-    if (corpus, model) not in weighted_sum_of_avg_err:
-        weighted_sum_of_avg_err[(corpus, model)] = {}
+    if (corpus, model) not in weighted_err_per_person:
+        weighted_err_per_person[(corpus, model)] = {}
+        err_per_person[(corpus, model)] = {}
         note_total[(corpus, model)] = 0
+        phrase_count[(corpus, model)] = 0
     res = cmt_err[(corpus, model, title)]
     print("{:<20s}".format(corpus), end=',')
     print("{:<8s}".format(model), end=',')
@@ -366,13 +378,16 @@ for (corpus, model, title) in cmt_err:
     print(res['notes'], end=',')
     print(res['people'], end=',')
     note_total[(corpus, model)] += res['notes']
+    phrase_count[(corpus, model)] += 1
 
     for meth in err_methods:
-        if meth not in weighted_sum_of_avg_err[(corpus, model)]:
-            weighted_sum_of_avg_err[(corpus, model)][meth] = 0
+        if meth not in weighted_err_per_person[(corpus, model)]:
+            weighted_err_per_person[(corpus, model)][meth] = 0
+            err_per_person[(corpus, model)][meth] = 0
         phrase_avg_err = float(res['sums'][meth])/res['people']
         print("{:7.5f}".format(phrase_avg_err), end=',')
-        weighted_sum_of_avg_err[(corpus, model)][meth] += phrase_avg_err * res['notes']
+        weighted_err_per_person[(corpus, model)][meth] += phrase_avg_err * res['notes']
+        err_per_person[(corpus, model)][meth] += phrase_avg_err
     print()
 mean_err_phrase_results_file.close()
 sys.stdout = stdout_org
@@ -380,20 +395,38 @@ sys.stdout = stdout_org
 headings = ['corpus', 'model']
 headings.extend(err_methods)
 
+weighted_mean_err_results_file = open(output_dir + '/weighted_mean_err_results.csv', 'w')
+sys.stdout = weighted_mean_err_results_file
+
+for field in headings:
+    print(field, end=',')
+print()
+for (corpus, model) in weighted_err_per_person:
+    print("{}".format(corpus), end=',')
+    print("{}".format(model), end=',')
+    for method in weighted_err_per_person[(corpus, model)]:
+        method_weighted_mean_err = weighted_err_per_person[(corpus, model)][method]
+        method_weighted_mean_err /= note_total[(corpus, model)]
+        print("{:7.5f}".format(method_weighted_mean_err), end=',')
+    print()
+print()
+
+weighted_mean_err_results_file.close()
+sys.stdout = stdout_org
+
 mean_err_results_file = open(output_dir + '/mean_err_results.csv', 'w')
 sys.stdout = mean_err_results_file
 
 for field in headings:
     print(field, end=',')
 print()
-# print(weighted_sum_of_avg_err)
-for (corpus, model) in weighted_sum_of_avg_err:
+for (corpus, model) in err_per_person:
     print("{}".format(corpus), end=',')
     print("{}".format(model), end=',')
-    for method in weighted_sum_of_avg_err[(corpus, model)]:
-        corpus_avg_err = weighted_sum_of_avg_err[(corpus, model)][method]
-        corpus_avg_err /= note_total[(corpus, model)]
-        print("{:7.5f}".format(corpus_avg_err), end=',')
+    for method in err_per_person[(corpus, model)]:
+        method_mean_err = err_per_person[(corpus, model)][method]
+        method_mean_err /= phrase_count[(corpus, model)]
+        print("{:7.5f}".format(method_mean_err), end=',')
     print()
 print()
 
