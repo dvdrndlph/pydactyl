@@ -149,6 +149,7 @@ for corpus_name in corpora:
         print("{} {} represents {} notes with {} human annotations.".
               format(corpus_name, model_name, note_count, human_annotation_id))
 
+
 # Okay, we use an ANOVA test to establish that the variances we see among all the
 # model means for each method are real and (we hope) statistically significant.
 for meth in methods:
@@ -156,11 +157,37 @@ for meth in methods:
         samples = []
         for model_name in best_to_worst_models:
             samples.append(err_vals[meth][(corpus_name, model_name)])
+        # statistic, p_val = stats.levene(*samples)
+        # print("Levene statistic for {} method over corpus {}: {}, p={}".format(meth, corpus_name, statistic, p_val))
         statistic, p_val = stats.f_oneway(*samples)
-        print("ANOVA for {} method over corpus {}, F={}, p={}".format(meth, corpus_name, statistic, p_val))
+        print("ANOVA for {} method over corpus {}: F={}, p={}".format(meth, corpus_name, statistic, p_val))
 
-# With a green light from ANOVA, we proceed to post-hoc Tukey test to
-# say something about pairwise comparisons.
+# Combining the corpora....
+# FIXME: We can't really do that, since the ideal and random models are actually different
+# for each corpus. We should have had the same model for both, using the full corpus for ideal
+# and truncating the phrases.
+combined_vals = {}
+for meth in methods:
+    if meth not in combined_vals:
+        combined_vals[meth] = {}
+    for corpus_name in corpora:
+        for model_name in best_to_worst_models:
+            if model_name not in combined_vals[meth]:
+                combined_vals[meth][model_name] = []
+            combined_vals[meth][model_name].extend(err_vals[meth][(corpus_name, model_name)])
+    # for model_name in best_to_worst_models:
+    #     print("{} method (evaluated with '{}' method) has {} vals".format(
+    #         model_name, meth, len(combined_vals[meth][model_name])))
+
+for meth in methods:
+    samples = []
+    for model_name in best_to_worst_models:
+        samples.append(combined_vals[meth][model_name])
+    statistic, p_val = stats.f_oneway(*samples)
+    print("ANOVA for {} method over all data: F={}, p={}".format(meth, statistic, p_val))
+
+# With all green lights from ANOVA, we proceed to post-hoc Tukey test to
+# say something about pairwise comparisons between the competing models.
 for meth in methods:
     for corpus_name in corpora:
         df = pd.DataFrame()
@@ -177,18 +204,11 @@ for meth in methods:
         print(mc.tukeyhsd().summary())
         print()
 
-# Combining the corpora....
-combined_vals = {}
 for meth in methods:
     df = pd.DataFrame()
-    for corpus_name in corpora:
-        for model_name in best_to_worst_models:
-            if model_name not in combined_vals:
-                combined_vals[model_name] = []
-            combined_vals[model_name].extend(err_vals[meth][(corpus_name, model_name)])
     for model_name in best_to_worst_models:
-        print("{} has {} vals".format(model_name, len(combined_vals[model_name])))
-        df[model_name] = combined_vals[model_name]
+        # print("{} has {} vals".format(model_name, len(combined_vals[meth][model_name])))
+        df[model_name] = combined_vals[meth][model_name]
     # Stack the data (and rename columns):
     stacked_data = df.stack().reset_index()
     stacked_data = stacked_data.rename(columns={'level_0': 'id',
@@ -199,12 +219,25 @@ for meth in methods:
     print(mc.tukeyhsd().summary())
     print()
 
-# Spearman's rank correlation coefficient to establish that
-# all methods rank the models in the same order. So we need
 
-# for corpus_name in corpora:
-#     is_greater, is_sig_greater, p_val = \
-#         ttest_greater_than(little=err_vals['hmg'][(corpus_name, 'random')],
-#                            big=err_vals['hmg'][(corpus_name, 'ideal')])
-#     print(is_sig_greater)
-#     print(p_val)
+# We should compute Spearman's rank correlation coefficients between each pair of methods to establish that
+# they all measure the same thing. But isn't this kinda redundant??
+
+# We do want to see if the difference between Hamming for ideal and Hamming for random is
+# significantly different from the difference Relaxed for ideal and Relaxed for random.
+
+for corpus_name in corpora:
+    hmg_diffs = []
+    for i in range(len(err_vals['hmg'][(corpus_name, 'random')])):
+        diff = err_vals['hmg'][(corpus_name, 'ideal')][i] - err_vals['hmg'][(corpus_name, 'random')][i]
+        hmg_diffs.append(diff)
+    rlx_diffs = []
+    for i in range(len(err_vals['tri_rlx'][(corpus_name, 'random')])):
+        diff = err_vals['tri_rlx'][(corpus_name, 'ideal')][i] - err_vals['tri_rlx'][(corpus_name, 'random')][i]
+        rlx_diffs.append(diff)
+
+    is_greater, is_sig_greater, p_val = \
+        ttest_greater_than(little=hmg_diffs, big=rlx_diffs)
+
+    print(is_sig_greater)
+    print(p_val)
