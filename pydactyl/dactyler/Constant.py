@@ -31,6 +31,9 @@ CORPUS_ABC = 'abc'
 CORPUS_ABCD = 'abcD'
 CORPUS_MUSIC_XML = 'MusicXML'
 CORPUS_MIDI = 'MIDI'
+MIDI_FILE_RE = r"Standard MIDI data.*format 1.*using 2 tracks"
+# MIDI_MIME_RE = r"^audio/midi$"
+
 
 THUMB = 1
 INDEX = 2

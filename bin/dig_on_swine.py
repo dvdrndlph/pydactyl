@@ -27,6 +27,7 @@ import copy
 import re
 import sys
 from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
+from pydactyl.dactyler.Parncutt import Parncutt
 from pydactyl.dcorpus.PigIn import PigIn
 # import scamp
 
@@ -36,4 +37,14 @@ from pydactyl.dcorpus.PigIn import PigIn
 
 pig_eater = PigIn()
 pig_eater.transform()
+
+staff = 'upper'
+k = 5
+corpus_dir = "/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/midi/"
+midi_path = corpus_dir + "001-1.mid"
+d_corpus = DCorpus(corpus_path=midi_path)
+# model = Parncutt()
+# model.load_corpus(d_corpus=d_corpus)
+# advice = model.generate_advice(staff=staff, score_index=0, k=k)
+# print(advice)
 exit(0)

@@ -123,7 +123,7 @@ class PigIn:
                         file_path = os.path.join(root, file)
                         print(file_path)
                         f = open(file_path, "r")
-                        mf = mido.MidiFile(type=1)
+                        mf = mido.MidiFile(type=1, ticks_per_beat=PigNote.TICKS_PER_BEAT)
                         upper = mido.MidiTrack()
                         mf.tracks.append(upper)
                         lower = mido.MidiTrack()

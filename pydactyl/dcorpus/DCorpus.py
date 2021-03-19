@@ -24,6 +24,9 @@ __author__ = 'David Randolph'
 import re
 import pymysql
 import os
+import subprocess
+import mimetypes
+import magic
 from music21 import abcFormat, converter, stream
 from pydactyl.dactyler import Constant
 
@@ -139,13 +142,21 @@ class DCorpus:
     @staticmethod
     def corpus_type(corpus_path=None, corpus_str=None):
         if corpus_path:
+            # file_str = subprocess.check_output(["/usr/bin/file", corpus_path], shell=True)
+            # file_str.rstrip()
+            # mime_type, _ = mimetypes.guess_type(corpus_path)
+            # mime_type = magic.from_file(corpus_path, mime=True)
+            file_type = magic.from_file(corpus_path)
+            print(file_type)
+            if re.match(Constant.MIDI_FILE_RE, file_type):
+                return Constant.CORPUS_MIDI
             corpus_str = DCorpus.file_to_string(file_path=corpus_path)
         if ABCDHeader.is_abcd(corpus_str):
             return Constant.CORPUS_ABCD
         if corpus_str[0] == '<':
             return Constant.CORPUS_MUSIC_XML;
         return Constant.CORPUS_ABC
-        # FIXME: Support MIDI, xml, and mxl
+        # FIXME: Support xml, and mxl
 
     def append_dir(self, corpus_dir):
         for file_name in os.listdir(corpus_dir):
@@ -165,6 +176,10 @@ class DCorpus:
 
         abcd_header = None
         abc_body = ''
+
+        if corpus_type == Constant.CORPUS_MIDI:
+            raise Exception("Got it.")
+            # corp = converter.parseFile()
 
         if d_score:
             self._d_scores.append(d_score)
