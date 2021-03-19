@@ -48,6 +48,7 @@ from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 
 output_dir = '/Users/dave/tb2/doc/smc2021/data'
 
+
 def get_system_scores(model_name, d_score, staff="upper"):
     k = 5
     if model_name == 'ideal':
@@ -63,6 +64,8 @@ def get_system_scores(model_name, d_score, staff="upper"):
             model = Jacobs()
         elif model_name == 'badge':
             model = Badgerow()
+        else:
+            raise Exception("Bad model")
 
         model.load_corpus(d_corpus=d_corpus)
         advice = model.generate_advice(staff=staff, score_index=0, k=k)
