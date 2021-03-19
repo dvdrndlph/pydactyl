@@ -163,7 +163,8 @@ class DCorpus:
             file_path = corpus_dir + "/" + file_name
             self.append(corpus_path=file_path)
 
-    def append(self, corpus_path=None, corpus_str=None, d_score=None, header_path=None, header_str=None, as_xml=True):
+    def append(self, corpus_path=None, corpus_str=None, d_score=None, header_path=None,
+               header_str=None, as_xml=True, title=None):
         corpus_type = None
 
         if corpus_path:
@@ -178,8 +179,14 @@ class DCorpus:
         abc_body = ''
 
         if corpus_type == Constant.CORPUS_MIDI:
-            raise Exception("Got it.")
-            # corp = converter.parseFile()
+            score = converter.parseFile(corpus_path)
+            score_title = title
+            if score_title is None:
+                score_title = os.path.basename(corpus_path)
+                score_title = score_title.split(sep='.')[0]
+            d_score = DScore(music21_stream=score, segmenter=self.segmenter(),
+                             abcd_header=abcd_header, title=score_title)
+            self._d_scores.append(d_score)
 
         if d_score:
             self._d_scores.append(d_score)

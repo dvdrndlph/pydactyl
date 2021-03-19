@@ -43,8 +43,7 @@ k = 5
 corpus_dir = "/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/midi/"
 midi_path = corpus_dir + "001-1.mid"
 d_corpus = DCorpus(corpus_path=midi_path)
-# model = Parncutt()
-# model.load_corpus(d_corpus=d_corpus)
-# advice = model.generate_advice(staff=staff, score_index=0, k=k)
-# print(advice)
-exit(0)
+model = Parncutt()
+model.load_corpus(d_corpus=d_corpus)
+advice = model.generate_advice(staff=staff, score_index=0, k=k)
+print(advice)

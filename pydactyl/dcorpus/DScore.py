@@ -78,16 +78,18 @@ class DScore:
         self.finger(staff=staff, d_annotation=d_annotation, id=id)
 
     def __init__(self, music21_stream=None, segmenter=None, abc_handle=None,
-                 voice_map=None, abcd_header=None, abc_body=''):
+                 voice_map=None, abcd_header=None, abc_body='', title=None):
         self._lower_d_part = None
         self._upper_d_part = None
         self._abc_body = abc_body
+        self._title = title
 
         if music21_stream:
             self._combined_d_part = DPart(music21_stream=music21_stream, staff="both")
             self._score = music21_stream
             meta = self._score[0]
-            self._title = meta.title
+            if self._title is None:
+                self._title = meta.title
             parts = list(self._score.getElementsByClass(stream.Part))
             if len(parts) > 1:
                 self._upper_d_part = DPart(music21_stream=parts[0], staff="upper")
