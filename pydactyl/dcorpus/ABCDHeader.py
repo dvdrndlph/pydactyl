@@ -29,13 +29,17 @@ class ABCDHeader:
     ABCD_VER = '6'
     COMMENT_RE = r'^%\s*(.*)'
     TITLE_RE = r'^%\s*abcDidactyl v(\d+)'
-    TITLE_STR = '% abcDidactyl v' + ABCD_VER
+    TITLE_STR = '% abcDidactyl v{}'
     FINGERING_RE = r'^%\s*abcD fingering (\d+):\s*(.*)'
+    FINGERING_STR = '% abcD fingering {}: {}'
     TERMINAL_RE = r'^%\s*abcDidactyl END'
     TERMINAL_STR = '% abcDidactyl END'
     AUTHORITY_RE = r'^%\s*Authority:\s*([^\(]+)\s*(\((\d+)\))?'
+    AUTHORITY_STR = '% Authority: {} ({})'
     TRANSCRIBER_RE = r'^%\s*Transcriber:\s*(.*)'
+    TRANSCRIBER_STR = '^% Transcriber: {}'
     TRANSCRIPTION_DATE_RE = r'^%\s*Transcription date:\s*((\d\d\d\d\-\d\d\-\d\d)\s*(\d\d:\d\d:\d\d)?)'
+    TRANSCRIPTION_DATE_STR = '^% Transcription date: ({} ({})'
 
     @staticmethod
     def is_abcd(string):
@@ -48,8 +52,8 @@ class ABCDHeader:
     def append_annotation(self, d_annotation):
         self._annotations.append(d_annotation)
 
-    def __init__(self, abcd_str=''):
-        self._annotations = []
+    def __init__(self, abcd_str='', annotations=[]):
+        self._annotations = annotations
 
         annotation = DAnnotation()
         in_header = False
@@ -89,7 +93,7 @@ class ABCDHeader:
                 annotation.add_comment_line(matt.group(1))
 
     def __str__(self):
-        abcd_str = ABCDHeader.TITLE_STR + "\n"
+        abcd_str = ABCDHeader.TITLE_STR.format(ABCDHeader.ABCD_VER) + "\n"
         for annot in self._annotations:
             abcd_str += annot.__str__()
         abcd_str += ABCDHeader.TERMINAL_STR + "\n"
@@ -178,7 +182,6 @@ class ABCDHeader:
             return self.upper_abcdf(index=index, identifier=identifier)
         elif staff == "lower":
             return self.lower_abcdf(index=index, identifier=identifier)
-
         return None
 
     def upper_abcdf(self, index=0, identifier=None):

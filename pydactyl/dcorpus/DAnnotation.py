@@ -517,15 +517,17 @@ class DAnnotation:
         abcdf_id = 1
         if self._abcdf_id:
             abcdf_id = self._abcdf_id
-        annot_str = DAnnotation.FINGERING_STR + str(abcdf_id) + ': ' + self.abcdf() + "\n"
+        annot_str = DAnnotation.FINGERING_STR + str(abcdf_id) + ': ' + self.abcdf(simple=True) + "\n"
         if self._authority:
-            annot_str += DAnnotation.AUTHORITY_STR + self._authority + "\n"
+            annot_str += DAnnotation.AUTHORITY_STR + self._authority
             if self._authority_year:
-                annot_str += '(' + self._authority_year + ')' + "\n"
+                annot_str += ' (' + self._authority_year + ')'
+            annot_str += "\n"
         if self._transcriber:
-            annot_str += DAnnotation.TRANSCRIBER_STR + self._transcriber + "\n"
-        if self._transcription_date:
-            annot_str += DAnnotation.TRANSCRIPTION_DATE_STR + self._transcription_date + "\n"
+            annot_str += DAnnotation.TRANSCRIBER_STR + self._transcriber
+            if self._transcription_date:
+                annot_str += DAnnotation.TRANSCRIPTION_DATE_STR + self._transcription_date
+            annot_str += "\n"
         if self._comments:
             annot_str += self.commented_comments() + "\n"
         return annot_str
@@ -555,29 +557,67 @@ class DAnnotation:
         flattened = abcdf.replace("&", "")
         return flattened
 
-    def abcdf(self, abcdf=None, staff=None, flat=False):
+    @staticmethod
+    def _simplify(abcdf, staff="both"):
+        last_hand = '>'
+        if staff == 'lower':
+            last_hand = '<'
+        simplified = ''
+        is_first = True
+        for character in abcdf:
+            if character == '@':
+                is_first = True
+                last_hand = '<'
+                if staff == "both":
+                    simplified += character
+            elif character in ['<', '>']:
+                if is_first:
+                    simplified += character
+                    is_first = False
+                elif character != last_hand:
+                    simplified += character
+                last_hand = character
+            else:
+                if is_first:
+                    is_first = False  # In case no hand explicitly specified, we leave it that way
+                simplified += character
+        return simplified
+
+    def abcdf(self, abcdf=None, staff=None, flat=False, simple=False):
         if abcdf:
             self._abcdf = abcdf
             self._ast = DAnnotation.abcdf_to_ast(abcdf)
-        if staff == "upper":
-            return self.upper_abcdf(flat=flat)
-        elif staff == "lower":
-            return self.lower_abcdf(flat=flat)
-        if flat:
-            return DAnnotation._flatten(self._abcdf)
-        return self._abcdf
+            return
 
-    def upper_abcdf(self, flat=False):
-        (upper, lower) = self.abcdf().split('@')
+        if staff == "upper":
+            return self.upper_abcdf(flat=flat, simple=simple)
+        elif staff == "lower":
+            return self.lower_abcdf(flat=flat, simple=simple)
+
+        cooked = self._abcdf
         if flat:
-            return DAnnotation._flatten(upper)
+            cooked = DAnnotation._flatten(self._abcdf)
+        if simple:
+            cooked = DAnnotation._simplify(abcdf=cooked)
+        return cooked
+
+    def upper_abcdf(self, flat=False, simple=False):
+        (upper, lower) = self.abcdf().split('@')
+        cooked = upper
+        if flat:
+            cooked = DAnnotation._flatten(upper)
+        if simple:
+            cooked = DAnnotation._simplify(abcdf=cooked, staff="upper")
         return upper
 
-    def lower_abcdf(self, flat=False):
+    def lower_abcdf(self, flat=False, simple=False):
         (upper, lower) = self.abcdf().split('@')
+        cooked = lower
         if flat:
-            return DAnnotation._flatten(lower)
-        return lower
+            cooked = DAnnotation._flatten(cooked)
+        if simple:
+            cooked = DAnnotation._simplify(abcdf=cooked, staff="lower")
+        return cooked
 
     def abcdf_id(self, abcdf_id=None):
         if abcdf_id:

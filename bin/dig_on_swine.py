@@ -40,7 +40,7 @@ pig_eater.transform()
 
 staff = 'upper'
 k = 5
-corpus_dir = "/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/midi/"
+corpus_dir = "/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/abcd/"
 midi_path = corpus_dir + "001-1.mid"
 d_corpus = DCorpus(corpus_path=midi_path)
 model = Parncutt()
