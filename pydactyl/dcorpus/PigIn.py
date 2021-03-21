@@ -21,15 +21,11 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-
-# from pprint import pprint
 import os
 import re
 import copy
-# import scamp
 import mido
-from music21 import pitch, note, chord
-from music21.articulations import Fingering
+from music21 import pitch
 from .DAnnotation import DAnnotation
 from .ABCDHeader import ABCDHeader
 
@@ -98,12 +94,6 @@ class PigNote:
         off_msg = mido.Message('note_off', channel=self.channel, note=midi_pitch, time=ticks_since)
         return off_msg
 
-    def scamp_args(self):
-        midi_pitch = self.midi_pitch()
-        velocity_float = self.on_vel / 127.0
-        time_float = self.off - self.on
-        return midi_pitch, velocity_float, time_float
-
     def handed_abcdf(self):
         mat = re.match(PigNote.FINGER_RE, self.finger)
         if mat:
@@ -125,6 +115,25 @@ class PigNote:
 
 
 class PigIn:
+    """
+    Class to manage migrating PIG piano fingering dataset to abcd header + MIDI.
+
+    Reference:
+    Nakamura, Eita, Yasuyuki Saito, and Kazuyoshi Yoshii. 2020. “Statistical Learning and
+      Estimation of Piano Fingering.” Information Sciences 517: 68–85.
+      https://doi.org/10.1016/j.ins.2019.12.068.
+
+    Note that the PIG dataset does not divide the music into upper and lower staffs (or channels
+    as expected in Type 1 MIDI files). Instead they define the channel by the hand used to play
+    the note. This makes it impossible in some cases to define a single MIDI file (with two tracks
+    or channels) to cover all PIG fingering files for the same piece. Since we require this
+    sort of channel separation in Pydactyl, we would need to have more than one MIDI/abcdh
+    combination for some pieces.
+
+    To correct this, we modify the PIG source files to make the channel assignments
+    consistent. For simplicity, we simply adopt the channel assignments from the first
+    fingering file.
+    """
     def __init__(self, base_dir="/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/"):
         self._base_dir = base_dir
         self._input_dir = base_dir + 'FingeringFiles/'
@@ -148,7 +157,7 @@ class PigIn:
         for annotator_id in pt_history:
             if PigIn.is_same_song(pig_tracks, pt_history[annotator_id]):
                 return annotator_id
-        return False
+        return ""
 
     def transform(self):
         file_re = r"^(\d+)-(\d+)_fingering.txt$"
@@ -156,31 +165,29 @@ class PigIn:
             {'notes_on': {}, 'notes_off': {}},
             {'notes_on': {}, 'notes_off': {}}
         ]
+        channel_for_note_at_tick = {}
+        annotations = {}
+        pig_tracks_for_piece = {}
         for root, dirs, files in os.walk(self._input_dir):
-            prior_pig_tracks = empty_pig_tracks
-            annotations = []
-            is_first_file = True
-            pig_tracks_for_piece = {}
-            base_abcd_file_name = ''
             for file in sorted(files):
                 if file.endswith(".txt"):
                     mat = re.match(file_re, file)
                     if mat:
                         piece_id = mat.group(1)
+                        if piece_id not in channel_for_note_at_tick:
+                            channel_for_note_at_tick[piece_id] = {}
                         if piece_id not in pig_tracks_for_piece:
                             pig_tracks_for_piece[piece_id] = {}
                         authority_id = mat.group(2)
                         file_path = os.path.join(root, file)
-                        if is_first_file:
-                            base_abcd_file_name = piece_id + '-' + authority_id + '.abcd'
                         f = open(file_path, "r")
                         mf = mido.MidiFile(type=1, ticks_per_beat=PigNote.TICKS_PER_BEAT)
                         upper = mido.MidiTrack()
                         mf.tracks.append(upper)
                         lower = mido.MidiTrack()
                         mf.tracks.append(lower)
-                        # We generate the note_on and note_off messages and interleave them
-                        # by relative "times" (ticks since the last event of any kind).
+                        # We generate the note_on and note_off messages and interleave them by
+                        # relative "times" (ticks since the last event of any kind on the track).
                         pig_tracks = copy.deepcopy(empty_pig_tracks)
                         upper_abcdf = ''
                         lower_abcdf = ''
@@ -225,55 +232,30 @@ class PigIn:
                         authority = "PIG Annotator {}".format(authority_id)
                         annot = DAnnotation(abcdf_id=authority_id, abcdf=abcdf, authority=authority,
                                             authority_year="2019", transcriber="PIG Team")
-                        abcd_file_name = piece_id + '-' + authority_id + '.abcd'
-                        # First time through, we create the midi file and spool the annotation.
-                        # The second time, if the song is the same, we spool the annotation.
-                        # If the any song after the first song is different, we print the spooled
-                        # annotations for the prior MIDI file, clear the spool, spool the latest
-                        # annotation, and create the MIDI file for the new song.
-                        if is_first_file:
-                            is_first_file = False
-                            midi_file = piece_id + '-' + authority_id + '.mid'
-                            midi_path = self._midi_dir + midi_file
-                            mf.save(midi_path)
-                            annotations.append(annot)
-                            prior_pig_tracks = copy.deepcopy(pig_tracks)
-                            pig_tracks_for_piece[piece_id][authority_id] = copy.deepcopy(pig_tracks)
-                            continue
-                        elif PigIn.is_same_song(pig_tracks, prior_pig_tracks):
-                            annotations.append(annot)
-                            prior_pig_tracks = copy.deepcopy(pig_tracks)
-                            continue
+                        last_annotator_id = PigIn.heard_song_before(pig_tracks, pig_tracks_for_piece[piece_id])
+                        if last_annotator_id:
+                            print("We have heard this {}-{} song before from {}".
+                                  format(piece_id, authority_id, last_annotator_id))
+                            prior_midi_file = piece_id + '-' + last_annotator_id + '.mid'
+                            annotations[prior_midi_file].append(annot)
                         else:
-                            last_annotator_id = PigIn.heard_song_before(pig_tracks, pig_tracks_for_piece[piece_id])
-                            if last_annotator_id:
-                                print("We have heard this {}-{} song before from {}".
-                                      format(piece_id, authority_id, last_annotator_id))
-                            prior_pig_tracks = copy.deepcopy(pig_tracks)
-                            pig_tracks_for_piece[piece_id][authority_id] = copy.deepcopy(pig_tracks)
-                            # Print the abcd file with the header corresponding to the
-                            # last MIDI file generated.
-                            abcdh = ABCDHeader(annotations=annotations)
-                            abcdh_str = abcdh.__str__()
-                            abcd_path = self._abcd_dir + base_abcd_file_name
-                            abcd_fh = open(abcd_path, 'w')
-                            print(abcdh_str, file=abcd_fh)
-                            abcd_fh.close()
-
-                            # Start spooling annotation for the new song.
-                            annotations = []
-                            annotations.append(annot)
-
                             # Print the MIDI for the file just processed.
                             midi_file = piece_id + '-' + authority_id + '.mid'
                             midi_path = self._midi_dir + midi_file
                             mf.save(midi_path)
-                            base_abcd_file_name = abcd_file_name
+                            # Start spooling annotation for the new version of the piece.
+                            annotations[midi_file] = []
+                            annotations[midi_file].append(annot)
+                            # Remember we have processed this version of the piece.
+                            pig_tracks_for_piece[piece_id][authority_id] = copy.deepcopy(pig_tracks)
                         f.close()
                 # break
-            abcdh = ABCDHeader(annotations=annotations)
+        for midi_file in annotations:
+            abcdh = ABCDHeader(annotations=annotations[midi_file])
             abcdh_str = abcdh.__str__()
-            abcd_path = self._abcd_dir + base_abcd_file_name
+            base_name, extension = midi_file.split('.')
+            abcd_file_name = base_name + '.abcd'
+            abcd_path = self._abcd_dir + abcd_file_name
             abcd_fh = open(abcd_path, 'w')
             print(abcdh_str, file=abcd_fh)
-
+            abcd_fh.close()
