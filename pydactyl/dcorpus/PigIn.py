@@ -132,7 +132,18 @@ class PigIn:
 
     To correct this, we modify the PIG source files to make the channel assignments
     consistent. For simplicity, we simply adopt the channel assignments from the first
-    fingering file.
+    fingering file for each piece. As the assignment of notes to a staff can be influenced
+    by the editorial concepts of voice and to avoid unnecessary ledger lines, we often see
+    quite different typesetting to express the same sequence of notes.
+
+    For our purposes of simplifying the problem to "segregated" fingerings of melodic phrase
+    segments, we think this standardization should be sufficient to provide a target rich
+    corpus.
+
+    To override this behavior and generate the multiple MIDI/abcdh files as needed, do this:
+
+         pi = PigIn()
+         pi.transform(standardize_channels=False)
     """
     def __init__(self, base_dir="/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/"):
         self._base_dir = base_dir
@@ -159,13 +170,14 @@ class PigIn:
                 return annotator_id
         return ""
 
-    def transform(self):
+    def transform(self, standardize_channels=True):
         file_re = r"^(\d+)-(\d+)_fingering.txt$"
         empty_pig_tracks = [
             {'notes_on': {}, 'notes_off': {}},
             {'notes_on': {}, 'notes_off': {}}
         ]
-        channel_for_note_at_tick = {}
+        channel_for_time_with_note = {}
+        are_defining_channel = False
         annotations = {}
         pig_tracks_for_piece = {}
         for root, dirs, files in os.walk(self._input_dir):
@@ -174,8 +186,9 @@ class PigIn:
                     mat = re.match(file_re, file)
                     if mat:
                         piece_id = mat.group(1)
-                        if piece_id not in channel_for_note_at_tick:
-                            channel_for_note_at_tick[piece_id] = {}
+                        if standardize_channels and piece_id not in channel_for_time_with_note:
+                            channel_for_time_with_note[piece_id] = {}
+                            are_defining_channel = True
                         if piece_id not in pig_tracks_for_piece:
                             pig_tracks_for_piece[piece_id] = {}
                         authority_id = mat.group(2)
@@ -196,7 +209,14 @@ class PigIn:
                                 continue
                             line = line.rstrip()
                             id, on, off, name, on_vel, off_vel, channel, finger = line.split()
-                            knot = PigNote(id, on, off, name, on_vel, off_vel, channel, finger)
+                            if are_defining_channel:
+                                std_channel = channel
+                                if on not in channel_for_time_with_note[piece_id]:
+                                    channel_for_time_with_note[piece_id][on] = {}
+                                channel_for_time_with_note[piece_id][on][name] = channel
+                            else:
+                                std_channel = channel_for_time_with_note[piece_id][on][name]
+                            knot = PigNote(id, on, off, name, on_vel, off_vel, std_channel, finger)
                             # print(knot)
                             on_tick = knot.on_tick()
                             off_tick = knot.off_tick()
@@ -210,7 +230,7 @@ class PigIn:
                                 upper_abcdf += knot.handed_abcdf()
                             else:
                                 lower_abcdf += knot.handed_abcdf()
-
+                        are_defining_channel = False
                         for chan in [0, 1]:
                             ons = pig_tracks[chan]['notes_on']
                             offs = pig_tracks[chan]['notes_off']
