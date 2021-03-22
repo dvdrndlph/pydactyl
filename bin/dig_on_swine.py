@@ -42,7 +42,7 @@ staff = 'upper'
 k = 5
 corpus_dir = "/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/abcd/"
 d_corpus = DCorpus()
-d_corpus.append_dir(corpus_dir=corpus_dir, split_files=True)
+d_corpus.append_dir(corpus_dir=corpus_dir, split_header_extension='abcd')
 
 model = Parncutt()
 model.load_corpus(d_corpus=d_corpus)

@@ -158,14 +158,14 @@ class DCorpus:
         return Constant.CORPUS_ABC
         # FIXME: Support xml, and mxl
 
-    def append_dir(self, corpus_dir, split_files=False):
+    def append_dir(self, corpus_dir, split_header_extension=""):
         for file_name in sorted(os.listdir(corpus_dir)):
-            if split_files:
+            if split_header_extension:
                 base_name, extension = file_name.split(sep='.')
                 if extension != 'mid':
                     continue
                 else:
-                    header_path = corpus_dir + '/' + base_name + '.abcd'
+                    header_path = corpus_dir + '/' + base_name + '.' + split_header_extension
                     file_path = corpus_dir + "/" + file_name
                     self.append(corpus_path=file_path, header_path=header_path)
             else:
