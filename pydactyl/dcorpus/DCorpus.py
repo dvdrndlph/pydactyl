@@ -65,7 +65,8 @@ class DCorpus:
     def abc2xml(file_path=None, abc_content=None):
         if file_path:
             abc_content = DCorpus.file_to_string(file_path)
-        xml_str = abc2xml.getXml(abc_string=abc_content)
+        xml_strings = abc2xml.getXmlScores(abc_string=abc_content)
+        xml_str = xml_strings[0]
         return xml_str
 
     @staticmethod
