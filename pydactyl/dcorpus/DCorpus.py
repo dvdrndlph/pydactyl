@@ -147,7 +147,7 @@ class DCorpus:
             # mime_type, _ = mimetypes.guess_type(corpus_path)
             # mime_type = magic.from_file(corpus_path, mime=True)
             file_type = magic.from_file(corpus_path)
-            print(file_type)
+            # print(file_type)
             if re.match(Constant.MIDI_FILE_RE, file_type):
                 return Constant.CORPUS_MIDI
             corpus_str = DCorpus.file_to_string(file_path=corpus_path)
@@ -158,10 +158,19 @@ class DCorpus:
         return Constant.CORPUS_ABC
         # FIXME: Support xml, and mxl
 
-    def append_dir(self, corpus_dir):
-        for file_name in os.listdir(corpus_dir):
-            file_path = corpus_dir + "/" + file_name
-            self.append(corpus_path=file_path)
+    def append_dir(self, corpus_dir, split_files=False):
+        for file_name in sorted(os.listdir(corpus_dir)):
+            if split_files:
+                base_name, extension = file_name.split(sep='.')
+                if extension != 'mid':
+                    continue
+                else:
+                    header_path = corpus_dir + '/' + base_name + '.abcd'
+                    file_path = corpus_dir + "/" + file_name
+                    self.append(corpus_path=file_path, header_path=header_path)
+            else:
+                file_path = corpus_dir + "/" + file_name
+                self.append(corpus_path=file_path)
 
     def append(self, corpus_path=None, corpus_str=None, d_score=None, header_path=None,
                header_str=None, as_xml=True, title=None):

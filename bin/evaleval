@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 __author__ = 'David Randolph'
-# Copyright (c) 2020 David A. Randolph.
+# Copyright (c) 2020-2021 David A. Randolph.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -22,7 +22,6 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-
 import copy
 import re
 import sys
@@ -34,11 +33,6 @@ from pydactyl.dactyler.Parncutt import Jacobs
 from pydactyl.dactyler.Parncutt import Badgerow
 from pydactyl.dactyler.Random import Random
 
-
-from pydactyl.dcorpus.DScore import DScore
-from pydactyl.dcorpus.ABCDHeader import ABCDHeader
-
-
 # da_corpus = DCorpus()
 # da_corpus.append_from_db(client_id='695311d7e88d5f79b4945bf45d00cc77', selection_id='21')
 # da_score = da_corpus.d_score_by_index(0)
@@ -46,13 +40,104 @@ from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 # print(da_title)
 # print(da_score)
 
-output_dir = '/Users/dave/tb2/doc/smc2021/data'
+STAFF = 'upper'
+FULL_CONTEXT = True
+OUTPUT_DIR = '/Users/dave/tb2/doc/smc2021/data'
+PIG_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/abcd/'
+
+QUERY = dict()
+
+QUERY['full_american'] = '''
+    select f.upper_staff as fingering,
+           count(*) as weight,
+           'Various Didactyl' as 'authority',
+           'Pydactyl' as 'transcriber'
+      from finger f
+     inner join parncutt p
+        on f.exercise = p.exercise
+     where f.exercise = {}
+       and f.upper_staff is not null
+       and length(f.upper_staff) = p.length_full
+     group by f.upper_staff
+     order by weight desc'''
+
+QUERY['all_american'] = '''
+    select parncutt_fingering as fingering,
+           total as weight,
+           'Various Didactyl' as 'authority',
+           'Pydactyl' as 'transcriber'
+      from parncutt_binary
+     where exercise = {}
+     order by weight desc'''
+
+QUERY['pure_american'] = '''
+    select parncutt as fingering,
+           'Various Didactyl' as 'authority',
+           'Pydactyl' as 'transcriber',
+           count(*) as weight
+      from parncutt_american_pure
+     where exercise = {} 
+       and Advised = 'No'
+     group by parncutt
+     order by weight desc'''
+
+QUERY['parncutt_published'] = '''
+    select fingering,
+           'Various Didactyl' as 'authority',
+           'Pydactyl' as 'transcriber',
+           subject_count as weight
+      from parncutt_published
+     where exercise = {}
+     order by weight desc'''
+
+FULL_ABC_QUERY = '''
+    select exercise as piece_id,
+           abc_full as abc_str
+      from parncutt
+     order by exercise'''
+
+FRAGMENT_ABC_QUERY = '''
+    select exercise as piece_id,
+           abc_fragment as abc_str
+      from parncutt
+     order by exercise'''
+
+RANK_HEADINGS = ['corpus', 'model', 'title', 'notes', 'ann_id', 'weight', 'rank', 'hmg', 'norm_hmg',
+                 'al', 'norm_al',
+                 'rho_no_d', 'rho_uni_d',
+                 'p_sat', 'tri_p_sat', 'nua_p_sat', 'rlx_p_sat',
+                 'tri_D', 'nua_D', 'rlx_D',
+                 'norm_tri_D', 'norm_nua_D', 'norm_rlx_D']
+ERR_METHODS = ['hmg', 'hmg_rho', 'al', 'al_rho', 'clvrst',
+               'tri', 'tri_rho', 'tri_nua', 'tri_nua_rho', 'tri_rlx', 'tri_rlx_rho', 'tri_clvrst']
+ERR_HEADINGS = ['corpus', 'model', 'title', 'notes', 'ann_id', 'weight']
+ERR_HEADINGS.extend(ERR_METHODS)
+
+WEIGHT_RE = r"^Weight:\s*(\d+)$"
+
+
+#####################################################
+# FUNCTIONS
+#####################################################
+def get_corpus(corpus_name):
+    if corpus_name == 'pig':
+        the_corpus = DCorpus()
+        the_corpus.append_dir(corpus_dir=PIG_DIR, split_files=True)
+        return the_corpus
+
+    piece_query = FRAGMENT_ABC_QUERY
+    if corpus_name == 'full_american':
+        piece_query = FULL_ABC_QUERY
+    the_corpus = DCorpus()
+    the_corpus.assemble_and_append_from_db(piece_query=piece_query,
+                                           fingering_query=QUERY[corpus_name])
+    return the_corpus
 
 
 def get_system_scores(model_name, d_score, staff="upper"):
     k = 5
     if model_name == 'ideal':
-        return DEvaluation.get_best_pseudo_model_scores(d_score=da_score, staff=staff)
+        return DEvaluation.get_best_pseudo_model_scores(d_score=da_score, staff=STAFF)
     else:
         d_corpus = DCorpus()
         d_corpus.append(d_score=d_score)
@@ -68,7 +153,7 @@ def get_system_scores(model_name, d_score, staff="upper"):
             raise Exception("Bad model")
 
         model.load_corpus(d_corpus=d_corpus)
-        advice = model.generate_advice(staff=staff, score_index=0, k=k)
+        advice = model.generate_advice(staff=STAFF, score_index=0, k=k)
         print(advice)
 
         sys_scores = []
@@ -78,7 +163,7 @@ def get_system_scores(model_name, d_score, staff="upper"):
             abcdf = advice[0][r]
             ann = DAnnotation(abcdf=abcdf, authority=model_name)
             sys_score.annotate(d_annotation=ann)
-            PianoFingering.finger_score(d_score=sys_score, staff=staff)
+            PianoFingering.finger_score(d_score=sys_score, staff=STAFF)
             sys_scores.append(sys_score)
         return sys_scores
 
@@ -162,98 +247,24 @@ def get_result_set(evil, corpus_name, model_name, title, note_count, annot_id, w
     return result
 
 
-full_abc_query = '''
-    select exercise as piece_id,
-           abc_full as abc_str
-      from parncutt
-     order by exercise'''
-
-fragment_abc_query = '''
-    select exercise as piece_id,
-           abc_fragment as abc_str
-      from parncutt
-     order by exercise'''
-
-query = {}
-
-query['full_american'] = '''
-    select f.upper_staff as fingering,
-           count(*) as weight,
-           'Various Didactyl' as 'authority',
-           'Pydactyl' as 'transcriber'
-      from finger f
-     inner join parncutt p
-        on f.exercise = p.exercise
-     where f.exercise = {}
-       and f.upper_staff is not null
-       and length(f.upper_staff) = p.length_full
-     group by f.upper_staff
-     order by weight desc'''
-
-query['all_american'] = '''
-    select parncutt_fingering as fingering,
-           total as weight,
-           'Various Didactyl' as 'authority',
-           'Pydactyl' as 'transcriber'
-      from parncutt_binary
-     where exercise = {}
-     order by weight desc'''
-
-query['pure_american'] = '''
-    select parncutt as fingering,
-           'Various Didactyl' as 'authority',
-           'Pydactyl' as 'transcriber',
-           count(*) as weight
-      from parncutt_american_pure
-     where exercise = {} 
-       and Advised = 'No'
-     group by parncutt
-     order by weight desc'''
-
-query['parncutt_published'] = '''
-    select fingering,
-           'Various Didactyl' as 'authority',
-           'Pydactyl' as 'transcriber',
-           subject_count as weight
-      from parncutt_published
-     where exercise = {}
-     order by weight desc'''
-
-staff = 'upper'
-full_context = True
-target_dir = "/Users/dave/corpus/"
+#####################################################
+# MAIN BLOCK
+#####################################################
 rank_results = []
 err_results = []
-rank_headings = ['corpus', 'model', 'title', 'notes', 'ann_id', 'weight', 'rank', 'hmg', 'norm_hmg',
-                 'al', 'norm_al',
-                 'rho_no_d', 'rho_uni_d',
-                 'p_sat', 'tri_p_sat', 'nua_p_sat', 'rlx_p_sat',
-                 'tri_D', 'nua_D', 'rlx_D',
-                 'norm_tri_D', 'norm_nua_D', 'norm_rlx_D']
-err_methods = [ 'hmg', 'hmg_rho', 'al', 'al_rho', 'clvrst',
-                'tri', 'tri_rho', 'tri_nua', 'tri_nua_rho', 'tri_rlx', 'tri_rlx_rho', 'tri_clvrst']
-err_headings = ['corpus', 'model', 'title', 'notes', 'ann_id', 'weight']
-err_headings.extend(err_methods)
-
-weight_re = r"^Weight:\s*(\d+)$"
-
 result = {}
 
-pivot_rpt_file = open(output_dir + '/pivot_reports.txt', 'w')
+pivot_rpt_file = open(OUTPUT_DIR + '/pivot_reports.txt', 'w')
 
-# for corpus_name in ['all_american', 'pure_american', 'parncutt_published', 'full_american']:
-for corpus_name in ['full_american', 'parncutt_published']:
+# for corpus_name in ['pig', 'all_american', 'pure_american', 'parncutt_published', 'full_american']:
+for corpus_name in ['pig', 'full_american', 'parncutt_published']:
     # for model_name in ['ideal', 'badge', 'jacobs', 'parncutt', 'random']:
     for model_name in ['ideal', 'jacobs', 'parncutt', 'random']:
-        piece_query = fragment_abc_query
-        if corpus_name == 'full_american':
-            piece_query = full_abc_query
-        da_corpus = DCorpus()
-        da_corpus.assemble_and_append_from_db(piece_query=piece_query, fingering_query=query[corpus_name])
+        da_corpus = get_corpus(corpus_name=corpus_name)
         for da_score in da_corpus.d_score_list():
-            system_scores = get_system_scores(model_name=model_name, d_score=da_score, staff=staff)
+            system_scores = get_system_scores(model_name=model_name, d_score=da_score, staff=STAFF)
             title = da_score.title()
-            note_count = da_score.note_count(staff=staff)
+            note_count = da_score.note_count(staff=STAFF)
             # if note_count != 4:
                 # continue  # Focus on only exercise with pivots (which has 4 notes)
             # print(da_score)
@@ -265,14 +276,14 @@ for corpus_name in ['full_american', 'parncutt_published']:
             for annot_id in range(1, last_annot_id+1):
                 annot = abcdh.annotation_by_id(annot_id)
                 comment = annot.comments()
-                mat = re.match(weight_re, comment)
+                mat = re.match(WEIGHT_RE, comment)
                 weight = int(mat.group(1))
 
                 human_score = copy.deepcopy(da_score)
-                PianoFingering.finger_score(d_score=human_score, staff=staff, id=annot_id)
+                PianoFingering.finger_score(d_score=human_score, staff=STAFF, id=annot_id)
 
                 evil = DEvaluation(human_score=human_score, system_scores=system_scores,
-                                   staff=staff, full_context=full_context)
+                                   staff=STAFF, full_context=FULL_CONTEXT)
                 pvt_heading = "{} over {} {} human {}".format(model_name, corpus_name, title, annot_id)
                 pivot_report = evil.pivot_count_report(heading=pvt_heading)
                 print(pivot_report, file=pivot_rpt_file)
@@ -291,28 +302,28 @@ for corpus_name in ['full_american', 'parncutt_published']:
 
 pivot_rpt_file.close()
 
-rank_results_file = open(output_dir + '/rank_results.csv', 'w')
+rank_results_file = open(OUTPUT_DIR + '/rank_results.csv', 'w')
 stdout_org = sys.stdout
 sys.stdout = rank_results_file
 
 # print(rank_results)
-for field in rank_headings:
+for field in RANK_HEADINGS:
     print(field, end=',')
 print()
 for res in rank_results:
-    for field in rank_headings:
+    for field in RANK_HEADINGS:
         print(res[field], end=',')
     print()
 rank_results_file.close()
 sys.stdout = stdout_org
 
-err_results_file = open(output_dir + '/err_results.csv', 'w')
+err_results_file = open(OUTPUT_DIR + '/err_results.csv', 'w')
 sys.stdout = err_results_file
-for field in err_headings:
+for field in ERR_HEADINGS:
     print(field, end=',')
 print()
 for res in err_results:
-    for field in err_headings:
+    for field in ERR_HEADINGS:
         if field in ['corpus', 'title']:
             print("{:<20s}".format(res[field]), end=',')
         elif field in ['model']:
@@ -341,17 +352,17 @@ for res in err_results:
 
     if (corpus, model, title) not in cmt_err:
         cmt_err[(corpus, model, title)] = {'sums': {}, 'people': 0, 'notes': res['notes']}
-        for method in err_methods:
+        for method in ERR_METHODS:
             cmt_err[(corpus, model, title)]['sums'][method] = 0
 
     cmt_err[(corpus, model, title)]['people'] += res['weight']
-    for meth in err_methods:
+    for meth in ERR_METHODS:
         cmt_err[(corpus, model, title)]['sums'][meth] += res[meth] * res['weight']
 
 headings = ['corpus', 'model', 'title', 'notes', 'people']
-headings.extend(err_methods)
+headings.extend(ERR_METHODS)
 
-mean_err_phrase_results_file = open(output_dir + '/mean_err_phrase_results.csv', 'w')
+mean_err_phrase_results_file = open(OUTPUT_DIR + '/mean_err_phrase_results.csv', 'w')
 sys.stdout = mean_err_phrase_results_file
 for field in headings:
     print(field, end=',')
@@ -383,7 +394,7 @@ for (corpus, model, title) in cmt_err:
     note_total[(corpus, model)] += res['notes']
     phrase_count[(corpus, model)] += 1
 
-    for meth in err_methods:
+    for meth in ERR_METHODS:
         if meth not in weighted_err_per_person[(corpus, model)]:
             weighted_err_per_person[(corpus, model)][meth] = 0
             err_per_person[(corpus, model)][meth] = 0
@@ -396,9 +407,9 @@ mean_err_phrase_results_file.close()
 sys.stdout = stdout_org
 
 headings = ['corpus', 'model']
-headings.extend(err_methods)
+headings.extend(ERR_METHODS)
 
-weighted_mean_err_results_file = open(output_dir + '/weighted_mean_err_results.csv', 'w')
+weighted_mean_err_results_file = open(OUTPUT_DIR + '/weighted_mean_err_results.csv', 'w')
 sys.stdout = weighted_mean_err_results_file
 
 for field in headings:
@@ -417,7 +428,7 @@ print()
 weighted_mean_err_results_file.close()
 sys.stdout = stdout_org
 
-mean_err_results_file = open(output_dir + '/mean_err_results.csv', 'w')
+mean_err_results_file = open(OUTPUT_DIR + '/mean_err_results.csv', 'w')
 sys.stdout = mean_err_results_file
 
 for field in headings:
