@@ -44,6 +44,10 @@ STAFF = 'upper'
 FULL_CONTEXT = True
 OUTPUT_DIR = '/Users/dave/tb2/doc/smc2021/data'
 PIG_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/abcd/'
+BERINGER_DIR = '/Users/dave/tb2/didactyl/dd/corpora/beringer/'
+SCALES_DIR = BERINGER_DIR + 'scales'
+ARPEGGIOS_DIR = BERINGER_DIR + 'arpeggios'
+BROKEN_DIR = BERINGER_DIR + 'broken_chords'
 
 QUERY = dict()
 
@@ -123,6 +127,27 @@ def get_corpus(corpus_name):
     if corpus_name == 'pig':
         the_corpus = DCorpus()
         the_corpus.append_dir(corpus_dir=PIG_DIR, split_header_extension='abcd')
+        return the_corpus
+
+    if corpus_name == 'scales':
+        the_corpus = DCorpus()
+        the_corpus.append_dir(corpus_dir=SCALES_DIR)
+        return the_corpus
+
+    if corpus_name == 'arpeggios':
+        the_corpus = DCorpus()
+        the_corpus.append_dir(corpus_dir=ARPEGGIOS_DIR)
+        return the_corpus
+
+    if corpus_name == 'broken':
+        the_corpus = DCorpus()
+        the_corpus.append_dir(corpus_dir=BROKEN_DIR)
+        return the_corpus
+
+    if corpus_name == 'beringer':
+        the_corpus = DCorpus()
+        for subdir in [SCALES_DIR, ARPEGGIOS_DIR, BROKEN_DIR]:
+            the_corpus.append_dir(corpus_dir=subdir)
         return the_corpus
 
     if corpus_name == 'clementi':
@@ -262,12 +287,16 @@ result = {}
 
 pivot_rpt_file = open(OUTPUT_DIR + '/pivot_reports.txt', 'w')
 
-# for corpus_name in ['pig', 'all_american', 'pure_american', 'parncutt_published', 'full_american']:
-for corpus_name in ['pig', 'full_american', 'parncutt_published']:
+# FIXME: We should read the corpora from db or disk only once.
+
+# for corpus_name in ['scales', 'arpeggios', 'broken', 'beringer', 'pig', 'all_american', 'pure_american', 'parncutt_published', 'full_american']:
+# for corpus_name in ['pig', 'full_american', 'parncutt_published']:
+for corpus_name in ['scales', 'arpeggios', 'broken', 'beringer']:
     # for model_name in ['ideal', 'badge', 'jacobs', 'parncutt', 'random']:
-    for model_name in ['ideal', 'jacobs', 'parncutt', 'random']:
+    # for model_name in ['ideal', 'jacobs', 'parncutt', 'random']:
+    for model_name in ['random']:
         da_corpus = get_corpus(corpus_name=corpus_name)
-        exit(1)
+        # continue
         for da_score in da_corpus.d_score_list():
             system_scores = get_system_scores(model_name=model_name, d_score=da_score, staff=STAFF)
             title = da_score.title()
