@@ -1090,7 +1090,7 @@ class MusicXml:
         acc, step, oct = '', 'C', '0'  # abc-notated pitch elements (accidental, pitch step, octave)
         alter, midi, notehead = '', '', ''  # xml alteration
         if n.name == 'rest':
-            if 'x' in n.t or 'X' in n.t: nt.set('print-object', 'no')
+            if 'x' in n.t or 'X' in n.t: nt.set('print-m21_object', 'no')
             rest = E.Element('rest')
             if not noMsrRest: rest.set('measure', 'yes')
             addElem(nt, rest, lev + 1)

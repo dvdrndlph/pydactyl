@@ -24,8 +24,6 @@ __author__ = 'David Randolph'
 import re
 import pymysql
 import os
-import subprocess
-import mimetypes
 import magic
 from music21 import abcFormat, converter, stream
 from pydactyl.dactyler import Constant
@@ -70,10 +68,10 @@ class DCorpus:
         return xml_str
 
     @staticmethod
-    def abc2xmlScores(file_path=None, abc_content=None, skip=None, max=None):
+    def abc2xmlScores(file_path=None, abc_content=None, skip=None, r=False, b=False, f=False):
         if file_path:
             abc_content = DCorpus.file_to_string(file_path)
-        xml_strings = abc2xml.getXmlScores(abc_string=abc_content, skip=skip, max=max)
+        xml_strings = abc2xml.getXmlScores(abc_string=abc_content, skip=skip, rOpt=r, bOpt=b, fOpt=f)
         return xml_strings
 
     @staticmethod
@@ -155,7 +153,7 @@ class DCorpus:
         if ABCDHeader.is_abcd(corpus_str):
             return Constant.CORPUS_ABCD
         if corpus_str[0] == '<':
-            return Constant.CORPUS_MUSIC_XML;
+            return Constant.CORPUS_MUSIC_XML
         return Constant.CORPUS_ABC
         # FIXME: Support xml, and mxl
 
@@ -201,12 +199,15 @@ class DCorpus:
             if score_title is None:
                 score_title = os.path.basename(corpus_path)
                 score_title = score_title.split(sep='.')[0]
-            d_score = DScore(music21_stream=score, segmenter=self.segmenter(),
-                             abcd_header=abcd_header, title=score_title)
-            self._d_scores.append(d_score)
+            da_score = DScore(music21_stream=score, segmenter=self.segmenter(),
+                              abcd_header=abcd_header, title=score_title)
+            self._d_scores.append(da_score)
 
         if d_score:
             self._d_scores.append(d_score)
+
+        abc_handle = None
+        staff_assignments = []
 
         if corpus_str:
             corpus_type = DCorpus.corpus_type(corpus_str=corpus_str)
@@ -228,7 +229,7 @@ class DCorpus:
                 # The abc conversion does not manage the grouping of voices into
                 # the appropriate part (staff), so we hack around this shortcoming.
                 self._abc_strings.append(corpus_str)
-                abc_file = abcFormat.ABCFile(abcVersion=(2,1,0))
+                abc_file = abcFormat.ABCFile(abcVersion=(2, 1, 0))
                 staff_assignments = DCorpus._score_staff_assignments(abc_content=corpus_str)
                 abc_handle = abc_file.readstr(corpus_str)
             else:
@@ -236,13 +237,13 @@ class DCorpus:
                 corp = converter.parse(corpus_str)
                 if isinstance(corp, stream.Opus):
                     for score in corp:
-                        d_score = DScore(music21_stream=score, segmenter=self.segmenter())
-                        self._d_scores.append(d_score)
+                        da_score = DScore(music21_stream=score, segmenter=self.segmenter())
+                        self._d_scores.append(da_score)
                 else:
                     score = corp
-                    d_score = DScore(music21_stream=score, segmenter=self.segmenter(),
-                                     abcd_header=abcd_header, abc_body=abc_body)
-                    self._d_scores.append(d_score)
+                    da_score = DScore(music21_stream=score, segmenter=self.segmenter(),
+                                      abcd_header=abcd_header, abc_body=abc_body)
+                    self._d_scores.append(da_score)
         else:
             return False
 
@@ -262,12 +263,12 @@ class DCorpus:
             score_index = 0
             for score_id in ah_for_id:
                 if len(staff_assignments) > 0:
-                    d_score = DScore(abc_handle=ah_for_id[score_id], abcd_header=abcd_header, abc_body=abc_body,
-                                     voice_map=staff_assignments[score_index], segmenter=self.segmenter())
+                    da_score = DScore(abc_handle=ah_for_id[score_id], abcd_header=abcd_header, abc_body=abc_body,
+                                      voice_map=staff_assignments[score_index], segmenter=self.segmenter())
                 else:
-                    d_score = DScore(abc_handle=ah_for_id[score_id], abcd_header=abcd_header, abc_body=abc_body,
-                                     segmenter=self.segmenter())
-                self._d_scores.append(d_score)
+                    da_score = DScore(abc_handle=ah_for_id[score_id], abcd_header=abcd_header, abc_body=abc_body,
+                                      segmenter=self.segmenter())
+                self._d_scores.append(da_score)
                 score_index += 1
 
     def pitch_range(self, staff="both"):
@@ -288,7 +289,9 @@ class DCorpus:
                 d_score.segmenter(segmenter)
         return self._segmenter
 
-    def __init__(self, corpus_path=None, corpus_str=None, paths=[], segmenter=None, as_xml=True):
+    def __init__(self, corpus_path=None, corpus_str=None, paths=None, segmenter=None, as_xml=True):
+        if paths is None:
+            paths = []
         self._conn = None
         self._abc_strings = []
         self._d_scores = []
@@ -390,4 +393,3 @@ class DCorpus:
                 abcdf_id += 1
             header_str = header.__str__()
             self.append(corpus_str=abc_str, header_str=header_str, as_xml=as_xml)
-

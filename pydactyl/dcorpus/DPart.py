@@ -30,7 +30,7 @@ class DPart:
         # All chords must have notes ordered from low to high.
         chords = music21_stream.flat.getElementsByClass(chord.Chord)
         for ch in chords:
-            ch.sortAscending(inPlace=True) # FIXME: Double accidentals will not sort by MIDI pitch.
+            ch.sortAscending(inPlace=True)  # FIXME: Double accidentals will not sort by MIDI pitch.
         self._stream = music21_stream
         self._staff = staff
 
@@ -86,7 +86,6 @@ class DPart:
         notes_at_offset = {}
         for ch in chords:
             chord_offset = ch.getOffsetBySite(chord_stream)
-            note_index = 0
             notes_at_offset[chord_offset] = []
             for pit in ch.pitches:
                 new_note = note.Note(pit)
@@ -174,7 +173,7 @@ class DPart:
             )
             if len(notes_in_range) > 1:
                 # for nir in notes_in_range:
-                    # print("{0} @ {1}".format(nir, start))
+                #     print("{0} @ {1}".format(nir, start))
                 return False
         return True
 

@@ -23,9 +23,7 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 from tatsu import compile
 import re
-import copy
 from pydactyl.dactyler import Constant
-from pprint import pprint
 
 
 class DAnnotation:
@@ -322,10 +320,8 @@ class DAnnotation:
 
         if staff == "upper":
             lines = ast.upper
-            hand = ">"
         else:
             lines = ast.lower
-            hand = "<"
         sr_data = []
         for line in lines:
             for score_fingering in line:
@@ -345,7 +341,7 @@ class DAnnotation:
         if digit is None:
             return None
 
-        handed_re = re.compile('^[<>]\d$')
+        handed_re = re.compile(r'^[<>]\d$')
         if handed_re.match(str(digit)):
             return digit
 
@@ -361,7 +357,7 @@ class DAnnotation:
         Determine the hand specified in the handed digit.
         :return: The abcDF hand specifier (">" or "<").
         """
-        handed_re = re.compile('^([<>]{1})\d$')
+        handed_re = re.compile(r'^([<>])\d$')
         mat = handed_re.match(str(handed_digit))
         hand = mat.group(1)
         if hand != "<" and hand != ">":
@@ -375,7 +371,7 @@ class DAnnotation:
         :param handed_digit:
         :return:
         """
-        handed_re = re.compile('^[<>]{1}(\d)$')
+        handed_re = re.compile(r'^[<>](\d)$')
         mat = handed_re.match(str(handed_digit))
         digit = mat.group(1)
         if not digit:
@@ -526,7 +522,7 @@ class DAnnotation:
         if self._transcriber:
             annot_str += DAnnotation.TRANSCRIBER_STR + self._transcriber
             if self._transcription_date:
-                annot_str += DAnnotation.TRANSCRIPTION_DATE_STR + self._transcription_date
+                annot_str += "\n" + DAnnotation.TRANSCRIPTION_DATE_STR + self._transcription_date
             annot_str += "\n"
         if self._comments:
             annot_str += self.commented_comments() + "\n"
@@ -608,7 +604,7 @@ class DAnnotation:
             cooked = DAnnotation._flatten(upper)
         if simple:
             cooked = DAnnotation._simplify(abcdf=cooked, staff="upper")
-        return upper
+        return cooked
 
     def lower_abcdf(self, flat=False, simple=False):
         (upper, lower) = self.abcdf().split('@')

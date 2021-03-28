@@ -166,7 +166,7 @@ class Music:
         s.gMaten = []           # [voices,.. for all measures in a part]
         s.gLyrics = []          # [{num: (abc_lyric_string, melis)},.. for all measures in a part]
         s.vnums = {}            # all used voice id's in a part (xml voice id's == numbers)
-        s.cnt = Counter ()      # global counter object
+        s.cnt = Counter ()      # global counter m21_object
         s.vceCnt = 1            # the global voice count over all parts
         s.lastnote = None       # the last real note record inserted in s.voices
         s.bpl = options.b       # the max number of bars per line when writing abc
@@ -999,7 +999,7 @@ class Parser:
             s.ingrace = 0
             s.msc.lastnote.after += '}' # close grace on lastenote.after
         if dur == None or note.grace: dur = 0
-        if r == None and n.get ('print-object') == 'no':
+        if r == None and n.get ('print-m21_object') == 'no':
             if chord: return
             r = 1  # turn invisible notes (that advance the time) into invisible rests
         note.dur = int (dur)
@@ -1014,7 +1014,7 @@ class Parser:
             note.before += ['s']; abcOut.stemless = 1;
         e = n.find ('accidental')
         if e != None and e.get ('parentheses') == 'yes': note.ntdec += '!courtesy!'
-        if r != None: noot = 'x' if n.get ('print-object') == 'no' or isTab else 'z'
+        if r != None: noot = 'x' if n.get ('print-m21_object') == 'no' or isTab else 'z'
         else: noot = s.ntAbc (p, int (o), n, v, note, isTab)
         if n.find ('unpitched') != None:
             clef = s.curClef [s.curStf [v]]     # the current clef for this voice
@@ -1539,7 +1539,7 @@ def getAbc(xml_string, X=0, options=None):
     abc_str = ''
     psr = Parser(options)  # xml parser
     try:
-        psr.parse(xml_str=xml_string)  # parse string and write result to abcOut object
+        psr.parse(xml_str=xml_string)  # parse string and write result to abcOut m21_object
         abc_str = abcOut.getString()
     except:
         etype, value, traceback = sys.exc_info()
@@ -1636,7 +1636,7 @@ if __name__ == '__main__':
         else:
             fobj = open (fnmext, 'rb')      # open regular xml file
 
-        abcOut = ABCoutput (fnm + '.abc', pad, X, options)  # create global ABC output object
+        abcOut = ABCoutput (fnm + '.abc', pad, X, options)  # create global ABC output m21_object
         psr = Parser (options)  # xml parser
         try:
             psr.parse (fobj)    # parse file fobj and write abc to <fnm>.abc

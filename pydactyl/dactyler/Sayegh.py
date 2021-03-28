@@ -37,7 +37,7 @@ from pydactyl.dcorpus.DNote import DNote
 
 
 class Sayegh(D.TrainedDactyler):
-    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive", version=(1,0,0)):
+    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive", version=(1, 0, 0)):
         super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
                          staff_combiner=staff_combiner, version=version)
         self._training = dict()  # W' in the Sayegh paper.
@@ -47,7 +47,7 @@ class Sayegh(D.TrainedDactyler):
         for (midi_1, midi_2, digit_1, digit_2) in fingered_counts:
             fingered_count = fingered_counts[(midi_1, midi_2, digit_1, digit_2)]
             transition_count = transition_counts[(midi_1, midi_2)]
-            training[(midi_1, midi_2, digit_1, digit_2)] += fingered_count / transition_count;
+            training[(midi_1, midi_2, digit_1, digit_2)] += fingered_count / transition_count
 
     def _paths(self, staff):
         path_exists = dict()
@@ -57,7 +57,9 @@ class Sayegh(D.TrainedDactyler):
                 path_exists[(from_midi, to_midi)] = True
         return path_exists
 
-    def train(self, d_corpus, staff="both", segregate=True, segmenter=None, annotation_indices=[]):
+    def train(self, d_corpus, staff="both", segregate=True, segmenter=None, annotation_indices=None):
+        if annotation_indices is None:
+            annotation_indices = []
         if not segregate:
             raise Exception("Desegregated (integrated) fingering not supported.")
 
@@ -142,6 +144,7 @@ class Sayegh(D.TrainedDactyler):
                                                training=training)
         self._training[staff] = training
 
+    @staticmethod
     def segment_advice_cost(abcdf, staff="upper", score_index=0, segment_index=0):
         """
         NOT YET IMPLEMENTED
@@ -159,7 +162,8 @@ class Sayegh(D.TrainedDactyler):
                                 handed_first_digit=None, handed_last_digit=None, k=None):
         """
         Generate a set of k ranked fingering suggestions for the given segment.
-        :param segment: The segment to work with, as a music21 score object.
+        :param cycle: Is the advice intended for a set of notes that will repeat.
+        :param segment: The segment to work with, as a music21 score m21_object.
         :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
         :param offset: The zero-based index to begin the returned advice. Defaults to 0. FIXME: Not supported.
         :param handed_first_digit: Constrain the solution to begin with this finger.

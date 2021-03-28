@@ -22,15 +22,14 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 from music21 import *
-from pydactyl.dactyler import Constant
 from .DSegmenter import DSegmenter
-from .DNote import DNote
 
 
 class ManualDSegmenter(DSegmenter):
     """A manual phrase-segmentation algorithm. Requires """
 
     def __init__(self, d_annotation=None):
+        super().__init__()
         self._d_annotation = d_annotation
         return
 

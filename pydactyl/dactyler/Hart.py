@@ -44,6 +44,7 @@ MAX_INTERVAL_SIZE = 12
 BIN_DIR = os.path.abspath(os.path.dirname(__file__))
 COST_FILE = Constant.DATA_DIR + '/tables_0.dat'
 
+
 class Interval:
     def __init__(self, low_color, high_color, low_finger, high_finger, semitone_delta):
         self._l_color = int(low_color)
@@ -107,7 +108,7 @@ class Hart(D.Dactyler):
         max_interval_size = self._max_interval_size
         max_interval_re = re.compile(r"^Max_Interval:\s+(\d+)")
         heading_re = re.compile(r"^([^_]+)_to_([^_]+)")
-        cost_re_str = "^(\d)\s+(\d)"
+        cost_re_str = r"^(\d)\s+(\d)"
         cost_re = None
         l_color = None
         h_color = None
@@ -122,8 +123,8 @@ class Hart(D.Dactyler):
                 interval_size_finalized = True
 
                 for i in range(max_interval_size + 1):
-                    cost_re_str += "\s+(\d+)"
-                cost_re_str += "\s*$"
+                    cost_re_str += r"\s+(\d+)"
+                cost_re_str += r"\s*$"
                 cost_re = re.compile(cost_re_str)
                 continue
 
@@ -151,7 +152,7 @@ class Hart(D.Dactyler):
         return costs
 
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
-                 cost_path=None, max_interval_size=MAX_INTERVAL_SIZE, version=(1,0,0)):
+                 cost_path=None, max_interval_size=MAX_INTERVAL_SIZE, version=(1, 0, 0)):
         super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
                          staff_combiner=staff_combiner, version=version)
         self._cost_path = COST_FILE
@@ -160,6 +161,7 @@ class Hart(D.Dactyler):
         self._max_interval_size = max_interval_size
         self._costs = self._define_costs()
 
+    @staticmethod
     def segment_advice_cost(abcdf, staff="upper", score_index=0, segment_index=0):
         """
         NOT YET IMPLEMENTED
@@ -178,7 +180,7 @@ class Hart(D.Dactyler):
         """
         Generate a set of k ranked fingering suggestions for the given segment. Note that the original
         Hart implementation only returns one best fingering.
-        :param segment: The segment to work with, as a music21 score object.
+        :param segment: The segment to work with, as a music21 score m21_object.
         :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
         :param offset: The zero-based index to begin the returned advice.
         :param cycle: Treat the segment as a repeating pattern and generate advice best suited to
@@ -341,7 +343,7 @@ class Hart(D.Dactyler):
 
 class HartK(Hart):
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
-                 cost_path=None, max_interval_size=MAX_INTERVAL_SIZE, version=(1,0,0)):
+                 cost_path=None, max_interval_size=MAX_INTERVAL_SIZE, version=(1, 0, 0)):
         super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
                          staff_combiner=staff_combiner, cost_path=cost_path,
                          max_interval_size=max_interval_size, version=version)
@@ -350,7 +352,7 @@ class HartK(Hart):
                                 handed_first_digit=None, handed_last_digit=None, k=None):
         """
         Generate a set of k ranked fingering suggestions for the given segment.
-        :param segment: The segment to work with, as a music21 score object.
+        :param segment: The segment to work with, as a music21 score m21_object.
         :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
         :param offset: The zero-based index to begin the returned advice.
         :param cycle: Treat the segment as a repeating pattern and generate advice best suited to
@@ -411,7 +413,8 @@ class HartK(Hart):
                         prior_hd = prior_node["handed_digit"]
                         prior_digit = int(prior_hd[1:])
 
-                        if (staff == "upper" and d_note.is_ascending()) or (staff == "lower" and not d_note.is_ascending):
+                        if (staff == "upper" and d_note.is_ascending()) or \
+                                (staff == "lower" and not d_note.is_ascending):
                             interval = Interval(low_color=d_note.prior_color(),
                                                 high_color=d_note.color(),
                                                 low_finger=prior_digit,

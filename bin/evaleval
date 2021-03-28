@@ -106,6 +106,13 @@ FRAGMENT_ABC_QUERY = '''
       from parncutt
      order by exercise'''
 
+LAYER_ONE_QUERY = '''
+    select id as piece_id,
+            abc_full as abc_str
+      from selection_detail
+     where id like 'c%1';
+'''
+
 RANK_HEADINGS = ['corpus', 'model', 'title', 'notes', 'ann_id', 'weight', 'rank', 'hmg', 'norm_hmg',
                  'al', 'norm_al',
                  'rho_no_d', 'rho_uni_d',
@@ -150,10 +157,11 @@ def get_corpus(corpus_name):
             the_corpus.append_dir(corpus_dir=subdir)
         return the_corpus
 
-    if corpus_name == 'clementi':
+    if corpus_name == 'layer_one':
         the_corpus = DCorpus()
-        the_corpus.assemble_and_append_from_db(db='diii', piece_query="?",
-                                               fingering_query=QUERY[corpus_name])
+        piece_query = LAYER_ONE_QUERY
+        the_corpus.assemble_and_append_from_db(db='diii', port=3307, user='didactyl', passwd='Pha_Lang35',
+                                               piece_query=piece_query, fingering_query=QUERY[corpus_name])
         return the_corpus
 
     piece_query = FRAGMENT_ABC_QUERY
@@ -240,7 +248,7 @@ def get_err_result_set(evil, corpus_name, model_name, title, note_count, annot_i
 
 
 def get_result_set(evil, corpus_name, model_name, title, note_count, annot_id, weight, rank):
-    result = {}
+    result = dict()
 
     result['corpus'] = corpus_name
     result['model'] = model_name

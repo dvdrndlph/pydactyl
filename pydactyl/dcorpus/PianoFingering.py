@@ -145,7 +145,7 @@ class PianoFingering(Fingering):
     '>'
     >>> pf.release_digit()
     3
-    >>> pf = PianoFingering.fingering(object=upper_notes[-1])
+    >>> pf = PianoFingering.fingering(m21_object=upper_notes[-1])
     >>> pf.strike_hand()
     '>'
     >>> pf.strike_digit()
@@ -269,30 +269,30 @@ class PianoFingering(Fingering):
                 sf_index += 1
 
     @staticmethod
-    def fingerings(object):
+    def fingerings(m21_object):
         """
         Extract the PianoFingering articulations from the music21 
-        (Note or Chord) object.
-        :param object: The music21 Note or Chord
+        (Note or Chord) m21_object.
+        :param m21_object: The music21 Note or Chord
         :return: An array of PianoFingering objects as ordered in the articulations
         list.
         """
         fingerings = []
-        for artic in object.articulations:
-            if isinstance(artic, PianoFingering):
-                fingerings.append(artic)
+        for articulation in m21_object.articulations:
+            if isinstance(articulation, PianoFingering):
+                fingerings.append(articulation)
         return fingerings
 
     @staticmethod
-    def fingering(object, index=0):
+    def fingering(m21_object, index=0):
         """
         Extract the PianoFingering articulation from the music21
         (Note or Chord) object.
-        :param object: The music21 Note or Chord
+        :param m21_object: The music21 Note or Chord
         :param index: The zero-based index of the PianoFingering to be retrieved.
         :return: A PianoFingering object.
         """
-        fingerings = PianoFingering.fingerings(object=object)
+        fingerings = PianoFingering.fingerings(m21_object=m21_object)
         return fingerings[index]
 
     def segment_boundary(self):

@@ -1,5 +1,6 @@
+#!/usr/bin/env python
 __author__ = 'David Randolph'
-# Copyright (c) 2018 David A. Randolph.
+# Copyright (c) 2020-2021 David A. Randolph.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -21,26 +22,26 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-from music21 import *
-from .DSegmenter import DSegmenter
+import copy
+import re
+import sys
+from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
 
+INTERP_DIR = '/Users/dave/tb2/didactyl/dd/corpora/clementi/interp'
+da_corpus = DCorpus()
+da_corpus.append_dir(corpus_dir=INTERP_DIR)
 
-class OneDSegmenter(DSegmenter):
-    """A degenerate phrase segmenter that always returns one segment."""
+for da_score in da_corpus.d_score_list():
+    print(da_score.title())
+    print(da_score.note_count())
+    one_annot = da_score.annotation_by_id(identifier=14)
+    other_annot = da_score.annotation_by_id(identifier=15)
+    print(one_annot)
+    print(other_annot)
 
-    def __init__(self, d_annotation=None):
-        super().__init__()
-        self._d_annotation = d_annotation
-        return
+    # kappa, pair_counts = score.cohens_kappa("14", "15")
+    # print("Kappa = {}".format(kappa))
+    # for pair in pair_counts:
+    #     if pair_counts[pair] > 0:
+    #         print("{}: {}".format(pair, pair_counts[pair]))
 
-    def segment_to_orderly_streams(self, d_part, offset=0):
-        orderly_stream = d_part.orderly_note_stream(offset=offset)
-        new_note_stream = stream.Score()
-        note_index = -1
-        for knot in orderly_stream:
-            note_index += 1
-            if note_index < offset:
-                continue
-            new_note_stream.append(knot)
-
-        return [new_note_stream]

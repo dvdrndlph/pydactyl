@@ -54,8 +54,8 @@ class Idealized(D.Dactyler):
         if cost_path:
             self._cost_path = cost_path
         self._max_interval_size = max_interval_size
-        self._costs = self._define_costs()
 
+    @staticmethod
     def segment_advice_cost(abcdf, staff="upper", score_index=0, segment_index=0):
         """
         NOT YET IMPLEMENTED
@@ -74,7 +74,7 @@ class Idealized(D.Dactyler):
         """
         Generate a set of k ranked fingering suggestions for the given segment. Note that the original
         Hart implementation only returns one best fingering.
-        :param segment: The segment to work with, as a music21 score object.
+        :param segment: The segment to work with, as a music21 score m21_object.
         :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
         :param offset: The zero-based index to begin the returned advice.
         :param cycle: Treat the segment as a repeating pattern and generate advice best suited to

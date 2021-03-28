@@ -21,7 +21,6 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-import pprint
 import re
 import numpy as np
 from music21 import abcFormat, stream 
@@ -271,7 +270,7 @@ class DScore:
             raise Exception("Score fingering count does not match note count: {} != {}".format(sf_count, note_count))
         self._abcd_header.assert_consistent(staff=staff)
 
-    def cohens_kappa(self, one_id, other_id, staff="both", common_id=None):
+    def cohens_kappa(self, one_id, other_id, staff="both", common_id=None, wildcard=True, handed=True):
         one_annot = self._abcd_header.annotation_by_id(identifier=one_id)
         other_annot = self._abcd_header.annotation_by_id(identifier=other_id)
         common_annot = None
@@ -305,7 +304,8 @@ class DScore:
         labels = ['>1', '>2', '>3', '>4', '>5', '<1', '<2', '<3', '<4', '<5']
         pair_counts = {}
         all_labels = list(labels)
-        all_labels.append('x')
+        if wildcard:
+            all_labels.append('x')
         for label_1 in all_labels:
             for label_2 in all_labels:
                 label_pair = "{}_{}".format(label_1, label_2)
@@ -371,7 +371,7 @@ class DScore:
                 note_index += 1
         return ignore
 
-    def _bigram_annotation_data(self, ids=[], staff="upper", common_id=None, offset=0):
+    def _bigram_annotation_data(self, ids=None, staff="upper", common_id=None, offset=0):
         """
         Data for feeding bigram tags to the NLTK AnnotationTask.
         :param ids:
@@ -379,6 +379,8 @@ class DScore:
         :param common_id:
         :return:
         """
+        if ids is None:
+            ids = []
         if staff == "upper":
             d_part = self.upper_d_part()
         elif staff == "lower":
@@ -540,7 +542,7 @@ class DScore:
         record = [datum['coder_id'], datum['note_index'], label]
         return record
 
-    def _nltk_bigram_staff_annotation_data(self, ids=[], staff="upper", common_id=None, offset=0):
+    def _nltk_bigram_staff_annotation_data(self, ids=None, staff="upper", common_id=None, offset=0):
         """
         Data for feeding the NLTK AnnotationTask.
         :param ids:
@@ -548,6 +550,8 @@ class DScore:
         :param common_id:
         :return:
         """
+        if ids is None:
+            ids = []
         if staff not in ('upper', 'lower'):
             raise Exception("Annotation data collected one staff at a time.")
 
@@ -564,7 +568,7 @@ class DScore:
             nltk_data.append(record)
         return nltk_data
 
-    def _pypi_bigram_staff_annotation_data(self, ids=[], staff="upper", common_id=None, offset=0):
+    def _pypi_bigram_staff_annotation_data(self, ids=None, staff="upper", common_id=None, offset=0):
         """
         Data for feeding the PyPI krippendorff module.
         :param ids:
@@ -572,6 +576,8 @@ class DScore:
         :param common_id:
         :return:
         """
+        if ids is None:
+            ids = []
         if staff not in ('upper', 'lower'):
             raise Exception("Annotation data collected one staff at a time.")
 
@@ -594,7 +600,7 @@ class DScore:
         pypi_data.append(human_data)
         return pypi_data
 
-    def _nltk_staff_annotation_data(self, ids=[], staff="upper", measurement='nominal', common_id=None):
+    def _nltk_staff_annotation_data(self, ids=None, staff="upper", measurement='nominal', common_id=None):
         """
         The data suitable for feeding the NLTK AnnotationTask.
         :param ids:
@@ -602,6 +608,8 @@ class DScore:
         :param common_id:
         :return:
         """
+        if ids is None:
+            ids = []
         if staff not in ('upper', 'lower'):
             raise Exception("Annotation data collected one staff at a time.")
 
@@ -617,7 +625,7 @@ class DScore:
                 note_index += 1
         return data
 
-    def _pypi_staff_annotation_data(self, ids=[], staff="upper", common_id=None):
+    def _pypi_staff_annotation_data(self, ids=None, staff="upper", common_id=None):
         """
         Data structure suitable for passing to the PyPI krippendorff module.
         :param ids:
@@ -625,6 +633,8 @@ class DScore:
         :param common_id:
         :return:
         """
+        if ids is None:
+            ids = []
         ignore = self._note_indices_to_ignore(staff=staff, common_id=common_id)
         data = []
         for coder_id in ids:
@@ -643,7 +653,9 @@ class DScore:
         # pprint.pprint(data)
         return data
 
-    def _staff_annotation_data(self, ids=[], staff="upper", lib="nltk", label="unigram", common_id=None):
+    def _staff_annotation_data(self, ids=None, staff="upper", lib="nltk", label="unigram", common_id=None):
+        if ids is None:
+            ids = []
         if staff not in ('upper', 'lower'):
             raise Exception("Annotation data collected one staff at a time.")
         if label == "bigram":
@@ -658,14 +670,16 @@ class DScore:
                 data = self._pypi_staff_annotation_data(ids=ids, staff=staff, common_id=common_id)
         return data
 
-    def _annotation_data(self, ids=[], staff="both", lib="nltk", label='unigram', common_id=None):
+    def _annotation_data(self, ids=None, staff="both", lib="nltk", label='unigram', common_id=None):
         """
-        Separated data structures suitable for passing to the PyPI krippendorff module.
+        Separated data structures suitable for passing to the NLTK or PyPI krippendorff modules.
         :param ids:
         :param staff:
         :param common_id:
         :return:
         """
+        if ids is None:
+            ids = []
         staff_data = dict()
         upper_data = None
         lower_data = None
@@ -678,7 +692,9 @@ class DScore:
         # pprint.pprint(data)
         return staff_data
 
-    def alpha(self, ids=[], staff="upper", common_id=None, lib='nltk', label='bigram', distance=None):
+    def alpha(self, ids=None, staff="upper", common_id=None, lib='nltk', label='bigram', distance=None):
+        if ids is None:
+            ids = []
         if staff not in ('upper', 'lower'):
             raise Exception("Alpha measure only applicable one staff at a time.")
 
@@ -698,7 +714,9 @@ class DScore:
 
         return krip
 
-    def pypi_alpha_old(self, ids=[], staff="both", common_id=None, label='bigram', distance=binary_distance):
+    def pypi_alpha_old(self, ids=None, staff="both", common_id=None, label='bigram', distance=binary_distance):
+        if ids is None:
+            ids = []
         if staff not in ('upper', 'lower'):
             raise Exception("PyPI krippendorff alpha only applicable one staff at a time.")
 
@@ -711,7 +729,9 @@ class DScore:
         krip = alpha(reliability_data=data, level_of_measurement='nominal', value_domain=value_domain)
         return krip
 
-    def _is_fully_annotated(self, staff="both", indices=[]):
+    def _is_fully_annotated(self, staff="both", indices=None):
+        if indices is None:
+            indices = []
         if not self.is_annotated():
             return False
         if staff == "upper":
@@ -737,10 +757,12 @@ class DScore:
             annot_index += 1
         return True
 
-    def is_fully_annotated(self, staff="both", indices=[]):
+    def is_fully_annotated(self, staff="both", indices=None):
         """
         :return: True iff a strike digit is assigned to every note in the score.
         """
+        if indices is None:
+            indices = []
         if not self.is_annotated():
             return False
         upper = self.upper_d_part()
@@ -779,6 +801,19 @@ class DScore:
         ah = self._abcd_header
         ah.append_annotation(d_annotation=d_annotation)
 
+    def annotations(self):
+        hdr = self._abcd_header
+        if hdr:
+            annots = hdr.annotations()
+            return annots
+        return []
+
+    def annotation_by_id(self, identifier):
+        hdr = self._abcd_header
+        if hdr:
+            annot = hdr.annotation_by_id(identifier=identifier)
+            return annot
+        return None
 
     def abcdf(self, index=0, identifier=None, staff="both"):
         if not self._abcd_header:

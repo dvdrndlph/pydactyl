@@ -52,17 +52,17 @@ class DNote:
         return self._prior_note
 
     def velocity(self, value=None):
-        '''
+        """
         Return MIDI velocity of note or set it to value.
-        '''
+        """
         if value is not None:
             self._m21_note.volume.velocity = value
         return self._m21_note.volume.velocity
 
     def duration(self, value=None):
-        '''
+        """
         Return the quarterLength duration of the note or set it to value.
-        '''
+        """
         if value is not None:
             self._m21_note.duration = value
         return self._m21_note.duration.quarterLength

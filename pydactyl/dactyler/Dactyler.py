@@ -29,7 +29,6 @@ import networkx as nx
 import json
 from itertools import islice
 from datetime import datetime
-from pydactyl.dactyler import Constant
 from pydactyl.dcorpus.DCorpus import DCorpus
 from pydactyl.dcorpus.DNote import AnnotatedDNote
 from pydactyl.dcorpus.DAnnotation import DAnnotation
@@ -152,8 +151,10 @@ class Dactyler(ABC):
         Apply the staff_combiner to combine solutions for upper and lower staves.
         :param upper_suggestions:
         :param upper_costs:
+        :param upper_details:
         :param lower_suggestions:
         :param lower_costs:
+        :param lower_details:
         :param upper_length:
         :param lower_length:
         :param k:
@@ -293,7 +294,7 @@ class Dactyler(ABC):
         if digit is None:
             return None
 
-        handed_re = re.compile('^[<>]\d$')
+        handed_re = re.compile(r'^[<>]\d$')
         if handed_re.match(str(digit)):
             return digit
 
@@ -309,7 +310,7 @@ class Dactyler(ABC):
         Determine the hand specified in the handed digit.
         :return: The abcDF hand specifier (">" or "<").
         """
-        handed_re = re.compile('^([<>]{1})\d$')
+        handed_re = re.compile(r'^([<>])\d$')
         mat = handed_re.match(str(handed_digit))
         hand = mat.group(1)
         if hand != "<" and hand != ">":
@@ -323,7 +324,7 @@ class Dactyler(ABC):
         :param handed_digit:
         :return:
         """
-        handed_re = re.compile('^[<>]{1}(\d)$')
+        handed_re = re.compile(r'^[<>](\d)$')
         mat = handed_re.match(str(handed_digit))
         digit = mat.group(1)
         if not digit:
@@ -379,7 +380,7 @@ class Dactyler(ABC):
         """
         Abstract method must be defined by derived class.
         Generate a set of k ranked fingering suggestions for the given segment.
-        :param segment: The segment to work with, as a music21 score object.
+        :param segment: The segment to work with, as a music21 score m21_object.
         :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
         :param offset: The zero-based index to begin the returned advice.
         :param cycle: Detect repeating note patterns of at least this length within each segment and generate
@@ -452,7 +453,8 @@ class Dactyler(ABC):
             print("TOTAL: {0} DISTINCT: {1} COSTS: {2}".format(len(suggestions), len(sugg_map), costs))
             return suggestions, costs, details
 
-    def generate_advice(self, score_index=0, staff="upper", cycle=None, offset=0, first_digit=None, last_digit=None, k=1):
+    def generate_advice(self, score_index=0, staff="upper", cycle=None, offset=0,
+                        first_digit=None, last_digit=None, k=1):
         """
         Generate advice for the specified score. This method only supports segregated advice.
         :param score_index:
@@ -617,8 +619,6 @@ class Dactyler(ABC):
         staff parameter.
         :param last_digit: Constrain the advice to end with this digit (1-5). Inconsistent with "both"
         staff parameter.
-        :param k: The number of suggestions and corresponding costs to return. (Up to this number may be
-        returned.)
         :return: abcDF advice string.
         """
         suggestions, costs, details = self.generate_advice(score_index=score_index, staff=staff, offset=offset,
@@ -628,8 +628,8 @@ class Dactyler(ABC):
     def load_corpus(self, d_corpus=None, path=None):
         """
         Load corpus to be processed by the Dactyler model.
-        :param d_corpus: A DCorpus object.
-        :param path: The path to a file that can be opened as a DCorpus object.
+        :param d_corpus: A DCorpus m21_object.
+        :param path: The path to a file that can be opened as a DCorpus m21_object.
         :return:
         """
         if d_corpus:
@@ -693,10 +693,10 @@ class Dactyler(ABC):
                                                                   test_annot=test_annot, gold_annot=gold_annot)
         return cost
 
-    def evaluate_strike_distance(self, method="hamming", score_index=0, staff="upper", gold_indices=[]):
+    def evaluate_strike_distance(self, method="hamming", score_index=0, staff="upper", gold_indices=None):
         """
         Evaluate the best solution for a given score reported by the model against each of the specified
-        gold-standard annotations embedded in the DScore object using the specified method.
+        gold-standard annotations embedded in the DScore m21_object using the specified method.
         :param method: The edit distance metric to apply in the evaluation. One of "hamming," "natural," or "pivot."
         :param score_index: The zero-based index of the DScore within the DCorpus currently loaded in this Dactyler.
         :param staff: The staff to include in the evaluation (one of "upper," "lower," or "both."
@@ -704,6 +704,8 @@ class Dactyler(ABC):
         as the gold standard advice. If not specified, distances against all DAnnotations is calculated.
         :return: An array of distance measures against each specified gold index, in sorted order.
         """
+        if gold_indices is None:
+            gold_indices = []
         d_score = self._d_corpus.d_score_by_index(score_index)
         if not d_score.is_fully_annotated():
             raise Exception("Only fully annotated scores can be evaluated.")
@@ -731,10 +733,10 @@ class Dactyler(ABC):
 
         return scores
 
-    def evaluate_strike_distances(self, method="hamming", score_index=0, staff="upper", gold_indices=[], k=1):
+    def evaluate_strike_distances(self, method="hamming", score_index=0, staff="upper", gold_indices=None, k=1):
         """
         Evaluate the k best solutions for a given score reported by the model against each of the specified
-        gold-standard annotations embedded in the DScore object.
+        gold-standard annotations embedded in the DScore m21_object.
         :param method: The edit distance metric to apply in the evaluation. One of "hamming," "natural," or "pivot."
         :param score_index: The zero-based index of the DScore within the DCorpus currently loaded in this Dactyler.
         :param staff: The staff to include in the evaluation (one of "upper" or "lower.")
@@ -745,6 +747,8 @@ class Dactyler(ABC):
         the costs determined by the model, and a dictionary mapping gold-standard indices to an array of corresponding
         distance metric scores.
         """
+        if gold_indices is None:
+            gold_indices = []
         if staff != "upper" and staff != "lower":
             raise Exception("Strike distances must be evaluated one staff at a time.")
 
@@ -773,7 +777,9 @@ class Dactyler(ABC):
 
         return suggestions, costs, scores_for_gold_index
 
-    def evaluate_strike_reentry(self, method="hamming", score_index=0, staff="upper", gold_indices=[]):
+    def evaluate_strike_reentry(self, method="hamming", score_index=0, staff="upper", gold_indices=None):
+        if gold_indices is None:
+            gold_indices = []
         d_score = self._d_corpus.d_score_by_index(score_index)
         if not d_score.is_fully_annotated():
             raise Exception("Only fully annotated scores can be evaluated.")
@@ -879,7 +885,9 @@ class Dactyler(ABC):
                 score += cost
         return score
 
-    def evaluate_pivot_alignment(self, score_index=0, staff="upper", gold_indices=[]):
+    def evaluate_pivot_alignment(self, score_index=0, staff="upper", gold_indices=None):
+        if gold_indices is None:
+            gold_indices = []
         d_score = self._d_corpus.d_score_by_index(score_index)
         if not d_score.is_fully_annotated():
             raise Exception("Only fully annotated scores can be evaluated.")
@@ -904,7 +912,8 @@ class Dactyler(ABC):
                 d_notes = d_part.orderly_d_notes()
                 test_pivot_flags = Dactyler._pivot_flags(staff=staff, d_notes=d_notes, annot=test_annot)
                 gold_pivot_flags = Dactyler._pivot_flags(staff=staff, d_notes=d_notes, annot=gold_annot)
-                staff_score = self._pivot_alignment_score(gold_pivot_flags=gold_pivot_flags, test_pivot_flags=test_pivot_flags)
+                staff_score = self._pivot_alignment_score(gold_pivot_flags=gold_pivot_flags,
+                                                          test_pivot_flags=test_pivot_flags)
                 score += staff_score
             scores.append(score)
             gold_index += 1
@@ -924,7 +933,7 @@ class TrainedDactyler(Dactyler):
         """
         Abstract method must be defined by derived class.
         Generate a set of k ranked fingering suggestions for the given segment.
-        :param segment: The segment to work with, as a music21 score object.
+        :param segment: The segment to work with, as a music21 score m21_object.
         :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
         :param offset: The zero-based index to begin the returned advice.
         :param cycle: Detect repeating note patterns of at least this length within each segment and generate
@@ -939,7 +948,7 @@ class TrainedDactyler(Dactyler):
         """
         pass
 
-    @abstractmethod
+    @staticmethod
     def segment_advice_cost(abcdf, staff="upper", score_index=0, segment_index=0):
         """
         Calculate cost and cost details for a given fingering sequence.
@@ -953,7 +962,7 @@ class TrainedDactyler(Dactyler):
         pass
 
     @abstractmethod
-    def train(self, d_corpus, staff="both", segregate=True, segmenter=None, annotation_indices=[]):
+    def train(self, d_corpus, staff="both", segregate=True, segmenter=None, annotation_indices=None):
         return
 
     def retain(self, pickle_path=None, to_db=False):
@@ -980,4 +989,3 @@ class TrainedDactyler(Dactyler):
     def demonstrate(self):
         for k in self._training:
             print(k, ': ', self._training[k])
-

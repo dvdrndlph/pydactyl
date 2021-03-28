@@ -25,7 +25,7 @@ __author__ = 'David Randolph'
 The "Parncutt" class implements and enhances the model described in the
 following paper:
 
-   ﻿R. Parncutt, J. A. Sloboda, E. F. Clarke, M. Raekallio, and P. Desain,
+   R. Parncutt, J. A. Sloboda, E. F. Clarke, M. Raekallio, and P. Desain,
        “An ergonomic model of keyboard fingering for melodic fragments,”
        Music Percept., vol. 14, no. 4, pp. 341–382, 1997.     
 
@@ -33,7 +33,7 @@ We enhance the method to handle repeated pitches, two staffs,
 and segregated two-hand fingering. Herein, we also implement the "Jacobs"
 class, providing the same treatment for the model described here:
 
-   ﻿J. P. Jacobs, “Refinements to the ergonomic model for keyboard
+   J. P. Jacobs, “Refinements to the ergonomic model for keyboard
        fingering of Parncutt, Sloboda, Clarke, Raekallio, and Desain,”
        Music Percept., vol. 18, no. 4, pp. 505–511, 2001.
 
@@ -223,7 +223,7 @@ class Parncutt(D.Dactyler):
         }
 
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
-                 pruning_method='max', finger_spans=FINGER_SPANS, version=(1,0,0)):
+                 pruning_method='max', finger_spans=FINGER_SPANS, version=(1, 0, 0)):
         super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
                          staff_combiner=staff_combiner, version=version)
         # self._finger_spans = FINGER_SPANS
@@ -294,11 +294,8 @@ class Parncutt(D.Dactyler):
         elif min_prac <= required_span <= max_prac:
             return True
 
-        # print("BAD {0} to {1} trans of span {2} (between {3} and {4})".format(from_digit,
-                                                                            # to_digit,
-                                                                            # required_span,
-                                                                            # min_prac,
-                                                                            # max_prac))
+        print("BAD {0} to {1} trans of span {2} (between {3} and {4})".
+              format(from_digit, to_digit, required_span, min_prac, max_prac))
         return False
 
     @staticmethod
@@ -543,15 +540,16 @@ class Parncutt(D.Dactyler):
         if absolute_semitone_diff_12 > max_rel_12:
             costs['lar'] = span_penalty * (absolute_semitone_diff_12 - max_rel_12) * self._weights['lar']
 
-    def raw_position_change_count(self, handed_digit_1, midi_1, handed_digit_2,
-                              midi_2, handed_digit_3, midi_3):
+    def raw_position_change_count(self, handed_digit_1, midi_1, handed_digit_2, midi_2,
+                                  handed_digit_3, midi_3):
         if not midi_1 or not midi_3:
             return 0
 
         pcc = 0
         semitone_diff_13 = self.distance(midi_1, midi_3)
-        ###if semitone_diff_13 != 0:  # FIXME: This is in the code Parncutt shared and needed to reproduce
-        # results for A and E, but is contradicted by Figure 2(iv) example in paper.
+        # if semitone_diff_13 != 0:  # FIXME: This is in the code Parncutt shared and needed to reproduce
+                                     # results for A and E, but is contradicted by Figure 2(iv)
+                                     # example in paper.
         max_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxComf']
         min_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MinComf']
         max_prac_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxPrac']
@@ -568,7 +566,7 @@ class Parncutt(D.Dactyler):
             if digit_2 == C.THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 < min_prac_13:
                 pcc = 2  # A "full change"
             else:
-                pcc = 1 # A "half change"
+                pcc = 1  # A "half change"
         return pcc
 
     def assess_position_change_count(self, costs, handed_digit_1, midi_1, handed_digit_2,
@@ -720,7 +718,8 @@ class Parncutt(D.Dactyler):
         cost = 0
         costs = self.init_costs()
 
-        hand, digit_1, digit_2, digit_3 = Parncutt._hand_and_trigram_digits(handed_digit_1, handed_digit_2, handed_digit_3)
+        hand, digit_1, digit_2, digit_3 = Parncutt._hand_and_trigram_digits(
+            handed_digit_1, handed_digit_2, handed_digit_3)
 
         # Rule 1 ("Stretch")
         self.assess_stretch(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
@@ -732,7 +731,8 @@ class Parncutt(D.Dactyler):
         self.assess_large_span(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
 
         # Rule 4 ("Position-Change-Count")
-        self.assess_position_change_count(costs, handed_digit_1, midi_1, handed_digit_2, midi_2, handed_digit_3, midi_3)
+        self.assess_position_change_count(costs, handed_digit_1, midi_1,
+                                          handed_digit_2, midi_2, handed_digit_3, midi_3)
 
         # Rule 5 ("Position-Change-Size")
         self.assess_position_change_size(costs, handed_digit_1, midi_1, handed_digit_3, midi_3)
@@ -890,7 +890,7 @@ class Parncutt(D.Dactyler):
         """
         Apply standard shortest path algorithms to determine set of optimal fingerings based on
         a standardized networkx graph.
-        :param g: The weighted trinode graph. Weights must be specified via a "weight" edge parameter. Fingerings
+        :param g: The weighted tri-node graph. Weights must be specified via a "weight" edge parameter. Fingerings
         must be set on each "handed_digit" node parameter.
         :param target_id: The node id (key) for the last node or end point in the graph.
         :param k: The number of suggestions to return.
@@ -919,11 +919,12 @@ class Parncutt(D.Dactyler):
                     rule_costs[rule_id] += rule_cost
             return [segment_abcdf], [cost], [rule_costs]
         else:
-            sugg_map = dict()
+            suggest_map = dict()
             suggestions = list()
             costs = list()
             details = list()
-            k_best_paths = list(islice(nx.shortest_simple_paths(g, source=0, target=target_id, weight="weight"), k))
+            k_best_paths = list(islice(nx.shortest_simple_paths(
+                g, source=0, target=target_id, weight="weight"), k))
             for path in k_best_paths:
                 rule_costs = dict()
                 sub_g = g.subgraph(path)
@@ -941,21 +942,21 @@ class Parncutt(D.Dactyler):
                     if "digit_2" in node:
                         segment_abcdf += node["digit_2"]
                 suggestions.append(segment_abcdf)
-                if segment_abcdf in sugg_map:
-                    sugg_map[segment_abcdf] += 1
+                if segment_abcdf in suggest_map:
+                    suggest_map[segment_abcdf] += 1
                 else:
-                    sugg_map[segment_abcdf] = 1
+                    suggest_map[segment_abcdf] = 1
                 costs.append(suggestion_cost)
                 details.append(rule_costs)
 
-            # print("TOTAL: {0} DISTINCT: {1} COSTS: {2}".format(len(suggestions), len(sugg_map), costs))
+            # print("TOTAL: {0} DISTINCT: {1} COSTS: {2}".format(len(suggestions), len(suggest_map), costs))
             return suggestions, costs, details
 
     def generate_segment_advice(self, segment, staff, offset=0, cycle=None,
                                 handed_first_digit=None, handed_last_digit=None, k=None):
         """
         Generate a set of k ranked fingering suggestions for the given segment.
-        :param segment: The segment to work with, as a music21 score object.
+        :param segment: The segment to work with, as a music21 score m21_object.
         :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
         :param offset: The zero-based index to begin the returned advice.
         :param cycle: Detect repeating note patterns of at least this length within each segment and generate
@@ -1071,7 +1072,7 @@ class Jacobs(Parncutt):
         return costs
 
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
-                 pruning_method='max', finger_spans=FINGER_SPANS, version=(1,0,0)):
+                 pruning_method='max', finger_spans=FINGER_SPANS, version=(1, 0, 0)):
         super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
                          staff_combiner=staff_combiner, pruning_method=pruning_method,
                          finger_spans=finger_spans, version=version)
@@ -1160,7 +1161,8 @@ class Jacobs(Parncutt):
         cost = 0
         costs = self.init_costs()
 
-        hand, digit_1, digit_2, digit_3 = Parncutt._hand_and_trigram_digits(handed_digit_1, handed_digit_2, handed_digit_3)
+        hand, digit_1, digit_2, digit_3 = Parncutt._hand_and_trigram_digits(
+            handed_digit_1, handed_digit_2, handed_digit_3)
 
         # Rule 1 ("Stretch")
         self.assess_stretch(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
@@ -1181,7 +1183,7 @@ class Jacobs(Parncutt):
         self.assess_weak_finger(costs, digit_2)
 
         # Rule 7 ("Three-Four-Five")
-        # Not done in the interests of parsomony.
+        # Not done in the interests of parsimony.
         # self.assess_345(costs, digit_1, digit_2, digit_3)
 
         # Rule 8 ("Three-to-Four")
@@ -1403,7 +1405,7 @@ class Badgerow(Parncutt):
     #             costs['bl1'] += 2 * self._weights['bl1']
 
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
-                 pruning_method='max', finger_spans=BADGEROW_FINGER_SPANS, version=(1,0,0)):
+                 pruning_method='max', finger_spans=BADGEROW_FINGER_SPANS, version=(1, 0, 0)):
         super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
                          staff_combiner=staff_combiner, pruning_method=pruning_method,
                          finger_spans=finger_spans, version=version)
@@ -1423,7 +1425,8 @@ class Badgerow(Parncutt):
         cost = 0
         costs = self.init_costs()
 
-        hand, digit_1, digit_2, digit_3 = Parncutt._hand_and_trigram_digits(handed_digit_1, handed_digit_2, handed_digit_3)
+        hand, digit_1, digit_2, digit_3 = Parncutt._hand_and_trigram_digits(
+            handed_digit_1, handed_digit_2, handed_digit_3)
 
         # Rule 1 ("Stretch")
         self.assess_stretch(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
@@ -1432,10 +1435,12 @@ class Badgerow(Parncutt):
         self.assess_small_span(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
 
         # Rule 3 ("Large-Span")
-        self.assess_large_span_badgerow(costs, handed_digit_1, midi_1, handed_digit_2, midi_2, handed_digit_3, midi_3)
+        self.assess_large_span_badgerow(costs, handed_digit_1, midi_1, handed_digit_2, midi_2,
+                                        handed_digit_3, midi_3)
 
         # Rule 4 ("Position-Change-Count")
-        self.assess_position_change_count(costs, handed_digit_1, midi_1, handed_digit_2, midi_2, handed_digit_3, midi_3)
+        self.assess_position_change_count(costs, handed_digit_1, midi_1, handed_digit_2, midi_2,
+                                          handed_digit_3, midi_3)
 
         # Rule 5 ("Position-Change-Size")
         self.assess_position_change_size(costs, handed_digit_1, midi_1, handed_digit_3, midi_3)

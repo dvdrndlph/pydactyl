@@ -52,7 +52,9 @@ class ABCDHeader:
     def append_annotation(self, d_annotation):
         self._annotations.append(d_annotation)
 
-    def __init__(self, abcd_str='', annotations=[]):
+    def __init__(self, abcd_str='', annotations=None):
+        if annotations is None:
+            annotations = []
         self._annotations = annotations
 
         annotation = DAnnotation()
@@ -112,10 +114,10 @@ class ABCDHeader:
         count_for_id = {}
         for annot in self._annotations:
             count = annot.score_fingering_count(staff=staff)
-            id = annot.abcdf_id()
-            if id in count_for_id:
-                raise Exception("Duplicate DAnnotation id: {}".format(id))
-            count_for_id[id] = count
+            the_id = annot.abcdf_id()
+            if the_id in count_for_id:
+                raise Exception("Duplicate DAnnotation id: {}".format(the_id))
+            count_for_id[the_id] = count
         return count_for_id
 
     def assert_consistent(self, staff="both"):

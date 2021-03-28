@@ -49,7 +49,7 @@ The Python representation of the grammar is quite readable, owing to the self-ex
 class names, and the use of '+', '|' and '^' operators.
 
 The parsed results returned from C{parseString()} can be accessed as a nested list, a dictionary, or an
-object with named attributes.
+m21_object with named attributes.
 
 The pyparsing module handles some of the problems that are typically vexing when writing text parsers:
  - extra or missing whitespace (the above program will also handle "Hello,World!", "Hello  ,  World  !", etc.)
@@ -108,7 +108,7 @@ else:
     def _ustr(obj):
         """Drop-in replacement for str(obj) that tries to be Unicode friendly. It first tries
            str(obj). If that fails with a UnicodeEncodeError, then it tries unicode(obj). It
-           then < returns the unicode object | encodes it with the default encoding | ... >.
+           then < returns the unicode m21_object | encodes it with the default encoding | ... >.
         """
         if isinstance(obj,unicode):
             return obj
@@ -120,10 +120,10 @@ else:
 
         except UnicodeEncodeError:
             # The Python docs (http://docs.python.org/ref/customization.html#l2h-182)
-            # state that "The return value must be a string object". However, does a
-            # unicode object (being a subclass of basestring) count as a "string
-            # object"?
-            # If so, then return a unicode object:
+            # state that "The return value must be a string m21_object". However, does a
+            # unicode m21_object (being a subclass of basestring) count as a "string
+            # m21_object"?
+            # If so, then return a unicode m21_object:
             return unicode(obj)
             # Else encode it... but how? There are many choices... :)
             # Replace unprintables with escape codes?
@@ -475,7 +475,7 @@ class ParseResults(object):
         return dict( self.items() )
 
     def copy( self ):
-        """Returns a new copy of a C{ParseResults} object."""
+        """Returns a new copy of a C{ParseResults} m21_object."""
         ret = ParseResults( self.__toklist )
         ret.__tokdict = self.__tokdict.copy()
         ret.__parent = self.__parent
@@ -764,7 +764,7 @@ class ParserElement(object):
     def setResultsName( self, name, listAllMatches=False ):
         """Define name for referencing matching tokens as a nested attribute
            of the returned parse results.
-           NOTE: this returns a *copy* of the original C{ParserElement} object;
+           NOTE: this returns a *copy* of the original C{ParserElement} m21_object;
            this is so that the client can define a basic element, such as an
            integer, and reference it in multiple places with different names.
            
@@ -804,7 +804,7 @@ class ParserElement(object):
            C{fn(loc,toks)}, C{fn(toks)}, or just C{fn()}, where:
             - s   = the original string being parsed (see note below)
             - loc = the location of the matching substring
-            - toks = a list of the matched tokens, packaged as a C{L{ParseResults}} object
+            - toks = a list of the matched tokens, packaged as a C{L{ParseResults}} m21_object
            If the functions in fns modify the tokens, they can return them as the return
            value from fn, and the modified list of tokens will replace the original.
            Otherwise, fn does not need to return any value.
@@ -1403,7 +1403,7 @@ class ParserElement(object):
 
     def parseFile( self, file_or_filename, parseAll=False ):
         """Execute the parse expression on the given file or filename.
-           If a filename is specified (instead of a file object),
+           If a filename is specified (instead of a file m21_object),
            the entire file is opened, read, and closed before parsing.
         """
         try:
@@ -1747,7 +1747,7 @@ class Regex(Token):
             self.flags = flags
             
         else:
-            raise ValueError("Regex may only be constructed with a string or a compiled RE object")
+            raise ValueError("Regex may only be constructed with a string or a compiled RE m21_object")
 
         self.name = _ustr(self)
         self.errmsg = "Expected " + self.name
@@ -3151,7 +3151,7 @@ def oneOf( strs, caseless=False, useRegex=True ):
         - strs - a string of space-delimited literals, or a list of string literals
         - caseless - (default=False) - treat all literals as caseless
         - useRegex - (default=True) - as an optimization, will generate a Regex
-          object; otherwise, will generate a C{MatchFirst} object (if C{caseless=True}, or
+          m21_object; otherwise, will generate a C{MatchFirst} m21_object (if C{caseless=True}, or
           if creating a C{Regex} raises an exception)
     """
     if caseless:

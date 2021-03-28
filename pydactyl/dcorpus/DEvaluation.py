@@ -62,6 +62,63 @@ class DEvalFunction:
         return 1.0
 
     @staticmethod
+    def is_white_key(knot):
+        pitch_class = knot.pitch.pitchClass
+        if pitch_class in [1, 3, 6, 8, 10]:
+            return False
+        return True
+
+    @staticmethod
+    def delta_black_white_adjacent(one_note, other_note, epsilon=None):
+        if epsilon is None:
+            epsilon = DEvalFunction.delta_epsilon
+
+        one_pf = PianoFingering.fingering(one_note)
+        other_pf = PianoFingering.fingering(other_note)
+        if one_pf.strike_hand() != other_pf.strike_hand():
+            return 1.0
+        one_digit = one_pf.strike_digit()
+        other_digit = other_pf.strike_digit()
+        if one_digit == other_digit:
+            return 0.0
+        if (one_digit in (2, 3) and other_digit in (2, 3)) or \
+                (one_digit in (3, 4) and other_digit in (3, 4)):
+            return 1.0 - epsilon
+        if DEvalFunction.is_white_key(one_note):
+            if (one_digit in (1, 2) and other_digit in (1, 2)) or \
+                    (one_digit in (4, 5) and other_digit in (4, 5)):
+                return 1.0 - epsilon
+        return 1.0
+
+    @staticmethod
+    def is_black_white_adjacent(one_note, other_note):
+        """
+        Determine if two fingerings of the input notes are interchangeable
+        because they are adjacent long fingers of the same hand or adjacent
+        fingers on white keys.
+        :param one_note: A fingered middle note of a trigram.
+        :param other_note: Another fingered middle note of the same sequence.
+        :return: True iff they are interchangeable. False otherwise, even if
+                 finger used is the same.
+        """
+        one_pf = PianoFingering.fingering(one_note)
+        other_pf = PianoFingering.fingering(other_note)
+        if one_pf.strike_hand() != other_pf.strike_hand():
+            return False
+        one_digit = one_pf.strike_digit()
+        other_digit = other_pf.strike_digit()
+        if one_digit == other_digit:
+            return False
+        if (one_digit in (2, 3) and other_digit in (2, 3)) or \
+                (one_digit in (3, 4) and other_digit in (3, 4)):
+            return True
+        if DEvalFunction.is_white_key(one_note):
+            if (one_digit in (1, 2) and other_digit in (1, 2)) or \
+                    (one_digit in (4, 5) and other_digit in (4, 5)):
+                return True
+        return False
+
+    @staticmethod
     def is_adjacent_long(one_note, other_note):
         """
         Determine if two fingerings of the input notes are interchangeable
@@ -70,8 +127,6 @@ class DEvalFunction:
         :param other_note: Another fingered middle note of the same sequence..
         :return: True iff they are interchangeable. False otherwise, even if
                  finger used is the same.
-                 arbitrary per theory notion that adjacent long fingers are
-                 essentially interchangeable, 1.0 otherwise.
         """
         one_pf = PianoFingering.fingering(one_note)
         other_pf = PianoFingering.fingering(other_note)
@@ -140,7 +195,7 @@ class DEvalFunction:
                                                 index=middle_index+1, proxy_test=proxy_test)
 
     @staticmethod
-    def tau_trigram(one_note_stream, other_note_stream, index):
+    def tau_trigram(one_note_stream, other_note_stream, index, proxy_test=None):
         if DEvalFunction.is_trigram_equal(one_note_stream, other_note_stream, index=index):
             return 0.0
         return 1.0
@@ -225,15 +280,16 @@ class DEvaluation:
     Class to determine how well each of the top ranked outputs of a model
     system perform against a given gold-standard human.
     """
-    def __init__(self, human_score=None, system_scores=[], staff="both",
+    def __init__(self, human_score=None, system_scores=None, staff="both",
                  delta_function=DEvalFunction.delta_hamming,
                  tau_function=DEvalFunction.tau_trigram,
+                 tau_proxy_test=DEvalFunction.is_adjacent_long,
                  decay_function=DEvalFunction.decay_none,
                  mu_function=None, rho_decay_function=DEvalFunction.decay_none,
                  delta_epsilon=0.5, tau_epsilon=0.99,
                  phi=DEvalFunction.phi_inverse, full_context=True):
         """
-        Initialize a new DEvaluation object.
+        Initialize a new DEvaluation m21_object.
         :param human_score:
         :param system_scores:
         :param staff:
@@ -244,15 +300,18 @@ class DEvaluation:
         :param rho_decay_function:
         :param epsilon:
         """
+        if system_scores is None:
+            system_scores = []
         self._staff = staff
         self._human_score = None
         self._human_note_stream = None
         self.human_score(d_score=human_score)
-        self._system_scores = []
+        self._system_scores = system_scores
         self._system_note_streams = []
         self.system_scores(system_scores)
         self._delta_function = delta_function
         self._tau_function = tau_function
+        self._tau_proxy_test = tau_proxy_test
         self._decay_function = decay_function
         self._mu_function = mu_function
         self._rho_decay_function = rho_decay_function
@@ -265,12 +324,14 @@ class DEvaluation:
 
     def parameterize(self, delta_function=DEvalFunction.delta_hamming,
                      tau_function=DEvalFunction.tau_trigram,
+                     tau_proxy_test=DEvalFunction.is_adjacent_long,
                      decay_function=DEvalFunction.decay_none,
                      mu_function=None, rho_decay_function=DEvalFunction.decay_none,
                      delta_epsilon=0.5, tau_epsilon=0.99,
                      phi=DEvalFunction.phi_inverse, full_context=True):
         self._delta_function = delta_function
         self._tau_function = tau_function
+        self._tau_proxy_test = tau_proxy_test
         self._decay_function = decay_function
         self._mu_function = mu_function
         self._rho_decay_function = rho_decay_function
@@ -324,7 +385,9 @@ class DEvaluation:
             self._human_note_stream = d_score.orderly_note_stream(staff=self._staff)
         return self._human_score
 
-    def system_scores(self, system_scores=[]):
+    def system_scores(self, system_scores=None):
+        if system_scores is None:
+            system_scores = []
         if system_scores:
             for d_score in system_scores:
                 self.append_system_score(d_score)
@@ -359,7 +422,7 @@ class DEvaluation:
             if self._decay_function:
                 decay_weight = self._decay_function(big_n=big_n, n=i+1)
             tau_value = self._tau_function(one_note_stream=human_stream, other_note_stream=system_stream,
-                                           index=i)
+                                           proxy_test=self._tau_proxy_test, index=i)
             distance += decay_weight * tau_value
         big_delta = normalizing_factor * distance
 

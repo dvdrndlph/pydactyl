@@ -24,16 +24,12 @@ __author__ = 'David Randolph'
 """ Implements a reproducible random fingering model.
 """
 
-import numpy
-import re
 import random
 import copy
-import networkx as nx
 import os
 
 from pydactyl.dactyler import Constant
 from . import Dactyler as D
-from pydactyl.dcorpus.DNote import DNote
 BIG_NUM = 999
 MAX_INTERVAL_SIZE = 12
 BIN_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -42,7 +38,7 @@ COST_FILE = Constant.DATA_DIR + '/tables_0.dat'
 
 class Random(D.Dactyler):
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
-                 cost_path=None, max_interval_size=MAX_INTERVAL_SIZE, version=(1,0,0)):
+                 cost_path=None, max_interval_size=MAX_INTERVAL_SIZE, version=(1, 0, 0)):
         super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
                          staff_combiner=staff_combiner, version=version)
         self._cost_path = COST_FILE
@@ -51,6 +47,7 @@ class Random(D.Dactyler):
         self._max_interval_size = max_interval_size
         self._costs = []  # self._define_costs()
 
+    @staticmethod
     def segment_advice_cost(abcdf, staff="upper", score_index=0, segment_index=0):
         """
         NOT YET IMPLEMENTED
@@ -69,7 +66,7 @@ class Random(D.Dactyler):
         """
         Generate a set of k ranked fingering suggestions for the given segment. Note that the original
         Hart implementation only returns one best fingering.
-        :param segment: The segment to work with, as a music21 score object.
+        :param segment: The segment to work with, as a music21 score m21_object.
         :param staff: The staff (one of "upper" or "lower") from which the segment was derived.
         :param offset: The zero-based index to begin the returned advice.
         :param cycle: Treat the segment as a repeating pattern and generate advice best suited to
@@ -109,5 +106,3 @@ class Random(D.Dactyler):
             cost += 1
 
         return suggestions, costs, details
-
-
