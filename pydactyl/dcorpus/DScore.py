@@ -270,7 +270,23 @@ class DScore:
             raise Exception("Score fingering count does not match note count: {} != {}".format(sf_count, note_count))
         self._abcd_header.assert_consistent(staff=staff)
 
-    def cohens_kappa(self, one_id, other_id, staff="both", common_id=None, wildcard=True, handed=True):
+    @staticmethod
+    def unigram_labels(staff="both", wildcard=False, segregated=False):
+        labels = ['>1', '>2', '>3', '>4', '>5', '<1', '<2', '<3', '<4', '<5']
+        if segregated:
+            if staff == "both":
+                raise Exception("Cannot calculate segregated kappa for both staffs.")
+            elif staff == "upper":
+                labels = ['>1', '>2', '>3', '>4', '>5']
+            else:
+                labels = ['<1', '<2', '<3', '<4', '<5']
+        if wildcard:
+            labels.append('x')
+        return labels
+
+    def cohens_kappa_data(self, one_id, other_id, staff="both", common_id=None, wildcard=True, segregated=False):
+        labels = DScore.unigram_labels(staff=staff, wildcard=wildcard, segregated=segregated)
+
         one_annot = self._abcd_header.annotation_by_id(identifier=one_id)
         other_annot = self._abcd_header.annotation_by_id(identifier=other_id)
         common_annot = None
@@ -301,11 +317,8 @@ class DScore:
                     one_clean.append(one[i])
                     other_clean.append(other[i])
 
-        labels = ['>1', '>2', '>3', '>4', '>5', '<1', '<2', '<3', '<4', '<5']
         pair_counts = {}
         all_labels = list(labels)
-        if wildcard:
-            all_labels.append('x')
         for label_1 in all_labels:
             for label_2 in all_labels:
                 label_pair = "{}_{}".format(label_1, label_2)
@@ -314,8 +327,19 @@ class DScore:
         for i in range(len(one_clean)):
             pair_key = "{}_{}".format(one_clean[i], other_clean[i])
             pair_counts[pair_key] += 1
-        kappa = cohen_kappa_score(one_clean, other_clean, labels=labels)
-        return kappa, pair_counts
+        data = {
+            'pair_counts': pair_counts,
+            'labels': labels,
+            'one': one_clean,
+            'other': other_clean
+        }
+        return data
+
+    def cohens_kappa(self, one_id, other_id, staff="both", common_id=None, wildcard=True, segregated=False):
+        data = self.cohens_kappa_data(one_id=one_id, other_id=other_id, staff=staff, common_id=common_id,
+                                      wildcard=wildcard, segregated=segregated)
+        kappa = cohen_kappa_score(data['one'], data['other'], labels=data['labels'])
+        return kappa, data['pair_counts']
 
     def _note_indices_to_ignore(self, staff="both", common_id=None):
         ignore = {}
