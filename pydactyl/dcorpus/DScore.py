@@ -326,6 +326,8 @@ class DScore:
 
         for i in range(len(one_clean)):
             pair_key = "{}_{}".format(one_clean[i], other_clean[i])
+            if pair_key not in pair_counts:
+                raise Exception("Bad key: {}".format(pair_key))
             pair_counts[pair_key] += 1
         data = {
             'pair_counts': pair_counts,
