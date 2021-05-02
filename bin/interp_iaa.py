@@ -80,14 +80,6 @@ class IaaResult:
             total += self.pair_counts[pair]
         return total
 
-    def long_str(self):
-        annot_count = self.annotation_count()
-        pair_str = self.pair_str()
-        string = "\"{}\"|\"{}\"|\"{}\"|\"{}\"|\"{}\"|\"{}\"|\"{}\"|\"{}\"|\"{}\"|\"{}\"".format(
-            self.corpus_name, self.experiment_type, self.one_id, self.other_id, self.authority_id,
-            self.scope, self.staff, self.kappa, self.note_count, annot_count, pair_str)
-        return string
-
     def __str__(self):
         annot_count = self.annotation_count()
         string = "\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"".format(
