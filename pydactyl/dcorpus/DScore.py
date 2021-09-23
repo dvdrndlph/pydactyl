@@ -397,6 +397,44 @@ class DScore:
                 note_index += 1
         return ignore
 
+    def trigram_strike_annotation_data(self, staff="upper"):
+        """
+        Data for feeding bigram tags to the NLTK AnnotationTask.
+        Here we are generating a set of trigram labels that consider
+        only strike hands and fingers, which is all we considered in the
+        SMC2021 paper.
+        :param staff:
+        :param common_id:
+        :return:
+        """
+        if staff == "upper":
+            d_part = self.upper_d_part()
+        elif staff == "lower":
+            d_part = self.lower_d_part()
+        else:
+            raise Exception("Specific staff must be specified.")
+        data = {}
+        for annot in self._abcd_header.annotations():
+            strikes = []
+            coder_id = annot.abcdf_id()
+            strike_str_0 = 'xx'
+            strike_str_1 = 'xx'
+            for hsd in annot.handed_strike_digits(staff=staff):
+                if len(hsd) != 2:
+                    raise Exception("Unsupported fingering sequence")
+                strike_str = hsd
+                trigram_str = strike_str_0 + strike_str_1 + strike_str
+                strikes.append(trigram_str)
+                strike_str_0 = strike_str_1
+                strike_str_1 = strike_str
+            trigram_str = strike_str_0 + strike_str_1 + 'xx'
+            strikes.append(trigram_str)
+            trigram_str = strike_str_1 + 'xxxx'
+            strikes.append(trigram_str)
+            data[coder_id] = strikes
+        return data
+
+
     def _bigram_annotation_data(self, ids=None, staff="upper", common_id=None, offset=0):
         """
         Data for feeding bigram tags to the NLTK AnnotationTask.

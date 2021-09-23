@@ -165,7 +165,7 @@ for meth in methods:
 # Combining the corpora....
 # FIXME: We can't really do that, since the ideal and random models are actually different
 # for each corpus. We should have had the same model for both, using the full corpus for ideal
-# and truncating the phrases.
+# and truncating (and combining) the phrases.
 combined_vals = {}
 for meth in methods:
     if meth not in combined_vals:
