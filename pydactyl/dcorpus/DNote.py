@@ -1,4 +1,5 @@
 __author__ = 'David Randolph'
+
 # Copyright (c) 2014-2018 David A. Randolph.
 #
 # Permission is hereby granted, free of charge, to any person
@@ -22,6 +23,7 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 from pydactyl.dactyler import Constant
+import hashlib
 import music21
 
 
@@ -44,6 +46,15 @@ class DNote:
     def __init__(self, m21_note, prior_note=None):
         self._m21_note = m21_note
         self._prior_note = prior_note
+
+    def __eq__(self, other):
+        if not isinstance(other, DNote):
+            return False
+        return self._m21_note == other._m21_note and \
+               self._prior_note == other._prior_note
+
+    def __hash__(self):
+        return hash((self._m21_note, self._prior_note))
 
     def m21_note(self):
         return self._m21_note
@@ -185,6 +196,19 @@ class AnnotatedDNote(DNote):
         self._strike_digit = strike_digit
         self._release_hand = release_hand
         self._release_digit = release_digit
+
+    def __eq__(self, other):
+        if not isinstance(other, AnnotatedDNote):
+            return False
+        return self._strike_hand == other._strike_hand and \
+               self._strike_digit == other._strike_digit and \
+               self._release_hand == other._release_hand and \
+               self._release_digit == other._release_digit
+
+    def __hash__(self):
+        return hash((self._m21_note, self._prior_note,
+                     self._strike_hand, self._strike_digit,
+                     self._release_hand, self._release_digit))
 
     def strike_hand(self):
         return self._strike_hand
