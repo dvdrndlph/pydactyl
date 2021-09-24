@@ -23,8 +23,8 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 from pydactyl.dactyler import Constant
-import hashlib
 import music21
+from .PianoFingering import PianoFingering
 
 
 class DNote:
@@ -47,14 +47,29 @@ class DNote:
         self._m21_note = m21_note
         self._prior_note = prior_note
 
+    def _pitches_match(self, other):
+        if self.midi() != other.midi():
+            return False
+        if self.prior_midi() != other.prior_midi():
+            return False
+        return True
+
     def __eq__(self, other):
         if not isinstance(other, DNote):
             return False
-        return self._m21_note == other._m21_note and \
-               self._prior_note == other._prior_note
+        if not self._pitches_match(other):
+            return False
+        if PianoFingering.fingerings(self.m21_note()):
+            pf = PianoFingering.fingering(self.m21_note())
+            other_pf = PianoFingering.fingering(other.m21_note())
+            if pf != other_pf:
+                return False
+        return True
 
     def __hash__(self):
-        return hash((self._m21_note, self._prior_note))
+        if self._prior_note is None:
+            return hash((self._m21_note.pitch.midi, -1))
+        return hash((self._m21_note.pitch.midi, self._prior_note.m21_note().pitch.midi))
 
     def m21_note(self):
         return self._m21_note

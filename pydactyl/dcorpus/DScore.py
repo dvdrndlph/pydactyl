@@ -434,6 +434,15 @@ class DScore:
             data[coder_id] = strikes
         return data
 
+    def orderly_d_notes(self, staff="upper", offset=0):
+        if staff == "upper":
+            d_part = self.upper_d_part()
+        elif staff == "lower":
+            d_part = self.lower_d_part()
+        else:
+            raise Exception("Specific staff must be specified.")
+        ordered_d_notes = d_part.orderly_d_notes(offset=offset)
+        return ordered_d_notes
 
     def _bigram_annotation_data(self, ids=None, staff="upper", common_id=None, offset=0):
         """

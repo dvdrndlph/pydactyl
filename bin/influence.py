@@ -22,13 +22,9 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
+import copy
 
-from scipy import stats
-from statsmodels.stats.multicomp import MultiComparison
-import sys
-import csv
-import numpy as np
-import pandas as pd
+from nltk.metrics.agreement import AnnotationTask
 from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
 import matplotlib
 matplotlib.use('TkAgg')
@@ -63,8 +59,51 @@ advised_corpus.assemble_and_append_from_db(piece_query=abc_query, fingering_quer
 indy_corpus = DCorpus()
 indy_corpus.assemble_and_append_from_db(piece_query=abc_query, fingering_query=indy_query)
 
+annotated_advised_scores = []
+annotated_indy_scores = []
+score_numbers = [1, 5]
+score_index = 0
 for adv_score in advised_corpus.d_score_list():
-    trigrams = adv_score.trigram_strike_annotation_data()
+    trigram_labels = adv_score.trigram_strike_annotation_data()
+    # for trigram_label in trigram_labels:
+    for annot in adv_score.annotations():
+        annotated_score = copy.deepcopy(adv_score)
+        annotated_score.finger(staff="upper", d_annotation=annot)
+        annotated_advised_scores.append(annotated_score)
+for indy_score in indy_corpus.d_score_list():
+    trigram_labels = indy_score.trigram_strike_annotation_data()
+    for annot in indy_score.annotations():
+        annotated_score = copy.deepcopy(indy_score)
+        annotated_score.finger(staff="upper", d_annotation=annot)
+        annotated_indy_scores.append(annotated_score)
+
+annotation_data = []
+coder_id = 0
+for indy_score in annotated_indy_scores:
+    item_id = 0
+    orderly_notes = indy_score.orderly_d_notes(staff="upper")
+    for note in orderly_notes:
+        record = [coder_id, item_id, note]
+        annotation_data.append(record)
+        item_id += 1
+    coder_id += 1
+print(annotation_data)
+annot_task = AnnotationTask(data=annotation_data)
+print(round(annot_task.alpha(), 3))
+
+annotation_data = []
+coder_id = 0
+for adv_score in annotated_advised_scores:
+    item_id = 0
+    orderly_notes = adv_score.orderly_d_notes(staff="upper")
+    for note in orderly_notes:
+        record = [coder_id, item_id, note]
+        annotation_data.append(record)
+        item_id += 1
+    coder_id += 1
+
+annot_task = AnnotationTask(data=annotation_data)
+print(round(annot_task.alpha(), 3))
 
 print("Basta")
 
