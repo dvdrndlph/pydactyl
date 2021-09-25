@@ -83,9 +83,11 @@ corpora['independent'].assemble_and_append_from_db(piece_query=abc_query, finger
 score_numbers = [1, 5]
 annotated_scores = dict()
 corpus_trigram_labels = dict()
+corpus_unigram_labels = dict()
 for corpus in corpora:
     annotated_scores[corpus] = dict()
     corpus_trigram_labels[corpus] = dict()
+    corpus_unigram_labels[corpus] = dict()
     score_index = 0
     for score in corpora[corpus].d_score_list():
         score_number = score_numbers[score_index]
@@ -93,19 +95,23 @@ for corpus in corpora:
         score_index += 1
         trigram_labels = score.trigram_strike_annotation_data()
         corpus_trigram_labels[corpus][score_number] = trigram_labels
+        unigram_labels = score.unigram_strike_annotation_data()
+        corpus_unigram_labels[corpus][score_number] = unigram_labels
         for annot in score.annotations():
             annotated_score = copy.deepcopy(score)
             annotated_score.finger(staff="upper", d_annotation=annot)
             annotated_scores[corpus][score_number].append(annotated_score)
 
-print(annotated_scores)
-print(corpus_trigram_labels['advised'])
+# print(annotated_scores['advised'])
+# print(corpus_trigram_labels['advised'])
+# print(corpus_unigram_labels['advised'])
 
 results = dict()
 for corpus in annotated_scores:
     unigram_annotation_data = []
     trigram_annotation_data = []
     trigram_label_annotation_data = []
+    unigram_label_annotation_data = []
     coder_id = 0
     for score_number in annotated_scores[corpus]:
         for annotated_score in annotated_scores[corpus][score_number]:
@@ -130,27 +136,38 @@ for corpus in annotated_scores:
             item_id = "{}_{}".format(score_number, item_index)
             record = [coder_id, item_id, triple]
             trigram_annotation_data.append(record)
-
         coder_id += 1
 
-    # print(trigram_annotation_data)
     annot_task = AnnotationTask(data=trigram_annotation_data)
     results[('trigram_native', corpus)] = annot_task.alpha()
     annot_task = AnnotationTask(data=unigram_annotation_data)  # distance=unigram_distance
     results[('unigram_native', corpus)] = annot_task.alpha()
 
     for score_number in corpus_trigram_labels[corpus]:
-        score_data = corpus_trigram_labels[corpus][score_number]
-        for coder_id in score_data:
+        score_trigram_data = corpus_trigram_labels[corpus][score_number]
+        score_unigram_data = corpus_unigram_labels[corpus][score_number]
+        for coder_id in score_trigram_data:
             item_index = 0
-            for label in score_data[coder_id]:
+            for label in score_trigram_data[coder_id]:
                 item_id = "{}_{}".format(score_number, item_index)
                 record = [coder_id, item_id, label]
                 trigram_label_annotation_data.append(record)
                 item_index += 1
-    print(trigram_label_annotation_data)
+            item_index = 0
+            for label in score_unigram_data[coder_id]:
+                item_id = "{}_{}".format(score_number, item_index)
+                record = [coder_id, item_id, label]
+                unigram_label_annotation_data.append(record)
+                item_index += 1
     annot_task = AnnotationTask(data=trigram_label_annotation_data)
     results[('trigram_label', corpus)] = annot_task.alpha()
+    annot_task = AnnotationTask(data=unigram_label_annotation_data)
+    results[('unigram_label', corpus)] = annot_task.alpha()
+
+print(trigram_label_annotation_data)
+print(trigram_annotation_data)
+print(unigram_label_annotation_data)
+print(unigram_annotation_data)
 
 for (distance_function, corpus) in sorted(results):
     print("{} alpha for {}: {}".format(
@@ -158,6 +175,8 @@ for (distance_function, corpus) in sorted(results):
         corpus.rjust(len("independent")),
         round(results[(distance_function, corpus)], 5)))
 
+# The metrics from the string labels and those from the notes should be identical.
+# But they are not.
 
 print("Basta")
 
