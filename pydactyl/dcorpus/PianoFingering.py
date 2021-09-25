@@ -207,6 +207,45 @@ class PianoFingering(Fingering):
 
         super().__init__(fingerNumber=finger_number)
 
+    def __hash__(self):
+        (strike_hand, strike_digit) = self.strike_hand_and_digit()
+        (release_hand, release_digit) = self.release_hand_and_digit()
+        return hash((strike_hand, strike_digit, release_hand, release_digit))
+
+    def __str__(self):
+        (strike_hand, strike_digit) = self.strike_hand_and_digit()
+        (release_hand, release_digit) = self.release_hand_and_digit()
+        my_str = "{}{}-{}{}".format(strike_hand, strike_digit, release_hand, release_digit)
+        return my_str
+
+
+    def __eq__(self, other):
+        if not isinstance(other, PianoFingering):
+            return False
+        if self._strike_hands_and_digits is None and other._strike_hands_and_digits is not None:
+            return False
+        if self._strike_hands_and_digits is not None and other._strike_hands_and_digits is None:
+            return False
+
+        if self._strike_hands_and_digits is not None and other._strike_hands_and_digits is not None:
+            for i in range(len(self._strike_hands_and_digits)):
+                (strike_hand, strike_digit) = self._strike_hands_and_digits[i]
+                (other_strike_hand, other_strike_digit) = other._strike_hands_and_digits[i]
+                if strike_hand != other_strike_hand or strike_digit != other_strike_digit:
+                    return False
+
+        if self._prior_hands_and_digits is None and other._prior_hands_and_digits is not None:
+            return False
+        if self._prior_hands_and_digits is not None and other._prior_hands_and_digits is None:
+            return False
+        if self._prior_hands_and_digits is not None and other._prior_hands_and_digits is not None:
+            for i in range(len(self._prior_hands_and_digits)):
+                (prior_hand, prior_digit) = self._prior_hands_and_digits[i]
+                (other_prior_hand, other_prior_digit) = other._prior_hands_and_digits[i]
+                if prior_hand != other_prior_hand or prior_digit != other_prior_digit:
+                    return False
+        return True
+
     @staticmethod
     def finger_score(d_score, staff="upper", abcdh=None, d_annotation=None, id=1):
         if abcdh:

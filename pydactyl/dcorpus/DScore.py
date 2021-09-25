@@ -399,7 +399,7 @@ class DScore:
 
     def trigram_strike_annotation_data(self, staff="upper"):
         """
-        Data for feeding bigram tags to the NLTK AnnotationTask.
+        Data for feeding string tags to the NLTK AnnotationTask.
         Here we are generating a set of trigram labels that consider
         only strike hands and fingers, which is all we considered in the
         SMC2021 paper.
@@ -434,6 +434,41 @@ class DScore:
             data[coder_id] = strikes
         return data
 
+    def unigram_strike_annotation_data(self, staff="upper"):
+        """
+        Data for feeding string tags to the NLTK AnnotationTask.
+        Here we are generating a set of unigram labels that consider
+        only strike hands and fingers, which is all we considered in the
+        SMC2021 paper.
+        :param staff:
+        :return: A dictionary (keyed by abcDF annotator ID) of lists of fingering strings.
+        """
+        if staff == "upper":
+            d_part = self.upper_d_part()
+        elif staff == "lower":
+            d_part = self.lower_d_part()
+        else:
+            raise Exception("Specific staff must be specified.")
+        data = {}
+        for annot in self._abcd_header.annotations():
+            strikes = []
+            coder_id = annot.abcdf_id()
+            for hsd in annot.handed_strike_digits(staff=staff):
+                if len(hsd) != 2:
+                    raise Exception("Unsupported fingering sequence")
+                strikes.append(hsd)
+            data[coder_id] = strikes
+        return data
+
+    def orderly_d_notes(self, staff="upper", offset=0):
+        if staff == "upper":
+            d_part = self.upper_d_part()
+        elif staff == "lower":
+            d_part = self.lower_d_part()
+        else:
+            raise Exception("Specific staff must be specified.")
+        ordered_d_notes = d_part.orderly_d_notes(offset=offset)
+        return ordered_d_notes
 
     def _bigram_annotation_data(self, ids=None, staff="upper", common_id=None, offset=0):
         """
