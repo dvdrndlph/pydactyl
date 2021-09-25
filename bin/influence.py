@@ -26,10 +26,30 @@ import copy
 
 from nltk.metrics.agreement import AnnotationTask
 from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
+from pydactyl.dcorpus.DEvaluation import DEvalFunction
+
 import matplotlib
 matplotlib.use('TkAgg')
 
-# Fingerings from people who received help from Czerny.
+
+def unigram_distance(one, other):
+    return 0.1
+
+
+def trigram_distance(one, other):
+    return 0.0
+
+
+def trigram_and_triple(old_trigram, note):
+    new_trigram = [None, None, None]
+    new_trigram[0] = old_trigram[1]
+    new_trigram[1] = old_trigram[2]
+    new_trigram[2] = note
+    nova_triple = tuple(new_trigram)
+    return new_trigram, nova_triple
+
+
+# Fingerings from the two experimental fragments.
 finger_query = """
   select f.upper_staff as fingering,
          1 as weight,
@@ -54,56 +74,90 @@ abc_query = '''
 advised_query = finger_query + " and sa.Advised = 'Yes'"
 indy_query = finger_query + " and sa.Advised = 'No'"
 
-advised_corpus = DCorpus()
-advised_corpus.assemble_and_append_from_db(piece_query=abc_query, fingering_query=advised_query)
-indy_corpus = DCorpus()
-indy_corpus.assemble_and_append_from_db(piece_query=abc_query, fingering_query=indy_query)
+corpora = dict()
+corpora['advised'] = DCorpus()
+corpora['advised'].assemble_and_append_from_db(piece_query=abc_query, fingering_query=advised_query)
+corpora['independent'] = DCorpus()
+corpora['independent'].assemble_and_append_from_db(piece_query=abc_query, fingering_query=indy_query)
 
-annotated_advised_scores = []
-annotated_indy_scores = []
 score_numbers = [1, 5]
-score_index = 0
-for adv_score in advised_corpus.d_score_list():
-    trigram_labels = adv_score.trigram_strike_annotation_data()
-    # for trigram_label in trigram_labels:
-    for annot in adv_score.annotations():
-        annotated_score = copy.deepcopy(adv_score)
-        annotated_score.finger(staff="upper", d_annotation=annot)
-        annotated_advised_scores.append(annotated_score)
-for indy_score in indy_corpus.d_score_list():
-    trigram_labels = indy_score.trigram_strike_annotation_data()
-    for annot in indy_score.annotations():
-        annotated_score = copy.deepcopy(indy_score)
-        annotated_score.finger(staff="upper", d_annotation=annot)
-        annotated_indy_scores.append(annotated_score)
+annotated_scores = dict()
+corpus_trigram_labels = dict()
+for corpus in corpora:
+    annotated_scores[corpus] = dict()
+    corpus_trigram_labels[corpus] = dict()
+    score_index = 0
+    for score in corpora[corpus].d_score_list():
+        score_number = score_numbers[score_index]
+        annotated_scores[corpus][score_number] = []
+        score_index += 1
+        trigram_labels = score.trigram_strike_annotation_data()
+        corpus_trigram_labels[corpus][score_number] = trigram_labels
+        for annot in score.annotations():
+            annotated_score = copy.deepcopy(score)
+            annotated_score.finger(staff="upper", d_annotation=annot)
+            annotated_scores[corpus][score_number].append(annotated_score)
 
-annotation_data = []
-coder_id = 0
-for indy_score in annotated_indy_scores:
-    item_id = 0
-    orderly_notes = indy_score.orderly_d_notes(staff="upper")
-    for note in orderly_notes:
-        record = [coder_id, item_id, note]
-        annotation_data.append(record)
-        item_id += 1
-    coder_id += 1
-print(annotation_data)
-annot_task = AnnotationTask(data=annotation_data)
-print(round(annot_task.alpha(), 3))
+print(annotated_scores)
+print(corpus_trigram_labels['advised'])
 
-annotation_data = []
-coder_id = 0
-for adv_score in annotated_advised_scores:
-    item_id = 0
-    orderly_notes = adv_score.orderly_d_notes(staff="upper")
-    for note in orderly_notes:
-        record = [coder_id, item_id, note]
-        annotation_data.append(record)
-        item_id += 1
-    coder_id += 1
+results = dict()
+for corpus in annotated_scores:
+    unigram_annotation_data = []
+    trigram_annotation_data = []
+    trigram_label_annotation_data = []
+    coder_id = 0
+    for score_number in annotated_scores[corpus]:
+        for annotated_score in annotated_scores[corpus][score_number]:
+            item_index = 0
+            orderly_notes = annotated_score.orderly_d_notes(staff="upper")
+            trigram = [None, None, None]
+            for note in orderly_notes:
+                trigram, triple = trigram_and_triple(trigram, note)
+                item_id = "{}_{}".format(score_number, item_index)
+                record = [coder_id, item_id, triple]
+                trigram_annotation_data.append(record)
+                record = [coder_id, item_id, note]
+                unigram_annotation_data.append(record)
+                item_index += 1
+            # To include "full trigram context," we need to add two more triples.
+            trigram, triple = trigram_and_triple(trigram, None)
+            item_id = "{}_{}".format(score_number, item_index)
+            record = [coder_id, item_id, triple]
+            trigram_annotation_data.append(record)
+            item_index += 1
+            trigram, triple = trigram_and_triple(trigram, None)
+            item_id = "{}_{}".format(score_number, item_index)
+            record = [coder_id, item_id, triple]
+            trigram_annotation_data.append(record)
 
-annot_task = AnnotationTask(data=annotation_data)
-print(round(annot_task.alpha(), 3))
+        coder_id += 1
+
+    # print(trigram_annotation_data)
+    annot_task = AnnotationTask(data=trigram_annotation_data)
+    results[('trigram_native', corpus)] = annot_task.alpha()
+    annot_task = AnnotationTask(data=unigram_annotation_data)  # distance=unigram_distance
+    results[('unigram_native', corpus)] = annot_task.alpha()
+
+    for score_number in corpus_trigram_labels[corpus]:
+        score_data = corpus_trigram_labels[corpus][score_number]
+        for coder_id in score_data:
+            item_index = 0
+            for label in score_data[coder_id]:
+                item_id = "{}_{}".format(score_number, item_index)
+                record = [coder_id, item_id, label]
+                trigram_label_annotation_data.append(record)
+                item_index += 1
+    print(trigram_label_annotation_data)
+    annot_task = AnnotationTask(data=trigram_label_annotation_data)
+    results[('trigram_label', corpus)] = annot_task.alpha()
+
+for (distance_function, corpus) in sorted(results):
+    print("{} alpha for {}: {}".format(
+        distance_function.rjust(len("trigram_nuanced")),
+        corpus.rjust(len("independent")),
+        round(results[(distance_function, corpus)], 5)))
+
 
 print("Basta")
 

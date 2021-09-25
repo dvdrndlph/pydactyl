@@ -54,22 +54,25 @@ class DNote:
             return False
         return True
 
+    def piano_fingering(self):
+        if PianoFingering.fingerings(self.m21_note()):
+            pf = PianoFingering.fingering(self.m21_note())
+            return pf
+        return None
+
     def __eq__(self, other):
         if not isinstance(other, DNote):
             return False
         if not self._pitches_match(other):
             return False
-        if PianoFingering.fingerings(self.m21_note()):
-            pf = PianoFingering.fingering(self.m21_note())
-            other_pf = PianoFingering.fingering(other.m21_note())
-            if pf != other_pf:
-                return False
+        if self.piano_fingering() != other.piano_fingering():
+            return False
         return True
 
     def __hash__(self):
         if self._prior_note is None:
-            return hash((self._m21_note.pitch.midi, -1))
-        return hash((self._m21_note.pitch.midi, self._prior_note.m21_note().pitch.midi))
+            return hash((self.midi(), None, self.piano_fingering()))
+        return hash((self.midi(), self._prior_note.midi(), self.piano_fingering()))
 
     def m21_note(self):
         return self._m21_note
@@ -94,7 +97,7 @@ class DNote:
         return self._m21_note.duration.quarterLength
 
     def __str__(self):
-        my_str = "MIDI {0}".format(self._m21_note.pitch.midi)
+        my_str = "MIDI {} {}".format(self.midi(), self.piano_fingering())
         return my_str
 
     note_class_is_black = {

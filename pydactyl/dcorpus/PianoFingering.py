@@ -207,6 +207,18 @@ class PianoFingering(Fingering):
 
         super().__init__(fingerNumber=finger_number)
 
+    def __hash__(self):
+        (strike_hand, strike_digit) = self.strike_hand_and_digit()
+        (release_hand, release_digit) = self.release_hand_and_digit()
+        return hash((strike_hand, strike_digit, release_hand, release_digit))
+
+    def __str__(self):
+        (strike_hand, strike_digit) = self.strike_hand_and_digit()
+        (release_hand, release_digit) = self.release_hand_and_digit()
+        my_str = "{}{}-{}{}".format(strike_hand, strike_digit, release_hand, release_digit)
+        return my_str
+
+
     def __eq__(self, other):
         if not isinstance(other, PianoFingering):
             return False
