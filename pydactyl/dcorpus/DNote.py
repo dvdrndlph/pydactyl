@@ -70,15 +70,24 @@ class DNote:
         return True
 
     def __hash__(self):
-        if self._prior_note is None:
-            return hash((self.midi(), None, self.piano_fingering()))
-        return hash((self.midi(), self._prior_note.midi(), self.piano_fingering()))
+        # return hash((self.midi(), self.prior_midi(), self.piano_fingering()))
+        return hash(self.piano_fingering())
+
+    def __repr__(self):
+        my_str = "DNote({} Prior:{} {})".format(
+            self.midi(), self.prior_midi(), self.piano_fingering())
+        return my_str
 
     def m21_note(self):
         return self._m21_note
 
     def prior_note(self):
         return self._prior_note
+
+    def prior_midi(self):
+        if self._prior_note is None:
+            return None
+        return self._prior_note.midi()
 
     def velocity(self, value=None):
         """
@@ -95,10 +104,6 @@ class DNote:
         if value is not None:
             self._m21_note.duration = value
         return self._m21_note.duration.quarterLength
-
-    def __str__(self):
-        my_str = "MIDI {} {}".format(self.midi(), self.piano_fingering())
-        return my_str
 
     note_class_is_black = {
         0: False,

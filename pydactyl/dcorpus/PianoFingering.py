@@ -166,6 +166,9 @@ class PianoFingering(Fingering):
     >>> # combo_stream = score.stream(staff="both")
     >>> # combo_stream.show()
     """
+    DELTA_EPSILON = 0.5
+    TAU_EPSILON = 0.99
+
     CONFIDENCE_EXPLICIT = 1.0
     CONFIDENCE_CLOSED = 0.9
     CONFIDENCE_OPEN = 0.6
@@ -212,39 +215,21 @@ class PianoFingering(Fingering):
         (release_hand, release_digit) = self.release_hand_and_digit()
         return hash((strike_hand, strike_digit, release_hand, release_digit))
 
-    def __str__(self):
+    def __repr__(self):
         (strike_hand, strike_digit) = self.strike_hand_and_digit()
         (release_hand, release_digit) = self.release_hand_and_digit()
         my_str = "{}{}-{}{}".format(strike_hand, strike_digit, release_hand, release_digit)
         return my_str
 
-
     def __eq__(self, other):
         if not isinstance(other, PianoFingering):
             return False
-        if self._strike_hands_and_digits is None and other._strike_hands_and_digits is not None:
-            return False
-        if self._strike_hands_and_digits is not None and other._strike_hands_and_digits is None:
-            return False
-
-        if self._strike_hands_and_digits is not None and other._strike_hands_and_digits is not None:
-            for i in range(len(self._strike_hands_and_digits)):
-                (strike_hand, strike_digit) = self._strike_hands_and_digits[i]
-                (other_strike_hand, other_strike_digit) = other._strike_hands_and_digits[i]
-                if strike_hand != other_strike_hand or strike_digit != other_strike_digit:
-                    return False
-
-        if self._prior_hands_and_digits is None and other._prior_hands_and_digits is not None:
-            return False
-        if self._prior_hands_and_digits is not None and other._prior_hands_and_digits is None:
-            return False
-        if self._prior_hands_and_digits is not None and other._prior_hands_and_digits is not None:
-            for i in range(len(self._prior_hands_and_digits)):
-                (prior_hand, prior_digit) = self._prior_hands_and_digits[i]
-                (other_prior_hand, other_prior_digit) = other._prior_hands_and_digits[i]
-                if prior_hand != other_prior_hand or prior_digit != other_prior_digit:
-                    return False
-        return True
+        (strike_hand, strike_digit) = self.strike_hand_and_digit()
+        (release_hand, release_digit) = self.release_hand_and_digit()
+        (other_strike_hand, other_strike_digit) = other.strike_hand_and_digit()
+        (other_release_hand, other_release_digit) = other.release_hand_and_digit()
+        return (strike_hand == other_strike_hand and strike_digit == other_strike_digit and
+                release_hand == other_release_hand and release_digit == other_release_digit)
 
     @staticmethod
     def finger_score(d_score, staff="upper", abcdh=None, d_annotation=None, id=1):
@@ -421,6 +406,159 @@ class PianoFingering(Fingering):
             return None
         return bits
 
+    @staticmethod
+    def delta_hamming(one_pf, other_pf):
+        if one_pf.strike_digit() != other_pf.strike_digit():
+            return 1.0
+        elif one_pf.strike_hand() != other_pf.strike_hand():
+            return 1.0
+        return 0.0
+
+    @staticmethod
+    def delta_adjacent_long(one_pf, other_pf, epsilon=None):
+        if epsilon is None:
+            epsilon = PianoFingering.DELTA_EPSILON
+
+        if one_pf.strike_hand() != other_pf.strike_hand():
+            return 1.0
+        one_digit = one_pf.strike_digit()
+        other_digit = other_pf.strike_digit()
+        if one_digit == other_digit:
+            return 0.0
+        if (one_digit in (2, 3) and other_digit in (2, 3)) or \
+                (one_digit in (3, 4) and other_digit in (3, 4)):
+            return 1.0 - epsilon
+        return 1.0
+
+    @staticmethod
+    def is_adjacent_long(one_pf, other_pf):
+        """
+        Determine if two fingerings of the input notes are interchangeable
+        because they are adjacent long fingers of the same hand.
+        :param one_pf: The PianoFingering of the middle note of a trigram.
+        :param other_pf: Another PianoFingering for a middle note of the same sequence..
+        :return: True iff they are interchangeable. False otherwise, even if
+                 finger used is the same.
+        """
+        if one_pf.strike_hand() != other_pf.strike_hand():
+            return False
+        one_digit = one_pf.strike_digit()
+        other_digit = other_pf.strike_digit()
+        if one_digit == other_digit:
+            return False
+        if (one_digit in (2, 3) and other_digit in (2, 3)) or \
+                (one_digit in (3, 4) and other_digit in (3, 4)):
+            return True
+        return False
+
+    @staticmethod
+    def is_unigram_match(one_pf, other_pf):
+        if one_pf is None and other_pf is None:
+            return True
+        if one_pf is None or other_pf is None:
+            return False
+        if one_pf.strike_hand() != other_pf.strike_hand():
+            return False
+        if one_pf.strike_digit() == other_pf.strike_digit():
+            return True
+        return False
+
+    @staticmethod
+    def is_ngram_equal(pfs, other_pfs):
+        if len(pfs) != len(other_pfs):
+            return False
+        for i in range(0, len(pfs)):
+            one_pf = pfs[i]
+            other_pf = other_pfs[i]
+            if not PianoFingering.is_unigram_match(one_pf, other_pf):
+                return False
+        return True
+
+    @staticmethod
+    def is_trigram_equal(pfs, other_pfs):
+        return PianoFingering.is_ngram_equal(pfs, other_pfs)
+
+    @staticmethod
+    def is_trigram_similar(pfs, other_pfs, proxy_test=None):
+        if proxy_test is None:
+            raise Exception("No nuance without an interchange_test function.")
+
+        if PianoFingering.is_trigram_equal(pfs, other_pfs):
+            return True
+
+        if not PianoFingering.is_unigram_match(pfs[0], other_pfs[0]):
+            return False
+        if not PianoFingering.is_unigram_match(pfs[2], other_pfs[2]):
+            return False
+
+        if proxy_test(pfs[1], other_pfs[1]):
+            return True
+        return False
+
+    @staticmethod
+    def is_similar_at(pfs, other_pfs, proxy_test=None):
+        """
+        Check trigram similarity around the middle index of a three-fingering sequence.
+        :param pfs: One sequence of PianoFingerings.
+        :param other_pfs: Another sequence over the same set of notes.
+        :param proxy_test: Function to determine if trigrams are indeed similar.
+        :return:
+        """
+        if PianoFingering.is_unigram_match(pfs[1], other_pfs[1]):
+            return True
+        return PianoFingering.is_trigram_similar(pfs, other_pfs, proxy_test=proxy_test)
+
+    @staticmethod
+    def tau_trigram(pfs, other_pfs, proxy_test=None):
+        if PianoFingering.is_trigram_equal(pfs, other_pfs):
+            return 0.0
+        return 1.0
+
+    @staticmethod
+    def tau_nuanced(pfs, other_pfs, proxy_test=None, epsilon=None):
+        if proxy_test is None:
+            proxy_test = PianoFingering.is_adjacent_long
+        if epsilon is None:
+            epsilon = PianoFingering.TAU_EPSILON
+
+        note_count = len(pfs)
+        check_count = len(other_pfs)
+        if note_count != check_count:
+            raise Exception("Note stream count mismatch")
+
+        if PianoFingering.is_trigram_equal(pfs, other_pfs):
+            return 0.0
+
+        if PianoFingering.is_trigram_similar(pfs, other_pfs, proxy_test=proxy_test):
+            return 1.0 - epsilon
+
+        return 1.0
+
+    @staticmethod
+    def tau_relaxed(pfs, other_pfs, proxy_test=None, epsilon=None):
+        if proxy_test is None:
+            proxy_test = PianoFingering.is_adjacent_long
+        if epsilon is None:
+            epsilon = PianoFingering.TAU_EPSILON
+
+        note_count = len(pfs)
+        check_count = len(other_pfs)
+        if note_count != check_count:
+            raise Exception("Note stream count mismatch")
+
+        if PianoFingering.is_trigram_equal(pfs, other_pfs):
+            return 0.0
+
+        # Okay, we need more than 3 fingerings to deterimine this. We need three trigrams
+        # worth of fingerings. That is, 5.
+        start = index - 2
+        stop = index + 1
+        for i in range(start, stop):
+            if not DEvalFunction.is_similar_at(one_note_stream, other_note_stream,
+                                               middle_index=i, proxy_test=proxy_test):
+                return 1.0
+
+        return 1.0 - epsilon
 
 if __name__ == "__main__":
     import doctest

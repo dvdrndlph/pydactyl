@@ -40,11 +40,14 @@ def trigram_distance(one, other):
     return 0.0
 
 
-def trigram_and_triple(old_trigram, note):
+def trigram_and_triple(old_trigram, new_note):
     new_trigram = [None, None, None]
     new_trigram[0] = old_trigram[1]
     new_trigram[1] = old_trigram[2]
-    new_trigram[2] = note
+    if new_note is not None:
+        new_trigram[2] = new_note.piano_fingering()
+    else:
+        new_trigram[2] = None
     nova_triple = tuple(new_trigram)
     return new_trigram, nova_triple
 
@@ -112,7 +115,7 @@ for corpus in annotated_scores:
     trigram_annotation_data = []
     trigram_label_annotation_data = []
     unigram_label_annotation_data = []
-    coder_id = 0
+    coder_id = 1
     for score_number in annotated_scores[corpus]:
         for annotated_score in annotated_scores[corpus][score_number]:
             item_index = 0
@@ -123,7 +126,7 @@ for corpus in annotated_scores:
                 item_id = "{}_{}".format(score_number, item_index)
                 record = [coder_id, item_id, triple]
                 trigram_annotation_data.append(record)
-                record = [coder_id, item_id, note]
+                record = [coder_id, item_id, note.piano_fingering()]
                 unigram_annotation_data.append(record)
                 item_index += 1
             # To include "full trigram context," we need to add two more triples.
@@ -136,12 +139,7 @@ for corpus in annotated_scores:
             item_id = "{}_{}".format(score_number, item_index)
             record = [coder_id, item_id, triple]
             trigram_annotation_data.append(record)
-        coder_id += 1
-
-    annot_task = AnnotationTask(data=trigram_annotation_data)
-    results[('trigram_native', corpus)] = annot_task.alpha()
-    annot_task = AnnotationTask(data=unigram_annotation_data)  # distance=unigram_distance
-    results[('unigram_native', corpus)] = annot_task.alpha()
+            coder_id += 1
 
     for score_number in corpus_trigram_labels[corpus]:
         score_trigram_data = corpus_trigram_labels[corpus][score_number]
@@ -159,10 +157,16 @@ for corpus in annotated_scores:
                 record = [coder_id, item_id, label]
                 unigram_label_annotation_data.append(record)
                 item_index += 1
-    annot_task = AnnotationTask(data=trigram_label_annotation_data)
-    results[('trigram_label', corpus)] = annot_task.alpha()
+
+    annot_task = AnnotationTask(data=unigram_annotation_data)  # distance=unigram_distance
+    results[('unigram_native', corpus)] = annot_task.alpha()
+    annot_task = AnnotationTask(data=trigram_annotation_data)
+    results[('trigram_native', corpus)] = annot_task.alpha()
+
     annot_task = AnnotationTask(data=unigram_label_annotation_data)
     results[('unigram_label', corpus)] = annot_task.alpha()
+    annot_task = AnnotationTask(data=trigram_label_annotation_data)
+    results[('trigram_label', corpus)] = annot_task.alpha()
 
 print(trigram_label_annotation_data)
 print(trigram_annotation_data)
