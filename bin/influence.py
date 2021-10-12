@@ -25,8 +25,8 @@ __author__ = 'David Randolph'
 import copy
 
 from nltk.metrics.agreement import AnnotationTask
-from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
-from pydactyl.dcorpus.DEvaluation import DEvalFunction
+from pydactyl.dcorpus.DCorpus import DCorpus
+from pydactyl.dcorpus.PianoFingering import PianoFingering
 
 import matplotlib
 matplotlib.use('TkAgg')
@@ -120,6 +120,7 @@ for corpus in annotated_scores:
         for annotated_score in annotated_scores[corpus][score_number]:
             item_index = 0
             orderly_notes = annotated_score.orderly_d_notes(staff="upper")
+            # five_gram = [None, None, None, None, None]
             trigram = [None, None, None]
             for note in orderly_notes:
                 trigram, triple = trigram_and_triple(trigram, note)
@@ -158,15 +159,21 @@ for corpus in annotated_scores:
                 unigram_label_annotation_data.append(record)
                 item_index += 1
 
-    annot_task = AnnotationTask(data=unigram_annotation_data)  # distance=unigram_distance
-    results[('unigram_native', corpus)] = annot_task.alpha()
-    annot_task = AnnotationTask(data=trigram_annotation_data)
-    results[('trigram_native', corpus)] = annot_task.alpha()
+    annot_task = AnnotationTask(data=unigram_annotation_data, distance=PianoFingering.delta_hamming)
+    results[('hamming_unigram_object', corpus)] = annot_task.alpha()
+    annot_task = AnnotationTask(data=unigram_annotation_data, distance=PianoFingering.delta_adjacent_long)
+    results[('adjlong_unigram_object', corpus)] = annot_task.alpha()
 
-    annot_task = AnnotationTask(data=unigram_label_annotation_data)
-    results[('unigram_label', corpus)] = annot_task.alpha()
-    annot_task = AnnotationTask(data=trigram_label_annotation_data)
-    results[('trigram_label', corpus)] = annot_task.alpha()
+    annot_task = AnnotationTask(data=trigram_annotation_data, distance=PianoFingering.tau_trigram)
+    results[('hamming_trigram_object', corpus)] = annot_task.alpha()
+    annot_task = AnnotationTask(data=trigram_annotation_data, distance=PianoFingering.tau_nuanced)
+    results[('nuanced_trigram_object', corpus)] = annot_task.alpha()
+
+    # annot_task = AnnotationTask(data=unigram_label_annotation_data)
+    # results[('unigram_label', corpus)] = annot_task.alpha()
+    # annot_task = AnnotationTask(data=trigram_label_annotation_data)
+    # results[('trigram_label', corpus)] = annot_task.alpha()
+    # These sanity checks pass: They match their object counterparts.
 
 print(trigram_label_annotation_data)
 print(trigram_annotation_data)
@@ -175,7 +182,7 @@ print(unigram_annotation_data)
 
 for (distance_function, corpus) in sorted(results):
     print("{} alpha for {}: {}".format(
-        distance_function.rjust(len("trigram_nuanced")),
+        distance_function.rjust(len("adjlong_unigram_object")),
         corpus.rjust(len("independent")),
         round(results[(distance_function, corpus)], 5)))
 

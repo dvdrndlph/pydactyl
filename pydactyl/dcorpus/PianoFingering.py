@@ -440,6 +440,8 @@ class PianoFingering(Fingering):
         :return: True iff they are interchangeable. False otherwise, even if
                  finger used is the same.
         """
+        if one_pf is None or other_pf is None:
+            return False
         if one_pf.strike_hand() != other_pf.strike_hand():
             return False
         one_digit = one_pf.strike_digit()
@@ -476,6 +478,8 @@ class PianoFingering(Fingering):
 
     @staticmethod
     def is_trigram_equal(pfs, other_pfs):
+        if len(pfs) != len(other_pfs):
+            return False
         return PianoFingering.is_ngram_equal(pfs, other_pfs)
 
     @staticmethod
@@ -499,14 +503,14 @@ class PianoFingering(Fingering):
     def is_similar_at(pfs, other_pfs, proxy_test=None):
         """
         Check trigram similarity around the middle index of a three-fingering sequence.
-        :param pfs: One sequence of PianoFingerings.
+        :param pfs: An array of three PianoFingerings, with the middle fingering at index 1.
         :param other_pfs: Another sequence over the same set of notes.
         :param proxy_test: Function to determine if trigrams are indeed similar.
-        :return:
+        :return: True iff similar. False otherwise.
         """
         if PianoFingering.is_unigram_match(pfs[1], other_pfs[1]):
             return True
-        return PianoFingering.is_trigram_similar(pfs, other_pfs, proxy_test=proxy_test)
+        return PianoFingering.is_trigram_similar(pfs, other_pfs)
 
     @staticmethod
     def tau_trigram(pfs, other_pfs, proxy_test=None):
@@ -536,6 +540,17 @@ class PianoFingering(Fingering):
 
     @staticmethod
     def tau_relaxed(pfs, other_pfs, proxy_test=None, epsilon=None):
+        """
+        Though presented as a "trigram" measure, it actually takes five notes of
+        context to calculate the relaxed measure.
+        :param pfs: List of 5 PianoFingering objects or Nones. Note that None == None.
+        :param other_pfs: Another list over the same sequence of notes.
+        :param proxy_test: A function to determine if one unigram PianoFingering is
+        similar to another.
+        :param epsilon: The penalty to incur (0 <= epsilon <= 1) to incur if a match
+        is only a proxy match.
+        :return:
+        """
         if proxy_test is None:
             proxy_test = PianoFingering.is_adjacent_long
         if epsilon is None:
@@ -546,17 +561,16 @@ class PianoFingering(Fingering):
         if note_count != check_count:
             raise Exception("Note stream count mismatch")
 
-        if PianoFingering.is_trigram_equal(pfs, other_pfs):
+        if PianoFingering.is_trigram_equal(pfs[0:3], other_pfs[0:3]):
             return 0.0
 
-        # Okay, we need more than 3 fingerings to deterimine this. We need three trigrams
-        # worth of fingerings. That is, 5.
-        start = index - 2
-        stop = index + 1
-        for i in range(start, stop):
-            if not DEvalFunction.is_similar_at(one_note_stream, other_note_stream,
-                                               middle_index=i, proxy_test=proxy_test):
-                return 1.0
+        # Okay, we need up to 4 fingerings to determine this.
+        if not PianoFingering.is_similar_at(pfs[0:2], other_pfs[0:2], proxy_test=proxy_test):
+            return 1.0
+        if not PianoFingering.is_similar_at(pfs[1:3], other_pfs[1:3], proxy_test=proxy_test):
+            return 1.0
+        if not PianoFingering.is_similar_at(pfs[2:4], other_pfs[2:4], proxy_test=proxy_test):
+            return 1.0
 
         return 1.0 - epsilon
 
