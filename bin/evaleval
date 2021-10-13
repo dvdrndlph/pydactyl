@@ -299,7 +299,8 @@ pivot_rpt_file = open(OUTPUT_DIR + '/pivot_reports.txt', 'w')
 
 # for corpus_name in ['scales', 'arpeggios', 'broken', 'beringer', 'pig', 'all_american', 'pure_american', 'parncutt_published', 'full_american']:
 # for corpus_name in ['pig', 'full_american', 'parncutt_published']:
-for corpus_name in ['scales', 'arpeggios', 'broken', 'beringer']:
+# for corpus_name in ['scales', 'arpeggios', 'broken', 'beringer']:
+for corpus_name in ['broken']:
     # for model_name in ['ideal', 'badge', 'jacobs', 'parncutt', 'random']:
     # for model_name in ['ideal', 'jacobs', 'parncutt', 'random']:
     for model_name in ['random']:
@@ -321,7 +322,10 @@ for corpus_name in ['scales', 'arpeggios', 'broken', 'beringer']:
                 annot = abcdh.annotation_by_id(annot_id)
                 comment = annot.comments()
                 mat = re.match(WEIGHT_RE, comment)
-                weight = int(mat.group(1))
+                if mat:
+                    weight = int(mat.group(1))
+                else:
+                    weight = 1
 
                 human_score = copy.deepcopy(da_score)
                 PianoFingering.finger_score(d_score=human_score, staff=STAFF, id=annot_id)
