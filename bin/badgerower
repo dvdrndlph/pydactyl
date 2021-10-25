@@ -186,7 +186,7 @@ def get_system_scores(model_name, d_score):
             model = Parncutt()
         elif model_name == 'jacobs':
             model = Jacobs()
-        elif model_name == 'badge':
+        elif model_name == 'badgerow':
             model = Badgerow()
         else:
             raise Exception("Bad model")
@@ -300,18 +300,15 @@ pivot_rpt_file = open(OUTPUT_DIR + '/pivot_reports.txt', 'w')
 # for corpus_name in ['scales', 'arpeggios', 'broken', 'beringer', 'pig', 'all_american', 'pure_american', 'parncutt_published', 'full_american']:
 # for corpus_name in ['pig', 'full_american', 'parncutt_published']:
 # for corpus_name in ['scales', 'arpeggios', 'broken', 'beringer']:
-for corpus_name in ['broken']:
-    # for model_name in ['ideal', 'badge', 'jacobs', 'parncutt', 'random']:
+for corpus_name in ['full_american', 'parncutt_published']:
+    # for model_name in ['ideal', 'badgerow', 'jacobs', 'parncutt', 'random']:
     # for model_name in ['ideal', 'jacobs', 'parncutt', 'random']:
-    for model_name in ['random']:
+    for model_name in ['badgerow', 'jacobs', 'parncutt']:
         da_corpus = get_corpus(corpus_name=corpus_name)
-        # continue
         for da_score in da_corpus.d_score_list():
             system_scores = get_system_scores(model_name=model_name, d_score=da_score)
             title = da_score.title()
             note_count = da_score.note_count(staff=STAFF)
-            # if note_count != 4:
-                # continue  # Focus on only exercise with pivots (which has 4 notes)
             # print(da_score)
             print("{} in {}".format(title, corpus_name), file=pivot_rpt_file)
             abcdh = da_score.abcd_header()

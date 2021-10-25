@@ -1,0 +1,243 @@
+#!/usr/bin/env python
+__author__ = 'David Randolph'
+# Copyright (c) 2021 David A. Randolph.
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without
+# restriction, including without limitation the rights to use,
+# copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following
+# conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+
+from scipy import stats
+from statsmodels.stats.multicomp import MultiComparison
+import sys
+import csv
+import numpy as np
+import pandas as pd
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+
+DISPLAY = {
+    'parncutt_published': 'Parncutt Published',
+    'full_american': 'Complete Americas',
+}
+
+
+def spew_out(name, method, result, itemized, spew=False):
+    if spew:
+        print("{} {}: {} => {}".format(name, method, result, itemized))
+
+
+def published_parncutt_std_evaluate(cutter, name="", spew=False):
+    err2_10, err2_10_itemized, undef = cutter.err_at_k(k=10, prob_function=None)
+    spew_out(name=name, method='meanERR2@10', result=err2_10, itemized=err2_10_itemized, spew=spew)
+    err_10, err_10_itemized, undef = cutter.err_at_k(k=10)
+    spew_out(name=name, method='meanERR@10', result=err_10, itemized=err_10_itemized, spew=spew)
+    results = {
+        'err2_10': {'result': err2_10, 'itemized': err2_10_itemized},
+        'err_10': {'result': err_10, 'itemized': err_10_itemized},
+    }
+    return results
+
+
+def graph_results(name, title, results, corpus):
+    plt.style.use('classic')
+    # x = np.arange(7)
+    my_xticks = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+    fig, ax = plt.subplots()
+    for method in results:
+        itemized = results[method]['itemized']
+        items = np.array(itemized, np.float)
+        ax.plot(my_xticks, items, label=method)
+    plt.title(title)
+    fig.subplots_adjust(bottom=0.3)
+    ax.set_ylim(0, 1)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), shadow=True, ncol=3)
+    extension = 'pdf'
+    file_path = '../../doc/drawings/pyplots/{}_{}.{}'.format(corpus, name, extension)
+    plt.savefig(file_path, format=extension)
+    # plt.show()
+
+
+def load_csv(file_path):
+    results = []
+    with open(file_path, 'r') as f:
+        rdr = csv.DictReader(f, skipinitialspace=True)
+        try:
+            for row_dict in rdr:
+                for k, v in row_dict.items():
+                    v = v.strip()
+                    row_dict[k] = v
+                # print(row_dict)
+                results.append(row_dict)
+        except csv.Error as e:
+            sys.exit('file {}, line {}: {}'.format(file_path, rdr.line_num, e))
+    f.close()
+    return results
+
+
+def ttest_greater_than(little, big, threshold=0.5):
+    '''
+    Determine if one the mean one sample is significantly larger (in a statistical sense)
+    than another per a one-sided paired t-test.
+    :param little: The putatively smaller sample data.
+    :param big: The putatively larger sample.
+    :return: Tuple of (is_greater, is_significantly_greater, p_value).
+    '''
+    statistic, p_value = stats.ttest_rel(little, big, alternative='less')
+    is_greater = False
+    is_significantly_greater = False
+    if statistic < 0:
+        is_greater = True
+        if p_value < threshold:
+            is_significantly_greater = True
+    return is_greater, is_significantly_greater, p_value
+
+# pp_dat = process_corpus(corpus='parncutt_published')
+# ap_dat = process_corpus(corpus='american_parncutt_pure')
+# corpus_delta(pp_dat=pp_dat, ap_dat=ap_dat)
+
+
+input_dir = '/Users/dave/tb2/doc/data/badgerow'
+err_file_path = input_dir + '/err_results.csv'
+err_data = load_csv(file_path=err_file_path)
+hamming_err_vals = {}
+adj_long_err_vals = {}
+trigram_err_vals = {}
+nuanced_err_vals = {}
+relaxed_err_vals = {}
+err_vals = {}
+best_to_worst_models = ['badgerow', 'jacobs', 'parncutt']
+methods = ['hmg', 'al', 'tri', 'tri_nua', 'tri_rlx']
+corpora = ['full_american', 'parncutt_published']
+for corpus_name in corpora:
+    for model_name in best_to_worst_models:
+        annotation_id = 0
+        human_annotation_id = 0
+        note_count = 0
+        for method in methods:
+            if method not in err_vals:
+                err_vals[method] = {}
+            err_vals[method][(corpus_name, model_name)] = []
+            for dat in err_data:
+                if dat['corpus'] != corpus_name or dat['model'] != model_name:
+                    continue
+                annotation_id += 1
+                annotation_count = int(dat['weight'])
+                notes_in_phrase = int(dat['weight'])
+                for h in range(annotation_count):
+                    err_vals[method][(corpus_name, model_name)].append(float(dat[method]))
+                    note_count += notes_in_phrase
+                    human_annotation_id += 1
+
+        print("{} {} represents {} notes with {} human annotations.".
+              format(corpus_name, model_name, note_count, human_annotation_id))
+
+
+# Okay, we use an ANOVA test to establish that the variances we see among all the
+# model means for each method are real and (we hope) statistically significant.
+for meth in methods:
+    for corpus_name in corpora:
+        samples = []
+        for model_name in best_to_worst_models:
+            samples.append(err_vals[meth][(corpus_name, model_name)])
+        # statistic, p_val = stats.levene(*samples)
+        # print("Levene statistic for {} method over corpus {}: {}, p={}".format(meth, corpus_name, statistic, p_val))
+        statistic, p_val = stats.f_oneway(*samples)
+        print("ANOVA for {} method over corpus {}: F={}, p={}".format(meth, corpus_name, statistic, p_val))
+
+# Combining the corpora....
+# FIXME: We can't really do that, since the ideal and random models are actually different
+# for each corpus. We should have had the same model for both, using the full corpus for ideal
+# and truncating (and combining) the phrases.
+combined_vals = {}
+for meth in methods:
+    if meth not in combined_vals:
+        combined_vals[meth] = {}
+    for corpus_name in corpora:
+        for model_name in best_to_worst_models:
+            if model_name not in combined_vals[meth]:
+                combined_vals[meth][model_name] = []
+            combined_vals[meth][model_name].extend(err_vals[meth][(corpus_name, model_name)])
+    # for model_name in best_to_worst_models:
+    #     print("{} method (evaluated with '{}' method) has {} vals".format(
+    #         model_name, meth, len(combined_vals[meth][model_name])))
+
+for meth in methods:
+    samples = []
+    for model_name in best_to_worst_models:
+        samples.append(combined_vals[meth][model_name])
+    statistic, p_val = stats.f_oneway(*samples)
+    print("ANOVA for {} method over all data: F={}, p={}".format(meth, statistic, p_val))
+
+# With all green lights from ANOVA, we proceed to post-hoc Tukey test to
+# say something about pairwise comparisons between the competing models.
+for meth in methods:
+    for corpus_name in corpora:
+        df = pd.DataFrame()
+        for model_name in best_to_worst_models:
+            df[model_name] = err_vals[meth][(corpus_name, model_name)]
+
+        # Stack the data (and rename columns):
+        stacked_data = df.stack().reset_index()
+        stacked_data = stacked_data.rename(columns={'level_0': 'id',
+                                                    'level_1': 'model',
+                                                    0: 'result'})
+        mc = MultiComparison(stacked_data['result'], stacked_data['model'])
+        print("Tukey for {} method over corpus {}:".format(meth, corpus_name))
+        print(mc.tukeyhsd().summary())
+        print()
+
+for meth in methods:
+    df = pd.DataFrame()
+    for model_name in best_to_worst_models:
+        # print("{} has {} vals".format(model_name, len(combined_vals[meth][model_name])))
+        df[model_name] = combined_vals[meth][model_name]
+    # Stack the data (and rename columns):
+    stacked_data = df.stack().reset_index()
+    stacked_data = stacked_data.rename(columns={'level_0': 'id',
+                                                'level_1': 'model',
+                                                0: 'result'})
+    mc = MultiComparison(stacked_data['result'], stacked_data['model'])
+    print("Tukey for '{}' method over all data:".format(meth))
+    print(mc.tukeyhsd().summary())
+    print()
+
+
+# We should compute Spearman's rank correlation coefficients between each pair of methods to establish that
+# they all measure the same thing. But isn't this kinda redundant??
+
+# We do want to see if the difference between Hamming for ideal and Hamming for random is
+# significantly different from the difference Relaxed for ideal and Relaxed for random.
+
+for corpus_name in corpora:
+    hmg_diffs = []
+    for i in range(len(err_vals['hmg'][(corpus_name, 'random')])):
+        diff = err_vals['hmg'][(corpus_name, 'ideal')][i] - err_vals['hmg'][(corpus_name, 'random')][i]
+        hmg_diffs.append(diff)
+    rlx_diffs = []
+    for i in range(len(err_vals['tri_rlx'][(corpus_name, 'random')])):
+        diff = err_vals['tri_rlx'][(corpus_name, 'ideal')][i] - err_vals['tri_rlx'][(corpus_name, 'random')][i]
+        rlx_diffs.append(diff)
+
+    is_greater, is_sig_greater, p_val = \
+        ttest_greater_than(little=hmg_diffs, big=rlx_diffs)
+
+    print(is_sig_greater)
+    print(p_val)
