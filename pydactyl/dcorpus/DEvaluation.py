@@ -306,7 +306,7 @@ class DEvaluation:
         self._human_score = None
         self._human_note_stream = None
         self.human_score(d_score=human_score)
-        self._system_scores = system_scores
+        self._system_scores = []
         self._system_note_streams = []
         self.system_scores(system_scores)
         self._delta_function = delta_function
@@ -386,8 +386,6 @@ class DEvaluation:
         return self._human_score
 
     def system_scores(self, system_scores=None):
-        if system_scores is None:
-            system_scores = []
         if system_scores:
             for d_score in system_scores:
                 self.append_system_score(d_score)
