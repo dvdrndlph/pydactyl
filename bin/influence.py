@@ -273,10 +273,10 @@ for corpus_name in annotated_scores:
     # results[('trigram_label', corpus_name)] = annot_task.alpha()
     # These sanity checks pass: They match their object counterparts.
 
-print(trigram_label_annotation_data)
-print(trigram_annotation_data)
-print(unigram_label_annotation_data)
-print(unigram_annotation_data)
+# print(trigram_label_annotation_data)
+# print(trigram_annotation_data)
+# print(unigram_label_annotation_data)
+# print(unigram_annotation_data)
 
 for (distance_function, corpus_name) in sorted(results):
     print("{} alpha for {}: {}".format(
