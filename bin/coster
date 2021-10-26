@@ -111,7 +111,7 @@ def graph_results(name, title, results, corpus):
     fig, ax = plt.subplots()
     for method in results:
         itemized = results[method]['itemized']
-        items = np.array(itemized, np.float)
+        items = np.array(itemized, float)
         ax.plot(my_xticks, items, label=method)
     plt.title(title)
     fig.subplots_adjust(bottom=0.3)
@@ -167,13 +167,13 @@ def process_corpus(corpus):
         fig, ax = plt.subplots()
         p_result = parncutt_std_results[method]['result']
         p_itemized = parncutt_std_results[method]['itemized']
-        p_items = np.array(p_itemized, np.float)
+        p_items = np.array(p_itemized, float)
         j_result = jacobs_std_results[method]['result']
         j_itemized = jacobs_std_results[method]['itemized']
-        j_items = np.array(j_itemized, np.float)
+        j_items = np.array(j_itemized, float)
         b_result = badgerow_std_results[method]['result']
         b_itemized = badgerow_std_results[method]['itemized']
-        b_items = np.array(b_itemized, np.float)
+        b_items = np.array(b_itemized, float)
 
         ax.plot(my_xticks, alpha_items, linestyle=":", color="gray", label="Alpha")
         ax.plot(my_xticks, p_items, label="Parncutt")
