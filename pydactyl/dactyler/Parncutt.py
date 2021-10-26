@@ -125,9 +125,9 @@ BADGEROW_FINGER_SPANS = {
 
     ('>1', '>2'): {'MinPrac': -5, 'MinComf': -3, 'MinRel': 1, 'MaxRel': 5, 'MaxComf': 9, 'MaxPrac': 10},
     ('>1', '>3'): {'MinPrac': -4, 'MinComf': -2, 'MinRel': 1, 'MaxRel': 7, 'MaxComf': 11, 'MaxPrac': 12},
-    ('>1', '>4'): {'MinPrac': -3, 'MinComf': -1, 'MinRel': 3, 'MaxRel': 9, 'MaxComf': 13, 'MaxPrac': 14},
+    ('>1', '>4'): {'MinPrac': -3, 'MinComf': -1, 'MinRel': 2, 'MaxRel': 9, 'MaxComf': 13, 'MaxPrac': 14},
     ('>1', '>5'): {'MinPrac': -1, 'MinComf': 1, 'MinRel': 7, 'MaxRel': 10, 'MaxComf': 14, 'MaxPrac': 15},
-    ('>2', '>3'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 3, 'MaxPrac': 5},
+    ('>2', '>3'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 2, 'MaxPrac': 5},
     ('>2', '>4'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 3, 'MaxRel': 4, 'MaxComf': 5, 'MaxPrac': 7},
     ('>2', '>5'): {'MinPrac': 2, 'MinComf': 2, 'MinRel': 5, 'MaxRel': 6, 'MaxComf': 8, 'MaxPrac': 10},
     ('>3', '>4'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 2, 'MaxPrac': 4},
@@ -136,7 +136,7 @@ BADGEROW_FINGER_SPANS = {
 
     ('>2', '>1'): {'MinPrac': -10, 'MinComf': -9, 'MinRel': -5, 'MaxRel': -1, 'MaxComf': 3, 'MaxPrac': 5},
     ('>3', '>1'): {'MinPrac': -12, 'MinComf': -11, 'MinRel': -7, 'MaxRel': -1, 'MaxComf': 2, 'MaxPrac': 4},
-    ('>4', '>1'): {'MinPrac': -14, 'MinComf': -13, 'MinRel': -9, 'MaxRel': -3, 'MaxComf': 1, 'MaxPrac': 3},
+    ('>4', '>1'): {'MinPrac': -14, 'MinComf': -13, 'MinRel': -9, 'MaxRel': -2, 'MaxComf': 1, 'MaxPrac': 3},
     ('>5', '>1'): {'MinPrac': -15, 'MinComf': -14, 'MinRel': -10, 'MaxRel': -7, 'MaxComf': -1, 'MaxPrac': 1},
     ('>3', '>2'): {'MinPrac': -5, 'MinComf': -3, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
     ('>4', '>2'): {'MinPrac': -7, 'MinComf': -5, 'MinRel': -4, 'MaxRel': -3, 'MaxComf': -1, 'MaxPrac': -1},
@@ -294,8 +294,8 @@ class Parncutt(D.Dactyler):
         elif min_prac <= required_span <= max_prac:
             return True
 
-        print("BAD {0} to {1} trans of span {2} (between {3} and {4})".
-              format(from_digit, to_digit, required_span, min_prac, max_prac))
+        # print("BAD {0} to {1} trans of span {2} (between {3} and {4})".
+              # format(from_digit, to_digit, required_span, min_prac, max_prac))
         return False
 
     @staticmethod
@@ -1223,7 +1223,7 @@ class Badgerow(Parncutt):
             'apr': 1,
             'afc': 1,
             # 'wb1': 1,
-            'b1w': 1,
+            'b1p': 1,
         }
 
     def init_costs(self):
@@ -1242,7 +1242,7 @@ class Badgerow(Parncutt):
             'apr': 0,
             'afc': 0,
             # 'wb1': 0,
-            'b1w': 0,
+            'b1p': 0,
         }
         return costs
 
@@ -1253,7 +1253,7 @@ class Badgerow(Parncutt):
         # "If PCC (Position Change Count) is less than or equal to 1, assign points exceeding
         # MaxComf, not MaxRel. So, for finger pairs including the thumb, assign 1 point for
         # each semitone that an interval exceeds MaxComf. For finger pairs not including
-        # the thumb, assign 2 points per semitone than an interval exceeds MaxComf."
+        # the thumb, assign 2 points per semitone than [that] an interval exceeds MaxComf."
         #
         if not midi_1:
             return
@@ -1299,16 +1299,46 @@ class Badgerow(Parncutt):
     def assess_alternation_pairing(self, costs, digit_1, digit_2, digit_3):
         # New Rule ("Alternation-Pairing") from Justin Badgerow
         # "Assign 1 point for 3-4-3 or 4-3-4 combinations and 1 point for 4-5-4 or 5-4-5 combinations."
+        ### FIXME: Justin says, "MAYBE DELETE??"
         if (digit_1 == 3 and digit_2 == 4 and digit_3 == 3) or (digit_1 == 4 and digit_2 == 3 and digit_3 == 4) or \
            (digit_1 == 4 and digit_2 == 5 and digit_3 == 4) or (digit_1 == 5 and digit_2 == 4 and digit_3 == 5):
             costs['apr'] = self._weights['apr']
 
     def assess_alternation_finger_change(self, costs, digit_1, midi_1, digit_3, midi_3):
         # New Rule ("Alternation-Finger-Change") from Justin Badgerow
-        # "Where the first and third notes are the same, assign 1 point when a different finger
-        # is used for these two notes."
+        # "On three note passages where the 1st and 3rd note are the same, add a 1 point
+        # deduction when a different finger is on the 1st and 3rd pitch.
         if digit_1 and digit_3 and midi_1 == midi_3 and digit_1 != digit_3:
             costs['afc'] = self._weights['afc']
+
+    def assess_black_thumb_pivot(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
+        if midi_1 == midi_2:
+            return
+        if not midi_1:
+            return
+        if midi_1 == midi_2:
+            return
+        hand_1 = D.Dactyler.digit_hand(handed_digit_1)
+        hand_2 = D.Dactyler.digit_hand(handed_digit_2)
+        if hand_1 != hand_2:
+            return
+
+        digit_1 = D.Dactyler.digit_only(handed_digit_1)
+        digit_2 = D.Dactyler.digit_only(handed_digit_2)
+        if hand_1 == '>':
+            if midi_2 < midi_1:  # descending
+                if digit_1 == C.THUMB and is_black(midi_1) and digit_2 in (C.RING, C.LITTLE) and is_white(midi_2):
+                    costs['b1p'] += (digit_2 - 1) * self._weights['b1p']
+            else:  # ascending
+                if digit_2 == C.THUMB and is_black(midi_2) and digit_1 in (C.RING, C.LITTLE) and is_white(midi_1):
+                    costs['b1p'] += (digit_2 - 1) * self._weights['b1p']
+        else:  # LH
+            if midi_2 > midi_1:  # ascending
+                if digit_1 == C.THUMB and is_black(midi_1) and digit_2 in (C.RING, C.LITTLE) and is_white(midi_2):
+                    costs['b1p'] += (digit_2 - 1) * self._weights['b1p']
+            else:  # descending
+                if digit_2 == C.THUMB and is_black(midi_2) and digit_1 in (C.RING, C.LITTLE) and is_white(midi_1):
+                    costs['b1p'] += (digit_2 - 1) * self._weights['b1p']
 
     def assess_thumb_on_black_to_weak(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
         if midi_1 == midi_2:
@@ -1316,35 +1346,39 @@ class Badgerow(Parncutt):
         digit_1 = D.Dactyler.digit_only(handed_digit_1) if midi_1 else None
         if digit_1 != C.THUMB or is_white(midi_1):
             return
+        # So a thumb is playing a black note 1.
+
         digit_2 = D.Dactyler.digit_only(handed_digit_2)
         if is_black(midi_2) or digit_2 not in (C.RING, C.LITTLE):
             return
+        # So a weak finger is playing a white note 2.
+
         hand_1 = D.Dactyler.digit_hand(handed_digit_1)
         hand_2 = D.Dactyler.digit_hand(handed_digit_2)
         if hand_1 != hand_2:
             return
 
-        # ANY descending move from 1-4 or 1-5 from black to white key, regardless of size,
-        # will be penalized an extra 2 points for 1-4 pairs and an extra 3 points for 1-5 pairs.
+        # For RH, ANY descending move from 1-4 or 1-5 from black to white key, regardless of size,
+        # will be penalized an extra 3 points for 1-4 pairs and an extra 4 points for 1-5 pairs.
         # Assess the same penalties for ascending intervals, if said intervals are less
         # than MinRel. And flip this around for the left hand.
 
         if hand_1 == '>':
             if midi_1 > midi_2:  # descending
-                costs['b1w'] += (digit_2 - 2) * self._weights['b1w']
+                costs['b1w'] += (digit_2 - 1) * self._weights['b1w']
             else:
                 distance = self.distance(midi_1, midi_2)
                 min_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinRel']
                 if distance < min_rel_12:
-                    costs['b1w'] += (digit_2 - 2) * self._weights['b1w']
+                    costs['b1w'] += (digit_2 - 1) * self._weights['b1w']
         else:  # Left hand
             if midi_2 > midi_1:  # ascending
-                costs['b1w'] += (digit_2 - 2) * self._weights['b1w']
+                costs['b1w'] += (digit_2 - 1) * self._weights['b1w']
             else:
                 distance = self.distance(midi_1, midi_2)
                 min_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinRel']
                 if distance < min_rel_12:
-                    costs['b1w'] += (digit_2 - 2) * self._weights['b1w']
+                    costs['b1w'] += (digit_2 - 1) * self._weights['b1w']
 
     def assess_weak_to_thumb_on_black(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
         if not midi_1 or midi_1 == midi_2:
@@ -1352,34 +1386,37 @@ class Badgerow(Parncutt):
         digit_2 = D.Dactyler.digit_only(handed_digit_2) if handed_digit_2 else None
         if digit_2 != C.THUMB or is_white(midi_2):
             return
+        # So thumb is playing a black note 2.
+
         digit_1 = D.Dactyler.digit_only(handed_digit_1)
         if is_black(midi_1) or digit_1 not in (C.RING, C.LITTLE):
             return
+        # So a weak finger is playing a white note 1.
+
         hand_1 = D.Dactyler.digit_hand(handed_digit_1)
         hand_2 = D.Dactyler.digit_hand(handed_digit_2)
         if hand_1 != hand_2:
             return
 
-        # For any descending move from 4-1 or 5-1, from black to white key, regardless of size,
-        # assess 2 points for 4-1 pairs and 3 points for 5-1 pairs.
-        # Assess the same penalties for descending intervals, if said intervals are more
-        # than MaxRel.
+        # For the RH, any ascending move from 4-1 or 5-1, from black to white key, regardless of size,
+        # assess 3 points for 4-1 pairs and 4 points for 5-1 pairs.
+        # Assess the same penalties for descending intervals, if said intervals are more than MaxRel.
         if hand_1 == '>':
             if midi_2 > midi_1:  # ascending
-                costs['wb1'] += (digit_1 - 2) * self._weights['wb1']
+                costs['wb1'] += (digit_1 - 1) * self._weights['wb1']
             else:
                 distance = self.distance(midi_1, midi_2)
                 max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
                 if distance > max_rel_12:
-                    costs['wb1'] += (digit_1 - 2) * self._weights['wb1']
+                    costs['wb1'] += (digit_1 - 1) * self._weights['wb1']
         else:  # Left hand
             if midi_2 > midi_1:  # ascending
                 distance = self.distance(midi_1, midi_2)
                 max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
                 if distance > max_rel_12:
-                    costs['wb1'] += (digit_1 - 2) * self._weights['wb1']
+                    costs['wb1'] += (digit_1 - 1) * self._weights['wb1']
             else:
-                costs['wb1'] += (digit_1 - 2) * self._weights['wb1']
+                costs['wb1'] += (digit_1 - 1) * self._weights['wb1']
 
     # def assess_thumb_on_black(self, costs, digit_1, midi_1, digit_2, midi_2, digit_3, midi_3):
     #     # Rule 10 ("Thumb-on-Black")
@@ -1470,9 +1507,11 @@ class Badgerow(Parncutt):
         self.assess_alternation_finger_change(costs, digit_1, midi_1, digit_3, midi_3)
 
         # New rule ("Thumb-on-Black-to-Weak")
-        self.assess_thumb_on_black_to_weak(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+        # self.assess_thumb_on_black_to_weak(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
         # New rule ("Weak-to-Thumb-on-Black")
         # self.assess_weak_to_thumb_on_black(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+        # New rule ("Black-Thumb-Pivot")
+        self.assess_black_thumb_pivot(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
 
         for cost_key in costs:
             cost += costs[cost_key]

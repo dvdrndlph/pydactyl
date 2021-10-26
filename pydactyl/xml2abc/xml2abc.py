@@ -18,6 +18,7 @@ except: import xml.etree.ElementTree as E
 import os, sys, types, re, math, io
 
 VERSION = 139.1
+LOG_LEVEL = 'none'
 
 python3 = sys.version_info.major > 2
 if python3:
@@ -103,7 +104,11 @@ tabSvg = '''%%beginsvg
 kopSvg = '<g id="kop%s" class="bf"><use xlink:href="#clr"></use><text x="-2" y="3">%s</text></g>\n'
 kopSvg2 = '<g id="kop%s" class="bf"><use xlink:href="#clr2"></use><text x="-2" y="3">%s</text></g>\n'
 
-def info (s, warn=1): sys.stderr.write ((warn and '-- ' or '') + s + '\n')
+
+def info(s, warn=1):
+    if LOG_LEVEL != 'none':
+        sys.stderr.write ((warn and '-- ' or '') + s + '\n')
+
 
 #-------------------
 # data abstractions

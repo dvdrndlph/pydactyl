@@ -26,6 +26,7 @@ except:
 import types, sys, os, re, datetime
 
 VERSION = 229
+LOG_LEVEL = 'none'
 
 python3 = sys.version_info[0] > 2
 lmap = lambda f, xs: list(map(f, xs))  # eager map for python 3
@@ -42,6 +43,9 @@ else:
 
 
 def info(s, warn=1):
+    if LOG_LEVEL == 'none':
+        return
+
     x = (warn and '-- ' or '') + s
     try:
         sys.stderr.write(x + '\n')
