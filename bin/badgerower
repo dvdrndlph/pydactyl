@@ -286,24 +286,42 @@ def get_result_set(evil, corpus_name, model_name, title, note_count, annot_id, w
     return result
 
 
+def full_file_path(base_name, name, output_dir=OUTPUT_DIR, suffix='csv'):
+    full_path = "{}/{}_{}.{}".format(output_dir, base_name, name, suffix)
+    return full_path
+
+
+def open_file(base_name, name, output_dir=OUTPUT_DIR, suffix='csv', mode='w'):
+    full_path = full_file_path(base_name, name, output_dir, suffix)
+    file = open(full_path, mode)
+    return file
+
 #####################################################
 # MAIN BLOCK
 #####################################################
-rank_results = []
-err_results = []
+# rank_results = []
+# err_results = []
 result = {}
 
-pivot_rpt_file = open(OUTPUT_DIR + '/pivot_reports.txt', 'w')
+# pivot_rpt_file = open(OUTPUT_DIR + '/pivot_reports.txt', 'w')
 
 # FIXME: We should read the corpora from db or disk only once.
 
-# for corpus_name in ['scales', 'arpeggios', 'broken', 'beringer', 'pig', 'all_american', 'pure_american', 'parncutt_published', 'full_american']:
-# for corpus_name in ['pig', 'full_american', 'parncutt_published']:
-# for corpus_name in ['scales', 'arpeggios', 'broken', 'beringer']:
-for corpus_name in ['full_american', 'parncutt_published']:
-    # for model_name in ['ideal', 'badgerow', 'jacobs', 'parncutt', 'random']:
-    # for model_name in ['ideal', 'jacobs', 'parncutt', 'random']:
-    for model_name in ['badgerow', 'jacobs', 'parncutt']:
+# for model_name in ['ideal', 'badgerow', 'jacobs', 'parncutt', 'random']:
+# for model_name in ['ideal', 'jacobs', 'parncutt', 'random']:
+for model_name in ['badgerow', 'jacobs', 'parncutt']:
+    pivot_rpt_file = open_file(base_name='pivot_report', name=model_name, suffix='txt')
+    rank_result_file = open_file(base_name='rank_result', name=model_name)
+    err_result_file = open_file(base_name='err_result', name=model_name)
+    mean_err_phrase_result_file = open_file(base_name='mean_err_phrase_result', name=model_name)
+    weighted_mean_err_result_file = open_file(base_name='weighted_mean_err_result', name=model_name)
+    mean_err_result_file = open_file(base_name='mean_err_result', name=model_name)
+    rank_results = []
+    err_results = []
+    # for corpus_name in ['scales', 'arpeggios', 'broken', 'beringer', 'pig', 'all_american', 'pure_american', 'parncutt_published', 'full_american']:
+    # for corpus_name in ['pig', 'full_american', 'parncutt_published']:
+    # for corpus_name in ['scales', 'arpeggios', 'broken', 'beringer']:
+    for corpus_name in ['full_american', 'parncutt_published']:
         da_corpus = get_corpus(corpus_name=corpus_name)
         for da_score in da_corpus.d_score_list():
             system_scores = get_system_scores(model_name=model_name, d_score=da_score)
@@ -344,149 +362,142 @@ for corpus_name in ['full_american', 'parncutt_published']:
                                                 title=title, note_count=note_count,
                                                 annot_id=annot_id, weight=weight)
                 err_results.append(err_result)
+    pivot_rpt_file.close()
 
-pivot_rpt_file.close()
+    stdout_org = sys.stdout
+    sys.stdout = rank_result_file
 
-rank_results_file = open(OUTPUT_DIR + '/rank_results.csv', 'w')
-stdout_org = sys.stdout
-sys.stdout = rank_results_file
-
-# print(rank_results)
-for field in RANK_HEADINGS:
-    print(field, end=',')
-print()
-for res in rank_results:
+    # print(rank_results)
     for field in RANK_HEADINGS:
-        print(res[field], end=',')
+        print(field, end=',')
     print()
-rank_results_file.close()
-sys.stdout = stdout_org
-
-err_results_file = open(OUTPUT_DIR + '/err_results.csv', 'w')
-sys.stdout = err_results_file
-for field in ERR_HEADINGS:
-    print(field, end=',')
-print()
-for res in err_results:
-    for field in ERR_HEADINGS:
-        if field in ['corpus', 'title']:
-            print("{:<20s}".format(res[field]), end=',')
-        elif field in ['model']:
-            print("{:<8s}".format(res[field]), end=',')
-        elif field in ['notes', 'ann_id', 'weight']:
+    for res in rank_results:
+        for field in RANK_HEADINGS:
             print(res[field], end=',')
-            # print("{:>3d}".format(res[field]), end=',')
-        else:
-            print("{:7.5f}".format(float(res[field])), end=',')
+        print()
+    rank_result_file.close()
+
+    sys.stdout = err_result_file
+    for field in ERR_HEADINGS:
+        print(field, end=',')
     print()
-err_results_file.close()
-sys.stdout = stdout_org
+    for res in err_results:
+        for field in ERR_HEADINGS:
+            if field in ['corpus', 'title']:
+                print("{:<20s}".format(res[field]), end=',')
+            elif field in ['model']:
+                print("{:<8s}".format(res[field]), end=',')
+            elif field in ['notes', 'ann_id', 'weight']:
+                print(res[field], end=',')
+                # print("{:>3d}".format(res[field]), end=',')
+            else:
+                print("{:7.5f}".format(float(res[field])), end=',')
+        print()
+    err_result_file.close()
+    sys.stdout = stdout_org
 
-cmt_err = {}
-norm_err = {}
-corpus = ''
-title = ''
-model = ''
+    cmt_err = {}
+    norm_err = {}
+    corpus = ''
+    title = ''
+    model = ''
 
-for res in err_results:
-    if res['corpus'] != corpus or res['model'] != model or res['title'] != title:
-        corpus = res['corpus']
-        model = res['model']
-        title = res['title']
+    for res in err_results:
+        if res['corpus'] != corpus or res['model'] != model or res['title'] != title:
+            corpus = res['corpus']
+            model = res['model']
+            title = res['title']
 
-    if (corpus, model, title) not in cmt_err:
-        cmt_err[(corpus, model, title)] = {'sums': {}, 'people': 0, 'notes': res['notes']}
-        for method in ERR_METHODS:
-            cmt_err[(corpus, model, title)]['sums'][method] = 0
+        if (corpus, model, title) not in cmt_err:
+            cmt_err[(corpus, model, title)] = {'sums': {}, 'people': 0, 'notes': res['notes']}
+            for method in ERR_METHODS:
+                cmt_err[(corpus, model, title)]['sums'][method] = 0
 
-    cmt_err[(corpus, model, title)]['people'] += res['weight']
-    for meth in ERR_METHODS:
-        cmt_err[(corpus, model, title)]['sums'][meth] += res[meth] * res['weight']
+        cmt_err[(corpus, model, title)]['people'] += res['weight']
+        for meth in ERR_METHODS:
+            cmt_err[(corpus, model, title)]['sums'][meth] += res[meth] * res['weight']
 
-headings = ['corpus', 'model', 'title', 'notes', 'people']
-headings.extend(ERR_METHODS)
+    headings = ['corpus', 'model', 'title', 'notes', 'people']
+    headings.extend(ERR_METHODS)
 
-mean_err_phrase_results_file = open(OUTPUT_DIR + '/mean_err_phrase_results.csv', 'w')
-sys.stdout = mean_err_phrase_results_file
-for field in headings:
-    print(field, end=',')
-print()
-note_total = {}
-phrase_count = {}
-# mean_err_phrase is the mean of all ERR measures assigned on a particular phrase across all people.
-# weighted_err_per_person aggregates all individual ERR scores weighted by the
-# length of the phrase used to generate each of them. If we divide this
-# aggregate by the sum total notes, we get the sum total ERR weighted by
-# phrase length. If we divide this by the total number of annotations, we get weighted_mean_err.
-# If we ignore the weighting by phrase length (notes) and treat each ERR measure the same, we get mean_err.
-# mean_err seems easier to deal with for statistical analysis.
-#
-weighted_err_per_person = {}
-err_per_person = {}
-for (corpus, model, title) in cmt_err:
-    if (corpus, model) not in weighted_err_per_person:
-        weighted_err_per_person[(corpus, model)] = {}
-        err_per_person[(corpus, model)] = {}
-        note_total[(corpus, model)] = 0
-        phrase_count[(corpus, model)] = 0
-    res = cmt_err[(corpus, model, title)]
-    print("{:<20s}".format(corpus), end=',')
-    print("{:<8s}".format(model), end=',')
-    print("{:<20s}".format(title), end=',')
-    print(res['notes'], end=',')
-    print(res['people'], end=',')
-    note_total[(corpus, model)] += res['notes']
-    phrase_count[(corpus, model)] += 1
-
-    for meth in ERR_METHODS:
-        if meth not in weighted_err_per_person[(corpus, model)]:
-            weighted_err_per_person[(corpus, model)][meth] = 0
-            err_per_person[(corpus, model)][meth] = 0
-        phrase_avg_err = float(res['sums'][meth])/res['people']
-        print("{:7.5f}".format(phrase_avg_err), end=',')
-        weighted_err_per_person[(corpus, model)][meth] += phrase_avg_err * res['notes']
-        err_per_person[(corpus, model)][meth] += phrase_avg_err
+    sys.stdout = mean_err_phrase_result_file
+    for field in headings:
+        print(field, end=',')
     print()
-mean_err_phrase_results_file.close()
-sys.stdout = stdout_org
+    note_total = {}
+    phrase_count = {}
+    # mean_err_phrase is the mean of all ERR measures assigned on a particular phrase across all people.
+    # weighted_err_per_person aggregates all individual ERR scores weighted by the
+    # length of the phrase used to generate each of them. If we divide this
+    # aggregate by the sum total notes, we get the sum total ERR weighted by
+    # phrase length. If we divide this by the total number of annotations, we get weighted_mean_err.
+    # If we ignore the weighting by phrase length (notes) and treat each ERR measure the same, we get mean_err.
+    # mean_err seems easier to deal with for statistical analysis.
+    #
+    weighted_err_per_person = {}
+    err_per_person = {}
+    for (corpus, model, title) in cmt_err:
+        if (corpus, model) not in weighted_err_per_person:
+            weighted_err_per_person[(corpus, model)] = {}
+            err_per_person[(corpus, model)] = {}
+            note_total[(corpus, model)] = 0
+            phrase_count[(corpus, model)] = 0
+        res = cmt_err[(corpus, model, title)]
+        print("{:<20s}".format(corpus), end=',')
+        print("{:<8s}".format(model), end=',')
+        print("{:<20s}".format(title), end=',')
+        print(res['notes'], end=',')
+        print(res['people'], end=',')
+        note_total[(corpus, model)] += res['notes']
+        phrase_count[(corpus, model)] += 1
 
-headings = ['corpus', 'model']
-headings.extend(ERR_METHODS)
+        for meth in ERR_METHODS:
+            if meth not in weighted_err_per_person[(corpus, model)]:
+                weighted_err_per_person[(corpus, model)][meth] = 0
+                err_per_person[(corpus, model)][meth] = 0
+            phrase_avg_err = float(res['sums'][meth])/res['people']
+            print("{:7.5f}".format(phrase_avg_err), end=',')
+            weighted_err_per_person[(corpus, model)][meth] += phrase_avg_err * res['notes']
+            err_per_person[(corpus, model)][meth] += phrase_avg_err
+        print()
+    mean_err_phrase_result_file.close()
+    sys.stdout = stdout_org
 
-weighted_mean_err_results_file = open(OUTPUT_DIR + '/weighted_mean_err_results.csv', 'w')
-sys.stdout = weighted_mean_err_results_file
+    headings = ['corpus', 'model']
+    headings.extend(ERR_METHODS)
 
-for field in headings:
-    print(field, end=',')
-print()
-for (corpus, model) in weighted_err_per_person:
-    print("{}".format(corpus), end=',')
-    print("{}".format(model), end=',')
-    for method in weighted_err_per_person[(corpus, model)]:
-        method_weighted_mean_err = weighted_err_per_person[(corpus, model)][method]
-        method_weighted_mean_err /= note_total[(corpus, model)]
-        print("{:7.5f}".format(method_weighted_mean_err), end=',')
+    sys.stdout = weighted_mean_err_result_file
+
+    for field in headings:
+        print(field, end=',')
     print()
-print()
-
-weighted_mean_err_results_file.close()
-sys.stdout = stdout_org
-
-mean_err_results_file = open(OUTPUT_DIR + '/mean_err_results.csv', 'w')
-sys.stdout = mean_err_results_file
-
-for field in headings:
-    print(field, end=',')
-print()
-for (corpus, model) in err_per_person:
-    print("{}".format(corpus), end=',')
-    print("{}".format(model), end=',')
-    for method in err_per_person[(corpus, model)]:
-        method_mean_err = err_per_person[(corpus, model)][method]
-        method_mean_err /= phrase_count[(corpus, model)]
-        print("{:7.5f}".format(method_mean_err), end=',')
+    for (corpus, model) in weighted_err_per_person:
+        print("{}".format(corpus), end=',')
+        print("{}".format(model), end=',')
+        for method in weighted_err_per_person[(corpus, model)]:
+            method_weighted_mean_err = weighted_err_per_person[(corpus, model)][method]
+            method_weighted_mean_err /= note_total[(corpus, model)]
+            print("{:7.5f}".format(method_weighted_mean_err), end=',')
+        print()
     print()
-print()
 
-mean_err_results_file.close()
-sys.stdout = stdout_org
+    weighted_mean_err_result_file.close()
+    sys.stdout = stdout_org
+
+    sys.stdout = mean_err_result_file
+
+    for field in headings:
+        print(field, end=',')
+    print()
+    for (corpus, model) in err_per_person:
+        print("{}".format(corpus), end=',')
+        print("{}".format(model), end=',')
+        for method in err_per_person[(corpus, model)]:
+            method_mean_err = err_per_person[(corpus, model)][method]
+            method_mean_err /= phrase_count[(corpus, model)]
+            print("{:7.5f}".format(method_mean_err), end=',')
+        print()
+    print()
+
+    mean_err_result_file.close()
+    sys.stdout = stdout_org
