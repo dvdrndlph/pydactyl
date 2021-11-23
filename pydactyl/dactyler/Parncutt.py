@@ -222,6 +222,23 @@ class Parncutt(D.Dactyler):
             'pa1': 1
         }
 
+    def init_costs(self):
+        costs = {
+            'str': 0,
+            'sma': 0,
+            'lar': 0,
+            'pcc': 0,
+            'pcs': 0,
+            'wea': 0,
+            '345': 0,
+            '3t4': 0,
+            'bl4': 0,
+            'bl1': 0,
+            'bl5': 0,
+            'pa1': 0,
+        }
+        return costs
+
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
                  pruning_method='max', finger_spans=FINGER_SPANS, version=(1, 0, 0)):
         super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
@@ -371,23 +388,6 @@ class Parncutt(D.Dactyler):
             g.add_edge(prior_node_id, node_id)
 
         return g
-
-    def init_costs(self):
-        costs = {
-            'str': 0,
-            'sma': 0,
-            'lar': 0,
-            'pcc': 0,
-            'pcs': 0,
-            'wea': 0,
-            '345': 0,
-            '3t4': 0,
-            'bl4': 0,
-            'bl1': 0,
-            'bl5': 0,
-            'pa1': 0,
-        }
-        return costs
 
     def distance(self, from_midi, to_midi):
         """
@@ -1207,6 +1207,7 @@ class Jacobs(Parncutt):
 
 
 class Badgerow(Parncutt):
+# class Badgerow(Jacobs):
     def init_rule_weights(self):
         self._weights = {
             'str': 1,

@@ -107,13 +107,12 @@ def load_csv_set(base_name, input_dir=INPUT_DIR, suffix='csv'):
     reggie = '^' + base_name + '_([^_]+)\.' + suffix
     for file_name in os.listdir(input_dir):
         if re.match(reggie, file_name):
-            print(file_name)
             file_path = input_dir + '/' + file_name
             result = load_csv(file_path)
             results.extend(result)
     return results
 
-def ttest_greater_than(little, big, threshold=0.5):
+def ttest_greater_than(little, big, threshold=0.05):
     '''
     Determine if one the mean one sample is significantly larger (in a statistical sense)
     than another per a one-sided paired t-test.
@@ -147,7 +146,7 @@ relaxed_err_vals = {}
 err_vals = {}
 best_to_worst_models = ['badgerow', 'jacobs', 'parncutt']
 methods = ['hmg', 'al', 'tri', 'tri_nua', 'tri_rlx']
-corpora = ['full_american', 'parncutt_published']
+corpora = ['parncutt_published']
 for corpus_name in corpora:
     for model_name in best_to_worst_models:
         annotation_id = 0
