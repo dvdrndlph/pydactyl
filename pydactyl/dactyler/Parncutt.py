@@ -41,7 +41,7 @@ Also included is our own "Badgerow" class, tweaking the Parncutt model
 per the suggestions of pianist Justin Badgerow at Elizabethtown College.
 """
 
-
+from abc import ABC
 import networkx as nx
 from itertools import islice
 import copy
@@ -205,6 +205,74 @@ def is_between(midi, midi_left, midi_right):
     return False
 
 
+class Ruler(ABC):
+    def distance(self, from_midi, to_midi):
+        """
+        Estimate the distance between two piano keys identified by MIDI code.
+        The original Parncutt paper simply uses semitone differences.
+        :param from_midi: The starting piano key.
+        :param to_midi: The ending piano key.
+        :return: The distance between the two keys.
+        """
+        return to_midi - from_midi
+
+
+class PhysicalRuler(Ruler):
+    def __init__(self):
+        self._key_positions = PhysicalRuler.horizontal_key_positions()
+        self._bounds_for_semitone_interval = None
+        self.set_bounds_for_semitone_intervals()
+
+    def distance(self, from_midi, to_midi):
+        from_pos = self._key_positions[from_midi]
+        to_pos = self._key_positions[to_midi]
+        multiplier = 1
+        dist = to_pos - from_pos
+        if to_midi < from_midi:
+            multiplier = -1
+            dist = from_pos - to_pos
+        for i in range(len(self._bounds_for_semitone_interval) - 1):
+            if self._bounds_for_semitone_interval[i] <= dist <= self._bounds_for_semitone_interval[i+1]:
+                return multiplier * i
+        raise Exception("Distance between {0} and {1} could not be calculated".format(from_midi, to_midi))
+
+    def set_bounds_for_semitone_intervals(self):
+        avg_distances = list()
+        for interval_size in range(0, 24):
+            distance = 0
+            for manifestation_num in range(0, 12):
+                start_midi = 21 + manifestation_num
+                end_midi = start_midi + interval_size
+                distance += (self._key_positions[end_midi] - self._key_positions[start_midi])
+            avg_distances.append(distance/12)
+
+        self._bounds_for_semitone_interval = list()
+        self._bounds_for_semitone_interval.append(0)
+
+        for i in range(1, len(avg_distances)):
+            if i == 1:
+                self._bounds_for_semitone_interval.append(0)
+            else:
+                self._bounds_for_semitone_interval.append((avg_distances[i] + avg_distances[i-1])/2.0)
+
+    @staticmethod
+    def horizontal_key_positions():
+        """
+        Return a dictionary mapping MIDI pitch numbers to the millimeter offsets
+        to their lengthwise center lines on the keyboard.
+        """
+        positions = dict()
+        #           A    A#    B  C     C#   D   D#  E     F  F#    G
+        offsets = [11.5, 15.5, 8, 23.5, 9.5, 14, 14, 9.5, 23.5, 8, 15.5, 11.5]
+        cycle_index = 0
+        value = 0
+        for midi_id in range(21, 109):
+            value += offsets[cycle_index % len(offsets)]
+            positions[midi_id] = value
+            cycle_index += 1
+
+        return positions
+
 class Parncutt(D.Dactyler):
     def init_rule_weights(self):
         self._weights = {
@@ -239,13 +307,14 @@ class Parncutt(D.Dactyler):
         }
         return costs
 
-    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
+    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive", ruler=Ruler(),
                  pruning_method='max', finger_spans=FINGER_SPANS, version=(1, 0, 0)):
         super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
                          staff_combiner=staff_combiner, version=version)
         # self._finger_spans = FINGER_SPANS
         # if finger_spans:
         self._finger_spans = finger_spans
+        self._ruler = ruler
         self._costs = {}
         self._last_segment_all_paths = None  # Generator of all paths for last segment processed.
         self._pruning_method = None
@@ -390,14 +459,8 @@ class Parncutt(D.Dactyler):
         return g
 
     def distance(self, from_midi, to_midi):
-        """
-        Estimate the distance between two piano keys identified by MIDI code.
-        The original Parncutt paper simply uses semitone differences.
-        :param from_midi: The starting piano key.
-        :param to_midi: The ending piano key.
-        :return: The distance between the two keys.
-        """
-        return to_midi - from_midi
+        print("{} to {}".format(from_midi, to_midi))
+        return self._ruler.distance(from_midi, to_midi)
 
     @staticmethod
     def _hand_and_trigram_digits(handed_digit_1, handed_digit_2, handed_digit_3):
@@ -1071,43 +1134,11 @@ class Jacobs(Parncutt):
         }
         return costs
 
-    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
+    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive", ruler=PhysicalRuler(),
                  pruning_method='max', finger_spans=FINGER_SPANS, version=(1, 0, 0)):
-        super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
+        super().__init__(segmenter=segmenter, segment_combiner=segment_combiner, ruler=ruler,
                          staff_combiner=staff_combiner, pruning_method=pruning_method,
                          finger_spans=finger_spans, version=version)
-
-        self._key_positions = D.Dactyler.horizontal_key_positions()
-        avg_distances = list()
-        for interval_size in range(0, 24):
-            distance = 0
-            for manifestation_num in range(0, 12):
-                start_midi = 21 + manifestation_num
-                end_midi = start_midi + interval_size
-                distance += (self._key_positions[end_midi] - self._key_positions[start_midi])
-            avg_distances.append(distance/12)
-
-        self._bounds_for_semitone_interval = list()
-        self._bounds_for_semitone_interval.append(0)
-
-        for i in range(1, len(avg_distances)):
-            if i == 1:
-                self._bounds_for_semitone_interval.append(0)
-            else:
-                self._bounds_for_semitone_interval.append((avg_distances[i] + avg_distances[i-1])/2.0)
-
-    def distance(self, from_midi, to_midi):
-        from_pos = self._key_positions[from_midi]
-        to_pos = self._key_positions[to_midi]
-        multiplier = 1
-        dist = to_pos - from_pos
-        if to_midi < from_midi:
-            multiplier = -1
-            dist = from_pos - to_pos
-        for i in range(len(self._bounds_for_semitone_interval) - 1):
-            if self._bounds_for_semitone_interval[i] <= dist <= self._bounds_for_semitone_interval[i+1]:
-                return multiplier * i
-        raise Exception("Distance between {0} and {1} could not be calculated".format(from_midi, to_midi))
 
     def assess_weak_finger(self, costs, digit_2):
         # Rule 6 (wea "Weak-Finger")
@@ -1207,7 +1238,6 @@ class Jacobs(Parncutt):
 
 
 class Badgerow(Parncutt):
-# class Badgerow(Jacobs):
     def init_rule_weights(self):
         self._weights = {
             'str': 1,
@@ -1442,9 +1472,9 @@ class Badgerow(Parncutt):
     #         if digit_3 == C.LITTLE and is_white(midi_3):
     #             costs['bl1'] += 2 * self._weights['bl1']
 
-    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive",
+    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive", ruler=Ruler(),
                  pruning_method='max', finger_spans=BADGEROW_FINGER_SPANS, version=(1, 0, 0)):
-        super().__init__(segmenter=segmenter, segment_combiner=segment_combiner,
+        super().__init__(segmenter=segmenter, segment_combiner=segment_combiner, ruler=ruler,
                          staff_combiner=staff_combiner, pruning_method=pruning_method,
                          finger_spans=finger_spans, version=version)
 

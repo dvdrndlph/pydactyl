@@ -1,0 +1,11 @@
+#!/bin/bash
+tag=$1
+output_file=${tag}_$(date "+%Y-%m-%d_%H_%M_%S").txt
+echo $output_file
+output_path=/Users/dave/tb2/doc/data/badgerow/stats/$output_file
+echo $output_path
+
+export PYTHONPATH=$PYTHONPATH:/Users/dave/tb2/pydactyl/bin:/Users/dave/tb2/pydactyl
+
+python3 ./badgerower
+python3 ./badgeit > $output_path

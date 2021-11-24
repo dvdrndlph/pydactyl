@@ -30,7 +30,7 @@ from pydactyl.dcorpus.PianoFingering import PianoFingering
 from pydactyl.dcorpus.DEvaluation import DEvaluation, DEvalFunction
 from pydactyl.dactyler.Parncutt import Parncutt
 from pydactyl.dactyler.Parncutt import Jacobs
-from pydactyl.dactyler.Parncutt import Badgerow, FINGER_SPANS
+from pydactyl.dactyler.Parncutt import Badgerow, FINGER_SPANS, PhysicalRuler, Ruler
 from pydactyl.dactyler.Random import Random
 
 # da_corpus = DCorpus()
@@ -195,7 +195,9 @@ def get_system_scores(model_name, d_score):
             model = Parncutt()
         elif model_name == 'jacobs':
             model = Jacobs()
+            # model = Jacobs(ruler=Ruler())
         elif model_name == 'badgerow':
+            # model = Badgerow(finger_spans=FINGER_SPANS, ruler=PhysicalRuler())
             model = Badgerow(finger_spans=FINGER_SPANS)
         else:
             raise Exception("Bad model")
