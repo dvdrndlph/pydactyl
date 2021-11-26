@@ -205,6 +205,64 @@ def is_between(midi, midi_left, midi_right):
     return False
 
 
+class TrigramNode(ABC):
+    def _digits(self):
+        pat = re.compile('^([<>])')
+        digit_1 = re.sub(pat, '', self.handed_digit_1)
+        digit_2 = re.sub(pat, '', self.handed_digit_2)
+        digit_3 = re.sub(pat, '', self.handed_digit_3)
+        if digit_1 == '-':
+            digit_1 = None
+        if digit_3 == '-':
+            digit_3 = None
+        if digit_1 is not None:
+            digit_1 = int(digit_1)
+        digit_2 = int(digit_2)
+        if digit_3 is not None:
+            digit_3 = int(digit_3)
+        return digit_1, digit_2, digit_3
+
+    def _hands(self):
+        pat = re.compile('^([<>])')
+
+        hand_1 = None
+        mat = pat.match(self.handed_digit_1)
+        if mat:
+            hand_1 = mat.group(1)
+
+        hand_2 = None
+        mat = pat.match(self.handed_digit_2)
+        if mat:
+            hand_2 = mat.group(1)
+
+        hand_3 = None
+        mat = pat.match(self.handed_digit_3)
+        if mat:
+            hand_3 = mat.group(1)
+
+        return hand_1, hand_2, hand_3
+
+    def __init__(self, midi_1, handed_digit_1, midi_2, handed_digit_2, midi_3, handed_digit_3):
+        """
+        Initialize a TrigramNode object.
+        :param midi_1: The MIDI note number of the first note in the trigram. May be None in first layer.
+        :param handed_digit_1: Fingering for first note (e.g., ">3").
+        :param midi_2: The MIDI note number of the second note in the trigram.
+        :param handed_digit_2: Fingering proposed for second note (e.g., "<5").
+        :param midi_3: The MIDI note number of the third note.
+        :param handed_digit_3: Fingering for third note.
+        """
+        self.midi_1 = midi_1
+        self.midi_2 = midi_2
+        self.midi_3 = midi_3
+        self.handed_digit_1 = handed_digit_1
+        self.handed_digit_2 = handed_digit_2
+        self.handed_digit_3 = handed_digit_3
+        self.hand_1, self.hand_2, self.hand_3 = self._hands()
+        self.digit_1, self.digit_2, self.digit_3 = self._digits()
+        self.hand = self.hand_2
+
+
 class Ruler(ABC):
     def distance(self, from_midi, to_midi):
         """
@@ -291,20 +349,9 @@ class Parncutt(D.Dactyler):
         }
 
     def init_costs(self):
-        costs = {
-            'str': 0,
-            'sma': 0,
-            'lar': 0,
-            'pcc': 0,
-            'pcs': 0,
-            'wea': 0,
-            '345': 0,
-            '3t4': 0,
-            'bl4': 0,
-            'bl1': 0,
-            'bl5': 0,
-            'pa1': 0,
-        }
+        costs = {}
+        for wt in self._weights:
+            costs[wt] = 0
         return costs
 
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive", ruler=Ruler(),
@@ -459,91 +506,68 @@ class Parncutt(D.Dactyler):
         return g
 
     def distance(self, from_midi, to_midi):
-        print("{} to {}".format(from_midi, to_midi))
         return self._ruler.distance(from_midi, to_midi)
 
-    @staticmethod
-    def _hand_and_trigram_digits(handed_digit_1, handed_digit_2, handed_digit_3):
-        pat = re.compile('^([<>])')
-        mat = pat.match(handed_digit_2)
-        hand = mat.group(1)
-        digit_1 = re.sub(pat, '', handed_digit_1)
-        digit_2 = re.sub(pat, '', handed_digit_2)
-        digit_3 = re.sub(pat, '', handed_digit_3)
-        if digit_1 == '-':
-            digit_1 = None
-        if digit_3 == '-':
-            digit_3 = None
-        if digit_1 is not None:
-            digit_1 = int(digit_1)
-        digit_2 = int(digit_2)
-        if digit_3 is not None:
-            digit_3 = int(digit_3)
-
-        return hand, digit_1, digit_2, digit_3
-
-    def assess_stretch(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
+    def assess_stretch(self, costs, trigram):
         # Rule 1 ("Stretch")
-        if not midi_1:
+        if not trigram.midi_1:
             return
 
-        semitone_diff_12 = self.distance(midi_1, midi_2)
-        max_comf_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxComf']
-        min_comf_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinComf']
+        semitone_diff_12 = self.distance(trigram.midi_1, trigram.midi_2)
+        max_comf_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxComf']
+        min_comf_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MinComf']
 
-        # ﻿"Assign 2 points for each semitone that an interval exceeds MaxComf or is less than MinComf."
+        # "Assign 2 points for each semitone that an interval exceeds MaxComf or is less than MinComf."
         if semitone_diff_12 > max_comf_12:
             costs['str'] = 2 * (semitone_diff_12 - max_comf_12) * self._weights['str']
         elif semitone_diff_12 < min_comf_12:
             costs['str'] = 2 * (min_comf_12 - semitone_diff_12) * self._weights['str']
 
-    def assess_small_per_rule(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
+    def assess_small_per_rule(self, costs, trigram):
         # Rule 2 ("Small-Span")
         # "For finger pairs including the thumb, assign 1 point for each semitone that an interval is
         # less than MinRel. For finger pairs not including the thumb, assign 2 points per semitone."
-        if not midi_1:
+        if not trigram.midi_1:
             return
 
-        semitone_diff_12 = self.distance(midi_1, midi_2)
-        min_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinRel']
+        semitone_diff_12 = self.distance(trigram.midi_1, trigram.midi_2)
+        min_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MinRel']
 
-        digit_1 = D.Dactyler.digit_only(handed_digit_1)
-        digit_2 = D.Dactyler.digit_only(handed_digit_2)
         span_penalty = 2
-        if digit_1 == C.THUMB or digit_2 == C.THUMB:
+        if trigram.digit_1 == C.THUMB or trigram.digit_2 == C.THUMB:
             span_penalty = 1
         if semitone_diff_12 < min_rel_12:
             costs['sma'] = span_penalty * (min_rel_12 - semitone_diff_12) * self._weights['sma']
 
-    def assess_small_span(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
+    def assess_small_span(self, costs, trigram):
         # Rule 2 ("Small-Span")
         # "For finger pairs including the thumb, assign 1 point for each semitone that an interval is
         # less than MinRel. For finger pairs not including the thumb, assign 2 points per semitone."
-        if not midi_1:
+        if not trigram.midi_1:
             return
 
-        semitone_diff = self.distance(midi_1, midi_2)
-        digit_1 = D.Dactyler.digit_only(handed_digit_1)
-        digit_2 = D.Dactyler.digit_only(handed_digit_2)
+        semitone_diff = self.distance(trigram.midi_1, trigram.midi_2)
+        digit_1 = D.Dactyler.digit_only(trigram.handed_digit_1)
+        digit_2 = D.Dactyler.digit_only(trigram.handed_digit_2)
         span_penalty = 2
         if digit_1 == C.THUMB or digit_2 == C.THUMB:
             span_penalty = 1
 
-        hand = D.Dactyler.digit_hand(handed_digit_1)
+        hand = D.Dactyler.digit_hand(trigram.handed_digit_1)
         min_rel = None
         max_rel = None
         if hand == '>':
             if digit_1 < digit_2:
-                min_rel = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinRel']
+                min_rel = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MinRel']
             elif digit_1 > digit_2:
-                max_rel = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
+                max_rel = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxRel']
             else:
                 return
         else:
             if digit_1 > digit_2:
-                min_rel = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinRel']
+                min_rel = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MinRel']
             elif digit_1 < digit_2:
-                max_rel = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
+                max_rel = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxRel']
             else:
                 return
 
@@ -554,86 +578,119 @@ class Parncutt(D.Dactyler):
             cost = span_penalty * (semitone_diff - max_rel) * self._weights['sma']
         costs['sma'] = cost
 
-    def assess_large_span_per_rule(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
+    def assess_large_span_per_rule(self, costs, trigram):
         # Rule 3 ("Large-Span")
         # "For finger pairs including the thumb, assign 1 point for each semitone that an interval
         # exceeds MaxRel. For finger pairs not including the thumb, assign 2 points per semitone."
-        if not midi_1:
+        if not trigram.midi_1:
             return
 
-        digit_1 = D.Dactyler.digit_only(handed_digit_1)
-        digit_2 = D.Dactyler.digit_only(handed_digit_2)
+        digit_1 = D.Dactyler.digit_only(trigram.handed_digit_1)
+        digit_2 = D.Dactyler.digit_only(trigram.handed_digit_2)
         span_penalty = 2
         if digit_1 == C.THUMB or digit_2 == C.THUMB:
             span_penalty = 1
-        semitone_diff_12 = self.distance(midi_1, midi_2)
-        max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
+        semitone_diff_12 = self.distance(trigram.midi_1, trigram.midi_2)
+        max_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxRel']
         if semitone_diff_12 > max_rel_12:
             costs['lar'] = span_penalty * (semitone_diff_12 - max_rel_12) * self._weights['lar']
 
-    def assess_large_span(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
+    def assess_large_span(self, costs, trigram):
         # Rule 3 ("Large-Span") as described in Parncutt text and implied in results reported,
         # NOT as defined in the stated Rule 3.
-        if not midi_1:
+        if not trigram.midi_1:
             return
 
-        absolute_semitone_diff_12 = abs(self.distance(midi_1, midi_2))
-        digit_1 = D.Dactyler.digit_only(handed_digit_1)
-        digit_2 = D.Dactyler.digit_only(handed_digit_2)
+        absolute_semitone_diff_12 = abs(self.distance(trigram.midi_1, trigram.midi_2))
         span_penalty = 2
-        if digit_1 == C.THUMB or digit_2 == C.THUMB:
+        if trigram.digit_1 == C.THUMB or trigram.digit_2 == C.THUMB:
             span_penalty = 1
 
-        hand = D.Dactyler.digit_hand(handed_digit_1)
-        if hand == '>':
-            if digit_1 < digit_2 and midi_1 < midi_2:
-                max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
-            elif digit_1 > digit_2 and midi_1 > midi_2:
-                max_rel_12 = self._finger_spans[(handed_digit_2, handed_digit_1)]['MaxRel']
+        if trigram.hand == '>':
+            if trigram.digit_1 < trigram.digit_2 and trigram.midi_1 < trigram.midi_2:
+                max_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxRel']
+            elif trigram.digit_1 > trigram.digit_2 and trigram.midi_1 > trigram.midi_2:
+                max_rel_12 = self._finger_spans[(trigram.handed_digit_2, trigram.handed_digit_1)]['MaxRel']
             else:
                 return
         else:
-            if digit_1 < digit_2 and midi_1 < midi_2:
-                max_rel_12 = self._finger_spans[(handed_digit_2, handed_digit_1)]['MaxRel']
-            elif digit_1 > digit_2 and midi_1 > midi_2:
-                max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
+            if trigram.digit_1 < trigram.digit_2 and trigram.midi_1 < trigram.midi_2:
+                max_rel_12 = self._finger_spans[(trigram.handed_digit_2, trigram.handed_digit_1)]['MaxRel']
+            elif trigram.digit_1 > trigram.digit_2 and trigram.midi_1 > trigram.midi_2:
+                max_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxRel']
             else:
                 return
 
         if absolute_semitone_diff_12 > max_rel_12:
             costs['lar'] = span_penalty * (absolute_semitone_diff_12 - max_rel_12) * self._weights['lar']
 
-    def raw_position_change_count(self, handed_digit_1, midi_1, handed_digit_2, midi_2,
-                                  handed_digit_3, midi_3):
-        if not midi_1 or not midi_3:
+    def assess_large_span_jacobs(self, costs, trigram):
+        # Rule 3 ("Large-Span") as described in Parncutt text and implied in results reported,
+        # NOT as defined in the stated Rule 3.
+        # Per Jacobs.
+        if not trigram.midi_1:
+            return
+
+        absolute_semitone_diff_12 = abs(self.distance(trigram.midi_1, trigram.midi_2))
+        digit_1 = D.Dactyler.digit_only(trigram.handed_digit_1)
+        digit_2 = D.Dactyler.digit_only(trigram.handed_digit_2)
+        # "penalizes equally (by 1 point per semitone) all spans exceeding MaxRel."
+        span_penalty = 1
+
+        if trigram.hand == '>':
+            if trigram.digit_1 < trigram.digit_2 and trigram.midi_1 < trigram.midi_2:
+                max_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxRel']
+            elif trigram.digit_1 > trigram.digit_2 and trigram.midi_1 > trigram.midi_2:
+                max_rel_12 = self._finger_spans[(trigram.handed_digit_2, trigram.handed_digit_1)]['MaxRel']
+            else:
+                return
+        else:  # Left hand
+            if trigram.digit_1 < digit_2 and trigram.midi_1 < trigram.midi_2:
+                max_rel_12 = self._finger_spans[(trigram.handed_digit_2, trigram.handed_digit_1)]['MaxRel']
+            elif trigram.digit_1 > trigram.digit_2 and trigram.midi_1 > trigram.midi_2:
+                max_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxRel']
+            else:
+                return
+
+        if absolute_semitone_diff_12 > max_rel_12:
+            costs['lar'] = span_penalty * (absolute_semitone_diff_12 - max_rel_12) * self._weights['lar']
+
+    def assess_weak_finger_jacobs(self, costs, trigram):
+        # Rule 6 (wea "Weak-Finger")
+        # Assign 1 point every time finger 4 is used (but no longer finger 5).
+        # Per Jacobs.
+        if trigram.digit_2 == C.RING:
+            costs['wea'] = self._weights['wea']
+
+    def raw_position_change_count(self, trigram):
+        if not trigram.midi_1 or not trigram.midi_3:
             return 0
 
         pcc = 0
-        semitone_diff_13 = self.distance(midi_1, midi_3)
+        semitone_diff_13 = self.distance(trigram.midi_1, trigram.midi_3)
         # if semitone_diff_13 != 0:  # FIXME: This is in the code Parncutt shared and needed to reproduce
                                      # results for A and E, but is contradicted by Figure 2(iv)
                                      # example in paper.
-        max_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxComf']
-        min_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MinComf']
-        max_prac_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxPrac']
-        min_prac_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MinPrac']
-
-        digit_2 = D.Dactyler.digit_only(handed_digit_2)
+        max_comf_13 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_3)]['MaxComf']
+        min_comf_13 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_3)]['MinComf']
+        max_prac_13 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_3)]['MaxPrac']
+        min_prac_13 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_3)]['MinPrac']
 
         if semitone_diff_13 > max_comf_13:
-            if digit_2 == C.THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 > max_prac_13:
+            if trigram.digit_2 == C.THUMB and is_between(trigram.midi_2, trigram.midi_1, trigram.midi_3) \
+                    and semitone_diff_13 > max_prac_13:
                 pcc = 2  # A "full change"
             else:
                 pcc = 1  # A "half change"
         elif semitone_diff_13 < min_comf_13:
-            if digit_2 == C.THUMB and is_between(midi_2, midi_1, midi_3) and semitone_diff_13 < min_prac_13:
+            if trigram.digit_2 == C.THUMB and is_between(trigram.midi_2, trigram.midi_1, trigram.midi_3) \
+                    and semitone_diff_13 < min_prac_13:
                 pcc = 2  # A "full change"
             else:
                 pcc = 1  # A "half change"
         return pcc
 
-    def assess_position_change_count(self, costs, handed_digit_1, midi_1, handed_digit_2,
-                                     midi_2, handed_digit_3, midi_3):
+    def assess_position_change_count(self, costs, trigram):
         # Rule 4 ("Position-Change-Count")
         # "Assign 2 points for every full change of hand position and 1 point for every half change.
         # A change of hand position occurs whenever the first and third notes in a consecutive
@@ -642,131 +699,129 @@ class Parncutt(D.Dactyler):
         # simultaneously: The finger on the second of the three notes is the thumb; the second pitch
         # lies between the first and third pitches; and the interval between the first and third pitches
         # is greater than MaxPrac or less than MinPrac. All other changes are half changes."
-        raw_pcc = self.raw_position_change_count(handed_digit_1, midi_1,
-                                                 handed_digit_2, midi_2,
-                                                 handed_digit_3, midi_3)
+        raw_pcc = self.raw_position_change_count(trigram)
         costs['pcc'] = raw_pcc * self._weights['pcc']
 
-    def assess_position_change_size(self, costs, handed_digit_1, midi_1, handed_digit_3, midi_3):
+    def assess_position_change_size(self, costs, trigram):
         # Rule 5 ("Position-Change-Size")
         # "If the interval spanned by the first and third notes in a group of three is less than MinComf,
         # assign the difference between the interval and MinComf (expressed in semitones). Conversely,
         # if the interval is greater than MaxComf, assign the difference between the interval and MaxComf."
         ### if semitone_diff_13 != 0:  # This is in the code Parncutt shared, but is contradicted in paper.
-        if not midi_1 or not midi_3:
+        if not trigram.midi_1 or not trigram.midi_3:
             return
 
-        semitone_diff_13 = self.distance(midi_1, midi_3)
-        max_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MaxComf']
-        min_comf_13 = self._finger_spans[(handed_digit_1, handed_digit_3)]['MinComf']
+        semitone_diff_13 = self.distance(trigram.midi_1, trigram.midi_3)
+        max_comf_13 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_3)]['MaxComf']
+        min_comf_13 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_3)]['MinComf']
 
         if semitone_diff_13 < min_comf_13:
             costs['pcs'] = (min_comf_13 - semitone_diff_13) * self._weights['pcs']
         elif semitone_diff_13 > max_comf_13:
             costs['pcs'] = (semitone_diff_13 - max_comf_13) * self._weights['pcs']
 
-    def assess_weak_finger(self, costs, digit_2):
+    def assess_weak_finger(self, costs, trigram):
         # Rule 6 (wea "Weak-Finger")
         # "Assign 1 point every time finger 4 or finger 5 is used."
-        if digit_2 == C.RING or digit_2 == C.LITTLE:
+        if trigram.digit_2 == C.RING or trigram.digit_2 == C.LITTLE:
             costs['wea'] = self._weights['wea']
 
-    def assess_345(self, costs, digit_1, digit_2, digit_3):
+    def assess_345(self, costs, trigram):
         # Rule 7 ("Three-Four-Five")
         # "Assign 1 point every time fingers 3, 4, and 5 occur consecutively in any order,
         # even when groups overlap."
         finger_hash = {
-            digit_1: True,
-            digit_2: True,
-            digit_3: True
+            trigram.digit_1: True,
+            trigram.digit_2: True,
+            trigram.digit_3: True
         }
         if C.MIDDLE in finger_hash and C.RING in finger_hash and C.LITTLE in finger_hash:
             costs['345'] = self._weights['345']
 
-    def assess_3_to_4(self, costs, digit_1, digit_2):
+    def assess_3_to_4(self, costs, trigram):
         # Rule 8 ("Three-to-Four")
         # "Assign 1 point each time finger 3 is immediately followed by finger 4."
-        if digit_1 == C.MIDDLE and digit_2 == C.RING:
+        if trigram.digit_1 == C.MIDDLE and trigram.digit_2 == C.RING:
             costs['3t4'] = self._weights['3t4']
 
-    def assess_4_on_black(self, costs, digit_1, midi_1, digit_2, midi_2):
+    def assess_4_on_black(self, costs, trigram):
         # Rule 9 ("Four-on-Black")
         # "Assign 1 point each time fingers 3 and 4 occur consecutively in any order with 3 on
         # white and 4 on black."
-        if (digit_1 == C.RING and is_black(midi_1) and digit_2 == C.MIDDLE and is_white(midi_2)) or \
-                (digit_1 == C.MIDDLE and is_white(midi_1) and digit_2 == C.RING and is_black(midi_2)):
+        if (trigram.digit_1 == C.RING and is_black(trigram.midi_1) and trigram.digit_2 == C.MIDDLE and is_white(trigram.midi_2)) or \
+                (trigram.digit_1 == C.MIDDLE and is_white(trigram.midi_1) and trigram.digit_2 == C.RING and is_black(trigram.midi_2)):
             costs['bl4'] = self._weights['bl4']
 
-    def assess_thumb_on_black(self, costs, digit_1, midi_1, digit_2, midi_2, digit_3, midi_3):
+    def assess_thumb_on_black(self, costs, trigram):
         # Rule 10 ("Thumb-on-Black")
         # "Assign 1 point whenever the thumb plays a black key."
-        if digit_2 != C.THUMB or is_white(midi_2):
+        if trigram.digit_2 != C.THUMB or is_white(trigram.midi_2):
             return
 
         costs['bl1'] += self._weights['bl1']
 
         # "If the immediately preceding note is white, assign a further 2 points."
-        if digit_1 and digit_2 == C.THUMB and is_black(midi_2) and is_white(midi_1):
+        if trigram.digit_1 and trigram.digit_2 == C.THUMB and is_black(trigram.midi_2) and is_white(trigram.midi_1):
             costs['bl1'] += 2 * self._weights['bl1']
 
         # "If the immediately following note is white, assign a further 2 points."
-        if digit_3 and digit_2 == C.THUMB and is_black(midi_2) and is_white(midi_3):
+        if trigram.digit_3 and trigram.digit_2 == C.THUMB and is_black(trigram.midi_2) and is_white(trigram.midi_3):
             costs['bl1'] += 2 * self._weights['bl1']
 
-    def assess_5_on_black(self, costs, midi_1, digit_2, midi_2, midi_3):
+    def assess_5_on_black(self, costs, trigram):
         # Rule 11 ("Five-on-Black")
         # "If the fifth finger plays a black key and the immediately preceding and following notes
         # are also black, assign 0 points. If the immediately preceding note is white, assign 2 points.
         # If the immediately following key is white, assign 2 further points."
         black_key_cost = 0
-        if digit_2 == C.LITTLE and is_black(midi_2):
-            if midi_1 and is_black(midi_1) and midi_3 and is_black(midi_3):
+        if trigram.digit_2 == C.LITTLE and is_black(trigram.midi_2):
+            if trigram.midi_1 and is_black(trigram.midi_1) and trigram.midi_3 and is_black(trigram.midi_3):
                 black_key_cost = 0
             else:
-                if midi_1 and is_white(midi_1):
+                if trigram.midi_1 and is_white(trigram.midi_1):
                     black_key_cost = 2
-                if midi_3 and is_white(midi_3):
+                if trigram.midi_3 and is_white(trigram.midi_3):
                     black_key_cost += 2
             costs['bl5'] += black_key_cost * self._weights['bl5']
 
-    def assess_thumb_passing(self, costs, hand, digit_1, midi_1, digit_2, midi_2):
+    def assess_thumb_passing(self, costs, trigram):
         # Rule 12 ("Thumb-Passing")
         # "Assign 1 point for each thumb- or finger-pass on the same level (from white to white
         # or black to black). Assign 3 points if the lower note is white, played by a finger
         # other than the thumb, and the upper is black, played by the thumb." Invert logic for
         # the left hand.
-        if not digit_1:
+        if not trigram.digit_1:
             return
 
         thumb_passing_cost = 0
-        if hand == '>':
-            if digit_1 == C.THUMB and midi_2 < midi_1:  # Finger crossing over thumb, descending.
-                if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
+        if trigram.hand == '>':
+            if trigram.digit_1 == C.THUMB and trigram.midi_2 < trigram.midi_1:  # Finger crossing over thumb, descending.
+                if (is_white(trigram.midi_1) and is_white(trigram.midi_2)) or (is_black(trigram.midi_1) and is_black(trigram.midi_2)):
                     thumb_passing_cost = 1
-                elif is_black(midi_1):
+                elif is_black(trigram.midi_1):
                     thumb_passing_cost = 3
                 costs['pa1'] = thumb_passing_cost * self._weights['pa1']
-            if digit_2 == C.THUMB and midi_2 > midi_1:  # Thumb passing under finger, ascending.
-                if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
+            if trigram.digit_2 == C.THUMB and trigram.midi_2 > trigram.midi_1:  # Thumb passing under finger, ascending.
+                if (is_white(trigram.midi_1) and is_white(trigram.midi_2)) or (is_black(trigram.midi_1) and is_black(trigram.midi_2)):
                     thumb_passing_cost = 1
-                elif is_black(midi_2):
+                elif is_black(trigram.midi_2):
                     thumb_passing_cost = 3
                 costs['pa1'] = thumb_passing_cost * self._weights['pa1']
         else:
-            if digit_1 == C.THUMB and midi_2 > midi_1:  # Finger crossing over thumb, ascending.
-                if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
+            if trigram.digit_1 == C.THUMB and trigram.midi_2 > trigram.midi_1:  # Finger crossing over thumb, ascending.
+                if (is_white(trigram.midi_1) and is_white(trigram.midi_2)) or (is_black(trigram.midi_1) and is_black(trigram.midi_2)):
                     thumb_passing_cost = 1
-                elif is_black(midi_1):
+                elif is_black(trigram.midi_1):
                     thumb_passing_cost = 3
                 costs['pa1'] = thumb_passing_cost * self._weights['pa1']
-            if digit_2 == C.THUMB and midi_2 < midi_1:  # Thumb passing under finger, descending.
-                if (is_white(midi_1) and is_white(midi_2)) or (is_black(midi_1) and is_black(midi_2)):
+            if trigram.digit_2 == C.THUMB and trigram.midi_2 < trigram.midi_1:  # Thumb passing under finger, descending.
+                if (is_white(trigram.midi_1) and is_white(trigram.midi_2)) or (is_black(trigram.midi_1) and is_black(trigram.midi_2)):
                     thumb_passing_cost = 1
-                elif is_black(midi_2):
+                elif is_black(trigram.midi_2):
                     thumb_passing_cost = 3
                 costs['pa1'] = thumb_passing_cost * self._weights['pa1']
 
-    def trigram_node_cost(self, midi_1, handed_digit_1, midi_2, handed_digit_2, midi_3, handed_digit_3):
+    def trigram_node_cost(self, trigram_node):
         """
         Determine the cost associated with a trigram node configured as input.
         :param midi_1: The MIDI note number of the first note in the trigram. May be None in first layer.
@@ -781,45 +836,41 @@ class Parncutt(D.Dactyler):
         cost = 0
         costs = self.init_costs()
 
-        hand, digit_1, digit_2, digit_3 = Parncutt._hand_and_trigram_digits(
-            handed_digit_1, handed_digit_2, handed_digit_3)
-
         # Rule 1 ("Stretch")
-        self.assess_stretch(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+        self.assess_stretch(costs, trigram_node)
 
         # Rule 2 ("Small-Span")
-        self.assess_small_span(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+        self.assess_small_span(costs, trigram_node)
 
         # Rule 3 ("Large-Span")
-        self.assess_large_span(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+        self.assess_large_span(costs, trigram_node)
 
         # Rule 4 ("Position-Change-Count")
-        self.assess_position_change_count(costs, handed_digit_1, midi_1,
-                                          handed_digit_2, midi_2, handed_digit_3, midi_3)
+        self.assess_position_change_count(costs, trigram_node)
 
         # Rule 5 ("Position-Change-Size")
-        self.assess_position_change_size(costs, handed_digit_1, midi_1, handed_digit_3, midi_3)
+        self.assess_position_change_size(costs, trigram_node)
 
         # Rule 6 (wea "Weak-Finger")
-        self.assess_weak_finger(costs, digit_2)
+        self.assess_weak_finger(costs, trigram_node)
 
         # Rule 7 ("Three-Four-Five")
-        self.assess_345(costs, digit_1, digit_2, digit_3)
+        self.assess_345(costs, trigram_node)
 
         # Rule 8 ("Three-to-Four")
-        self.assess_3_to_4(costs, digit_1, digit_2)
+        self.assess_3_to_4(costs, trigram_node)
 
         # Rule 9 ("Four-on-Black")
-        self.assess_4_on_black(costs, digit_1, midi_1, digit_2, midi_2)
+        self.assess_4_on_black(costs, trigram_node)
 
         # Rule 10 ("Thumb-on-Black")
-        self.assess_thumb_on_black(costs, digit_1, midi_1, digit_2, midi_2, digit_3, midi_3)
+        self.assess_thumb_on_black(costs, trigram_node)
 
         # Rule 11 ("Five-on-Black")
-        self.assess_5_on_black(costs, midi_1, digit_2, midi_2, midi_3)
+        self.assess_5_on_black(costs, trigram_node)
 
         # Rule 12 ("Thumb-Passing")
-        self.assess_thumb_passing(costs, hand, digit_1, midi_1, digit_2, midi_2)
+        self.assess_thumb_passing(costs, trigram_node)
 
         for cost_key in costs:
             cost += costs[cost_key]
@@ -869,7 +920,10 @@ class Parncutt(D.Dactyler):
                 midi_3 = segment[note_num + 1].pitch.midi
                 hd_3 = handed_strikers[note_num + 1]
 
-            cost, detail = self.trigram_node_cost(midi_1, hd_1, midi_2, hd_2, midi_3, hd_3)
+            trigram = TrigramNode(midi_1=midi_1, handed_digit_1=hd_1,
+                                  midi_2=midi_2, handed_digit_2=hd_2,
+                                  midi_3=midi_3, handed_digit_3=hd_3)
+            cost, detail = self.trigram_node_cost(trigram)
             total_cost += cost
             transition_detail.append(detail)
         return total_cost, transition_detail
@@ -934,9 +988,10 @@ class Parncutt(D.Dactyler):
                             if 'start' in g.nodes[prior_trigram_node_id] or \
                                 (g.nodes[prior_trigram_node_id]['digit_2'] == digit_1 and
                                  g.nodes[prior_trigram_node_id]['digit_3'] == digit_2):
-                                weight, weights = self.trigram_node_cost(midi_1=midi_1, handed_digit_1=digit_1,
-                                                                         midi_2=midi_2, handed_digit_2=digit_2,
-                                                                         midi_3=midi_3, handed_digit_3=digit_3)
+                                trigram_node = TrigramNode(midi_1=midi_1, handed_digit_1=digit_1,
+                                                           midi_2=midi_2, handed_digit_2=digit_2,
+                                                           midi_3=midi_3, handed_digit_3=digit_3)
+                                weight, weights = self.trigram_node_cost(trigram_node)
                                 g.add_edge(prior_trigram_node_id, trigram_node_id, weight=weight, weights=weights)
             level_1_slice = list(set(next_level_1_slice))  # Distinct IDs only
             prior_trigram_slice = []
@@ -1103,6 +1158,12 @@ class Parncutt(D.Dactyler):
 
 
 class Jacobs(Parncutt):
+    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive", ruler=PhysicalRuler(),
+                 pruning_method='max', finger_spans=FINGER_SPANS, version=(1, 0, 0)):
+        super().__init__(segmenter=segmenter, segment_combiner=segment_combiner, ruler=ruler,
+                         staff_combiner=staff_combiner, pruning_method=pruning_method,
+                         finger_spans=finger_spans, version=version)
+
     def init_rule_weights(self):
         self._weights = {
             'str': 1,
@@ -1118,69 +1179,10 @@ class Jacobs(Parncutt):
             'pa1': 1
         }
 
-    def init_costs(self):
-        costs = {
-            'str': 0,
-            'sma': 0,
-            'lar': 0,
-            'pcc': 0,
-            'pcs': 0,
-            'wea': 0,
-            '3t4': 0,
-            'bl4': 0,
-            'bl1': 0,
-            'bl5': 0,
-            'pa1': 0,
-        }
-        return costs
-
-    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive", ruler=PhysicalRuler(),
-                 pruning_method='max', finger_spans=FINGER_SPANS, version=(1, 0, 0)):
-        super().__init__(segmenter=segmenter, segment_combiner=segment_combiner, ruler=ruler,
-                         staff_combiner=staff_combiner, pruning_method=pruning_method,
-                         finger_spans=finger_spans, version=version)
-
-    def assess_weak_finger(self, costs, digit_2):
-        # Rule 6 (wea "Weak-Finger")
-        # Assign 1 point every time finger 4 is used (but no longer finger 5).
-        if digit_2 == C.RING:
-            costs['wea'] = self._weights['wea']
-
-    def assess_large_span(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
-        # Rule 3 ("Large-Span") as described in Parncutt text and implied in results reported,
-        # NOT as defined in the stated Rule 3.
-        if not midi_1:
-            return
-
-        absolute_semitone_diff_12 = abs(self.distance(midi_1, midi_2))
-        digit_1 = D.Dactyler.digit_only(handed_digit_1)
-        digit_2 = D.Dactyler.digit_only(handed_digit_2)
-        # "penalizes equally (by 1 point per semitone) all spans exceeding MaxRel."
-        span_penalty = 1
-
-        hand = D.Dactyler.digit_hand(handed_digit_1)
-        if hand == '>':
-            if digit_1 < digit_2 and midi_1 < midi_2:
-                max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
-            elif digit_1 > digit_2 and midi_1 > midi_2:
-                max_rel_12 = self._finger_spans[(handed_digit_2, handed_digit_1)]['MaxRel']
-            else:
-                return
-        else:
-            if digit_1 < digit_2 and midi_1 < midi_2:
-                max_rel_12 = self._finger_spans[(handed_digit_2, handed_digit_1)]['MaxRel']
-            elif digit_1 > digit_2 and midi_1 > midi_2:
-                max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
-            else:
-                return
-
-        if absolute_semitone_diff_12 > max_rel_12:
-            costs['lar'] = span_penalty * (absolute_semitone_diff_12 - max_rel_12) * self._weights['lar']
-
-    def trigram_node_cost(self, midi_1, handed_digit_1, midi_2, handed_digit_2, midi_3, handed_digit_3):
+    def trigram_node_cost(self, trigram_node):
         """
         Determine the cost associated with a trigram node configured as input.
-        :param midi_1: The MIDI note number of the first note in the trigram. May be None in first layer.
+        :param trigramidi_1: The MIDI note number of the first note in the trigram. May be None in first layer.
         :param handed_digit_1: Fingering for first note (e.g., ">3").
         :param midi_2: The MIDI note number of the second note in the trigram.
         :param handed_digit_2: Fingering proposed for second note (e.g., "<5").
@@ -1192,45 +1194,42 @@ class Jacobs(Parncutt):
         cost = 0
         costs = self.init_costs()
 
-        hand, digit_1, digit_2, digit_3 = Parncutt._hand_and_trigram_digits(
-            handed_digit_1, handed_digit_2, handed_digit_3)
-
         # Rule 1 ("Stretch")
-        self.assess_stretch(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+        self.assess_stretch(costs, trigram_node)
 
         # Rule 2 ("Small-Span")
-        self.assess_small_span(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+        self.assess_small_span(costs, trigram_node)
 
         # Rule 3 ("Large-Span")
-        self.assess_large_span(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+        self.assess_large_span_jacobs(costs, trigram_node)
 
         # Rule 4 ("Position-Change-Count")
-        self.assess_position_change_count(costs, handed_digit_1, midi_1, handed_digit_2, midi_2, handed_digit_3, midi_3)
+        self.assess_position_change_count(costs, trigram_node)
 
         # Rule 5 ("Position-Change-Size")
-        self.assess_position_change_size(costs, handed_digit_1, midi_1, handed_digit_3, midi_3)
+        self.assess_position_change_size(costs, trigram_node)
 
         # Rule 6 (wea "Weak-Finger")
-        self.assess_weak_finger(costs, digit_2)
+        self.assess_weak_finger_jacobs(costs, trigram_node)
 
         # Rule 7 ("Three-Four-Five")
         # Not done in the interests of parsimony.
-        # self.assess_345(costs, digit_1, digit_2, digit_3)
+        # self.assess_345(costs, trigram_node)
 
         # Rule 8 ("Three-to-Four")
-        self.assess_3_to_4(costs, digit_1, digit_2)
+        self.assess_3_to_4(costs, trigram_node)
 
         # Rule 9 ("Four-on-Black")
-        self.assess_4_on_black(costs, digit_1, midi_1, digit_2, midi_2)
+        self.assess_4_on_black(costs, trigram_node)
 
         # Rule 10 ("Thumb-on-Black")
-        self.assess_thumb_on_black(costs, digit_1, midi_1, digit_2, midi_2, digit_3, midi_3)
+        self.assess_thumb_on_black(costs, trigram_node)
 
         # Rule 11 ("Five-on-Black")
-        self.assess_5_on_black(costs, midi_1, digit_2, midi_2, midi_3)
+        self.assess_5_on_black(costs, trigram_node)
 
         # Rule 12 ("Thumb-Passing")
-        self.assess_thumb_passing(costs, hand, digit_1, midi_1, digit_2, midi_2)
+        self.assess_thumb_passing(costs, trigram_node)
 
         for cost_key in costs:
             cost += costs[cost_key]
@@ -1257,27 +1256,7 @@ class Badgerow(Parncutt):
             'b1p': 1,
         }
 
-    def init_costs(self):
-        costs = {
-            'str': 0,
-            'sma': 0,
-            'lar': 0,
-            'pcc': 0,
-            'pcs': 0,
-            'wea': 0,
-            '345': 0,
-            '3t4': 0,
-            'bl1': 0,
-            'bl5': 0,
-            'pa1': 0,
-            'apr': 0,
-            'afc': 0,
-            # 'wb1': 0,
-            'b1p': 0,
-        }
-        return costs
-
-    def assess_large_span_badgerow(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2, handed_digit_3, midi_3):
+    def assess_large_span_badgerow(self, costs, trigram):
         # Rule 3 ("Large-Span") as described in Parncutt text and implied in results reported,
         # NOT as defined in the stated Rule 3. Amended as suggested by Badgerow:
         #
@@ -1286,40 +1265,37 @@ class Badgerow(Parncutt):
         # each semitone that an interval exceeds MaxComf. For finger pairs not including
         # the thumb, assign 2 points per semitone than [that] an interval exceeds MaxComf."
         #
-        if not midi_1:
+        if not trigram.midi_1:
             return
 
-        absolute_semitone_diff_12 = abs(self.distance(midi_1, midi_2))
-        digit_1 = D.Dactyler.digit_only(handed_digit_1)
-        digit_2 = D.Dactyler.digit_only(handed_digit_2)
+        absolute_semitone_diff_12 = abs(self.distance(trigram.midi_1, trigram.midi_2))
         span_penalty = 2
-        if digit_1 == C.THUMB or digit_2 == C.THUMB:
+        if trigram.digit_1 == C.THUMB or trigram.digit_2 == C.THUMB:
             span_penalty = 1
 
-        hand = D.Dactyler.digit_hand(handed_digit_1)
+        hand = D.Dactyler.digit_hand(trigram.handed_digit_1)
         if hand == '>':
-            if digit_1 < digit_2 and midi_1 < midi_2:
-                max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
-                max_comf_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxComf']
-            elif digit_1 > digit_2 and midi_1 > midi_2:
-                max_rel_12 = self._finger_spans[(handed_digit_2, handed_digit_1)]['MaxRel']
-                max_comf_12 = self._finger_spans[(handed_digit_2, handed_digit_1)]['MaxComf']
+            if trigram.digit_1 < trigram.digit_2 and trigram.midi_1 < trigram.midi_2:
+                max_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxRel']
+                max_comf_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxComf']
+            elif trigram.digit_1 > trigram.digit_2 and trigram.midi_1 > trigram.midi_2:
+                max_rel_12 = self._finger_spans[(trigram.handed_digit_2, trigram.handed_digit_1)]['MaxRel']
+                max_comf_12 = self._finger_spans[(trigram.handed_digit_2, trigram.handed_digit_1)]['MaxComf']
             else:
                 return
         else:
-            if digit_1 < digit_2 and midi_1 < midi_2:
-                max_rel_12 = self._finger_spans[(handed_digit_2, handed_digit_1)]['MaxRel']
-                max_comf_12 = self._finger_spans[(handed_digit_2, handed_digit_1)]['MaxComf']
-            elif digit_1 > digit_2 and midi_1 > midi_2:
-                max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
-                max_comf_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxComf']
+            if trigram.digit_1 < trigram.digit_2 and trigram.midi_1 < trigram.midi_2:
+                max_rel_12 = self._finger_spans[(trigram.handed_digit_2, trigram.handed_digit_1)]['MaxRel']
+                max_comf_12 = self._finger_spans[(trigram.handed_digit_2, trigram.handed_digit_1)]['MaxComf']
+            elif trigram.digit_1 > trigram.digit_2 and trigram.midi_1 > trigram.midi_2:
+                max_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxRel']
+                max_comf_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxComf']
             else:
                 return
 
         raw_pcc = 2
-        if midi_3:
-            raw_pcc = self.raw_position_change_count(handed_digit_1, midi_1, handed_digit_2, midi_2,
-                                                     handed_digit_3, midi_3)
+        if trigram.midi_3:
+            raw_pcc = self.raw_position_change_count(trigram)
         if raw_pcc <= 1:
             if absolute_semitone_diff_12 > max_comf_12:
                 costs['lar'] = span_penalty * (absolute_semitone_diff_12 - max_comf_12) * self._weights['lar']
@@ -1327,66 +1303,61 @@ class Badgerow(Parncutt):
             if absolute_semitone_diff_12 > max_rel_12:
                 costs['lar'] = span_penalty * (absolute_semitone_diff_12 - max_rel_12) * self._weights['lar']
 
-    def assess_alternation_pairing(self, costs, digit_1, digit_2, digit_3):
+    def assess_alternation_pairing(self, costs, trigram):
         # New Rule ("Alternation-Pairing") from Justin Badgerow
         # "Assign 1 point for 3-4-3 or 4-3-4 combinations and 1 point for 4-5-4 or 5-4-5 combinations."
         ### FIXME: Justin says, "MAYBE DELETE??"
-        if (digit_1 == 3 and digit_2 == 4 and digit_3 == 3) or (digit_1 == 4 and digit_2 == 3 and digit_3 == 4) or \
-           (digit_1 == 4 and digit_2 == 5 and digit_3 == 4) or (digit_1 == 5 and digit_2 == 4 and digit_3 == 5):
+        if (trigram.digit_1 == 3 and trigram.digit_2 == 4 and trigram.digit_3 == 3) or \
+                (trigram.digit_1 == 4 and trigram.digit_2 == 3 and trigram.digit_3 == 4) or \
+                (trigram.digit_1 == 4 and trigram.digit_2 == 5 and trigram.digit_3 == 4) or \
+                (trigram.digit_1 == 5 and trigram.digit_2 == 4 and trigram.digit_3 == 5):
             costs['apr'] = self._weights['apr']
 
-    def assess_alternation_finger_change(self, costs, digit_1, midi_1, digit_3, midi_3):
+    def assess_alternation_finger_change(self, costs, trigram):
         # New Rule ("Alternation-Finger-Change") from Justin Badgerow
         # "On three note passages where the 1st and 3rd note are the same, add a 1 point
         # deduction when a different finger is on the 1st and 3rd pitch.
-        if digit_1 and digit_3 and midi_1 == midi_3 and digit_1 != digit_3:
+        if trigram.digit_1 and trigram.digit_3 and trigram.midi_1 == trigram.midi_3 and \
+                trigram.digit_1 != trigram.digit_3:
             costs['afc'] = self._weights['afc']
 
-    def assess_black_thumb_pivot(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
-        if midi_1 == midi_2:
+    def assess_black_thumb_pivot(self, costs, trigram):
+        if trigram.midi_1 == trigram.midi_2:
             return
-        if not midi_1:
+        if not trigram.midi_1:
             return
-        if midi_1 == midi_2:
+        if trigram.midi_1 == trigram.midi_2:
             return
-        hand_1 = D.Dactyler.digit_hand(handed_digit_1)
-        hand_2 = D.Dactyler.digit_hand(handed_digit_2)
-        if hand_1 != hand_2:
+        if trigram.hand_1 != trigram.hand_2:
             return
 
-        digit_1 = D.Dactyler.digit_only(handed_digit_1)
-        digit_2 = D.Dactyler.digit_only(handed_digit_2)
-        if hand_1 == '>':
-            if midi_2 < midi_1:  # descending
-                if digit_1 == C.THUMB and is_black(midi_1) and digit_2 in (C.RING, C.LITTLE) and is_white(midi_2):
-                    costs['b1p'] += (digit_2 - 1) * self._weights['b1p']
+        if trigram.hand_1 == '>':
+            if trigram.midi_2 < trigram.midi_1:  # descending
+                if trigram.digit_1 == C.THUMB and is_black(trigram.midi_1) and trigram.digit_2 in (C.RING, C.LITTLE) and is_white(trigram.midi_2):
+                    costs['b1p'] += (trigram.digit_2 - 1) * self._weights['b1p']
             else:  # ascending
-                if digit_2 == C.THUMB and is_black(midi_2) and digit_1 in (C.RING, C.LITTLE) and is_white(midi_1):
-                    costs['b1p'] += (digit_2 - 1) * self._weights['b1p']
+                if trigram.digit_2 == C.THUMB and is_black(trigram.midi_2) and trigram.digit_1 in (C.RING, C.LITTLE) and is_white(trigram.midi_1):
+                    costs['b1p'] += (trigram.digit_2 - 1) * self._weights['b1p']
         else:  # LH
-            if midi_2 > midi_1:  # ascending
-                if digit_1 == C.THUMB and is_black(midi_1) and digit_2 in (C.RING, C.LITTLE) and is_white(midi_2):
-                    costs['b1p'] += (digit_2 - 1) * self._weights['b1p']
+            if trigram.midi_2 > trigram.midi_1:  # ascending
+                if trigram.digit_1 == C.THUMB and is_black(trigram.midi_1) and trigram.digit_2 in (C.RING, C.LITTLE) and is_white(trigram.midi_2):
+                    costs['b1p'] += (trigram.digit_2 - 1) * self._weights['b1p']
             else:  # descending
-                if digit_2 == C.THUMB and is_black(midi_2) and digit_1 in (C.RING, C.LITTLE) and is_white(midi_1):
-                    costs['b1p'] += (digit_2 - 1) * self._weights['b1p']
+                if trigram.digit_2 == C.THUMB and is_black(trigram.midi_2) and trigram.digit_1 in (C.RING, C.LITTLE) and is_white(trigram.midi_1):
+                    costs['b1p'] += (trigram.digit_2 - 1) * self._weights['b1p']
 
-    def assess_thumb_on_black_to_weak(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
-        if midi_1 == midi_2:
+    def assess_thumb_on_black_to_weak(self, costs, trigram):
+        if trigram.midi_1 == trigram.midi_2:
             return
-        digit_1 = D.Dactyler.digit_only(handed_digit_1) if midi_1 else None
-        if digit_1 != C.THUMB or is_white(midi_1):
+        if trigram.digit_1 != C.THUMB or is_white(trigram.midi_1):
             return
         # So a thumb is playing a black note 1.
 
-        digit_2 = D.Dactyler.digit_only(handed_digit_2)
-        if is_black(midi_2) or digit_2 not in (C.RING, C.LITTLE):
+        if is_black(trigram.midi_2) or trigram.digit_2 not in (C.RING, C.LITTLE):
             return
         # So a weak finger is playing a white note 2.
 
-        hand_1 = D.Dactyler.digit_hand(handed_digit_1)
-        hand_2 = D.Dactyler.digit_hand(handed_digit_2)
-        if hand_1 != hand_2:
+        if trigram.hand_1 != trigram.hand_2:
             return
 
         # For RH, ANY descending move from 1-4 or 1-5 from black to white key, regardless of size,
@@ -1394,82 +1365,79 @@ class Badgerow(Parncutt):
         # Assess the same penalties for ascending intervals, if said intervals are less
         # than MinRel. And flip this around for the left hand.
 
-        if hand_1 == '>':
-            if midi_1 > midi_2:  # descending
-                costs['b1w'] += (digit_2 - 1) * self._weights['b1w']
+        if trigram.hand_1 == '>':
+            if trigram.midi_1 > trigram.midi_2:  # descending
+                costs['b1w'] += (trigram.digit_2 - 1) * self._weights['b1w']
             else:
-                distance = self.distance(midi_1, midi_2)
-                min_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinRel']
+                distance = self.distance(trigram.midi_1, trigram.midi_2)
+                min_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MinRel']
                 if distance < min_rel_12:
-                    costs['b1w'] += (digit_2 - 1) * self._weights['b1w']
+                    costs['b1w'] += (trigram.digit_2 - 1) * self._weights['b1w']
         else:  # Left hand
-            if midi_2 > midi_1:  # ascending
-                costs['b1w'] += (digit_2 - 1) * self._weights['b1w']
+            if trigram.midi_2 > trigram.midi_1:  # ascending
+                costs['b1w'] += (trigram.digit_2 - 1) * self._weights['b1w']
             else:
-                distance = self.distance(midi_1, midi_2)
-                min_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MinRel']
+                distance = self.distance(trigram.midi_1, trigram.midi_2)
+                min_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MinRel']
                 if distance < min_rel_12:
-                    costs['b1w'] += (digit_2 - 1) * self._weights['b1w']
+                    costs['b1w'] += (trigram.digit_2 - 1) * self._weights['b1w']
 
-    def assess_weak_to_thumb_on_black(self, costs, handed_digit_1, midi_1, handed_digit_2, midi_2):
-        if not midi_1 or midi_1 == midi_2:
+    def assess_weak_to_thumb_on_black(self, costs, trigram):
+        if not trigram.midi_1 or trigram.midi_1 == trigram.midi_2:
             return
-        digit_2 = D.Dactyler.digit_only(handed_digit_2) if handed_digit_2 else None
-        if digit_2 != C.THUMB or is_white(midi_2):
+        digit_2 = D.Dactyler.digit_only(trigram.handed_digit_2) if trigram.handed_digit_2 else None
+        if trigram.digit_2 != C.THUMB or is_white(trigram.midi_2):
             return
         # So thumb is playing a black note 2.
 
-        digit_1 = D.Dactyler.digit_only(handed_digit_1)
-        if is_black(midi_1) or digit_1 not in (C.RING, C.LITTLE):
+        if is_black(trigram.midi_1) or trigram.digit_1 not in (C.RING, C.LITTLE):
             return
         # So a weak finger is playing a white note 1.
 
-        hand_1 = D.Dactyler.digit_hand(handed_digit_1)
-        hand_2 = D.Dactyler.digit_hand(handed_digit_2)
-        if hand_1 != hand_2:
+        if trigram.hand_1 != trigram.hand_2:
             return
 
         # For the RH, any ascending move from 4-1 or 5-1, from black to white key, regardless of size,
         # assess 3 points for 4-1 pairs and 4 points for 5-1 pairs.
         # Assess the same penalties for descending intervals, if said intervals are more than MaxRel.
-        if hand_1 == '>':
-            if midi_2 > midi_1:  # ascending
-                costs['wb1'] += (digit_1 - 1) * self._weights['wb1']
+        if trigram.hand_1 == '>':
+            if trigram.midi_2 > trigram.midi_1:  # ascending
+                costs['wb1'] += (trigram.digit_1 - 1) * self._weights['wb1']
             else:
-                distance = self.distance(midi_1, midi_2)
-                max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
+                distance = self.distance(trigram.midi_1, trigram.midi_2)
+                max_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxRel']
                 if distance > max_rel_12:
-                    costs['wb1'] += (digit_1 - 1) * self._weights['wb1']
+                    costs['wb1'] += (trigram.digit_1 - 1) * self._weights['wb1']
         else:  # Left hand
-            if midi_2 > midi_1:  # ascending
-                distance = self.distance(midi_1, midi_2)
-                max_rel_12 = self._finger_spans[(handed_digit_1, handed_digit_2)]['MaxRel']
+            if trigram.midi_2 > trigram.midi_1:  # ascending
+                distance = self.distance(trigram.midi_1, trigram.midi_2)
+                max_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxRel']
                 if distance > max_rel_12:
-                    costs['wb1'] += (digit_1 - 1) * self._weights['wb1']
+                    costs['wb1'] += (trigram.digit_1 - 1) * self._weights['wb1']
             else:
-                costs['wb1'] += (digit_1 - 1) * self._weights['wb1']
+                costs['wb1'] += (trigram.digit_1 - 1) * self._weights['wb1']
 
-    # def assess_thumb_on_black(self, costs, digit_1, midi_1, digit_2, midi_2, digit_3, midi_3):
+    # def assess_thumb_on_black(self, costs, trigram):
     #     # Rule 10 ("Thumb-on-Black")
     #     # "Assign 1 point whenever the thumb plays a black key."
-    #     if digit_2 != C.THUMB or is_white(midi_2):
+    #     if trigram.digit_2 != C.THUMB or is_white(trigram.midi_2):
     #         return
     #
     #     costs['bl1'] += self._weights['bl1']
     #
     #     # "If the immediately preceding note is white, assign a further 2 points."
-    #     if digit_1 and digit_2 == C.THUMB and is_black(midi_2) and is_white(midi_1):
+    #     if trigram.digit_1 and trigram.digit_2 == C.THUMB and is_black(trigram.midi_2) and is_white(trigram.midi_1):
     #         costs['bl1'] += 2 * self._weights['bl1']
     #
     #     # "If the immediately following note is white, assign a further 2 points."
-    #     if digit_3 and digit_2 == C.THUMB and is_black(midi_2) and is_white(midi_3):
+    #     if trigram.digit_3 and trigram.digit_2 == C.THUMB and is_black(trigram.midi_2) and is_white(trigram.midi_3):
     #         costs['bl1'] += 2 * self._weights['bl1']
     #
     #         # Justin's amendment: "When the thumb plays a black key, if the preceding OR
     #         # following note is finger 5 on a white key, assign a further 2 points for each usage."
-    #         if digit_1 == C.LITTLE and is_white(midi_1):
+    #         if trigram.digit_1 == C.LITTLE and is_white(trigram.midi_1):
     #             costs['bl1'] += 2 * self._weights['bl1']
-    #         if digit_3 == C.LITTLE and is_white(midi_3):
+    #         if trigram.digit_3 == C.LITTLE and is_white(trigram.midi_3):
     #             costs['bl1'] += 2 * self._weights['bl1']
 
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive", ruler=Ruler(),
@@ -1478,7 +1446,7 @@ class Badgerow(Parncutt):
                          staff_combiner=staff_combiner, pruning_method=pruning_method,
                          finger_spans=finger_spans, version=version)
 
-    def trigram_node_cost(self, midi_1, handed_digit_1, midi_2, handed_digit_2, midi_3, handed_digit_3):
+    def trigram_node_cost(self, trigram_node):
         """
         Determine the cost associated with a trigram node configured as input.
         :param midi_1: The MIDI note number of the first note in the trigram. May be None in first layer.
@@ -1493,56 +1461,130 @@ class Badgerow(Parncutt):
         cost = 0
         costs = self.init_costs()
 
-        hand, digit_1, digit_2, digit_3 = Parncutt._hand_and_trigram_digits(
-            handed_digit_1, handed_digit_2, handed_digit_3)
-
         # Rule 1 ("Stretch")
-        self.assess_stretch(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+        self.assess_stretch(costs, trigram_node)
 
         # Rule 2 ("Small-Span")
-        self.assess_small_span(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+        self.assess_small_span(costs, trigram_node)
 
         # Rule 3 ("Large-Span")
-        self.assess_large_span_badgerow(costs, handed_digit_1, midi_1, handed_digit_2, midi_2,
-                                        handed_digit_3, midi_3)
+        self.assess_large_span_badgerow(costs, trigram_node)
 
         # Rule 4 ("Position-Change-Count")
-        self.assess_position_change_count(costs, handed_digit_1, midi_1, handed_digit_2, midi_2,
-                                          handed_digit_3, midi_3)
+        self.assess_position_change_count(costs, trigram_node)
 
         # Rule 5 ("Position-Change-Size")
-        self.assess_position_change_size(costs, handed_digit_1, midi_1, handed_digit_3, midi_3)
+        self.assess_position_change_size(costs, trigram_node)
 
         # Rule 6 (wea "Weak-Finger")
-        self.assess_weak_finger(costs, digit_2)
+        self.assess_weak_finger(costs, trigram_node)
 
         # Rule 7 ("Three-Four-Five")
-        self.assess_345(costs, digit_1, digit_2, digit_3)
+        self.assess_345(costs, trigram_node)
 
         # Rule 8 ("Three-to-Four")
-        self.assess_3_to_4(costs, digit_1, digit_2)
+        self.assess_3_to_4(costs, trigram_node)
 
         # Rule 10 ("Thumb-on-Black")
-        self.assess_thumb_on_black(costs, digit_1, midi_1, digit_2, midi_2, digit_3, midi_3)
+        self.assess_thumb_on_black(costs, trigram_node)
 
         # Rule 11 ("Five-on-Black")
-        self.assess_5_on_black(costs, midi_1, digit_2, midi_2, midi_3)
+        self.assess_5_on_black(costs, trigram_node)
 
         # Rule 12 ("Thumb-Passing")
-        self.assess_thumb_passing(costs, hand, digit_1, midi_1, digit_2, midi_2)
+        self.assess_thumb_passing(costs, trigram_node)
 
         # New rule ("Alternation-Pairing")
-        self.assess_alternation_pairing(costs, digit_1, digit_2, digit_3)
+        self.assess_alternation_pairing(costs, trigram_node)
 
         # New rule ("Alternation-Finger-Change")
-        self.assess_alternation_finger_change(costs, digit_1, midi_1, digit_3, midi_3)
+        self.assess_alternation_finger_change(costs, trigram_node)
 
         # New rule ("Thumb-on-Black-to-Weak")
-        # self.assess_thumb_on_black_to_weak(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+        # self.assess_thumb_on_black_to_weak(costs, trigram_node)
         # New rule ("Weak-to-Thumb-on-Black")
-        # self.assess_weak_to_thumb_on_black(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+        # self.assess_weak_to_thumb_on_black(costs, trigram_node)
         # New rule ("Black-Thumb-Pivot")
-        self.assess_black_thumb_pivot(costs, handed_digit_1, midi_1, handed_digit_2, midi_2)
+        self.assess_black_thumb_pivot(costs, trigram_node)
+
+        for cost_key in costs:
+            cost += costs[cost_key]
+        return cost, costs
+
+
+class Balliauw(Parncutt):
+    def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive", ruler=Ruler(),
+                 pruning_method='max', finger_spans=FINGER_SPANS, version=(1, 0, 0)):
+        super().__init__(segmenter=segmenter, segment_combiner=segment_combiner, ruler=ruler,
+                         staff_combiner=staff_combiner, pruning_method=pruning_method,
+                         finger_spans=finger_spans, version=version)
+
+    def init_rule_weights(self):
+        self._weights = {
+            'str': 1,
+            'sma': 1,
+            'lar': 1,
+            'pcc': 1,
+            'pcs': 1,
+            'wea': 1,
+            '345': 1,
+            '3t4': 1,
+            'bl1': 1,
+            'bl5': 1,
+            'pa1': 1,
+            'apr': 1,
+            'afc': 1,
+            # 'wb1': 1,
+            'b1p': 1,
+        }
+
+    def trigram_node_cost(self, trigram_node):
+        """
+        Determine the cost associated with a trigram node configured as input.
+        :param midi_1: The MIDI note number of the first note in the trigram. May be None in first layer.
+        :param handed_digit_1: Fingering for first note (e.g., ">3").
+        :param midi_2: The MIDI note number of the second note in the trigram.
+        :param handed_digit_2: Fingering proposed for second note (e.g., "<5").
+        :param midi_3: The MIDI note number of the third note.
+        :param handed_digit_3: Fingering for third note.
+        :return: cost, costs: The total (scalar integer) cost associated with the node, and a dictionary
+        detailing the specific subcosts contributing to the total.
+        """
+        cost = 0
+        costs = self.init_costs()
+
+        # Rule 1 ("Stretch")
+        self.assess_stretch(costs, trigram_node)
+
+        # Rule 2 ("Small-Span")
+        self.assess_small_span(costs, trigram_node)
+
+        # Rule 3 ("Large-Span")
+        self.assess_large_span_badgerow(costs, trigram_node)
+
+        # Rule 4 ("Position-Change-Count")
+        self.assess_position_change_count(costs, trigram_node)
+
+        # Rule 5 ("Position-Change-Size")
+        self.assess_position_change_size(costs,  trigram_node)
+
+        # Rule 6 (wea "Weak-Finger")
+        self.assess_weak_finger(costs,  trigram_node)
+
+        # Rule 7 ("Three-Four-Five")
+        self.assess_345(costs,  trigram_node)
+
+        # Rule 8 ("Three-to-Four")
+        self.assess_3_to_4(costs,  trigram_node)
+
+        # Rule 10 ("Thumb-on-Black")
+        self.assess_thumb_on_black(costs,  trigram_node)
+
+        # Rule 11 ("Five-on-Black")
+        self.assess_5_on_black(costs,  trigram_node)
+
+        # Rule 12 ("Thumb-Passing")
+        self.assess_thumb_passing(costs,  trigram_node)
 
         for cost_key in costs:
             cost += costs[cost_key]

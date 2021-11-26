@@ -43,8 +43,8 @@ from pydactyl.dactyler.Random import Random
 
 # ['ideal', 'badgerow', 'jacobs', 'parncutt', 'random']:
 # ['ideal', 'jacobs', 'parncutt', 'random']:
-# MODELS = ['badgerow', 'jacobs', 'parncutt']
-MODELS = ['badgerow']
+MODELS = ['badgerow', 'jacobs', 'parncutt']
+# MODELS = ['badgerow']
 
 # CORPORA = ['full_american', 'parncutt_published']
 CORPORA = ['parncutt_published']
