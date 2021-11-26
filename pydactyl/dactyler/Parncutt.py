@@ -331,28 +331,45 @@ class PhysicalRuler(Ruler):
 
         return positions
 
+
 class Parncutt(D.Dactyler):
-    def init_rule_weights(self):
-        self._weights = {
-            'str': 1,
-            'sma': 1,
-            'lar': 1,
-            'pcc': 1,
-            'pcs': 1,
-            'wea': 1,
-            '345': 1,
-            '3t4': 1,
-            'bl4': 1,
-            'bl1': 1,
-            'bl5': 1,
-            'pa1': 1
+    def init_rules(self):
+        # Rule 1 ("Stretch")
+        # Rule 2 ("Small-Span")
+        # Rule 3 ("Large-Span")
+        # Rule 4 ("Position-Change-Count")
+        # Rule 5 ("Position-Change-Size")
+        # Rule 6 (wea "Weak-Finger")
+        # Rule 7 ("Three-Four-Five")
+        # Rule 8 ("Three-to-Four")
+        # Rule 9 ("Four-on-Black")
+        # Rule 10 ("Thumb-on-Black")
+        # Rule 11 ("Five-on-Black")
+        # Rule 12 ("Thumb-Passing")
+        self._rules = {
+            'str': self.assess_stretch,
+            'sma': self.assess_small_span,
+            'lar': self.assess_large_span,
+            'pcc': self.assess_position_change_count,
+            'pcs': self.assess_position_change_size,
+            'wea': self.assess_weak_finger,
+            '345': self.assess_345,
+            '3t4': self.assess_3_to_4,
+            'bl4': self.assess_4_on_black,
+            'bl1': self.assess_thumb_on_black,
+            'bl5': self.assess_5_on_black,
+            'pa1': self.assess_thumb_passing
         }
 
+    def init_rule_weights(self):
+        self._weights = {}
+        for rule in self._rules:
+            self._weights[rule] = 1
+
     def init_costs(self):
-        costs = {}
+        self._costs = {}
         for wt in self._weights:
-            costs[wt] = 0
-        return costs
+            self._costs[wt] = 0
 
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive", ruler=Ruler(),
                  pruning_method='max', finger_spans=FINGER_SPANS, version=(1, 0, 0)):
@@ -362,11 +379,13 @@ class Parncutt(D.Dactyler):
         # if finger_spans:
         self._finger_spans = finger_spans
         self._ruler = ruler
+        self._rules = {}
         self._costs = {}
         self._last_segment_all_paths = None  # Generator of all paths for last segment processed.
         self._pruning_method = None
         self.pruning_method(method=pruning_method)
         self._weights = {}
+        self.init_rules()
         self.init_rule_weights()
 
     def finger_spans(self, finger_spans=None):
@@ -508,7 +527,7 @@ class Parncutt(D.Dactyler):
     def distance(self, from_midi, to_midi):
         return self._ruler.distance(from_midi, to_midi)
 
-    def assess_stretch(self, costs, trigram):
+    def assess_stretch(self, trigram):
         # Rule 1 ("Stretch")
         if not trigram.midi_1:
             return
@@ -519,11 +538,11 @@ class Parncutt(D.Dactyler):
 
         # "Assign 2 points for each semitone that an interval exceeds MaxComf or is less than MinComf."
         if semitone_diff_12 > max_comf_12:
-            costs['str'] = 2 * (semitone_diff_12 - max_comf_12) * self._weights['str']
+            self._costs['str'] = 2 * (semitone_diff_12 - max_comf_12) * self._weights['str']
         elif semitone_diff_12 < min_comf_12:
-            costs['str'] = 2 * (min_comf_12 - semitone_diff_12) * self._weights['str']
+            self._costs['str'] = 2 * (min_comf_12 - semitone_diff_12) * self._weights['str']
 
-    def assess_small_per_rule(self, costs, trigram):
+    def assess_small_per_rule(self, trigram):
         # Rule 2 ("Small-Span")
         # "For finger pairs including the thumb, assign 1 point for each semitone that an interval is
         # less than MinRel. For finger pairs not including the thumb, assign 2 points per semitone."
@@ -537,9 +556,9 @@ class Parncutt(D.Dactyler):
         if trigram.digit_1 == C.THUMB or trigram.digit_2 == C.THUMB:
             span_penalty = 1
         if semitone_diff_12 < min_rel_12:
-            costs['sma'] = span_penalty * (min_rel_12 - semitone_diff_12) * self._weights['sma']
+            self._costs['sma'] = span_penalty * (min_rel_12 - semitone_diff_12) * self._weights['sma']
 
-    def assess_small_span(self, costs, trigram):
+    def assess_small_span(self, trigram):
         # Rule 2 ("Small-Span")
         # "For finger pairs including the thumb, assign 1 point for each semitone that an interval is
         # less than MinRel. For finger pairs not including the thumb, assign 2 points per semitone."
@@ -576,9 +595,9 @@ class Parncutt(D.Dactyler):
             cost = span_penalty * (min_rel - semitone_diff) * self._weights['sma']
         if max_rel is not None and semitone_diff > max_rel:
             cost = span_penalty * (semitone_diff - max_rel) * self._weights['sma']
-        costs['sma'] = cost
+        self._costs['sma'] = cost
 
-    def assess_large_span_per_rule(self, costs, trigram):
+    def assess_large_span_per_rule(self, trigram):
         # Rule 3 ("Large-Span")
         # "For finger pairs including the thumb, assign 1 point for each semitone that an interval
         # exceeds MaxRel. For finger pairs not including the thumb, assign 2 points per semitone."
@@ -593,9 +612,9 @@ class Parncutt(D.Dactyler):
         semitone_diff_12 = self.distance(trigram.midi_1, trigram.midi_2)
         max_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxRel']
         if semitone_diff_12 > max_rel_12:
-            costs['lar'] = span_penalty * (semitone_diff_12 - max_rel_12) * self._weights['lar']
+            self._costs['lar'] = span_penalty * (semitone_diff_12 - max_rel_12) * self._weights['lar']
 
-    def assess_large_span(self, costs, trigram):
+    def assess_large_span(self, trigram):
         # Rule 3 ("Large-Span") as described in Parncutt text and implied in results reported,
         # NOT as defined in the stated Rule 3.
         if not trigram.midi_1:
@@ -622,9 +641,9 @@ class Parncutt(D.Dactyler):
                 return
 
         if absolute_semitone_diff_12 > max_rel_12:
-            costs['lar'] = span_penalty * (absolute_semitone_diff_12 - max_rel_12) * self._weights['lar']
+            self._costs['lar'] = span_penalty * (absolute_semitone_diff_12 - max_rel_12) * self._weights['lar']
 
-    def assess_large_span_jacobs(self, costs, trigram):
+    def assess_large_span_jacobs(self, trigram):
         # Rule 3 ("Large-Span") as described in Parncutt text and implied in results reported,
         # NOT as defined in the stated Rule 3.
         # Per Jacobs.
@@ -653,14 +672,14 @@ class Parncutt(D.Dactyler):
                 return
 
         if absolute_semitone_diff_12 > max_rel_12:
-            costs['lar'] = span_penalty * (absolute_semitone_diff_12 - max_rel_12) * self._weights['lar']
+            self._costs['larj'] = span_penalty * (absolute_semitone_diff_12 - max_rel_12) * self._weights['lar']
 
-    def assess_weak_finger_jacobs(self, costs, trigram):
+    def assess_weak_finger_jacobs(self, trigram):
         # Rule 6 (wea "Weak-Finger")
         # Assign 1 point every time finger 4 is used (but no longer finger 5).
         # Per Jacobs.
         if trigram.digit_2 == C.RING:
-            costs['wea'] = self._weights['wea']
+            self._costs['weaj'] = self._weights['wea']
 
     def raw_position_change_count(self, trigram):
         if not trigram.midi_1 or not trigram.midi_3:
@@ -690,7 +709,7 @@ class Parncutt(D.Dactyler):
                 pcc = 1  # A "half change"
         return pcc
 
-    def assess_position_change_count(self, costs, trigram):
+    def assess_position_change_count(self, trigram):
         # Rule 4 ("Position-Change-Count")
         # "Assign 2 points for every full change of hand position and 1 point for every half change.
         # A change of hand position occurs whenever the first and third notes in a consecutive
@@ -700,9 +719,9 @@ class Parncutt(D.Dactyler):
         # lies between the first and third pitches; and the interval between the first and third pitches
         # is greater than MaxPrac or less than MinPrac. All other changes are half changes."
         raw_pcc = self.raw_position_change_count(trigram)
-        costs['pcc'] = raw_pcc * self._weights['pcc']
+        self._costs['pcc'] = raw_pcc * self._weights['pcc']
 
-    def assess_position_change_size(self, costs, trigram):
+    def assess_position_change_size(self, trigram):
         # Rule 5 ("Position-Change-Size")
         # "If the interval spanned by the first and third notes in a group of three is less than MinComf,
         # assign the difference between the interval and MinComf (expressed in semitones). Conversely,
@@ -716,17 +735,17 @@ class Parncutt(D.Dactyler):
         min_comf_13 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_3)]['MinComf']
 
         if semitone_diff_13 < min_comf_13:
-            costs['pcs'] = (min_comf_13 - semitone_diff_13) * self._weights['pcs']
+            self._costs['pcs'] = (min_comf_13 - semitone_diff_13) * self._weights['pcs']
         elif semitone_diff_13 > max_comf_13:
-            costs['pcs'] = (semitone_diff_13 - max_comf_13) * self._weights['pcs']
+            self._costs['pcs'] = (semitone_diff_13 - max_comf_13) * self._weights['pcs']
 
-    def assess_weak_finger(self, costs, trigram):
+    def assess_weak_finger(self, trigram):
         # Rule 6 (wea "Weak-Finger")
         # "Assign 1 point every time finger 4 or finger 5 is used."
         if trigram.digit_2 == C.RING or trigram.digit_2 == C.LITTLE:
-            costs['wea'] = self._weights['wea']
+            self._costs['wea'] = self._weights['wea']
 
-    def assess_345(self, costs, trigram):
+    def assess_345(self, trigram):
         # Rule 7 ("Three-Four-Five")
         # "Assign 1 point every time fingers 3, 4, and 5 occur consecutively in any order,
         # even when groups overlap."
@@ -736,39 +755,39 @@ class Parncutt(D.Dactyler):
             trigram.digit_3: True
         }
         if C.MIDDLE in finger_hash and C.RING in finger_hash and C.LITTLE in finger_hash:
-            costs['345'] = self._weights['345']
+            self._costs['345'] = self._weights['345']
 
-    def assess_3_to_4(self, costs, trigram):
+    def assess_3_to_4(self, trigram):
         # Rule 8 ("Three-to-Four")
         # "Assign 1 point each time finger 3 is immediately followed by finger 4."
         if trigram.digit_1 == C.MIDDLE and trigram.digit_2 == C.RING:
-            costs['3t4'] = self._weights['3t4']
+            self._costs['3t4'] = self._weights['3t4']
 
-    def assess_4_on_black(self, costs, trigram):
+    def assess_4_on_black(self, trigram):
         # Rule 9 ("Four-on-Black")
         # "Assign 1 point each time fingers 3 and 4 occur consecutively in any order with 3 on
         # white and 4 on black."
         if (trigram.digit_1 == C.RING and is_black(trigram.midi_1) and trigram.digit_2 == C.MIDDLE and is_white(trigram.midi_2)) or \
                 (trigram.digit_1 == C.MIDDLE and is_white(trigram.midi_1) and trigram.digit_2 == C.RING and is_black(trigram.midi_2)):
-            costs['bl4'] = self._weights['bl4']
+            self._costs['bl4'] = self._weights['bl4']
 
-    def assess_thumb_on_black(self, costs, trigram):
+    def assess_thumb_on_black(self, trigram):
         # Rule 10 ("Thumb-on-Black")
         # "Assign 1 point whenever the thumb plays a black key."
         if trigram.digit_2 != C.THUMB or is_white(trigram.midi_2):
             return
 
-        costs['bl1'] += self._weights['bl1']
+        self._costs['bl1'] += self._weights['bl1']
 
         # "If the immediately preceding note is white, assign a further 2 points."
         if trigram.digit_1 and trigram.digit_2 == C.THUMB and is_black(trigram.midi_2) and is_white(trigram.midi_1):
-            costs['bl1'] += 2 * self._weights['bl1']
+            self._costs['bl1'] += 2 * self._weights['bl1']
 
         # "If the immediately following note is white, assign a further 2 points."
         if trigram.digit_3 and trigram.digit_2 == C.THUMB and is_black(trigram.midi_2) and is_white(trigram.midi_3):
-            costs['bl1'] += 2 * self._weights['bl1']
+            self._costs['bl1'] += 2 * self._weights['bl1']
 
-    def assess_5_on_black(self, costs, trigram):
+    def assess_5_on_black(self, trigram):
         # Rule 11 ("Five-on-Black")
         # "If the fifth finger plays a black key and the immediately preceding and following notes
         # are also black, assign 0 points. If the immediately preceding note is white, assign 2 points.
@@ -782,9 +801,9 @@ class Parncutt(D.Dactyler):
                     black_key_cost = 2
                 if trigram.midi_3 and is_white(trigram.midi_3):
                     black_key_cost += 2
-            costs['bl5'] += black_key_cost * self._weights['bl5']
+            self._costs['bl5'] += black_key_cost * self._weights['bl5']
 
-    def assess_thumb_passing(self, costs, trigram):
+    def assess_thumb_passing(self, trigram):
         # Rule 12 ("Thumb-Passing")
         # "Assign 1 point for each thumb- or finger-pass on the same level (from white to white
         # or black to black). Assign 3 points if the lower note is white, played by a finger
@@ -800,81 +819,40 @@ class Parncutt(D.Dactyler):
                     thumb_passing_cost = 1
                 elif is_black(trigram.midi_1):
                     thumb_passing_cost = 3
-                costs['pa1'] = thumb_passing_cost * self._weights['pa1']
+                self._costs['pa1'] = thumb_passing_cost * self._weights['pa1']
             if trigram.digit_2 == C.THUMB and trigram.midi_2 > trigram.midi_1:  # Thumb passing under finger, ascending.
                 if (is_white(trigram.midi_1) and is_white(trigram.midi_2)) or (is_black(trigram.midi_1) and is_black(trigram.midi_2)):
                     thumb_passing_cost = 1
                 elif is_black(trigram.midi_2):
                     thumb_passing_cost = 3
-                costs['pa1'] = thumb_passing_cost * self._weights['pa1']
+                self._costs['pa1'] = thumb_passing_cost * self._weights['pa1']
         else:
             if trigram.digit_1 == C.THUMB and trigram.midi_2 > trigram.midi_1:  # Finger crossing over thumb, ascending.
                 if (is_white(trigram.midi_1) and is_white(trigram.midi_2)) or (is_black(trigram.midi_1) and is_black(trigram.midi_2)):
                     thumb_passing_cost = 1
                 elif is_black(trigram.midi_1):
                     thumb_passing_cost = 3
-                costs['pa1'] = thumb_passing_cost * self._weights['pa1']
+                self._costs['pa1'] = thumb_passing_cost * self._weights['pa1']
             if trigram.digit_2 == C.THUMB and trigram.midi_2 < trigram.midi_1:  # Thumb passing under finger, descending.
                 if (is_white(trigram.midi_1) and is_white(trigram.midi_2)) or (is_black(trigram.midi_1) and is_black(trigram.midi_2)):
                     thumb_passing_cost = 1
                 elif is_black(trigram.midi_2):
                     thumb_passing_cost = 3
-                costs['pa1'] = thumb_passing_cost * self._weights['pa1']
+                self._costs['pa1'] = thumb_passing_cost * self._weights['pa1']
 
     def trigram_node_cost(self, trigram_node):
         """
         Determine the cost associated with a trigram node configured as input.
-        :param midi_1: The MIDI note number of the first note in the trigram. May be None in first layer.
-        :param handed_digit_1: Fingering for first note (e.g., ">3").
-        :param midi_2: The MIDI note number of the second note in the trigram.
-        :param handed_digit_2: Fingering proposed for second note (e.g., "<5").
-        :param midi_3: The MIDI note number of the third note.
-        :param handed_digit_3: Fingering for third note.
+        :param trigram_node: The TrigramNode under consideration.
         :return: cost, costs: The total (scalar integer) cost associated with the node, and a dictionary
         detailing the specific subcosts contributing to the total.
         """
         cost = 0
-        costs = self.init_costs()
+        self.init_costs()
 
-        # Rule 1 ("Stretch")
-        self.assess_stretch(costs, trigram_node)
-
-        # Rule 2 ("Small-Span")
-        self.assess_small_span(costs, trigram_node)
-
-        # Rule 3 ("Large-Span")
-        self.assess_large_span(costs, trigram_node)
-
-        # Rule 4 ("Position-Change-Count")
-        self.assess_position_change_count(costs, trigram_node)
-
-        # Rule 5 ("Position-Change-Size")
-        self.assess_position_change_size(costs, trigram_node)
-
-        # Rule 6 (wea "Weak-Finger")
-        self.assess_weak_finger(costs, trigram_node)
-
-        # Rule 7 ("Three-Four-Five")
-        self.assess_345(costs, trigram_node)
-
-        # Rule 8 ("Three-to-Four")
-        self.assess_3_to_4(costs, trigram_node)
-
-        # Rule 9 ("Four-on-Black")
-        self.assess_4_on_black(costs, trigram_node)
-
-        # Rule 10 ("Thumb-on-Black")
-        self.assess_thumb_on_black(costs, trigram_node)
-
-        # Rule 11 ("Five-on-Black")
-        self.assess_5_on_black(costs, trigram_node)
-
-        # Rule 12 ("Thumb-Passing")
-        self.assess_thumb_passing(costs, trigram_node)
-
-        for cost_key in costs:
-            cost += costs[cost_key]
-        return cost, costs
+        for cost_key in self._costs:
+            cost += self._costs[cost_key]
+        return cost, self._costs
 
     def segment_advice_cost(self, abcdf, staff="upper", score_index=0, segment_index=0):
         """
@@ -1164,99 +1142,80 @@ class Jacobs(Parncutt):
                          staff_combiner=staff_combiner, pruning_method=pruning_method,
                          finger_spans=finger_spans, version=version)
 
-    def init_rule_weights(self):
-        self._weights = {
-            'str': 1,
-            'sma': 1,
-            'lar': 1,
-            'pcc': 1,
-            'pcs': 1,
-            'wea': 1,
-            '3t4': 1,
-            'bl4': 1,
-            'bl1': 1,
-            'bl5': 1,
-            'pa1': 1
-        }
-
-    def trigram_node_cost(self, trigram_node):
-        """
-        Determine the cost associated with a trigram node configured as input.
-        :param trigramidi_1: The MIDI note number of the first note in the trigram. May be None in first layer.
-        :param handed_digit_1: Fingering for first note (e.g., ">3").
-        :param midi_2: The MIDI note number of the second note in the trigram.
-        :param handed_digit_2: Fingering proposed for second note (e.g., "<5").
-        :param midi_3: The MIDI note number of the third note.
-        :param handed_digit_3: Fingering for third note.
-        :return: cost, costs: The total (scalar integer) cost associated with the node, and a dictionary
-        detailing the specific subcosts contributing to the total.
-        """
-        cost = 0
-        costs = self.init_costs()
-
+    def init_rules(self):
         # Rule 1 ("Stretch")
-        self.assess_stretch(costs, trigram_node)
-
         # Rule 2 ("Small-Span")
-        self.assess_small_span(costs, trigram_node)
-
-        # Rule 3 ("Large-Span")
-        self.assess_large_span_jacobs(costs, trigram_node)
-
+        # Rule 3 (larj "Large-Span")
         # Rule 4 ("Position-Change-Count")
-        self.assess_position_change_count(costs, trigram_node)
-
         # Rule 5 ("Position-Change-Size")
-        self.assess_position_change_size(costs, trigram_node)
-
-        # Rule 6 (wea "Weak-Finger")
-        self.assess_weak_finger_jacobs(costs, trigram_node)
-
-        # Rule 7 ("Three-Four-Five")
-        # Not done in the interests of parsimony.
-        # self.assess_345(costs, trigram_node)
-
+        # Rule 6 (weaj "Weak-Finger")
+        # Rule 7 ("Three-Four-Five") NOT DONE in the interests of parsimony.
         # Rule 8 ("Three-to-Four")
-        self.assess_3_to_4(costs, trigram_node)
-
         # Rule 9 ("Four-on-Black")
-        self.assess_4_on_black(costs, trigram_node)
-
         # Rule 10 ("Thumb-on-Black")
-        self.assess_thumb_on_black(costs, trigram_node)
-
         # Rule 11 ("Five-on-Black")
-        self.assess_5_on_black(costs, trigram_node)
-
         # Rule 12 ("Thumb-Passing")
-        self.assess_thumb_passing(costs, trigram_node)
-
-        for cost_key in costs:
-            cost += costs[cost_key]
-        return cost, costs
+        self._rules = {
+            'str': self.assess_stretch,
+            'sma': self.assess_small_span,
+            'larj': self.assess_large_span_jacobs,
+            'pcc': self.assess_position_change_count,
+            'pcs': self.assess_position_change_size,
+            'weaj': self.assess_weak_finger_jacobs,
+            # '345': self.assess_345
+            '3t4': self.assess_3_to_4,
+            'bl4': self.assess_4_on_black,
+            'bl1': self.assess_thumb_on_black,
+            'bl5': self.assess_5_on_black,
+            'pa1': self.assess_thumb_passing
+        }
 
 
 class Badgerow(Parncutt):
-    def init_rule_weights(self):
-        self._weights = {
-            'str': 1,
-            'sma': 1,
-            'lar': 1,
-            'pcc': 1,
-            'pcs': 1,
-            'wea': 1,
-            '345': 1,
-            '3t4': 1,
-            'bl1': 1,
-            'bl5': 1,
-            'pa1': 1,
-            'apr': 1,
-            'afc': 1,
-            # 'wb1': 1,
-            'b1p': 1,
+    def init_rules(self):
+        # Rule 1 ("Stretch")
+        # Rule 2 ("Small-Span")
+        # Rule 3 (larb "Large-Span")
+        # Rule 4 ("Position-Change-Count")
+        # Rule 5 ("Position-Change-Size")
+        # Rule 6 (wea "Weak-Finger")
+        # Rule 7 ("Three-Four-Five")
+        # Rule 8 ("Three-to-Four")
+        # Rule 9 ("Four-on-Black")
+        # Rule 10 ("Thumb-on-Black")
+        # Rule 11 ("Five-on-Black")
+        # Rule 12 ("Thumb-Passing")
+        # New rule (aprb "Alternation-Pairing")
+        # self.assess_alternation_pairing_badgerow(trigram_node)
+        # New rule (afcb "Alternation-Finger-Change")
+        # self.assess_alternation_finger_change_badgerow(costs, trigram_node)
+        # New rule (b1wb "Thumb-on-Black-to-Weak")
+        # self.assess_thumb_on_black_to_weak_badgerow()
+        # New rule (wb1b "Weak-to-Thumb-on-Black")
+        # self.assess_weak_to_thumb_on_black_badgerow()
+        # New rule (b1pb "Black-Thumb-Pivot")
+        # self.assess_black_thumb_pivot_badgerow()
+        self._rules = {
+            'str': self.assess_stretch,
+            'sma': self.assess_small_span,
+            'larb': self.assess_large_span_badgerow,
+            'pcc': self.assess_position_change_count,
+            'pcs': self.assess_position_change_size,
+            'wea': self.assess_weak_finger,
+            '345': self.assess_345,
+            '3t4': self.assess_3_to_4,
+            # 'bl4': self.assess_4_on_black,
+            'bl1': self.assess_thumb_on_black,
+            'bl5': self.assess_5_on_black,
+            'pa1': self.assess_thumb_passing,
+            'aprb': self.assess_alternation_pairing_badgerow,
+            'afcb': self.assess_alternation_finger_change_badgerow,
+            'b1wb': self.assess_thumb_on_black_to_weak_badgerow,
+            # 'wb1b': self.assess_weak_to_thumb_on_black_badgerow,
+            'b1pb': self.assess_black_thumb_pivot_badgerow
         }
 
-    def assess_large_span_badgerow(self, costs, trigram):
+    def assess_large_span_badgerow(self, trigram):
         # Rule 3 ("Large-Span") as described in Parncutt text and implied in results reported,
         # NOT as defined in the stated Rule 3. Amended as suggested by Badgerow:
         #
@@ -1298,12 +1257,12 @@ class Badgerow(Parncutt):
             raw_pcc = self.raw_position_change_count(trigram)
         if raw_pcc <= 1:
             if absolute_semitone_diff_12 > max_comf_12:
-                costs['lar'] = span_penalty * (absolute_semitone_diff_12 - max_comf_12) * self._weights['lar']
+                self._costs['larb'] = span_penalty * (absolute_semitone_diff_12 - max_comf_12) * self._weights['larb']
         else:
             if absolute_semitone_diff_12 > max_rel_12:
-                costs['lar'] = span_penalty * (absolute_semitone_diff_12 - max_rel_12) * self._weights['lar']
+                self._costs['larb'] = span_penalty * (absolute_semitone_diff_12 - max_rel_12) * self._weights['larb']
 
-    def assess_alternation_pairing(self, costs, trigram):
+    def assess_alternation_pairing_badgerow(self, trigram):
         # New Rule ("Alternation-Pairing") from Justin Badgerow
         # "Assign 1 point for 3-4-3 or 4-3-4 combinations and 1 point for 4-5-4 or 5-4-5 combinations."
         ### FIXME: Justin says, "MAYBE DELETE??"
@@ -1311,17 +1270,17 @@ class Badgerow(Parncutt):
                 (trigram.digit_1 == 4 and trigram.digit_2 == 3 and trigram.digit_3 == 4) or \
                 (trigram.digit_1 == 4 and trigram.digit_2 == 5 and trigram.digit_3 == 4) or \
                 (trigram.digit_1 == 5 and trigram.digit_2 == 4 and trigram.digit_3 == 5):
-            costs['apr'] = self._weights['apr']
+            self._costs['aprb'] = self._weights['aprb']
 
-    def assess_alternation_finger_change(self, costs, trigram):
+    def assess_alternation_finger_change_badgerow(self, trigram):
         # New Rule ("Alternation-Finger-Change") from Justin Badgerow
         # "On three note passages where the 1st and 3rd note are the same, add a 1 point
         # deduction when a different finger is on the 1st and 3rd pitch.
         if trigram.digit_1 and trigram.digit_3 and trigram.midi_1 == trigram.midi_3 and \
                 trigram.digit_1 != trigram.digit_3:
-            costs['afc'] = self._weights['afc']
+            self._costs['afcb'] = self._weights['afcb']
 
-    def assess_black_thumb_pivot(self, costs, trigram):
+    def assess_black_thumb_pivot_badgerow(self, costs, trigram):
         if trigram.midi_1 == trigram.midi_2:
             return
         if not trigram.midi_1:
@@ -1334,19 +1293,19 @@ class Badgerow(Parncutt):
         if trigram.hand_1 == '>':
             if trigram.midi_2 < trigram.midi_1:  # descending
                 if trigram.digit_1 == C.THUMB and is_black(trigram.midi_1) and trigram.digit_2 in (C.RING, C.LITTLE) and is_white(trigram.midi_2):
-                    costs['b1p'] += (trigram.digit_2 - 1) * self._weights['b1p']
+                    costs['b1pb'] += (trigram.digit_2 - 1) * self._weights['b1pb']
             else:  # ascending
                 if trigram.digit_2 == C.THUMB and is_black(trigram.midi_2) and trigram.digit_1 in (C.RING, C.LITTLE) and is_white(trigram.midi_1):
-                    costs['b1p'] += (trigram.digit_2 - 1) * self._weights['b1p']
+                    costs['b1pb'] += (trigram.digit_2 - 1) * self._weights['b1pb']
         else:  # LH
             if trigram.midi_2 > trigram.midi_1:  # ascending
                 if trigram.digit_1 == C.THUMB and is_black(trigram.midi_1) and trigram.digit_2 in (C.RING, C.LITTLE) and is_white(trigram.midi_2):
-                    costs['b1p'] += (trigram.digit_2 - 1) * self._weights['b1p']
+                    costs['b1pb'] += (trigram.digit_2 - 1) * self._weights['b1pb']
             else:  # descending
                 if trigram.digit_2 == C.THUMB and is_black(trigram.midi_2) and trigram.digit_1 in (C.RING, C.LITTLE) and is_white(trigram.midi_1):
-                    costs['b1p'] += (trigram.digit_2 - 1) * self._weights['b1p']
+                    costs['b1pb'] += (trigram.digit_2 - 1) * self._weights['b1pb']
 
-    def assess_thumb_on_black_to_weak(self, costs, trigram):
+    def assess_thumb_on_black_to_weak_badgerow(self, costs, trigram):
         if trigram.midi_1 == trigram.midi_2:
             return
         if trigram.digit_1 != C.THUMB or is_white(trigram.midi_1):
@@ -1367,25 +1326,24 @@ class Badgerow(Parncutt):
 
         if trigram.hand_1 == '>':
             if trigram.midi_1 > trigram.midi_2:  # descending
-                costs['b1w'] += (trigram.digit_2 - 1) * self._weights['b1w']
+                costs['b1wb'] += (trigram.digit_2 - 1) * self._weights['b1wb']
             else:
                 distance = self.distance(trigram.midi_1, trigram.midi_2)
                 min_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MinRel']
                 if distance < min_rel_12:
-                    costs['b1w'] += (trigram.digit_2 - 1) * self._weights['b1w']
+                    costs['b1wb'] += (trigram.digit_2 - 1) * self._weights['b1wb']
         else:  # Left hand
             if trigram.midi_2 > trigram.midi_1:  # ascending
-                costs['b1w'] += (trigram.digit_2 - 1) * self._weights['b1w']
+                costs['b1wb'] += (trigram.digit_2 - 1) * self._weights['b1wb']
             else:
                 distance = self.distance(trigram.midi_1, trigram.midi_2)
                 min_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MinRel']
                 if distance < min_rel_12:
-                    costs['b1w'] += (trigram.digit_2 - 1) * self._weights['b1w']
+                    costs['b1wb'] += (trigram.digit_2 - 1) * self._weights['b1wb']
 
-    def assess_weak_to_thumb_on_black(self, costs, trigram):
+    def assess_weak_to_thumb_on_black_badgerow(self, costs, trigram):
         if not trigram.midi_1 or trigram.midi_1 == trigram.midi_2:
             return
-        digit_2 = D.Dactyler.digit_only(trigram.handed_digit_2) if trigram.handed_digit_2 else None
         if trigram.digit_2 != C.THUMB or is_white(trigram.midi_2):
             return
         # So thumb is playing a black note 2.
@@ -1402,20 +1360,20 @@ class Badgerow(Parncutt):
         # Assess the same penalties for descending intervals, if said intervals are more than MaxRel.
         if trigram.hand_1 == '>':
             if trigram.midi_2 > trigram.midi_1:  # ascending
-                costs['wb1'] += (trigram.digit_1 - 1) * self._weights['wb1']
+                costs['wb1b'] += (trigram.digit_1 - 1) * self._weights['wb1b']
             else:
                 distance = self.distance(trigram.midi_1, trigram.midi_2)
                 max_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxRel']
                 if distance > max_rel_12:
-                    costs['wb1'] += (trigram.digit_1 - 1) * self._weights['wb1']
+                    costs['wb1b'] += (trigram.digit_1 - 1) * self._weights['wb1b']
         else:  # Left hand
             if trigram.midi_2 > trigram.midi_1:  # ascending
                 distance = self.distance(trigram.midi_1, trigram.midi_2)
                 max_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxRel']
                 if distance > max_rel_12:
-                    costs['wb1'] += (trigram.digit_1 - 1) * self._weights['wb1']
+                    costs['wb1b'] += (trigram.digit_1 - 1) * self._weights['wb1b']
             else:
-                costs['wb1'] += (trigram.digit_1 - 1) * self._weights['wb1']
+                costs['wb1b'] += (trigram.digit_1 - 1) * self._weights['wb1b']
 
     # def assess_thumb_on_black(self, costs, trigram):
     #     # Rule 10 ("Thumb-on-Black")
@@ -1446,71 +1404,6 @@ class Badgerow(Parncutt):
                          staff_combiner=staff_combiner, pruning_method=pruning_method,
                          finger_spans=finger_spans, version=version)
 
-    def trigram_node_cost(self, trigram_node):
-        """
-        Determine the cost associated with a trigram node configured as input.
-        :param midi_1: The MIDI note number of the first note in the trigram. May be None in first layer.
-        :param handed_digit_1: Fingering for first note (e.g., ">3").
-        :param midi_2: The MIDI note number of the second note in the trigram.
-        :param handed_digit_2: Fingering proposed for second note (e.g., "<5").
-        :param midi_3: The MIDI note number of the third note.
-        :param handed_digit_3: Fingering for third note.
-        :return: cost, costs: The total (scalar integer) cost associated with the node, and a dictionary
-        detailing the specific subcosts contributing to the total.
-        """
-        cost = 0
-        costs = self.init_costs()
-
-        # Rule 1 ("Stretch")
-        self.assess_stretch(costs, trigram_node)
-
-        # Rule 2 ("Small-Span")
-        self.assess_small_span(costs, trigram_node)
-
-        # Rule 3 ("Large-Span")
-        self.assess_large_span_badgerow(costs, trigram_node)
-
-        # Rule 4 ("Position-Change-Count")
-        self.assess_position_change_count(costs, trigram_node)
-
-        # Rule 5 ("Position-Change-Size")
-        self.assess_position_change_size(costs, trigram_node)
-
-        # Rule 6 (wea "Weak-Finger")
-        self.assess_weak_finger(costs, trigram_node)
-
-        # Rule 7 ("Three-Four-Five")
-        self.assess_345(costs, trigram_node)
-
-        # Rule 8 ("Three-to-Four")
-        self.assess_3_to_4(costs, trigram_node)
-
-        # Rule 10 ("Thumb-on-Black")
-        self.assess_thumb_on_black(costs, trigram_node)
-
-        # Rule 11 ("Five-on-Black")
-        self.assess_5_on_black(costs, trigram_node)
-
-        # Rule 12 ("Thumb-Passing")
-        self.assess_thumb_passing(costs, trigram_node)
-
-        # New rule ("Alternation-Pairing")
-        self.assess_alternation_pairing(costs, trigram_node)
-
-        # New rule ("Alternation-Finger-Change")
-        self.assess_alternation_finger_change(costs, trigram_node)
-
-        # New rule ("Thumb-on-Black-to-Weak")
-        # self.assess_thumb_on_black_to_weak(costs, trigram_node)
-        # New rule ("Weak-to-Thumb-on-Black")
-        # self.assess_weak_to_thumb_on_black(costs, trigram_node)
-        # New rule ("Black-Thumb-Pivot")
-        self.assess_black_thumb_pivot(costs, trigram_node)
-
-        for cost_key in costs:
-            cost += costs[cost_key]
-        return cost, costs
-
 
 class Balliauw(Parncutt):
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive", ruler=Ruler(),
@@ -1537,55 +1430,3 @@ class Balliauw(Parncutt):
             # 'wb1': 1,
             'b1p': 1,
         }
-
-    def trigram_node_cost(self, trigram_node):
-        """
-        Determine the cost associated with a trigram node configured as input.
-        :param midi_1: The MIDI note number of the first note in the trigram. May be None in first layer.
-        :param handed_digit_1: Fingering for first note (e.g., ">3").
-        :param midi_2: The MIDI note number of the second note in the trigram.
-        :param handed_digit_2: Fingering proposed for second note (e.g., "<5").
-        :param midi_3: The MIDI note number of the third note.
-        :param handed_digit_3: Fingering for third note.
-        :return: cost, costs: The total (scalar integer) cost associated with the node, and a dictionary
-        detailing the specific subcosts contributing to the total.
-        """
-        cost = 0
-        costs = self.init_costs()
-
-        # Rule 1 ("Stretch")
-        self.assess_stretch(costs, trigram_node)
-
-        # Rule 2 ("Small-Span")
-        self.assess_small_span(costs, trigram_node)
-
-        # Rule 3 ("Large-Span")
-        self.assess_large_span_badgerow(costs, trigram_node)
-
-        # Rule 4 ("Position-Change-Count")
-        self.assess_position_change_count(costs, trigram_node)
-
-        # Rule 5 ("Position-Change-Size")
-        self.assess_position_change_size(costs,  trigram_node)
-
-        # Rule 6 (wea "Weak-Finger")
-        self.assess_weak_finger(costs,  trigram_node)
-
-        # Rule 7 ("Three-Four-Five")
-        self.assess_345(costs,  trigram_node)
-
-        # Rule 8 ("Three-to-Four")
-        self.assess_3_to_4(costs,  trigram_node)
-
-        # Rule 10 ("Thumb-on-Black")
-        self.assess_thumb_on_black(costs,  trigram_node)
-
-        # Rule 11 ("Five-on-Black")
-        self.assess_5_on_black(costs,  trigram_node)
-
-        # Rule 12 ("Thumb-Passing")
-        self.assess_thumb_passing(costs,  trigram_node)
-
-        for cost_key in costs:
-            cost += costs[cost_key]
-        return cost, costs
