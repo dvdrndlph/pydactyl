@@ -672,14 +672,14 @@ class Parncutt(D.Dactyler):
                 return
 
         if absolute_semitone_diff_12 > max_rel_12:
-            self._costs['larj'] = span_penalty * (absolute_semitone_diff_12 - max_rel_12) * self._weights['lar']
+            self._costs['larj'] = span_penalty * (absolute_semitone_diff_12 - max_rel_12) * self._weights['larj']
 
     def assess_weak_finger_jacobs(self, trigram):
         # Rule 6 (wea "Weak-Finger")
         # Assign 1 point every time finger 4 is used (but no longer finger 5).
         # Per Jacobs.
         if trigram.digit_2 == C.RING:
-            self._costs['weaj'] = self._weights['wea']
+            self._costs['weaj'] = self._weights['weaj']
 
     def raw_position_change_count(self, trigram):
         if not trigram.midi_1 or not trigram.midi_3:
@@ -850,6 +850,8 @@ class Parncutt(D.Dactyler):
         cost = 0
         self.init_costs()
 
+        for rule_method in self._rules.values():
+            rule_method(trigram_node)
         for cost_key in self._costs:
             cost += self._costs[cost_key]
         return cost, self._costs
@@ -1280,7 +1282,7 @@ class Badgerow(Parncutt):
                 trigram.digit_1 != trigram.digit_3:
             self._costs['afcb'] = self._weights['afcb']
 
-    def assess_black_thumb_pivot_badgerow(self, costs, trigram):
+    def assess_black_thumb_pivot_badgerow(self, trigram):
         if trigram.midi_1 == trigram.midi_2:
             return
         if not trigram.midi_1:
@@ -1293,19 +1295,19 @@ class Badgerow(Parncutt):
         if trigram.hand_1 == '>':
             if trigram.midi_2 < trigram.midi_1:  # descending
                 if trigram.digit_1 == C.THUMB and is_black(trigram.midi_1) and trigram.digit_2 in (C.RING, C.LITTLE) and is_white(trigram.midi_2):
-                    costs['b1pb'] += (trigram.digit_2 - 1) * self._weights['b1pb']
+                    self._costs['b1pb'] += (trigram.digit_2 - 1) * self._weights['b1pb']
             else:  # ascending
                 if trigram.digit_2 == C.THUMB and is_black(trigram.midi_2) and trigram.digit_1 in (C.RING, C.LITTLE) and is_white(trigram.midi_1):
-                    costs['b1pb'] += (trigram.digit_2 - 1) * self._weights['b1pb']
+                    self._costs['b1pb'] += (trigram.digit_2 - 1) * self._weights['b1pb']
         else:  # LH
             if trigram.midi_2 > trigram.midi_1:  # ascending
                 if trigram.digit_1 == C.THUMB and is_black(trigram.midi_1) and trigram.digit_2 in (C.RING, C.LITTLE) and is_white(trigram.midi_2):
-                    costs['b1pb'] += (trigram.digit_2 - 1) * self._weights['b1pb']
+                    self._costs['b1pb'] += (trigram.digit_2 - 1) * self._weights['b1pb']
             else:  # descending
                 if trigram.digit_2 == C.THUMB and is_black(trigram.midi_2) and trigram.digit_1 in (C.RING, C.LITTLE) and is_white(trigram.midi_1):
-                    costs['b1pb'] += (trigram.digit_2 - 1) * self._weights['b1pb']
+                    self._costs['b1pb'] += (trigram.digit_2 - 1) * self._weights['b1pb']
 
-    def assess_thumb_on_black_to_weak_badgerow(self, costs, trigram):
+    def assess_thumb_on_black_to_weak_badgerow(self, trigram):
         if trigram.midi_1 == trigram.midi_2:
             return
         if trigram.digit_1 != C.THUMB or is_white(trigram.midi_1):
@@ -1326,22 +1328,22 @@ class Badgerow(Parncutt):
 
         if trigram.hand_1 == '>':
             if trigram.midi_1 > trigram.midi_2:  # descending
-                costs['b1wb'] += (trigram.digit_2 - 1) * self._weights['b1wb']
+                self._costs['b1wb'] += (trigram.digit_2 - 1) * self._weights['b1wb']
             else:
                 distance = self.distance(trigram.midi_1, trigram.midi_2)
                 min_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MinRel']
                 if distance < min_rel_12:
-                    costs['b1wb'] += (trigram.digit_2 - 1) * self._weights['b1wb']
+                    self._costs['b1wb'] += (trigram.digit_2 - 1) * self._weights['b1wb']
         else:  # Left hand
             if trigram.midi_2 > trigram.midi_1:  # ascending
-                costs['b1wb'] += (trigram.digit_2 - 1) * self._weights['b1wb']
+                self._costs['b1wb'] += (trigram.digit_2 - 1) * self._weights['b1wb']
             else:
                 distance = self.distance(trigram.midi_1, trigram.midi_2)
                 min_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MinRel']
                 if distance < min_rel_12:
-                    costs['b1wb'] += (trigram.digit_2 - 1) * self._weights['b1wb']
+                    self._costs['b1wb'] += (trigram.digit_2 - 1) * self._weights['b1wb']
 
-    def assess_weak_to_thumb_on_black_badgerow(self, costs, trigram):
+    def assess_weak_to_thumb_on_black_badgerow(self, trigram):
         if not trigram.midi_1 or trigram.midi_1 == trigram.midi_2:
             return
         if trigram.digit_2 != C.THUMB or is_white(trigram.midi_2):
@@ -1360,43 +1362,43 @@ class Badgerow(Parncutt):
         # Assess the same penalties for descending intervals, if said intervals are more than MaxRel.
         if trigram.hand_1 == '>':
             if trigram.midi_2 > trigram.midi_1:  # ascending
-                costs['wb1b'] += (trigram.digit_1 - 1) * self._weights['wb1b']
+                self._costs['wb1b'] += (trigram.digit_1 - 1) * self._weights['wb1b']
             else:
                 distance = self.distance(trigram.midi_1, trigram.midi_2)
                 max_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxRel']
                 if distance > max_rel_12:
-                    costs['wb1b'] += (trigram.digit_1 - 1) * self._weights['wb1b']
+                    self._costs['wb1b'] += (trigram.digit_1 - 1) * self._weights['wb1b']
         else:  # Left hand
             if trigram.midi_2 > trigram.midi_1:  # ascending
                 distance = self.distance(trigram.midi_1, trigram.midi_2)
                 max_rel_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxRel']
                 if distance > max_rel_12:
-                    costs['wb1b'] += (trigram.digit_1 - 1) * self._weights['wb1b']
+                    self._costs['wb1b'] += (trigram.digit_1 - 1) * self._weights['wb1b']
             else:
-                costs['wb1b'] += (trigram.digit_1 - 1) * self._weights['wb1b']
+                self._costs['wb1b'] += (trigram.digit_1 - 1) * self._weights['wb1b']
 
-    # def assess_thumb_on_black(self, costs, trigram):
+    # def assess_thumb_on_black(self, trigram):
     #     # Rule 10 ("Thumb-on-Black")
     #     # "Assign 1 point whenever the thumb plays a black key."
     #     if trigram.digit_2 != C.THUMB or is_white(trigram.midi_2):
     #         return
     #
-    #     costs['bl1'] += self._weights['bl1']
+    #     self._costs['bl1'] += self._weights['bl1']
     #
     #     # "If the immediately preceding note is white, assign a further 2 points."
     #     if trigram.digit_1 and trigram.digit_2 == C.THUMB and is_black(trigram.midi_2) and is_white(trigram.midi_1):
-    #         costs['bl1'] += 2 * self._weights['bl1']
+    #         self._costs['bl1'] += 2 * self._weights['bl1']
     #
     #     # "If the immediately following note is white, assign a further 2 points."
     #     if trigram.digit_3 and trigram.digit_2 == C.THUMB and is_black(trigram.midi_2) and is_white(trigram.midi_3):
-    #         costs['bl1'] += 2 * self._weights['bl1']
+    #         self._costs['bl1'] += 2 * self._weights['bl1']
     #
     #         # Justin's amendment: "When the thumb plays a black key, if the preceding OR
     #         # following note is finger 5 on a white key, assign a further 2 points for each usage."
     #         if trigram.digit_1 == C.LITTLE and is_white(trigram.midi_1):
-    #             costs['bl1'] += 2 * self._weights['bl1']
+    #             self._costs['bl1'] += 2 * self._weights['bl1']
     #         if trigram.digit_3 == C.LITTLE and is_white(trigram.midi_3):
-    #             costs['bl1'] += 2 * self._weights['bl1']
+    #             self._costs['bl1'] += 2 * self._weights['bl1']
 
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive", ruler=Ruler(),
                  pruning_method='max', finger_spans=BADGEROW_FINGER_SPANS, version=(1, 0, 0)):

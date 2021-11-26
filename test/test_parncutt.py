@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import re
 import unittest
-from pydactyl.dactyler.Parncutt import Parncutt
+from pydactyl.dactyler.Parncutt import Parncutt, TrigramNode
 from pydactyl.dcorpus.DCorpus import DCorpus
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 import TestConstant
@@ -280,7 +280,8 @@ class ParncuttTest(unittest.TestCase):
         midi_3 = 65
         handed_digit_3 = '>3'
 
-        cost, costs = parncutt.trigram_node_cost(midi_1, handed_digit_1, midi_2, handed_digit_2, midi_3, handed_digit_3)
+        trigram_node = TrigramNode(midi_1, handed_digit_1, midi_2, handed_digit_2, midi_3, handed_digit_3)
+        cost, costs = parncutt.trigram_node_cost(trigram_node)
         assert costs['bl1'] == 3, "Bad bl1 cost"
 
     @staticmethod
