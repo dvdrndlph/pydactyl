@@ -196,8 +196,8 @@ def get_system_scores(model_name, d_score):
             model = Jacobs()
             # model = Jacobs(ruler=Ruler())
         elif model_name == 'badgerow':
-            model = Badgerow(finger_spans=FINGER_SPANS, ruler=PhysicalRuler())
-            # model = Badgerow(finger_spans=FINGER_SPANS)
+            # model = Badgerow(finger_spans=FINGER_SPANS, ruler=PhysicalRuler())
+            model = Badgerow(finger_spans=FINGER_SPANS)
         elif model_name == 'balliauw':
             model = Balliauw()
         else:
