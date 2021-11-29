@@ -144,7 +144,7 @@ trigram_err_vals = {}
 nuanced_err_vals = {}
 relaxed_err_vals = {}
 err_vals = {}
-best_to_worst_models = ['badgerow', 'jacobs', 'parncutt']
+best_to_worst_models = ['badgerow', 'balliauw', 'jacobs', 'parncutt']
 methods = ['hmg', 'al', 'tri', 'tri_nua', 'tri_rlx']
 corpora = ['parncutt_published']
 for corpus_name in corpora:

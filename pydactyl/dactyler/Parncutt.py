@@ -601,7 +601,7 @@ class Parncutt(D.Dactyler):
         return cost
 
     def assess_small_span_balliauw(self, trigram):
-        return self.assess_small_span(span_penalty=1)
+        return self.assess_small_span(trigram=trigram, span_penalty=1)
 
     def assess_large_span_per_rule(self, trigram, tag='lar'):
         # Rule 3 ("Large-Span")
@@ -837,7 +837,7 @@ class Parncutt(D.Dactyler):
     def assess_thumb_passing_balliauw(self, trigram):
         return self.assess_thumb_passing(trigram=trigram, bad_level_change_cost=2)
 
-    def assess_large_span_badgerow(self, trigram, tag='larb'):
+    def assess_large_span_badgerow(self, trigram):
         # Rule 3 ("Large-Span") as described in Parncutt text and implied in results reported,
         # NOT as defined in the stated Rule 3. Amended as suggested by Badgerow:
         #
@@ -1071,6 +1071,47 @@ class Parncutt(D.Dactyler):
             cost = (semitone_diff_13 - max_comf_13)
         elif semitone_diff_13 < min_comf_13:
             cost = (max_comf_13 - semitone_diff_13)
+        return cost
+
+    def assess_repeat_finger_on_position_change_balliauw(self, trigram):
+        # Balliauw Rule 12: "For a different first and third consecutive note, played by the same finger,
+        # and the second pitch being the middle one." This is clarified this way: "Rule 12 prevents the repetitive
+        # use of a finger in combination with a hand position change. For instance, a sequenceC4–G4–C5fingered 2–1–2
+        # in the right hand forces the pianist to reuse the second finger very quickly" (p.516).
+        cost = 0
+        if not trigram.midi_1 or not trigram.midi_3:
+            return cost
+        if trigram.midi_1 != trigram.midi_3 and trigram.handed_digit_1 == trigram.handed_digit_3 and \
+                self.raw_position_change_count(trigram) > 0:
+            cost = 1
+        return cost
+
+    def assess_impractical_balliauw(self, trigram, penalty=10):
+        # Balliauw Rule 13: "For every unit where the distance between two following notes
+        # is below MinPrac or exceeds MaxPrac." Penalize +10.
+        cost = 0
+        if not trigram.midi_1:
+            return 0
+
+        semitone_diff_12 = self.distance(trigram.midi_1, trigram.midi_2)
+        max_prac_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MaxPrac']
+        min_prac_12 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_2)]['MinPrac']
+
+        # "Assign 2 points for each semitone that an interval exceeds MaxComf or is less than MinComf."
+        if semitone_diff_12 > max_prac_12:
+            cost = penalty * (semitone_diff_12 - max_prac_12)
+        elif semitone_diff_12 < min_prac_12:
+            cost = penalty * (min_prac_12 - semitone_diff_12)
+        return cost
+
+    def assess_nonrepeating_finger_balliauw(self, trigram):
+        # Balliauw Rule 15: "For consecutive slices containing exactly the same notes (with identical pitches),
+        # played by a different finger, for each different finger." For our purposes, a slice is a note.
+        cost = 0
+        if not trigram.midi_1:
+            return 0
+        if trigram.midi_1 == trigram.midi_2 and trigram.handed_finger_1 != trigram.handed_finger_2:
+            cost = 1
         return cost
 
     def trigram_node_cost(self, trigram_node):
@@ -1451,8 +1492,6 @@ class Badgerow(Parncutt):
             'b1pb': self.assess_black_thumb_pivot_badgerow
         }
 
-
-
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive", ruler=Ruler(),
                  pruning_method='max', finger_spans=BADGEROW_FINGER_SPANS, version=(1, 0, 0)):
         super().__init__(segmenter=segmenter, segment_combiner=segment_combiner, ruler=ruler,
@@ -1467,33 +1506,24 @@ class Balliauw(Parncutt):
                          staff_combiner=staff_combiner, pruning_method=pruning_method,
                          finger_spans=finger_spans, version=version)
 
-    def init_rules(self):
-        # Rule 1 ("Stretch")
-        # Rule 2 ("Small-Span")
-        # Rule 3 ("Large-Span")
-        # Rule 4 ("Position-Change-Count")
-        # Rule 5 ("Position-Change-Size")
-        # Rule 6 (wea "Weak-Finger")
-        # Rule 7 ("Three-Four-Five")
-        # Rule 8 ("Three-to-Four")
-        # Rule 9 ("Four-on-Black")
-        # Rule 10 ("Thumb-on-Black")
-        # Rule 11 ("Five-on-Black")
-        # Rule 12 ("Thumb-Passing")
-        self._rules = {
-            'str': self.assess_stretch,                     # Balliauw 1 == Balliauw 1
-            'sma': self.assess_small_span_balliauw,         # Balliauw 2
-            'pchw': self.assess_position_change_balliauw,   # Balliauw 3
-            'pcow': self.assess_position_comfort_balliauw,  # Balliauw 4
-            'weaj': self.assess_weak_finger_jacobs,         # Balliauw 5 == Jacobs 6
-            '3t4': self.assess_3_to_4,                      # Balliauw 6 == Parncutt 8
-            'bl4': self.assess_4_on_black,                  # Balliauw 7 == Parncutt 9
-            'bl1': self.assess_thumb_on_black,              # 8 == Parncutt 10, WEIGHTED 0.5
-            'bl5': self.assess_5_on_black,                  # 9 == Parncutt 11, WEIGHTED 0.5
-            'pa1w': self.assess_thumb_passing,              # 10 and 11 = modified Parncutt 12
+    def init_rule_weights(self):
+        super().init_rule_weights()
+        self._weights['bl1'] = 0.5
+        self._weights['bl5'] = 0.5
 
-            'lar': self.assess_large_span,
-            'pcc': self.assess_position_change_count,
-            'pcs': self.assess_position_change_size,
-            '345': self.assess_345,
+    def init_rules(self):
+        self._rules = {
+            'str': self.assess_stretch,                       # Balliauw 1 == Parncutt 1
+            'sma': self.assess_small_span_balliauw,           # Balliauw 2
+            'pchw': self.assess_position_change_balliauw,     # Balliauw 3
+            'pcow': self.assess_position_comfort_balliauw,    # Balliauw 4
+            'weaj': self.assess_weak_finger_jacobs,           # Balliauw 5 == Jacobs 6
+            '3t4': self.assess_3_to_4,                        # Balliauw 6 == Parncutt 8
+            'bl4': self.assess_4_on_black,                    # Balliauw 7 == Parncutt 9
+            'bl1': self.assess_thumb_on_black,                # 8 == Parncutt 10, WEIGHTED 0.5
+            'bl5': self.assess_5_on_black,                    # 9 == Parncutt 11, WEIGHTED 0.5
+            'pa1w': self.assess_thumb_passing,                # 10 and 11 = modified Parncutt 12
+            'rfrw': self.assess_repeat_finger_on_position_change_balliauw,  # Balliauw 12
+            'impw': self.assess_impractical_balliauw,         # Balliauw 13
+            'nrfw': self.assess_nonrepeating_finger_balliauw  # Balliauw 15 (14 is for polyphonic)
         }
