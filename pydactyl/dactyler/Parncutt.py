@@ -41,7 +41,7 @@ Also included is our own "Badgerow" class, tweaking the Parncutt model
 per the suggestions of pianist Justin Badgerow at Elizabethtown College.
 """
 
-from abc import ABC
+from abc import ABC, abstractmethod
 import networkx as nx
 from itertools import islice
 import copy
@@ -333,6 +333,43 @@ class Ruler(ABC):
         return to_midi - from_midi
 
 
+class CacheRuler(Ruler):
+    def __init__(self, preload=False):
+        self._preload_cache = preload
+        self._cache = {}
+        self._distance_method = None
+        if preload:
+            self.cache_all()
+            self._distance_method = self.cached_distance
+        else:
+            self._distance_method = self.dynamic_distance
+
+    def cache_all(self):
+        for from_midi in range(21, 109):
+            for to_midi in range(21, 109):
+                self._cache[(from_midi, to_midi)] = self.calculated_distance(from_midi, to_midi)
+
+    def add_distance_to_cache(self, from_midi, to_midi, d):
+        self._cache[(from_midi, to_midi)] = d
+
+    def cached_distance(self, from_midi, to_midi):
+        return self._cache[(from_midi, to_midi)]
+
+    def dynamic_distance(self, from_midi, to_midi):
+        if (from_midi, to_midi) in self._cache:
+            return self._cache[(from_midi, to_midi)]
+        d = self.calculated_distance(from_midi, to_midi)
+        self.add_distance_to_cache(from_midi, to_midi, d)
+        return self.cached_distance(from_midi, to_midi)
+
+    def distance(self, from_midi, to_midi):
+        return self._distance_method(from_midi, to_midi)
+
+    @abstractmethod
+    def calculated_distance(self, from_midi, to_midi):
+        return 0.0
+
+
 class PhysicalRuler(Ruler):
     def __init__(self):
         self._key_positions = PhysicalRuler.horizontal_key_positions()
@@ -390,45 +427,43 @@ class PhysicalRuler(Ruler):
         return positions
 
 
-class ImaginaryBlackKeyRuler(Ruler):
-    def distance(self, from_midi, to_midi):
-        black_to_left = True
+class ImaginaryBlackKeyRuler(CacheRuler):
+    def __init__(self, preload=False):
+        super().__init__(preload=preload)
+
+    def calculated_distance(self, from_midi, to_midi):
         d = 0
-        for midi in range(from_midi, to_midi + 1):
-            if not black_to_left:
+        black_to_left = is_black(from_midi)
+        left_midi = from_midi
+        right_midi = to_midi
+        if from_midi > to_midi:
+            left_midi = to_midi
+            right_midi = from_midi
+        for midi in range(left_midi + 1, right_midi + 1):
+            if is_white(midi) and not black_to_left:
                 d += 1
             black_to_left = is_black(midi)
             d += 1
+        if from_midi > to_midi:
+            d *= -1
         return d
 
 
 class Parncutt(D.Dactyler):
     def init_rules(self):
-        # Rule 1 ("Stretch")
-        # Rule 2 ("Small-Span")
-        # Rule 3 ("Large-Span")
-        # Rule 4 ("Position-Change-Count")
-        # Rule 5 ("Position-Change-Size")
-        # Rule 6 (wea "Weak-Finger")
-        # Rule 7 ("Three-Four-Five")
-        # Rule 8 ("Three-to-Four")
-        # Rule 9 ("Four-on-Black")
-        # Rule 10 ("Thumb-on-Black")
-        # Rule 11 ("Five-on-Black")
-        # Rule 12 ("Thumb-Passing")
         self._rules = {
-            'str': self.assess_stretch,
-            'sma': self.assess_small_span,
-            'lar': self.assess_large_span,
-            'pcc': self.assess_position_change_count,
-            'pcs': self.assess_position_change_size,
-            'wea': self.assess_weak_finger,
-            '345': self.assess_345,
-            '3t4': self.assess_3_to_4,
-            'bl4': self.assess_4_on_black,
-            'bl1': self.assess_thumb_on_black,
-            'bl5': self.assess_5_on_black,
-            'pa1': self.assess_thumb_passing
+            'str': self.assess_stretch,                 # Rule 1 ("Stretch")
+            'sma': self.assess_small_span,              # Rule 2 ("Small-Span")
+            'lar': self.assess_large_span,              # Rule 3 ("Large-Span")
+            'pcc': self.assess_position_change_count,   # Rule 4 ("Position-Change-Count")
+            'pcs': self.assess_position_change_size,    # Rule 5 ("Position-Change-Size")
+            'wea': self.assess_weak_finger,             # Rule 6 (wea "Weak-Finger")
+            '345': self.assess_345,                     # Rule 7 ("Three-Four-Five")
+            '3t4': self.assess_3_to_4,                  # Rule 8 ("Three-to-Four")
+            'bl4': self.assess_4_on_black,              # Rule 9 ("Four-on-Black")
+            'bl1': self.assess_thumb_on_black,          # Rule 10 ("Thumb-on-Black")
+            'bl5': self.assess_5_on_black,              # Rule 11 ("Five-on-Black")
+            'pa1': self.assess_thumb_passing            # Rule 12 ("Thumb-Passing")
         }
 
     def init_rule_weights(self):
@@ -1551,7 +1586,7 @@ class Badgerow(Parncutt):
             'wea': self.assess_weak_finger,
             '345': self.assess_345,
             '3t4': self.assess_3_to_4,
-            # 'bl4': self.assess_4_on_black,
+            'bl4': self.assess_4_on_black,
             'bl1': self.assess_thumb_on_black,
             'bl5': self.assess_5_on_black,
             'pa1': self.assess_thumb_passing,

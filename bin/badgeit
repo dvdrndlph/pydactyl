@@ -29,6 +29,7 @@ __author__ = 'David Randolph'
 import os
 import pathlib
 from scipy import stats
+# import matplotlib.pyplot as plt
 from statsmodels.stats.multicomp import MultiComparison
 import re
 import sys
@@ -144,7 +145,10 @@ trigram_err_vals = {}
 nuanced_err_vals = {}
 relaxed_err_vals = {}
 err_vals = {}
-best_to_worst_models = ['badgerow', 'balliauw', 'jacobs', 'parncutt']
+# best_to_worst_models = ['badball', 'badgerow', 'balliauw', 'jacobs', 'parncutt']
+# best_to_worst_models = ['badball', 'balliauw', 'jacobs', 'parncutt']
+# best_to_worst_models = ['badgerow', 'jacobs', 'parncutt']
+best_to_worst_models = ['badball', 'jacobs', 'parncutt']
 methods = ['hmg', 'al', 'tri', 'tri_nua', 'tri_rlx']
 corpora = ['parncutt_published']
 for corpus_name in corpora:
@@ -229,7 +233,10 @@ for meth in methods:
                                                         0: 'result'})
             mc = MultiComparison(stacked_data['result'], stacked_data['model'])
             print("Tukey for {} method over corpus {}:".format(meth, corpus_name))
-            print(mc.tukeyhsd().summary())
+            tukey = mc.tukeyhsd()
+            tukey.plot_simultaneous()
+            md = tukey.meandiffs
+            print(tukey.summary())
             print()
 
 for meth in methods:
