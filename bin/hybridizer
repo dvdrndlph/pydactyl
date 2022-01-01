@@ -1,0 +1,86 @@
+#!/usr/bin/env python
+__author__ = 'David Randolph'
+# Copyright (c) 2020-2021 David A. Randolph.
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without
+# restriction, including without limitation the rights to use,
+# copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following
+# conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+import copy
+import pprint
+import re
+import sys
+from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
+from pydactyl.dcorpus.PianoFingering import PianoFingering
+from pydactyl.dcorpus.DEvaluation import DEvaluation, DEvalFunction
+from pydactyl.dactyler.Parncutt import Parncutt, Jacobs, Badgerow, Balliauw
+from pydactyl.dactyler.Parncutt import FINGER_SPANS, BALLIAUW_FINGER_SPANS, PhysicalRuler, ImaginaryBlackKeyRuler, Ruler
+from pydactyl.dactyler.Random import Random
+from pydactyl.eval.Corporeal import Corporeal, WEIGHT_RE
+
+
+# MODELS = ['badgerow', 'badball', 'badpar', 'jacobs', 'parncutt', 'balliauw']
+MODELS = ['badball']
+
+
+# CORPORA = ['full_american', 'parncutt_published']
+CORPORA = ['parncutt_published']
+
+STAFF = 'upper'
+FULL_CONTEXT = True
+OUTPUT_DIR = '/Users/dave/tb2/doc/data/badgerow'
+PIG_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/abcd/'
+BERINGER_DIR = '/Users/dave/tb2/didactyl/dd/corpora/beringer/'
+SCALES_DIR = BERINGER_DIR + 'scales'
+ARPEGGIOS_DIR = BERINGER_DIR + 'arpeggios'
+BROKEN_DIR = BERINGER_DIR + 'broken_chords'
+
+#####################################################
+# MAIN BLOCK
+#####################################################
+VERSION = '0001'
+ERR_METHODS = ['hmg', 'al', 'tri', 'tri_nua']
+corporeal = Corporeal(err_methods=ERR_METHODS)
+
+for model_name in MODELS:
+    model = corporeal.get_model(model_name=model_name)
+    weights = model.get_rule_weights()
+
+    # model.set_rule_weight(tag=tag, weight=weight)
+    # model.init_rule_weights(weights=weights)
+
+    # pivot_rpt_file = open_file(base_name='pivot_report', name=model_name, version=None, suffix='txt')
+    # rank_result_file = open_file(base_name='rank_result', name=model_name, version=VERSION)
+    # err_result_file = open_file(base_name='err_result', name=model_name, version=VERSION)
+    # mean_err_phrase_result_file = open_file(base_name='mean_err_phrase_result', name=model_name, version=VERSION)
+    # weighted_mean_err_result_file = open_file(base_name='weighted_mean_err_result', name=model_name, version=VERSION)
+    # mean_err_result_file = open_file(base_name='mean_err_result', name=model_name, version=VERSION)
+    mean_err_results = []
+    weighted_mean_err_results = []
+    for corpus_name in CORPORA:
+        da_corpus = corporeal.get_corpus(corpus_name=corpus_name)
+        mean_err = corporeal.get_mean_err(corpus_name=corpus_name, model=model, model_name=model_name,
+                                          staff=STAFF, full_context=FULL_CONTEXT, version=VERSION)
+        mean_err_results.append(mean_err)
+        weighted_mean_err = corporeal.get_weighted_mean_err(corpus_name=corpus_name, model=model, model_name=model_name,
+                                                            staff=STAFF, full_context=FULL_CONTEXT, version=VERSION)
+        weighted_mean_err_results.append(weighted_mean_err)
+
+    pprint.pprint(mean_err_results)
+    pprint.pprint(weighted_mean_err_results)

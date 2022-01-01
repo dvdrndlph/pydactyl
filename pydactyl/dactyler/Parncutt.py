@@ -37,6 +37,13 @@ class, providing the same treatment for the model described here:
        fingering of Parncutt, Sloboda, Clarke, Raekallio, and Desain,”
        Music Percept., vol. 18, no. 4, pp. 505–511, 2001.
 
+We also approximate the methods from
+
+   Balliauw, M., Herremans, D., Palhazi Cuervo, D., & Sörensen, K. (2017).
+       A variable neighborhood search algorithm to generate piano fingerings for 
+       polyphonic sheet music. International Transactions in Operational Research, 
+       24(3), 509–535. https://doi.org/10.1111/itor.12211
+       
 Also included is our own "Badgerow" class, tweaking the Parncutt model
 per the suggestions of pianist Justin Badgerow at Elizabethtown College.
 """
@@ -196,7 +203,7 @@ BADGEROW_FINGER_SPANS = {
     ('>3', '>1'): {'MinPrac': -12, 'MinComf': -11, 'MinRel': -7, 'MaxRel': -1, 'MaxComf': 2, 'MaxPrac': 4},
     ('>4', '>1'): {'MinPrac': -14, 'MinComf': -13, 'MinRel': -9, 'MaxRel': -2, 'MaxComf': 1, 'MaxPrac': 3},
     ('>5', '>1'): {'MinPrac': -15, 'MinComf': -14, 'MinRel': -10, 'MaxRel': -7, 'MaxComf': -1, 'MaxPrac': 1},
-    ('>3', '>2'): {'MinPrac': -5, 'MinComf': -3, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+    ('>3', '>2'): {'MinPrac': -5, 'MinComf': -2, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
     ('>4', '>2'): {'MinPrac': -7, 'MinComf': -5, 'MinRel': -4, 'MaxRel': -3, 'MaxComf': -1, 'MaxPrac': -1},
     ('>5', '>2'): {'MinPrac': -10, 'MinComf': -8, 'MinRel': -6, 'MaxRel': -5, 'MaxComf': -2, 'MaxPrac': -2},
     ('>4', '>3'): {'MinPrac': -4, 'MinComf': -2, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
@@ -449,8 +456,17 @@ class ImaginaryBlackKeyRuler(CacheRuler):
         return d
 
 
-class Parncutt(D.Dactyler):
-    def init_rules(self):
+class Parncutt(D.TrainedDactyler):
+    def train(self, d_corpus, staff="both", segregate=True, segmenter=None, annotation_indices=None):
+        pass
+
+    def init_rules(self, rules=dict()):
+        if rules:
+            self._rules = rules
+        else:
+            self.init_default_rules()
+
+    def init_default_rules(self):
         self._rules = {
             'str': self.assess_stretch,                 # Rule 1 ("Stretch")
             'sma': self.assess_small_span,              # Rule 2 ("Small-Span")
@@ -466,10 +482,34 @@ class Parncutt(D.Dactyler):
             'pa1': self.assess_thumb_passing            # Rule 12 ("Thumb-Passing")
         }
 
-    def init_rule_weights(self):
+    def init_rule_weights(self, weights=list()):
         self._weights = {}
+        if weights:
+            if len(weights) != len(self._rules):
+                raise Exception("Weights specified do not match all rule names.")
+            for rule in self._rules:
+                if rule not in weights:
+                    raise Exception("Weight for rule tag {} is not specified.".format(rule))
+            for rule in self._rules:
+                self._weights[rule] = 0
+            for rule in weights:
+                if rule not in self._rules:
+                    raise Exception("Weighting a nonexistent rule: {}".format(rule))
+                self._weights[rule] = weights[rule]
+        else:
+            self.init_default_rule_weights()
+
+    def get_rule_weights(self):
+        return self._weights
+
+    def init_default_rule_weights(self):
         for rule in self._rules:
             self._weights[rule] = 1
+
+    def set_rule_weight(self, tag, weight):
+        if tag not in self._weights:
+            raise Exception("Cannot re-weight unknown rule.")
+        self._weights[tag] = weight
 
     def init_costs(self):
         costs = {}
@@ -1524,7 +1564,7 @@ class Jacobs(Parncutt):
                          staff_combiner=staff_combiner, pruning_method=pruning_method,
                          finger_spans=finger_spans, version=version)
 
-    def init_rules(self):
+    def init_default_rules(self):
         # Rule 1 ("Stretch")
         # Rule 2 ("Small-Span")
         # Rule 3 (larj "Large-Span")
@@ -1554,7 +1594,7 @@ class Jacobs(Parncutt):
 
 
 class Badgerow(Parncutt):
-    def init_rules(self):
+    def init_default_rules(self):
         # Rule 1 ("Stretch")
         # Rule 2 ("Small-Span")
         # Rule 3 (larb "Large-Span")
@@ -1611,12 +1651,12 @@ class Balliauw(Parncutt):
                          staff_combiner=staff_combiner, pruning_method=pruning_method,
                          finger_spans=finger_spans, version=version)
 
-    def init_rule_weights(self):
-        super().init_rule_weights()
+    def init_default_rule_weights(self):
+        super().init_default_rule_weights()
         self._weights['bl1'] = 0.5
         self._weights['bl5'] = 0.5
 
-    def init_rules(self):
+    def init_default_rules(self, rules=dict()):
         self._rules = {
             'str': self.assess_stretch,                       # Balliauw 1 == Parncutt 1
             'sma': self.assess_small_span_balliauw,           # Balliauw 2

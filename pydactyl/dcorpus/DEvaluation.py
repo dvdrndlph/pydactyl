@@ -575,7 +575,7 @@ class DEvaluation:
             prior_note = note
         return contour_string
 
-    def pivot_count_report(self, heading=None, echo=True):
+    def pivot_count_report(self, heading=None, echo=False):
         report_str = ''
         human_stream = self._human_note_stream
         # human_abcdf = DEvaluation.abcdf_for_note_stream(human_stream)

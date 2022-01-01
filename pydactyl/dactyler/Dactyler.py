@@ -22,6 +22,7 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 from abc import ABC, abstractmethod
+from pydactyl.dcorpus.DCorpus import DCorpus, DScore, DAnnotation
 import pickle
 import re
 import copy
@@ -627,8 +628,21 @@ class Dactyler(ABC):
         if self._segmenter:
             self._d_corpus.segmenter(self._segmenter)
 
+    def load_score_as_corpus(self, d_score: DScore):
+        d_corpus = DCorpus()
+        d_corpus.append(d_score=d_score)
+        self.load_corpus(d_corpus=d_corpus)
+
+    def corpus_score_count(self):
+        d_corpus = self._d_corpus
+        corpus_len = d_corpus.score_count()
+        return corpus_len
+
+    def score_by_index(self, score_index):
+        return self._d_corpus.d_score_by_index(score_index)
+
     def score_note_count(self, score_index=0, staff="both"):
-        d_score = self._d_corpus.d_score_by_index(score_index)
+        d_score = self._d_corpus.score_by_index(score_index)
         note_count = d_score.note_count(staff=staff)
         return note_count
 

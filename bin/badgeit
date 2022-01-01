@@ -29,6 +29,7 @@ __author__ = 'David Randolph'
 import os
 import pathlib
 from scipy import stats
+import pingouin as pg
 # import matplotlib.pyplot as plt
 from statsmodels.stats.multicomp import MultiComparison
 import re
@@ -113,22 +114,6 @@ def load_csv_set(base_name, input_dir=INPUT_DIR, suffix='csv'):
             results.extend(result)
     return results
 
-def ttest_greater_than(little, big, threshold=0.05):
-    '''
-    Determine if one the mean one sample is significantly larger (in a statistical sense)
-    than another per a one-sided paired t-test.
-    :param little: The putatively smaller sample data.
-    :param big: The putatively larger sample.
-    :return: Tuple of (is_greater, is_significantly_greater, p_value).
-    '''
-    statistic, p_value = stats.ttest_rel(little, big, alternative='less')
-    is_greater = False
-    is_significantly_greater = False
-    if statistic < 0:
-        is_greater = True
-        if p_value < threshold:
-            is_significantly_greater = True
-    return is_greater, is_significantly_greater, p_value
 
 # pp_dat = process_corpus(corpus='parncutt_published')
 # ap_dat = process_corpus(corpus='american_parncutt_pure')
@@ -139,15 +124,11 @@ input_dir = '/Users/dave/tb2/doc/data/badgerow'
 # err_file_path = input_dir + '/err_results.csv'
 # err_data = load_csv(file_path=err_file_path)
 err_data = load_csv_set(base_name='err_result')
-hamming_err_vals = {}
-adj_long_err_vals = {}
-trigram_err_vals = {}
-nuanced_err_vals = {}
-relaxed_err_vals = {}
 err_vals = {}
-# best_to_worst_models = ['badball', 'badgerow', 'balliauw', 'jacobs', 'parncutt']
+# best_to_worst_models = ['badball', 'badpar', 'balliauw', 'jacobs', 'parncutt', 'badgerow']
 # best_to_worst_models = ['badball', 'balliauw', 'jacobs', 'parncutt']
 # best_to_worst_models = ['badgerow', 'jacobs', 'parncutt']
+# best_to_worst_models = ['badpar', 'jacobs', 'parncutt']
 best_to_worst_models = ['badball', 'jacobs', 'parncutt']
 methods = ['hmg', 'al', 'tri', 'tri_nua', 'tri_rlx']
 corpora = ['parncutt_published']
@@ -203,6 +184,26 @@ for meth in methods:
     #     print("{} method (evaluated with '{}' method) has {} vals".format(
     #         model_name, meth, len(combined_vals[meth][model_name])))
 
+
+for meth in methods:
+    samples = []
+    better_index = 0
+    for better_model in best_to_worst_models:
+        worse_index = 0
+        for worse_model in best_to_worst_models:
+            if worse_index > better_index:
+                littler = combined_vals[meth][worse_model]
+                bigger = combined_vals[meth][better_model]
+                tt = pg.ttest(littler, bigger, paired=True)  # , alternative="less")
+                p_val = tt.loc['T-test', 'p-val']
+                ci = tt.loc['T-test', 'CI95%']
+                print("Paired t-test under {}, {} vs. {}: {}".format(
+                    meth, worse_model, better_model, p_val))
+                print(ci)
+            worse_index += 1
+        better_index += 1
+
+
 for meth in methods:
     samples = []
     for model_name in best_to_worst_models:
@@ -218,7 +219,7 @@ print(anova_p_vals)
 for meth in methods:
     for corpus_name in corpora:
         p_val = anova_p_vals[(meth, corpus_name)]
-        if p_val > float(0.05):
+        if p_val > 10:  # float(0.05):
             print("ANOVA for {} method over corpus {} is NOT statistically significant at p={}\n".
                   format(meth, corpus_name, p_val))
         else:

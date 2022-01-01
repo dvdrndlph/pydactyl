@@ -31,6 +31,8 @@ from pydactyl.dcorpus.DEvaluation import DEvaluation, DEvalFunction
 from pydactyl.dactyler.Parncutt import Parncutt, Jacobs, Badgerow, Balliauw
 from pydactyl.dactyler.Parncutt import FINGER_SPANS, BALLIAUW_FINGER_SPANS, PhysicalRuler, ImaginaryBlackKeyRuler, Ruler
 from pydactyl.dactyler.Random import Random
+from pydactyl.eval.Corporeal import open_file, get_corpus, get_system_scores, \
+     get_result_set, get_err_result_set, RANK_HEADINGS, ERR_HEADINGS, ERR_METHODS, WEIGHT_RE, STAFF
 
 # da_corpus = DCorpus()
 # da_corpus.append_from_db(client_id='695311d7e88d5f79b4945bf45d00cc77', selection_id='21')
@@ -39,278 +41,22 @@ from pydactyl.dactyler.Random import Random
 # print(da_title)
 # print(da_score)
 
+FULL_CONTEXT = True
 
 # ['ideal', 'badgerow', 'jacobs', 'parncutt', 'random']:
 # ['ideal', 'jacobs', 'parncutt', 'random']:
-MODELS = ['badball', 'badgerow', 'jacobs', 'parncutt', 'balliauw']
+MODELS = ['badgerow', 'badball', 'badpar', 'jacobs', 'parncutt', 'balliauw']
 # MODELS = ['badgerow']
 # MODELS = ['balliauw']
+# MODELS = ['badball']
+
 
 # CORPORA = ['full_american', 'parncutt_published']
 CORPORA = ['parncutt_published']
 
-STAFF = 'upper'
-FULL_CONTEXT = True
-OUTPUT_DIR = '/Users/dave/tb2/doc/data/badgerow'
-PIG_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/abcd/'
-BERINGER_DIR = '/Users/dave/tb2/didactyl/dd/corpora/beringer/'
-SCALES_DIR = BERINGER_DIR + 'scales'
-ARPEGGIOS_DIR = BERINGER_DIR + 'arpeggios'
-BROKEN_DIR = BERINGER_DIR + 'broken_chords'
-
-QUERY = dict()
-
-QUERY['full_american'] = '''
-    select f.upper_staff as fingering,
-           count(*) as weight,
-           'Various Didactyl' as 'authority',
-           'Pydactyl' as 'transcriber'
-      from finger f
-     inner join parncutt p
-        on f.exercise = p.exercise
-     where f.exercise = {}
-       and f.upper_staff is not null
-       and length(f.upper_staff) = p.length_full
-     group by f.upper_staff
-     order by weight desc'''
-
-QUERY['all_american'] = '''
-    select parncutt_fingering as fingering,
-           total as weight,
-           'Various Didactyl' as 'authority',
-           'Pydactyl' as 'transcriber'
-      from parncutt_binary
-     where exercise = {}
-     order by weight desc'''
-
-QUERY['pure_american'] = '''
-    select parncutt as fingering,
-           'Various Didactyl' as 'authority',
-           'Pydactyl' as 'transcriber',
-           count(*) as weight
-      from parncutt_american_pure
-     where exercise = {} 
-       and Advised = 'No'
-     group by parncutt
-     order by weight desc'''
-
-QUERY['parncutt_published'] = '''
-    select fingering,
-           'Various Didactyl' as 'authority',
-           'Pydactyl' as 'transcriber',
-           subject_count as weight
-      from parncutt_published
-     where exercise = {}
-     order by weight desc'''
-
-FULL_ABC_QUERY = '''
-    select exercise as piece_id,
-           abc_full as abc_str
-      from parncutt
-     order by exercise'''
-
-FRAGMENT_ABC_QUERY = '''
-    select exercise as piece_id,
-           abc_fragment as abc_str
-      from parncutt
-     order by exercise'''
-
-LAYER_ONE_QUERY = '''
-    select id as piece_id,
-            abc_full as abc_str
-      from selection_detail
-     where id like 'c%1';
-'''
-
-RANK_HEADINGS = ['corpus', 'model', 'title', 'notes', 'ann_id', 'weight', 'rank', 'hmg', 'norm_hmg',
-                 'al', 'norm_al',
-                 'rho_no_d', 'rho_uni_d',
-                 'p_sat', 'tri_p_sat', 'nua_p_sat', 'rlx_p_sat',
-                 'tri_D', 'nua_D', 'rlx_D',
-                 'norm_tri_D', 'norm_nua_D', 'norm_rlx_D']
-ERR_METHODS = ['hmg', 'hmg_rho', 'al', 'al_rho', 'clvrst',
-               'tri', 'tri_rho', 'tri_nua', 'tri_nua_rho', 'tri_rlx', 'tri_rlx_rho', 'tri_clvrst']
-ERR_HEADINGS = ['corpus', 'model', 'title', 'notes', 'ann_id', 'weight']
-ERR_HEADINGS.extend(ERR_METHODS)
-
-WEIGHT_RE = r"^Weight:\s*(\d+)$"
-
-
 #####################################################
 # FUNCTIONS
 #####################################################
-def get_corpus(corpus_name):
-    if corpus_name == 'pig':
-        the_corpus = DCorpus()
-        the_corpus.append_dir(corpus_dir=PIG_DIR, split_header_extension='abcd')
-        return the_corpus
-
-    if corpus_name == 'scales':
-        the_corpus = DCorpus()
-        the_corpus.append_dir(corpus_dir=SCALES_DIR)
-        return the_corpus
-
-    if corpus_name == 'arpeggios':
-        the_corpus = DCorpus()
-        the_corpus.append_dir(corpus_dir=ARPEGGIOS_DIR)
-        return the_corpus
-
-    if corpus_name == 'broken':
-        the_corpus = DCorpus()
-        the_corpus.append_dir(corpus_dir=BROKEN_DIR)
-        return the_corpus
-
-    if corpus_name == 'beringer':
-        the_corpus = DCorpus()
-        for subdir in [SCALES_DIR, ARPEGGIOS_DIR, BROKEN_DIR]:
-            the_corpus.append_dir(corpus_dir=subdir)
-        return the_corpus
-
-    if corpus_name == 'layer_one':
-        the_corpus = DCorpus()
-        piece_query = LAYER_ONE_QUERY
-        the_corpus.assemble_and_append_from_db(db='diii', port=3307, user='didactyl', passwd='Pha_Lang35',
-                                               piece_query=piece_query, fingering_query=QUERY[corpus_name])
-        return the_corpus
-
-    piece_query = FRAGMENT_ABC_QUERY
-    if corpus_name == 'full_american':
-        piece_query = FULL_ABC_QUERY
-    the_corpus = DCorpus()
-    the_corpus.assemble_and_append_from_db(piece_query=piece_query,
-                                           fingering_query=QUERY[corpus_name])
-    return the_corpus
-
-
-def get_system_scores(model_name, d_score):
-    k = 5
-    if model_name == 'ideal':
-        return DEvaluation.get_best_pseudo_model_scores(d_score=da_score, staff=STAFF)
-    else:
-        d_corpus = DCorpus()
-        d_corpus.append(d_score=d_score)
-        if model_name == 'random':
-            model = Random()
-        elif model_name == 'parncutt':
-            model = Parncutt()
-        elif model_name == 'jacobs':
-            model = Jacobs()
-            # model = Jacobs(ruler=Ruler())
-        elif model_name == 'badgerow':
-            # model = Badgerow(finger_spans=FINGER_SPANS, ruler=PhysicalRuler())
-            # model = Badgerow(finger_spans=BALLIAUW_FINGER_SPANS, ruler=ImaginaryBlackKeyRuler())
-            model = Badgerow(finger_spans=FINGER_SPANS)
-        elif model_name == 'balliauw':
-            model = Balliauw()
-        elif model_name == 'badball':
-            model = Badgerow(finger_spans=BALLIAUW_FINGER_SPANS, ruler=ImaginaryBlackKeyRuler())
-        else:
-            raise Exception("Bad model")
-
-        model.load_corpus(d_corpus=d_corpus)
-        advice = model.generate_advice(staff=STAFF, score_index=0, k=k)
-        print(advice)
-
-        sys_scores = []
-        for r in (range(k)):
-            sys_score = copy.deepcopy(da_score)
-            sys_score.remove_annotations()
-            abcdf = advice[0][r]
-            ann = DAnnotation(abcdf=abcdf, authority=model_name)
-            sys_score.annotate(d_annotation=ann)
-            PianoFingering.finger_score(d_score=sys_score, staff=STAFF)
-            sys_scores.append(sys_score)
-        return sys_scores
-
-
-def get_err_result_set(evil, corpus_name, model_name, title, note_count, annot_id, weight):
-    err_result = {}
-
-    err_result['corpus'] = corpus_name
-    err_result['model'] = model_name
-    err_result['title'] = title
-    err_result['notes'] = note_count
-    err_result['ann_id'] = annot_id
-    err_result['weight'] = weight
-
-    err_result['hmg'] = evil.expected_reciprocal_rank()
-    evil.delta_function(DEvalFunction.delta_adjacent_long)
-    err_result['al'] = evil.expected_reciprocal_rank()
-    evil.mu_function(DEvalFunction.mu_scale)
-    err_result['al_rho'] = evil.expected_reciprocal_rank()
-    evil.delta_function(DEvalFunction.delta_hamming)
-    err_result['hmg_rho'] = evil.expected_reciprocal_rank()
-
-    evil.mu_function(None)
-    err_result['tri'] = evil.expected_reciprocal_rank(trigram=True)
-    evil.tau_function(DEvalFunction.tau_nuanced)
-    err_result['tri_nua'] = evil.expected_reciprocal_rank(trigram=True)
-    evil.tau_function(DEvalFunction.tau_relaxed)
-    err_result['tri_rlx'] = evil.expected_reciprocal_rank(trigram=True)
-
-    evil.mu_function(DEvalFunction.mu_scale)
-    err_result['tri_rlx_rho'] = evil.expected_reciprocal_rank(trigram=True)
-    evil.tau_function(DEvalFunction.tau_nuanced)
-    err_result['tri_nua_rho'] = evil.expected_reciprocal_rank(trigram=True)
-    evil.tau_function(DEvalFunction.tau_trigram)
-    err_result['tri_rho'] = evil.expected_reciprocal_rank(trigram=True)
-
-    evil.parameterize(delta_function=DEvalFunction.delta_adjacent_long, tau_function=DEvalFunction.tau_relaxed,
-                      decay_function=DEvalFunction.decay_uniform,
-                      mu_function=DEvalFunction.mu_scale, rho_decay_function=DEvalFunction.decay_uniform)
-    err_result['clvrst'] = evil.expected_reciprocal_rank()
-    err_result['tri_clvrst'] = evil.expected_reciprocal_rank(trigram=True)
-    return err_result
-
-
-def get_result_set(evil, corpus_name, model_name, title, note_count, annot_id, weight, rank):
-    result = dict()
-
-    result['corpus'] = corpus_name
-    result['model'] = model_name
-    result['title'] = title
-    result['notes'] = note_count
-    result['ann_id'] = annot_id
-    result['weight'] = weight
-    result['rank'] = rank
-
-    result['hmg'] = evil.big_delta_at_rank(rank=rank)
-    result['norm_hmg'] = evil.big_delta_at_rank(rank=rank, normalized=True)
-    result['rho_no_d'] = evil.pivot_clashes_at_rank(rank=rank)
-    result['p_sat'] = evil.prob_satisfied(rank=rank)
-
-    evil.delta_function(DEvalFunction.delta_adjacent_long)
-    result['al'] = evil.big_delta_at_rank(rank=rank)
-    result['norm_al'] = evil.big_delta_at_rank(rank=rank, normalized=True)
-
-    result['tri_D'] = evil.trigram_big_delta_at_rank(rank=rank)
-    result['norm_tri_D'] = evil.trigram_big_delta_at_rank(rank=rank, normalized=True)
-    result['tri_p_sat'] = evil.trigram_prob_satisfied(rank=rank)
-
-    evil.tau_function(DEvalFunction.tau_nuanced)
-    result['nua_D'] = evil.trigram_big_delta_at_rank(rank=rank)
-    result['norm_nua_D'] = evil.trigram_big_delta_at_rank(rank=rank, normalized=True)
-    result['nua_p_sat'] = evil.trigram_prob_satisfied(rank=rank)
-
-    evil.tau_function(DEvalFunction.tau_relaxed)
-    result['rlx_D'] = evil.trigram_big_delta_at_rank(rank=rank)
-    result['norm_rlx_D'] = evil.trigram_big_delta_at_rank(rank=rank, normalized=True)
-    result['rlx_p_sat'] = evil.trigram_prob_satisfied(rank=rank)
-
-    evil.rho_decay_function(DEvalFunction.decay_uniform)
-    result['rho_uni_d'] = evil.rho_at_rank(rank=rank)
-    return result
-
-
-def full_file_path(base_name, name, output_dir=OUTPUT_DIR, suffix='csv'):
-    full_path = "{}/{}_{}.{}".format(output_dir, base_name, name, suffix)
-    return full_path
-
-
-def open_file(base_name, name, output_dir=OUTPUT_DIR, suffix='csv', mode='w'):
-    full_path = full_file_path(base_name, name, output_dir, suffix)
-    file = open(full_path, mode)
-    return file
 
 #####################################################
 # MAIN BLOCK
