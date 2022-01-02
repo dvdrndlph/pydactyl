@@ -113,6 +113,7 @@ RANK_METHODS = ['hmg', 'norm_hmg',
 BASE_RANK_HEADINGS = copy.deepcopy(BASE_HEADINGS)
 BASE_RANK_HEADINGS.append('rank')
 RANK_HEADINGS = copy.deepcopy(BASE_RANK_HEADINGS)
+RANK_HEADINGS.extend(RANK_METHODS)
 ERR_METHODS = ['hmg', 'hmg_rho', 'al', 'al_rho', 'clvrst',
                'tri', 'tri_rho', 'tri_nua', 'tri_nua_rho', 'tri_rlx', 'tri_rlx_rho', 'tri_clvrst']
 ERR_HEADINGS = copy.deepcopy(BASE_HEADINGS)
@@ -130,6 +131,9 @@ class Corporeal(ABC):
         self.err_methods = err_methods
         self.err_headings = copy.deepcopy(BASE_HEADINGS)
         self.err_headings.extend(err_methods)
+        self._err_result_cache = {}
+        self._pivot_report_cache = {}
+        self._rank_result_cache = {}
 
     def get_corpus(self, corpus_name):
         if corpus_name == 'pig':
@@ -268,7 +272,7 @@ class Corporeal(ABC):
         elif tag == 'tri_rho':
             evil.mu_function(DEvalFunction.mu_scale)
             evil.tau_function(DEvalFunction.tau_trigram)
-        elif tag == 'clvrsrt' or tag == 'tri_clvrst':
+        elif tag == 'clvrst' or tag == 'tri_clvrst':
             evil.parameterize(delta_function=DEvalFunction.delta_adjacent_long,
                               tau_function=DEvalFunction.tau_relaxed,
                               decay_function=DEvalFunction.decay_uniform,
@@ -280,7 +284,7 @@ class Corporeal(ABC):
         else:
             err_result[tag] = evil.expected_reciprocal_rank()
 
-    def get_err_result_set(self, evil, corpus_name, model_name, title, note_count, annot_id, weight):
+    def _get_err_result_set(self, evil, corpus_name, model_name, title, note_count, annot_id, weight):
         err_result = {}
 
         err_result['corpus'] = corpus_name
@@ -294,7 +298,7 @@ class Corporeal(ABC):
             self.set_err_result(err_result=err_result, tag=tag, evil=evil)
         return err_result
 
-    def _get_cmt_err(self, err_results):
+    def get_cmt_err(self, err_results):
         cmt_err = {}
         corpus = ''
         title = ''
@@ -316,7 +320,7 @@ class Corporeal(ABC):
                 cmt_err[(corpus, model, title)]['sums'][meth] += res[meth] * res['weight']
         return cmt_err
 
-    def _get_errs_per_person(self, cmt_err):
+    def get_errs_per_person(self, cmt_err):
         """
         Returns err_per_person, weighted_err_per_person, note_total.
         mean_err_phrase is the mean of all ERR measures assigned on a particular phrase across all people.
@@ -372,7 +376,68 @@ class Corporeal(ABC):
                 mean_err[(corpus, model, method)] = method_mean_err
         return mean_err
 
-    def _get_err_results(self, corpus_name, model, model_name, staff="upper", full_context=True, version='0000'):
+    def get_all_results(self, corpus_name, model, model_name, k=5, staff="upper", full_context=True, version='0000'):
+        if (corpus_name, model_name, version, staff, k, full_context) in self._err_result_cache:
+            cached_err_results = self._err_result_cache[(corpus_name, model_name, version, staff, k, full_context)]
+            cached_pivot_reports = self._pivot_report_cache[(corpus_name, model_name, version, staff, k, full_context)]
+            cached_rank_results = self._rank_result_cache[(corpus_name, model_name, version, staff, k, full_context)]
+            return cached_err_results, cached_pivot_reports, cached_rank_results
+
+        rank_results = []
+        err_results = []
+        pivot_reports = {}
+        da_corpus = self.get_corpus(corpus_name=corpus_name)
+        for da_score in da_corpus.d_score_list():
+            model.load_score_as_corpus(d_score=da_score)
+            system_scores = self.get_fingered_system_scores(loaded_model=model,
+                                                            model_name=model_name, version=version)
+            title = da_score.title()
+            note_count = da_score.note_count(staff=STAFF)
+            abcdh = da_score.abcd_header()
+            last_annot_id = abcdh.annotation_count()
+            for annot_id in range(1, last_annot_id + 1):
+                annot = abcdh.annotation_by_id(annot_id)
+                comment = annot.comments()
+                mat = re.match(WEIGHT_RE, comment)
+                if mat:
+                    weight = int(mat.group(1))
+                else:
+                    weight = 1
+
+                human_score = copy.deepcopy(da_score)
+                PianoFingering.finger_score(d_score=human_score, staff=STAFF, id=annot_id)
+
+                evil = DEvaluation(human_score=human_score, system_scores=system_scores,
+                                   staff=staff, full_context=full_context)
+                pivot_report_key = (model_name, corpus_name, title)
+                pivot_heading = "{} over {} {} human {}".format(model_name, corpus_name, title, annot_id)
+                pivot_report = evil.pivot_count_report(heading=pivot_heading)
+                if pivot_report_key not in pivot_reports:
+                    pivot_reports[pivot_report_key] = []
+                pivot_reports[pivot_report_key].append(pivot_report)
+
+                err_result = self._get_err_result_set(evil, corpus_name=corpus_name, model_name=model_name,
+                                                     title=title, note_count=note_count,
+                                                     annot_id=annot_id, weight=weight)
+                err_results.append(err_result)
+
+                for i in range(k):
+                    rank = i + 1
+                    result = self._get_result_set(evil, corpus_name=corpus_name, model_name=model_name,
+                                                 title=title, note_count=note_count,
+                                                 annot_id=annot_id, weight=weight, rank=rank)
+                    rank_results.append(result)
+                    evil.parameterize()  # Reset to defaults.
+        self._err_result_cache[(corpus_name, model_name, version, staff, k, full_context)] = err_results
+        self._pivot_report_cache[(corpus_name, model_name, version, staff, k, full_context)] = pivot_reports
+        self._rank_result_cache[(corpus_name, model_name, version, staff, k, full_context)] = rank_results
+        return err_results, pivot_reports, rank_results
+
+    def get_err_results(self, corpus_name, model, model_name, staff="upper", full_context=True, version='0000'):
+        if (corpus_name, model_name, version, staff) in self._err_result_cache:
+            cached_err_results = self._err_result_cache[(corpus_name, model_name, version, staff)]
+            return cached_err_results
+
         err_results = []
         da_corpus = self.get_corpus(corpus_name=corpus_name)
         for da_score in da_corpus.d_score_list():
@@ -397,31 +462,33 @@ class Corporeal(ABC):
 
                 evil = DEvaluation(human_score=human_score, system_scores=system_scores,
                                    staff=staff, full_context=full_context)
-                err_result = self.get_err_result_set(evil, corpus_name=corpus_name, model_name=model_name,
+                err_result = self._get_err_result_set(evil, corpus_name=corpus_name, model_name=model_name,
                                                      title=title, note_count=note_count,
                                                      annot_id=annot_id, weight=weight)
                 err_results.append(err_result)
+
+        self._err_result_cache[(corpus_name, model_name, version, staff)] = err_results
         return err_results
 
     def get_mean_err(self, corpus_name, model, model_name, staff="upper", full_context=True, version='0000'):
-        err_results = self._get_err_results(corpus_name=corpus_name, model=model, model_name=model_name,
-                                            staff=staff, full_context=full_context, version=version)
-        cmt_err = self._get_cmt_err(err_results=err_results)
-        epp = self._get_errs_per_person(cmt_err=cmt_err)
+        err_results = self.get_err_results(corpus_name=corpus_name, model=model, model_name=model_name,
+                                           staff=staff, full_context=full_context, version=version)
+        cmt_err = self.get_cmt_err(err_results=err_results)
+        epp = self.get_errs_per_person(cmt_err=cmt_err)
         mean_err = self._get_mean_err(err_per_person=epp['err_per_person'], phrase_count=epp['phrase_count'])
         return mean_err
 
     def get_weighted_mean_err(self, corpus_name, model, model_name, staff="upper", full_context=True, version='0000'):
-        err_results = self._get_err_results(corpus_name=corpus_name, model=model, model_name=model_name,
-                                            staff=staff, full_context=full_context, version=version)
-        cmt_err = self._get_cmt_err(err_results=err_results)
-        epp = self._get_errs_per_person(cmt_err=cmt_err)
-        mean_err = self._get_weighted_mean_err(weighted_err_per_person=epp['err_per_person'],
+        err_results = self.get_err_results(corpus_name=corpus_name, model=model, model_name=model_name,
+                                           staff=staff, full_context=full_context, version=version)
+        cmt_err = self.get_cmt_err(err_results=err_results)
+        epp = self.get_errs_per_person(cmt_err=cmt_err)
+        mean_err = self._get_weighted_mean_err(weighted_err_per_person=epp['weighted_err_per_person'],
                                                note_total=epp['note_total'])
         return mean_err
 
     def set_result(self, result, tag, rank, evil: DEvaluation):
-        evil.paramaterize()
+        evil.parameterize()
         if tag == 'hmg':
             result['hmg'] = evil.big_delta_at_rank(rank=rank)
         elif tag == 'norm_hmg':
@@ -471,7 +538,7 @@ class Corporeal(ABC):
             raise Exception("Unknown result tag: {}".format(tag))
         return result
 
-    def get_result_set(self, evil, corpus_name, model_name, title, note_count, annot_id, weight, rank):
+    def _get_result_set(self, evil: DEvaluation, corpus_name, model_name, title, note_count, annot_id, weight, rank):
         result = dict()
 
         result['corpus'] = corpus_name
