@@ -127,10 +127,6 @@ if __name__ == '__main__':
     tic = time.time()
     model = corp.get_model(model_name=model_name)
     weights = model.get_rule_weights()
-    mute_one_weights = mute_one(weights=weights)
-    mute_two_weights = mute_two(weights=weights)
-    mute_three_weights = mute_three(weights=weights)
-    # versioned_weights = mute_one_weights | mute_two_weights | mute_three_weights
     versioned_weights = mute_n(weights=weights, n=4)
     for version, wt in versioned_weights.items():
         # model = corp.get_model(model_name=model_name)
@@ -165,8 +161,10 @@ if __name__ == '__main__':
             total += values[(corpus_name, model_name, method)]
         method_avg = total / len(ERR_METHODS)
         method_avgs[version] = method_avg
+    print("rule,cost_of_muting")
+    for version in method_avgs:
         rule_value = method_avgs['none'] - method_avgs[version]
-        print("muting {} hurts {}".format(version, rule_value))
+        print("{},{}".format(version, rule_value))
 
     print("Computation took {} seconds".format(time.time() - tic))
 
