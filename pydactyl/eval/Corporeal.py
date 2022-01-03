@@ -21,7 +21,7 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-from abc import ABC, abstractmethod
+from abc import ABC
 import copy
 import re
 from pydactyl.dcorpus.DCorpus import DCorpus, DScore, DAnnotation
@@ -224,7 +224,7 @@ class Corporeal(ABC):
         return sys_scores
 
     # Deprecate?
-    def get_system_scores(self, model_name, d_score, model=None, k=5, weights=None):
+    def get_system_scores(self, model_name, d_score, k=5, weights=None):
         if model_name == 'ideal':
             return DEvaluation.get_best_pseudo_model_scores(d_score=d_score, staff=STAFF)
 

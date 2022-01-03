@@ -1,0 +1,105 @@
+#!/usr/bin/env python
+__author__ = 'David Randolph'
+# Copyright (c) 2020-2021 David A. Randolph.
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without
+# restriction, including without limitation the rights to use,
+# copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following
+# conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+import copy
+from multiprocessing import Process
+from threading import Thread
+import pprint
+import time
+from pydactyl.dactyler.Parncutt import Parncutt, Jacobs, Badgerow, Balliauw
+from pydactyl.eval.Corporeal import Corporeal, WEIGHT_RE
+
+
+#####################################################
+# FUNCTIONS
+#####################################################
+def weight_list(weights, toggle=1):
+    weight_list = [weights]
+    for tag in sorted(weights):
+        new_weights = copy.copy(weights)
+        new_weights[tag] = 0.0
+        weight_list.append(new_weights)
+    return weight_list
+
+
+def get_mean_err(corporeal, corpus_name, model, model_name, staff, full_context, version):
+    global mean_err_results
+    mean_err = corporeal.get_mean_err(corpus_name=corpus_name, model=model, model_name=model_name,
+                                      staff=staff, full_context=full_context, version=version)
+    mean_err_results[(corpus_name, version)] = mean_err
+
+
+#####################################################
+# MAIN BLOCK
+#####################################################
+if __name__ == '__main__':
+    # MODELS = ['badgerow', 'badball', 'badpar', 'jacobs', 'parncutt', 'balliauw']
+    MODELS = ['badball']
+
+    # CORPORA = ['full_american', 'parncutt_published']
+    CORPORA = ['parncutt_published']
+
+    STAFF = 'upper'
+    FULL_CONTEXT = True
+    ERR_METHODS = ['hmg', 'al', 'tri', 'tri_nua']
+    corp = Corporeal(err_methods=ERR_METHODS)
+    models = {}
+    # procs = []
+    # threads = []
+    mean_err_results = {}
+    tic = time.time()
+    for model_name in MODELS:
+        model = corp.get_model(model_name=model_name)
+        weights = model.get_rule_weights()
+        weight_list = weight_list(weights=weights)
+
+        wt_index = 0
+        for wt in weight_list:
+            version = "{:04d}".format(wt_index)
+            # model = corp.get_model(model_name=model_name)
+            model.init_rule_weights(weights=wt)
+            # model.set_rule_weight(tag=tag, weight=weight)
+            models[version] = model
+
+            for corpus_name in CORPORA:
+                mean_err = corp.get_mean_err(corpus_name=corpus_name, model=model, model_name=model_name,
+                                             staff=STAFF, full_context=FULL_CONTEXT, version=version)
+                mean_err_results[(corpus_name, version)] = mean_err
+                # proc = Process(
+                #     target=get_mean_err(corp, corpus_name, model, model_name, STAFF, FULL_CONTEXT, version))
+                # proc.start()
+                # procs.append(proc)
+                # thread = Thread(
+                #     target=get_mean_err(corp, corpus_name, model, model_name, STAFF, FULL_CONTEXT, version))
+                # thread.start()
+                # threads.append(thread)
+            wt_index += 1
+
+        # for proc in procs:
+        #     proc.join()
+        # for thread in threads:
+        #     thread.join()
+
+    pprint.pprint(mean_err_results)
+    print("Computation took {} seconds".format(time.time() - tic))

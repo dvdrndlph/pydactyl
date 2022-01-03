@@ -23,59 +23,150 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 import copy
+# from multiprocessing import Process
+# from threading import Thread
 import pprint
-import re
-import sys
-from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
-from pydactyl.dcorpus.PianoFingering import PianoFingering
-from pydactyl.dcorpus.DEvaluation import DEvaluation, DEvalFunction
+from itertools import combinations
+import time
 from pydactyl.dactyler.Parncutt import Parncutt, Jacobs, Badgerow, Balliauw
-from pydactyl.dactyler.Parncutt import FINGER_SPANS, BALLIAUW_FINGER_SPANS, PhysicalRuler, ImaginaryBlackKeyRuler, Ruler
-from pydactyl.dactyler.Random import Random
 from pydactyl.eval.Corporeal import Corporeal, WEIGHT_RE
 
 
-# MODELS = ['badgerow', 'badball', 'badpar', 'jacobs', 'parncutt', 'balliauw']
-MODELS = ['badball']
+#####################################################
+# FUNCTIONS
+#####################################################
+def mute_version(tag_list):
+    tag_set = set(tag_list)
+    if len(tag_list) != len(tag_set):
+        return None
+    version_str = "&".join(sorted(tag_list))
+    return version_str
 
 
-# CORPORA = ['full_american', 'parncutt_published']
-CORPORA = ['parncutt_published']
+def mute_one(weights):
+    version_weights = {}
+    version_weights['none'] = copy.copy(weights)
+    for tag in sorted(weights):
+        new_weights = copy.copy(weights)
+        new_weights[tag] = 0.0
+        version_weights[tag] = new_weights
+    return version_weights
 
-STAFF = 'upper'
-FULL_CONTEXT = True
-OUTPUT_DIR = '/Users/dave/tb2/doc/data/badgerow'
-PIG_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/abcd/'
-BERINGER_DIR = '/Users/dave/tb2/didactyl/dd/corpora/beringer/'
-SCALES_DIR = BERINGER_DIR + 'scales'
-ARPEGGIOS_DIR = BERINGER_DIR + 'arpeggios'
-BROKEN_DIR = BERINGER_DIR + 'broken_chords'
+
+def mute_two(weights):
+    version_weights = {}
+    for tag_one in sorted(weights):
+        for tag_two in sorted(weights):
+            version_str = mute_version([tag_one, tag_two])
+            if version_str and version_str not in version_weights:
+                new_weights = copy.copy(weights)
+                new_weights[tag_one] = 0.0
+                new_weights[tag_two] = 0.0
+                version_weights[version_str] = new_weights
+    return version_weights
+
+
+def mute_three(weights):
+    version_weights = {}
+    for tag_one in sorted(weights):
+        for tag_two in sorted(weights):
+            for tag_three in sorted(weights):
+                version_str = mute_version([tag_one, tag_two, tag_three])
+                if version_str and version_str not in version_weights:
+                    new_weights = copy.copy(weights)
+                    new_weights[tag_one] = 0.0
+                    new_weights[tag_two] = 0.0
+                    new_weights[tag_three] = 0.0
+                    version_weights[version_str] = new_weights
+    return version_weights
+
+
+def mute_n(weights: dict, n):
+    version_weights = {}
+    tags = weights.keys()
+    for i in range(n):
+        pick_count = i + 1
+        combos = combinations(tags, pick_count)
+        for c in combos:
+            new_weights = copy.copy(weights)
+            for tag in c:
+                new_weights[tag] = 0.0
+            mv = mute_version(list(c))
+            version_weights[mv] = new_weights
+    version_weights['none'] = copy.copy(weights)
+    return version_weights
+
+
+def get_mean_err(corporeal: Corporeal, corpus_name, model: Parncutt,
+                 model_name, staff, full_context, version):
+    global mean_err_results
+    mean_err = corporeal.get_mean_err(corpus_name=corpus_name, model=model, model_name=model_name,
+                                      staff=staff, full_context=full_context, version=version)
+    mean_err_results[(corpus_name, version)] = mean_err
+
 
 #####################################################
 # MAIN BLOCK
 #####################################################
-VERSION = '0001'
-ERR_METHODS = ['hmg', 'al', 'tri', 'tri_nua']
-corp = Corporeal(err_methods=ERR_METHODS)
+if __name__ == '__main__':
+    # MODELS = ['badgerow', 'badball', 'badpar', 'jacobs', 'parncutt', 'balliauw']
+    model_name = 'parncutt'
 
-for model_name in MODELS:
+    # CORPORA = ['full_american', 'parncutt_published']
+    CORPORA = ['parncutt_published']
+
+    STAFF = 'upper'
+    FULL_CONTEXT = True
+    ERR_METHODS = ['hmg', 'al', 'tri', 'tri_nua']
+    corp = Corporeal(err_methods=ERR_METHODS)
+    # models = {}
+    # procs = []
+    # threads = []
+    muted_rules = {}
+    mean_err_results = {}
+    tic = time.time()
     model = corp.get_model(model_name=model_name)
     weights = model.get_rule_weights()
+    mute_one_weights = mute_one(weights=weights)
+    mute_two_weights = mute_two(weights=weights)
+    mute_three_weights = mute_three(weights=weights)
+    # versioned_weights = mute_one_weights | mute_two_weights | mute_three_weights
+    versioned_weights = mute_n(weights=weights, n=4)
+    for version, wt in versioned_weights.items():
+        # model = corp.get_model(model_name=model_name)
+        model.init_rule_weights(weights=wt)
+        # model.set_rule_weight(tag=tag, weight=weight)
+        # models[version] = model
 
-    # model.set_rule_weight(tag=tag, weight=weight)
-    # model.init_rule_weights(weights=weights)
+        for corpus_name in CORPORA:
+            mean_err = corp.get_mean_err(corpus_name=corpus_name, model=model, model_name=model_name,
+                                         staff=STAFF, full_context=FULL_CONTEXT, version=version)
+            mean_err_results[(corpus_name, version)] = mean_err
+            # proc = Process(
+            #     target=get_mean_err(corp, corpus_name, model, model_name, STAFF, FULL_CONTEXT, version))
+            # proc.start()
+            # procs.append(proc)
+            # thread = Thread(
+            #     target=get_mean_err(corp, corpus_name, model, model_name, STAFF, FULL_CONTEXT, version))
+            # thread.start()
+            # threads.append(thread)
 
-    mean_err_results = []
-    weighted_mean_err_results = []
-    for corpus_name in CORPORA:
-        # da_corpus = corp.get_corpus(corpus_name=corpus_name)
+    # for proc in procs:
+    #     proc.join()
+    # for thread in threads:
+    #     thread.join()
 
-        mean_err = corp.get_mean_err(corpus_name=corpus_name, model=model, model_name=model_name,
-                                     staff=STAFF, full_context=FULL_CONTEXT, version=VERSION)
-        mean_err_results.append(mean_err)
-        weighted_mean_err = corp.get_weighted_mean_err(corpus_name=corpus_name, model=model, model_name=model_name,
-                                                       staff=STAFF, full_context=FULL_CONTEXT, version=VERSION)
-        weighted_mean_err_results.append(weighted_mean_err)
+    # pprint.pprint(mean_err_results)
+    method_avgs = {}
+    for (corpus_name, version), values in mean_err_results.items():
+        total = 0
+        for method in ERR_METHODS:
+            # print(values[(corpus_name, model_name, method)])
+            total += values[(corpus_name, model_name, method)]
+        method_avg = total / len(ERR_METHODS)
+        method_avgs[version] = method_avg
+        rule_value = method_avgs['none'] - method_avgs[version]
+        print("muting {} hurts {}".format(version, rule_value))
 
-    pprint.pprint(mean_err_results)
-    pprint.pprint(weighted_mean_err_results)
+    print("Computation took {} seconds".format(time.time() - tic))
+
