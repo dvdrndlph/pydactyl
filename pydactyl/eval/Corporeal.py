@@ -28,7 +28,8 @@ from pydactyl.dcorpus.DCorpus import DCorpus, DScore, DAnnotation
 from pydactyl.dcorpus.PianoFingering import PianoFingering
 from pydactyl.dcorpus.DEvaluation import DEvaluation, DEvalFunction
 from pydactyl.dactyler.Parncutt import Parncutt, Jacobs, Badgerow, Balliauw
-from pydactyl.dactyler.Parncutt import FINGER_SPANS, BALLIAUW_FINGER_SPANS, PhysicalRuler, ImaginaryBlackKeyRuler, Ruler
+from pydactyl.dactyler.Parncutt import FINGER_SPANS, BALLIAUW_LARGE_FINGER_SPANS, \
+    BALLIAUW_MEDIUM_FINGER_SPANS, BALLIAUW_SMALL_FINGER_SPANS, ImaginaryBlackKeyRuler
 from pydactyl.dactyler.Random import Random
 
 STAFF = 'upper'
@@ -187,7 +188,7 @@ class Corporeal(ABC):
             # model = Jacobs(ruler=Ruler())
         elif model_name == 'badgerow':
             # model = Badgerow(finger_spans=FINGER_SPANS, ruler=PhysicalRuler())
-            # model = Badgerow(finger_spans=BALLIAUW_FINGER_SPANS, ruler=ImaginaryBlackKeyRuler())
+            # model = Badgerow(finger_spans=BALLIAUW_LARGE_FINGER_SPANS, ruler=ImaginaryBlackKeyRuler())
             model = Badgerow()
         elif model_name == 'badpar':
             # model = Badgerow(finger_spans=FINGER_SPANS, ruler=PhysicalRuler())
@@ -196,7 +197,11 @@ class Corporeal(ABC):
         elif model_name == 'balliauw':
             model = Balliauw()
         elif model_name == 'badball':
-            model = Badgerow(finger_spans=BALLIAUW_FINGER_SPANS, ruler=ImaginaryBlackKeyRuler())
+            model = Badgerow(finger_spans=BALLIAUW_LARGE_FINGER_SPANS, ruler=ImaginaryBlackKeyRuler())
+        elif model_name == 'badSball':
+            model = Badgerow(finger_spans=BALLIAUW_SMALL_FINGER_SPANS, ruler=ImaginaryBlackKeyRuler())
+        elif model_name == 'badMball':
+            model = Badgerow(finger_spans=BALLIAUW_MEDIUM_FINGER_SPANS, ruler=ImaginaryBlackKeyRuler())
         else:
             raise Exception("Bad model")
 

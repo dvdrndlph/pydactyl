@@ -22,15 +22,7 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-import copy
-import re
 import sys
-from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
-from pydactyl.dcorpus.PianoFingering import PianoFingering
-from pydactyl.dcorpus.DEvaluation import DEvaluation, DEvalFunction
-from pydactyl.dactyler.Parncutt import Parncutt, Jacobs, Badgerow, Balliauw
-from pydactyl.dactyler.Parncutt import FINGER_SPANS, BALLIAUW_FINGER_SPANS, PhysicalRuler, ImaginaryBlackKeyRuler, Ruler
-from pydactyl.dactyler.Random import Random
 from pydactyl.eval.Corporeal import Corporeal, RANK_HEADINGS, ERR_HEADINGS, ERR_METHODS, WEIGHT_RE, STAFF
 
 # da_corpus = DCorpus()

@@ -117,7 +117,7 @@ FINGER_SPANS = {
     ('<4', '<5'): {'MinPrac': -5, 'MinComf': -3, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
 }
 
-BALLIAUW_FINGER_SPANS = {
+BALLIAUW_LARGE_FINGER_SPANS = {
     ('>1', '>1'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
     ('>2', '>2'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
     ('>3', '>3'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
@@ -167,6 +167,122 @@ BALLIAUW_FINGER_SPANS = {
     ('<1', '<3'): {'MinPrac': -15, 'MinComf': -13, 'MinRel': -9, 'MaxRel': -3, 'MaxComf': 6, 'MaxPrac': 8},
     ('<1', '<4'): {'MinPrac': -16, 'MinComf': -14, 'MinRel': -11, 'MaxRel': -5, 'MaxComf': 4, 'MaxPrac': 6},
     ('<1', '<5'): {'MinPrac': -18, 'MinComf': -16, 'MinRel': -12, 'MaxRel': -7, 'MaxComf': 0, 'MaxPrac': 2},
+    ('<2', '<3'): {'MinPrac': -7, 'MinComf': -5, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+    ('<2', '<4'): {'MinPrac': -8, 'MinComf': -6, 'MinRel': -4, 'MaxRel': -3, 'MaxComf': -1, 'MaxPrac': -1},
+    ('<2', '<5'): {'MinPrac': -12, 'MinComf': -10, 'MinRel': -6, 'MaxRel': -5, 'MaxComf': -2, 'MaxPrac': -2},
+    ('<3', '<4'): {'MinPrac': -4, 'MinComf': -2, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+    ('<3', '<5'): {'MinPrac': -8, 'MinComf': -6, 'MinRel': -4, 'MaxRel': -3, 'MaxComf': -1, 'MaxPrac': -1},
+    ('<4', '<5'): {'MinPrac': -6, 'MinComf': -4, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+}
+
+BALLIAUW_SMALL_FINGER_SPANS = {
+    ('>1', '>1'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('>2', '>2'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('>3', '>3'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('>4', '>4'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('>5', '>5'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+
+    ('<1', '<1'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('<2', '<2'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('<3', '<3'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('<4', '<4'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('<5', '<5'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+
+    ('>1', '>2'): {'MinPrac': -7, 'MinComf': -5, 'MinRel': 1, 'MaxRel': 3, 'MaxComf': 8, 'MaxPrac': 10},
+    ('>1', '>3'): {'MinPrac': -6, 'MinComf': -4, 'MinRel': 3, 'MaxRel': 6, 'MaxComf': 10, 'MaxPrac': 12},
+    ('>1', '>4'): {'MinPrac': -4, 'MinComf': -2, 'MinRel': 5, 'MaxRel': 8, 'MaxComf': 11, 'MaxPrac': 13},
+    ('>1', '>5'): {'MinPrac': -2, 'MinComf': 0, 'MinRel': 7, 'MaxRel': 10, 'MaxComf': 12, 'MaxPrac': 14},
+    ('>2', '>3'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 4, 'MaxPrac': 6},
+    ('>2', '>4'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 3, 'MaxRel': 4, 'MaxComf': 6, 'MaxPrac': 8},
+    ('>2', '>5'): {'MinPrac': 2, 'MinComf': 2, 'MinRel': 5, 'MaxRel': 6, 'MaxComf': 8, 'MaxPrac': 10},
+    ('>3', '>4'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 2, 'MaxPrac': 4},
+    ('>3', '>5'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 3, 'MaxRel': 4, 'MaxComf': 6, 'MaxPrac': 8},
+    ('>4', '>5'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 4, 'MaxPrac': 6},
+
+    ('>2', '>1'): {'MinPrac': -10, 'MinComf': -8, 'MinRel': -3, 'MaxRel': -1, 'MaxComf': 5, 'MaxPrac': 7},
+    ('>3', '>1'): {'MinPrac': -12, 'MinComf': -10, 'MinRel': -6, 'MaxRel': -3, 'MaxComf': 4, 'MaxPrac': 6},
+    ('>4', '>1'): {'MinPrac': -13, 'MinComf': -11, 'MinRel': -8, 'MaxRel': -5, 'MaxComf': 2, 'MaxPrac': 4},
+    ('>5', '>1'): {'MinPrac': -14, 'MinComf': -12, 'MinRel': -10, 'MaxRel': -7, 'MaxComf': 0, 'MaxPrac': 2},
+    ('>3', '>2'): {'MinPrac': -6, 'MinComf': -4, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+    ('>4', '>2'): {'MinPrac': -8, 'MinComf': -6, 'MinRel': -4, 'MaxRel': -3, 'MaxComf': -1, 'MaxPrac': -1},
+    ('>5', '>2'): {'MinPrac': -10, 'MinComf': -8, 'MinRel': -6, 'MaxRel': -5, 'MaxComf': -2, 'MaxPrac': -2},
+    ('>4', '>3'): {'MinPrac': -4, 'MinComf': -2, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+    ('>5', '>3'): {'MinPrac': -8, 'MinComf': -6, 'MinRel': -4, 'MaxRel': -3, 'MaxComf': -1, 'MaxPrac': -1},
+    ('>5', '>4'): {'MinPrac': -6, 'MinComf': -4, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+
+    ('<2', '<1'): {'MinPrac': -7, 'MinComf': -5, 'MinRel': 1, 'MaxRel': 3, 'MaxComf': 8, 'MaxPrac': 10},
+    ('<3', '<1'): {'MinPrac': -6, 'MinComf': -4, 'MinRel': 3, 'MaxRel': 6, 'MaxComf': 10, 'MaxPrac': 12},
+    ('<4', '<1'): {'MinPrac': -4, 'MinComf': -2, 'MinRel': 5, 'MaxRel': 8, 'MaxComf': 11, 'MaxPrac': 13},
+    ('<5', '<1'): {'MinPrac': -2, 'MinComf': 0, 'MinRel': 7, 'MaxRel': 10, 'MaxComf': 12, 'MaxPrac': 14},
+    ('<3', '<2'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 4, 'MaxPrac': 6},
+    ('<4', '<2'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 3, 'MaxRel': 4, 'MaxComf': 6, 'MaxPrac': 8},
+    ('<5', '<2'): {'MinPrac': 2, 'MinComf': 2, 'MinRel': 5, 'MaxRel': 6, 'MaxComf': 8, 'MaxPrac': 10},
+    ('<4', '<3'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 2, 'MaxPrac': 4},
+    ('<5', '<3'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 3, 'MaxRel': 4, 'MaxComf': 6, 'MaxPrac': 8},
+    ('<5', '<4'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 4, 'MaxPrac': 6},
+
+    ('<1', '<2'): {'MinPrac': -10, 'MinComf': -8, 'MinRel': -3, 'MaxRel': -1, 'MaxComf': 5, 'MaxPrac': 7},
+    ('<1', '<3'): {'MinPrac': -12, 'MinComf': -10, 'MinRel': -6, 'MaxRel': -3, 'MaxComf': 4, 'MaxPrac': 6},
+    ('<1', '<4'): {'MinPrac': -13, 'MinComf': -11, 'MinRel': -8, 'MaxRel': -5, 'MaxComf': 2, 'MaxPrac': 4},
+    ('<1', '<5'): {'MinPrac': -14, 'MinComf': -12, 'MinRel': -10, 'MaxRel': -7, 'MaxComf': 0, 'MaxPrac': 2},
+    ('<2', '<3'): {'MinPrac': -6, 'MinComf': -4, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+    ('<2', '<4'): {'MinPrac': -8, 'MinComf': -6, 'MinRel': -4, 'MaxRel': -3, 'MaxComf': -1, 'MaxPrac': -1},
+    ('<2', '<5'): {'MinPrac': -10, 'MinComf': -8, 'MinRel': -6, 'MaxRel': -5, 'MaxComf': -2, 'MaxPrac': -2},
+    ('<3', '<4'): {'MinPrac': -4, 'MinComf': -2, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+    ('<3', '<5'): {'MinPrac': -8, 'MinComf': -6, 'MinRel': -4, 'MaxRel': -3, 'MaxComf': -1, 'MaxPrac': -1},
+    ('<4', '<5'): {'MinPrac': -6, 'MinComf': -4, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+}
+
+BALLIAUW_MEDIUM_FINGER_SPANS = {
+    ('>1', '>1'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('>2', '>2'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('>3', '>3'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('>4', '>4'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('>5', '>5'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+
+    ('<1', '<1'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('<2', '<2'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('<3', '<3'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('<4', '<4'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+    ('<5', '<5'): {'MinPrac': 0, 'MinComf': 0, 'MinRel': 0, 'MaxRel': 0, 'MaxComf': 0, 'MaxPrac': 0},
+
+    ('>1', '>2'): {'MinPrac': -8, 'MinComf': -6, 'MinRel': 1, 'MaxRel': 5, 'MaxComf': 8, 'MaxPrac': 10},
+    ('>1', '>3'): {'MinPrac': -7, 'MinComf': -5, 'MinRel': 3, 'MaxRel': 9, 'MaxComf': 12, 'MaxPrac': 14},
+    ('>1', '>4'): {'MinPrac': -5, 'MinComf': -3, 'MinRel': 5, 'MaxRel': 11, 'MaxComf': 13, 'MaxPrac': 15},
+    ('>1', '>5'): {'MinPrac': -2, 'MinComf': 0, 'MinRel': 7, 'MaxRel': 12, 'MaxComf': 14, 'MaxPrac': 16},
+    ('>2', '>3'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 5, 'MaxPrac': 7},
+    ('>2', '>4'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 3, 'MaxRel': 4, 'MaxComf': 6, 'MaxPrac': 8},
+    ('>2', '>5'): {'MinPrac': 2, 'MinComf': 2, 'MinRel': 5, 'MaxRel': 6, 'MaxComf': 10, 'MaxPrac': 12},
+    ('>3', '>4'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 2, 'MaxPrac': 4},
+    ('>3', '>5'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 3, 'MaxRel': 4, 'MaxComf': 6, 'MaxPrac': 8},
+    ('>4', '>5'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 4, 'MaxPrac': 6},
+
+    ('>2', '>1'): {'MinPrac': -10, 'MinComf': -8, 'MinRel': -5, 'MaxRel': -1, 'MaxComf': 6, 'MaxPrac': 8},
+    ('>3', '>1'): {'MinPrac': -14, 'MinComf': -12, 'MinRel': -9, 'MaxRel': -3, 'MaxComf': 5, 'MaxPrac': 7},
+    ('>4', '>1'): {'MinPrac': -15, 'MinComf': -13, 'MinRel': -11, 'MaxRel': -5, 'MaxComf': 3, 'MaxPrac': 5},
+    ('>5', '>1'): {'MinPrac': -16, 'MinComf': -14, 'MinRel': -12, 'MaxRel': -7, 'MaxComf': 0, 'MaxPrac': 2},
+    ('>3', '>2'): {'MinPrac': -7, 'MinComf': -5, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+    ('>4', '>2'): {'MinPrac': -8, 'MinComf': -6, 'MinRel': -4, 'MaxRel': -3, 'MaxComf': -1, 'MaxPrac': -1},
+    ('>5', '>2'): {'MinPrac': -12, 'MinComf': -10, 'MinRel': -6, 'MaxRel': -5, 'MaxComf': -2, 'MaxPrac': -2},
+    ('>4', '>3'): {'MinPrac': -4, 'MinComf': -2, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+    ('>5', '>3'): {'MinPrac': -8, 'MinComf': -6, 'MinRel': -4, 'MaxRel': -3, 'MaxComf': -1, 'MaxPrac': -1},
+    ('>5', '>4'): {'MinPrac': -6, 'MinComf': -4, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
+
+    ('<2', '<1'): {'MinPrac': -8, 'MinComf': -6, 'MinRel': 1, 'MaxRel': 5, 'MaxComf': 8, 'MaxPrac': 10},
+    ('<3', '<1'): {'MinPrac': -7, 'MinComf': -5, 'MinRel': 3, 'MaxRel': 9, 'MaxComf': 12, 'MaxPrac': 14},
+    ('<4', '<1'): {'MinPrac': -5, 'MinComf': -3, 'MinRel': 5, 'MaxRel': 11, 'MaxComf': 13, 'MaxPrac': 15},
+    ('<5', '<1'): {'MinPrac': -2, 'MinComf': 0, 'MinRel': 7, 'MaxRel': 12, 'MaxComf': 14, 'MaxPrac': 16},
+    ('<3', '<2'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 5, 'MaxPrac': 7},
+    ('<4', '<2'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 3, 'MaxRel': 4, 'MaxComf': 6, 'MaxPrac': 8},
+    ('<5', '<2'): {'MinPrac': 2, 'MinComf': 2, 'MinRel': 5, 'MaxRel': 6, 'MaxComf': 10, 'MaxPrac': 12},
+    ('<4', '<3'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 2, 'MaxPrac': 4},
+    ('<5', '<3'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 3, 'MaxRel': 4, 'MaxComf': 6, 'MaxPrac': 8},
+    ('<5', '<4'): {'MinPrac': 1, 'MinComf': 1, 'MinRel': 1, 'MaxRel': 2, 'MaxComf': 4, 'MaxPrac': 6},
+
+    ('<1', '<2'): {'MinPrac': -10, 'MinComf': -8, 'MinRel': -5, 'MaxRel': -1, 'MaxComf': 6, 'MaxPrac': 8},
+    ('<1', '<3'): {'MinPrac': -14, 'MinComf': -12, 'MinRel': -9, 'MaxRel': -3, 'MaxComf': 5, 'MaxPrac': 7},
+    ('<1', '<4'): {'MinPrac': -15, 'MinComf': -13, 'MinRel': -11, 'MaxRel': -5, 'MaxComf': 3, 'MaxPrac': 5},
+    ('<1', '<5'): {'MinPrac': -16, 'MinComf': -14, 'MinRel': -12, 'MaxRel': -7, 'MaxComf': 0, 'MaxPrac': 2},
     ('<2', '<3'): {'MinPrac': -7, 'MinComf': -5, 'MinRel': -2, 'MaxRel': -1, 'MaxComf': -1, 'MaxPrac': -1},
     ('<2', '<4'): {'MinPrac': -8, 'MinComf': -6, 'MinRel': -4, 'MaxRel': -3, 'MaxComf': -1, 'MaxPrac': -1},
     ('<2', '<5'): {'MinPrac': -12, 'MinComf': -10, 'MinRel': -6, 'MaxRel': -5, 'MaxComf': -2, 'MaxPrac': -2},
@@ -1646,7 +1762,7 @@ class Badgerow(Parncutt):
 
 class Balliauw(Parncutt):
     def __init__(self, segmenter=None, segment_combiner="normal", staff_combiner="naive", ruler=ImaginaryBlackKeyRuler(),
-                 pruning_method='max', finger_spans=BALLIAUW_FINGER_SPANS, version=(1, 0, 0)):
+                 pruning_method='max', finger_spans=BALLIAUW_LARGE_FINGER_SPANS, version=(1, 0, 0)):
         super().__init__(segmenter=segmenter, segment_combiner=segment_combiner, ruler=ruler,
                          staff_combiner=staff_combiner, pruning_method=pruning_method,
                          finger_spans=finger_spans, version=version)
