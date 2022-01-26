@@ -37,14 +37,16 @@ FULL_CONTEXT = True
 
 # ['ideal', 'badgerow', 'jacobs', 'parncutt', 'random']:
 # ['ideal', 'jacobs', 'parncutt', 'random']:
-MODELS = ['badgerow', 'badball', 'badpar', 'jacobs', 'parncutt', 'balliauw']
+# MODELS = ['jaball', 'jaSball', 'jaMball', 'badgerow', 'badball', 'badSball', 'badMball', 'badpar', 'jarules', 'jacobs', 'parncutt', 'balliauw']
+MODELS = ['jaball', 'jaSball', 'jaMball']
 # MODELS = ['badgerow']
 # MODELS = ['balliauw']
 # MODELS = ['badball']
 
 
 # CORPORA = ['full_american', 'parncutt_published']
-CORPORA = ['parncutt_published']
+# CORPORA = ['parncutt_published']
+CORPORA = ['layer_one']
 
 #####################################################
 # FUNCTIONS
@@ -54,31 +56,34 @@ CORPORA = ['parncutt_published']
 # MAIN BLOCK
 #####################################################
 corp = Corporeal()
+file_mode = 'a'
 
-# FIXME: We should read the corpora from db or disk only once.
 for model_name in MODELS:
     model = corp.get_model(model_name=model_name)
-
-    pivot_rpt_file = corp.open_file(base_name='pivot_report', name=model_name, suffix='txt')
-    rank_result_file = corp.open_file(base_name='rank_result', name=model_name)
-    err_result_file = corp.open_file(base_name='err_result', name=model_name)
-    mean_err_phrase_result_file = corp.open_file(base_name='mean_err_phrase_result', name=model_name)
-    weighted_mean_err_result_file = corp.open_file(base_name='weighted_mean_err_result', name=model_name)
-    mean_err_result_file = corp.open_file(base_name='mean_err_result', name=model_name)
-
     rank_results = []
     err_results = []
     pivot_reports = {}
+
+    pivot_rpt_file = corp.open_file(base_name='pivot_report', name=model_name, suffix='txt', mode=file_mode)
+    rank_result_file = corp.open_file(base_name='rank_result', name=model_name, mode=file_mode)
+    err_result_file = corp.open_file(base_name='err_result', name=model_name, mode=file_mode)
+    mean_err_phrase_result_file = corp.open_file(base_name='mean_err_phrase_result', name=model_name, mode=file_mode)
+    weighted_mean_err_result_file = corp.open_file(base_name='weighted_mean_err_result', name=model_name, mode=file_mode)
+    mean_err_result_file = corp.open_file(base_name='mean_err_result', name=model_name, mode=file_mode)
+
     # for corpus_name in ['scales', 'arpeggios', 'broken', 'beringer', 'pig', 'all_american', 'pure_american', 'parncutt_published', 'full_american']:
     # for corpus_name in ['pig', 'full_american', 'parncutt_published']:
     # for corpus_name in ['scales', 'arpeggios', 'broken', 'beringer']:
     for corpus_name in CORPORA:
-        err_results, pivot_reports, rank_results = corp.get_all_results(corpus_name=corpus_name,
-                                                                        model=model, model_name=model_name,
-                                                                        staff=STAFF, full_context=FULL_CONTEXT,
-                                                                        version=VERSION)
+        er, pr, rr = corp.get_all_results(corpus_name=corpus_name, model=model, model_name=model_name,
+                                          staff=STAFF, full_context=FULL_CONTEXT, version=VERSION)
+        err_results.extend(er)
+        pivot_reports = pivot_reports | pr
+        rank_results.extend(rr)
 
-    for (model_name, corpus_name, title) in pivot_reports:
+    for (mod_name, corpus_name, title) in pivot_reports:
+        if mod_name != model_name:
+            continue
         print("{} in {}".format(title, corpus_name), file=pivot_rpt_file)
         annot_id = 1
         for pivot_report in pivot_reports[(model_name, corpus_name, title)]:

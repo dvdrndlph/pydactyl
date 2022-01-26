@@ -30,7 +30,6 @@ import os
 import pathlib
 from scipy import stats
 import pingouin as pg
-# import matplotlib.pyplot as plt
 from statsmodels.stats.multicomp import MultiComparison
 import re
 import sys
@@ -42,6 +41,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 INPUT_DIR = '/Users/dave/tb2/doc/data/badgerow'
+FIGURE_DIR = '/Users/dave/tb2/doc/drawings/badgerow'
 
 DISPLAY = {
     'parncutt_published': 'Parncutt Published',
@@ -129,9 +129,19 @@ err_vals = {}
 # best_to_worst_models = ['badball', 'balliauw', 'jacobs', 'parncutt']
 # best_to_worst_models = ['badgerow', 'jacobs', 'parncutt']
 # best_to_worst_models = ['badpar', 'jacobs', 'parncutt']
-best_to_worst_models = ['badball', 'jacobs', 'parncutt']
+# best_to_worst_models = ['badball', 'badpar' 'jacobs', 'parncutt']
+# best_to_worst_models = ['jaball', 'jaMball', 'jaSball', 'jacobs', 'parncutt']
+# best_to_worst_models = ['jarules', 'jacobs', 'parncutt']
+best_to_worst_models = ['jaball', 'jacobs', 'parncutt']
 methods = ['hmg', 'al', 'tri', 'tri_nua', 'tri_rlx']
-corpora = ['parncutt_published']
+merr_xlabels = {
+    'hmg': '$MERR_{Hamming}$',
+    'al': '$MERR_{AdjLong}$',
+    'tri': '$MERR_{Trigram}$',
+    'tri_nua': '$MERR_{Nuanced}$',
+    'tri_rlx': '$MERR_{Relaxed}$',
+}
+corpora = ['full_american', 'parncutt_published']
 for corpus_name in corpora:
     for model_name in best_to_worst_models:
         annotation_id = 0
@@ -219,7 +229,7 @@ print(anova_p_vals)
 for meth in methods:
     for corpus_name in corpora:
         p_val = anova_p_vals[(meth, corpus_name)]
-        if p_val > 10:  # float(0.05):
+        if p_val >= float(0.05):
             print("ANOVA for {} method over corpus {} is NOT statistically significant at p={}\n".
                   format(meth, corpus_name, p_val))
         else:
@@ -235,8 +245,13 @@ for meth in methods:
             mc = MultiComparison(stacked_data['result'], stacked_data['model'])
             print("Tukey for {} method over corpus {}:".format(meth, corpus_name))
             tukey = mc.tukeyhsd()
-            tukey.plot_simultaneous()
-            md = tukey.meandiffs
+
+            xlabel = merr_xlabels[meth]
+            fig = tukey.plot_simultaneous(xlabel=xlabel)
+            fig_path = FIGURE_DIR + '/merr_' + meth + '_' + corpus_name + '.pdf'
+            fig.savefig(fig_path, format='pdf')
+            # md = tukey.meandiffs
+            # print("mean diffs: %".format(md))
             print(tukey.summary())
             print()
 

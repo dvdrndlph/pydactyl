@@ -27,7 +27,7 @@ import re
 from pydactyl.dcorpus.DCorpus import DCorpus, DScore, DAnnotation
 from pydactyl.dcorpus.PianoFingering import PianoFingering
 from pydactyl.dcorpus.DEvaluation import DEvaluation, DEvalFunction
-from pydactyl.dactyler.Parncutt import Parncutt, Jacobs, Badgerow, Balliauw
+from pydactyl.dactyler.Parncutt import Parncutt, Jacobs, Badgerow, Balliauw, Ruler
 from pydactyl.dactyler.Parncutt import FINGER_SPANS, BALLIAUW_LARGE_FINGER_SPANS, \
     BALLIAUW_MEDIUM_FINGER_SPANS, BALLIAUW_SMALL_FINGER_SPANS, ImaginaryBlackKeyRuler
 from pydactyl.dactyler.Random import Random
@@ -185,7 +185,14 @@ class Corporeal(ABC):
             model = Parncutt()
         elif model_name == 'jacobs':
             model = Jacobs()
-            # model = Jacobs(ruler=Ruler())
+        elif model_name == 'jarules':
+            model = Jacobs(finger_spans=FINGER_SPANS, ruler=Ruler())
+        elif model_name == 'jaball':
+            model = Jacobs(finger_spans=BALLIAUW_LARGE_FINGER_SPANS, ruler=ImaginaryBlackKeyRuler())
+        elif model_name == 'jaSball':
+            model = Jacobs(finger_spans=BALLIAUW_SMALL_FINGER_SPANS, ruler=ImaginaryBlackKeyRuler())
+        elif model_name == 'jaMball':
+            model = Jacobs(finger_spans=BALLIAUW_MEDIUM_FINGER_SPANS, ruler=ImaginaryBlackKeyRuler())
         elif model_name == 'badgerow':
             # model = Badgerow(finger_spans=FINGER_SPANS, ruler=PhysicalRuler())
             # model = Badgerow(finger_spans=BALLIAUW_LARGE_FINGER_SPANS, ruler=ImaginaryBlackKeyRuler())
