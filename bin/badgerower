@@ -45,8 +45,8 @@ MODELS = ['jaball', 'jaSball', 'jaMball']
 
 
 # CORPORA = ['full_american', 'parncutt_published']
-# CORPORA = ['parncutt_published']
-CORPORA = ['layer_one']
+CORPORA = ['parncutt_published']
+# CORPORA = ['layer_one']
 
 #####################################################
 # FUNCTIONS

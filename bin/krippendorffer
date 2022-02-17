@@ -44,7 +44,7 @@ last_digit = {
     6: 1
 }
 
-conn = pymysql.connect(host='127.0.0.1', port=3306, user='didactyl', passwd='', db='didactyl2')
+conn = pymysql.connect(host='127.0.0.1', port=3316, user='didactyl', passwd='', db='didactyl2')
 query = """select exercise, abc_fragment
              from parncutt"""
 curs = conn.cursor()

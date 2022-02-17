@@ -25,6 +25,7 @@ __author__ = 'David Randolph'
 from pydactyl.dactyler import Constant
 import music21
 from .PianoFingering import PianoFingering
+from .Ruler import ImaginaryBlackKeyRuler, NOTE_CLASS_IS_BLACK
 
 
 class DNote:
@@ -42,6 +43,8 @@ class DNote:
         LATERAL: LATERAL_CHAR,
         LATERAL_CHAR: LATERAL
     }
+
+    BALLIAUW_RULER = ImaginaryBlackKeyRuler()
 
     def __init__(self, m21_note, prior_note=None):
         self._m21_note = m21_note
@@ -105,19 +108,19 @@ class DNote:
             self._m21_note.duration = value
         return self._m21_note.duration.quarterLength
 
-    note_class_is_black = {
-        0: False,
-        1: True,
-        2: False,
-        3: True,
-        4: False,
-        5: False,
-        6: True,
-        7: False,
-        8: True,
-        9: False,
-        10: True,
-        11: False
+    note_class_is_cramped = {
+        0: False,   # C
+        1: False,   # C#
+        2: True,    # D
+        3: False,   # Eb
+        4: False,   # E
+        5: False,   # F
+        6: False,   # F#
+        7: True,    # G
+        8: False,   # G#
+        9: True,    # A
+        10: False,  # Bb
+        11: False   # B
     }
 
     @staticmethod
@@ -134,10 +137,15 @@ class DNote:
             prior_note = new_note
         return notes
 
+    def is_cramped(self):
+        if not self._m21_note:
+            return False
+        return DNote.note_class_is_cramped[self._m21_note.pitch.pitchClass]
+
     def is_black(self):
         if not self._m21_note:
             return False
-        return DNote.note_class_is_black[self._m21_note.pitch.pitchClass]
+        return NOTE_CLASS_IS_BLACK[self._m21_note.pitch.pitchClass]
 
     def is_white(self):
         if not self._m21_note:
@@ -187,7 +195,29 @@ class DNote:
             return True
         return False
 
+    def signed_semitone_delta(self):
+        if self.prior_midi() is None:
+            return None
+        delta = self.midi() - self.prior_midi()
+        return delta
+
+    def signed_balliauw_delta(self):
+        if self.prior_midi() is None:
+            raise Exception("No prior midi for DNote.")
+        distance = DNote.BALLIAUW_RULER.distance(from_midi=self.prior_midi(), to_midi=self.midi())
+        return distance
+
+    def signed_semitone_delta_from(self, earlier_note):
+        delta = self.midi() - earlier_note.midi()
+        return delta
+
+    def signed_balliauw_delta_from(self, earlier_note):
+        distance = DNote.BALLIAUW_RULER.distance(from_midi=earlier_note.midi(), to_midi=self.midi())
+        return distance
+
     def semitone_delta(self):
+        if self.prior_midi() is None:
+            return None
         delta = self.midi() - self.prior_midi()
         delta = -1 * delta if delta < 0 else delta
         return delta

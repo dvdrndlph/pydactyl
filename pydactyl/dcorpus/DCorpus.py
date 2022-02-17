@@ -363,7 +363,7 @@ class DCorpus:
 
         curs.close()
 
-    def assemble_and_append_from_db(self, host='127.0.0.1', port=3306, user='didactyl', passwd='', db='didactyl2',
+    def assemble_and_append_from_db(self, host='127.0.0.1', port=3316, user='didactyl', passwd='', db='didactyl2',
                                     piece_query=None, fingering_query=None, as_xml=True):
         if not piece_query:
             raise Exception("Piece query with piece_id and abc_str columns not specified.")
@@ -386,10 +386,13 @@ class DCorpus:
                     abcdf = '>' + abcdf
                 if not re.match('@', abcdf):
                     abcdf += '@'
-                comment = "Weight: {}".format(f['weight'])
+                comment = 'Weight: 1'
+                if 'weight' in f:
+                    comment = "Weight: {}".format(f['weight'])
                 annot = DAnnotation(abcdf=abcdf, authority=f['authority'], transcriber=f['transcriber'],
                                     abcdf_id=abcdf_id, comments=comment)
                 header.append_annotation(annot)
                 abcdf_id += 1
             header_str = header.__str__()
             self.append(corpus_str=abc_str, header_str=header_str, as_xml=as_xml)
+        print()

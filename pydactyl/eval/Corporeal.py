@@ -42,6 +42,18 @@ BROKEN_DIR = BERINGER_DIR + 'broken_chords'
 
 QUERY = dict()
 
+QUERY['full_american_by_annotator'] = '''
+   select f.upper_staff as fingering,
+           f.subject as 'authority',
+           'Pydactyl' as 'transcriber'
+      from finger f
+     inner join parncutt p
+        on f.exercise = p.exercise
+     where f.exercise = {} 
+       and f.upper_staff is not null
+       and length(f.upper_staff) = p.length_full;  
+'''
+
 QUERY['full_american'] = '''
     select f.upper_staff as fingering,
            count(*) as weight,
@@ -171,7 +183,7 @@ class Corporeal(ABC):
             return the_corpus
 
         piece_query = FRAGMENT_ABC_QUERY
-        if corpus_name == 'full_american':
+        if corpus_name in ('full_american', 'full_american_by_annotator'):
             piece_query = FULL_ABC_QUERY
         the_corpus = DCorpus()
         the_corpus.assemble_and_append_from_db(piece_query=piece_query,
