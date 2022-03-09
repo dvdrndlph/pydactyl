@@ -39,7 +39,8 @@ from pydactyl.dcorpus.PianoFingering import PianoFingering
 from pydactyl.dcorpus.DCorpus import DCorpus, DScore, DAnnotation
 
 VERSION = '0000'
-CORPUS_NAMES = ['full_american_by_annotator']
+# CORPUS_NAMES = ['full_american_by_annotator']
+CORPUS_NAMES = ['layer_one_by_annotator']
 
 #####################################################
 # FUNCTIONS
@@ -140,6 +141,12 @@ def phrase2tokens(notes):
     return tokens
 
 
+def has_left_hand(hsd_seq):
+    for fingering in hsd_seq:
+        if fingering[0] == '<':
+           return True
+    return False
+
 #####################################################
 # MAIN BLOCK
 #####################################################
@@ -151,10 +158,13 @@ x_train = []
 y_train = []
 x_test = []
 y_test = []
-test_annot_id = 1
+test_annot_id = 2
+bad_annot_count = 0
+good_annot_count = 0
 for corpus_name in CORPUS_NAMES:
     da_corpus = creal.get_corpus(corpus_name=corpus_name)
     for da_score in da_corpus.d_score_list():
+        score_title = da_score.title()
         ordered_notes = da_score.orderly_d_notes(staff=STAFF)
         # print(ordered_notes)
         token_lists.append(phrase2tokens(ordered_notes))
@@ -162,26 +172,34 @@ for corpus_name in CORPUS_NAMES:
         annot_count = abcdh.annotation_count()
         for annot_id in range(1, annot_count + 1, 1):
             annot = da_score.annotation_by_id(identifier=annot_id)
+            authority = annot.authority()
             hsd = annot.handed_strike_digits(staff=STAFF)
             if len(ordered_notes) != len(hsd):
                 print("Bad annotation. Notes: {} Fingers: {}".format(len(ordered_notes), len(hsd)))
                 print(da_score)
                 print(annot)
                 raise Exception("Bad")
+            if STAFF == "upper":
+                if has_left_hand(hsd_seq=hsd):
+                    print("Left hand disallowed by annotator {} in score {}: {}".format(
+                        authority, score_title, hsd))
+                    bad_annot_count += 1
+                    continue
             if annot_id == test_annot_id:
                 x_test.append(phrase2features(ordered_notes))
                 y_test.append(phrase2labels(hsd))
             else:
                 x_train.append(phrase2features(ordered_notes))
                 y_train.append(phrase2labels(hsd))
+            good_annot_count += 1
 
 print(token_lists)
-print(len(x_train))
-print(len(y_train))
-
+print("Training examples: {}".format(len(x_train)))
+print("Training values: {}".format(len(y_train)))
+print("Good examples: {}".format(good_annot_count))
+print("Bad examples: {}".format(bad_annot_count))
 print(len(x_test))
 print(len(y_test))
-
 
 crf = crf.CRF(
     algorithm='lbfgs',

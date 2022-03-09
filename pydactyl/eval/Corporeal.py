@@ -42,6 +42,26 @@ BROKEN_DIR = BERINGER_DIR + 'broken_chords'
 
 QUERY = dict()
 
+QUERY['layer_one_by_annotator'] = '''
+    with expo as (
+        select e.id as experimentId, e.clientId, s.`type`,
+               s.`description`, s.id as studyId
+          from diii_nm.study s
+         inner join diii_nm.experiment e
+            on s.id = e.studyId
+         where (description like '%Layer One%')
+   ) select a.abcDF as 'fingering',
+            a.clientId as 'authority',
+            concat(`type`, '_study_', studyId) as 'transcriber',
+            e.`description` as 'comment'
+       from diii_nm.annotation a
+      inner join expo e
+         on a.experimentId = e.experimentId
+      where a.abcDF is not null
+        and a.abcDF not like '%x%'
+        and a.selectionId = '{}'
+'''
+
 QUERY['full_american_by_annotator'] = '''
    select f.upper_staff as fingering,
            f.subject as 'authority',
@@ -111,8 +131,8 @@ FRAGMENT_ABC_QUERY = '''
 
 LAYER_ONE_QUERY = '''
     select id as piece_id,
-            abc_full as abc_str
-      from selection_detail
+           abc_full as abc_str
+      from diii_nm.selection_detail
      where id like 'c%1';
 '''
 
@@ -175,16 +195,17 @@ class Corporeal(ABC):
                 the_corpus.append_dir(corpus_dir=subdir)
             return the_corpus
 
-        if corpus_name == 'layer_one':
+        if corpus_name == 'clementi':
             the_corpus = DCorpus()
-            piece_query = LAYER_ONE_QUERY
-            the_corpus.assemble_and_append_from_db(db='diii', port=3307, user='didactyl', passwd='Pha_Lang35',
-                                                   piece_query=piece_query, fingering_query=QUERY[corpus_name])
             return the_corpus
 
         piece_query = FRAGMENT_ABC_QUERY
         if corpus_name in ('full_american', 'full_american_by_annotator'):
             piece_query = FULL_ABC_QUERY
+
+        if corpus_name in ('layer_one_by_annotator'):
+            piece_query = LAYER_ONE_QUERY
+
         the_corpus = DCorpus()
         the_corpus.assemble_and_append_from_db(piece_query=piece_query,
                                                fingering_query=QUERY[corpus_name])

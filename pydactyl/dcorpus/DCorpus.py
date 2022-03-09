@@ -384,7 +384,7 @@ class DCorpus:
                 abcdf = f['fingering']
                 if not re.match('[<>]', abcdf):
                     abcdf = '>' + abcdf
-                if not re.match('@', abcdf):
+                if '@' not in abcdf:
                     abcdf += '@'
                 comment = 'Weight: 1'
                 if 'weight' in f:
