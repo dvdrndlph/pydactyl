@@ -26,13 +26,20 @@ from .DNote import DNote
 
 
 class DPart:
-    def __init__(self, music21_stream, staff="both"):
+    def __init__(self, music21_stream, staff="both", segmenter=None):
         # All chords must have notes ordered from low to high.
         chords = music21_stream.flat.getElementsByClass(chord.Chord)
         for ch in chords:
             ch.sortAscending(inPlace=True)  # FIXME: Double accidentals will not sort by MIDI pitch.
         self._stream = music21_stream
         self._staff = staff
+        self._segmenter = None
+        self.segmenter(segmenter=segmenter)
+
+    def segmenter(self, segmenter=None):
+        if segmenter:
+            self._segmenter = segmenter
+        return self._segmenter
 
     def staff(self):
         return self._staff
@@ -135,6 +142,14 @@ class DPart:
         m21_stream = self.orderly_note_stream(offset=offset)
         note_list = DNote.note_list(m21_stream)
         return note_list
+
+    def orderly_d_note_segments(self, offset=0):
+        orderly_streams = self._segmenter.segment_to_orderly_streams(d_part=self, offset=offset)
+        d_note_lists = []
+        for ostrm in orderly_streams:
+            note_list = DNote.note_list(ostrm)
+            d_note_lists.append(note_list)
+        return d_note_lists
 
     def length(self, offset=0):
         note_list = self.orderly_d_notes(offset=offset)

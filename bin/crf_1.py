@@ -22,6 +22,7 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
+import pprint
 import re
 import copy
 import sys
@@ -34,13 +35,21 @@ from sklearn_crfsuite import scorers
 
 import sklearn_crfsuite as crf
 from sklearn_crfsuite import metrics
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_score
 from pydactyl.eval.Corporeal import Corporeal, RANK_HEADINGS, ERR_HEADINGS, ERR_METHODS, WEIGHT_RE, STAFF
 from pydactyl.dcorpus.PianoFingering import PianoFingering
 from pydactyl.dcorpus.DCorpus import DCorpus, DScore, DAnnotation
+from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 
 VERSION = '0000'
-# CORPUS_NAMES = ['full_american_by_annotator']
+CORPUS_NAMES = ['full_american_by_annotator']
 CORPUS_NAMES = ['layer_one_by_annotator']
+# CORPUS_NAMES = ['scales']
+# CORPUS_NAMES = ['arpeggios']
+# CORPUS_NAMES = ['broken']
+# CORPUS_NAMES = ['layer_one_by_annotator', 'scales', 'arpeggios', 'broken']
+CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
 
 #####################################################
 # FUNCTIONS
@@ -144,8 +153,16 @@ def phrase2tokens(notes):
 def has_left_hand(hsd_seq):
     for fingering in hsd_seq:
         if fingering[0] == '<':
-           return True
+            return True
     return False
+
+
+def has_wildcard(hsd_seq):
+    for fingering in hsd_seq:
+        if fingering[0] == 'x':
+            return True
+    return False
+
 
 #####################################################
 # MAIN BLOCK
@@ -153,66 +170,82 @@ def has_left_hand(hsd_seq):
 creal = Corporeal()
 file_mode = 'a'
 
-token_lists = []
+# token_lists = []
 x_train = []
 y_train = []
 x_test = []
 y_test = []
-test_annot_id = 2
+test_annot_id = 3
 bad_annot_count = 0
+wildcarded_count = 0
+
 good_annot_count = 0
 for corpus_name in CORPUS_NAMES:
     da_corpus = creal.get_corpus(corpus_name=corpus_name)
     for da_score in da_corpus.d_score_list():
-        score_title = da_score.title()
-        ordered_notes = da_score.orderly_d_notes(staff=STAFF)
-        # print(ordered_notes)
-        token_lists.append(phrase2tokens(ordered_notes))
         abcdh = da_score.abcd_header()
         annot_count = abcdh.annotation_count()
+        annot = da_score.annotation_by_id(identifier=1)
+        segger = ManualDSegmenter(level='.', d_annotation=annot)
+        da_score.segmenter(segger)
+        score_title = da_score.title()
+        orderly_note_segments = da_score.orderly_d_note_segments(staff=STAFF)
+        seg_count = len(orderly_note_segments)
         for annot_id in range(1, annot_count + 1, 1):
             annot = da_score.annotation_by_id(identifier=annot_id)
             authority = annot.authority()
-            hsd = annot.handed_strike_digits(staff=STAFF)
-            if len(ordered_notes) != len(hsd):
-                print("Bad annotation. Notes: {} Fingers: {}".format(len(ordered_notes), len(hsd)))
-                print(da_score)
-                print(annot)
-                raise Exception("Bad")
-            if STAFF == "upper":
-                if has_left_hand(hsd_seq=hsd):
-                    print("Left hand disallowed by annotator {} in score {}: {}".format(
-                        authority, score_title, hsd))
-                    bad_annot_count += 1
+            hsd_segments = segger.segment_annotation(annotation=annot, staff=STAFF)
+            print(hsd_segments)
+            seg_index = 0
+            for hsd_seg in hsd_segments:
+                ordered_notes = orderly_note_segments[seg_index]
+                # token_lists.append(phrase2tokens(ordered_notes))
+                note_len = len(ordered_notes)
+                seg_len = len(hsd_seg)
+                if note_len != seg_len:
+                    print("Bad annotation. Notes: {} Fingers: {}".format(note_len, seg_len))
+                    print(da_score)
+                    print(annot)
+                    raise Exception("Bad")
+                if STAFF == "upper":
+                    if has_left_hand(hsd_seq=hsd_seg):
+                        print("Left hand disallowed by annotator {} in score {}: {}".format(
+                            authority, score_title, hsd_seg))
+                        bad_annot_count += 1
+                        continue
+                if has_wildcard(hsd_seq=hsd_seg):
+                    print("Wildcard disallowed by annotator {} in score {}: {}".format(
+                        authority, score_title, hsd_seg))
+                    wildcarded_count += 1
                     continue
-            if annot_id == test_annot_id:
-                x_test.append(phrase2features(ordered_notes))
-                y_test.append(phrase2labels(hsd))
-            else:
-                x_train.append(phrase2features(ordered_notes))
-                y_train.append(phrase2labels(hsd))
-            good_annot_count += 1
+                if annot_id == test_annot_id:
+                    x_test.append(phrase2features(ordered_notes))
+                    y_test.append(phrase2labels(hsd_seg))
+                else:
+                    x_train.append(phrase2features(ordered_notes))
+                    y_train.append(phrase2labels(hsd_seg))
+                good_annot_count += 1
 
-print(token_lists)
+# print(token_lists)
 print("Training examples: {}".format(len(x_train)))
 print("Training values: {}".format(len(y_train)))
 print("Good examples: {}".format(good_annot_count))
 print("Bad examples: {}".format(bad_annot_count))
-print(len(x_test))
-print(len(y_test))
+print("Wildcarded examples: {}".format(wildcarded_count))
+print("Test values: {}".format(len(y_test)))
 
-crf = crf.CRF(
+my_crf = crf.CRF(
     algorithm='lbfgs',
     c1=0.1,
     c2=0.1,
     max_iterations=100,
     all_possible_transitions=True
 )
-crf.fit(x_train, y_train)
-labels = list(crf.classes_)
+my_crf.fit(x_train, y_train)
+labels = list(my_crf.classes_)
 print(labels)
 
-y_predicted = crf.predict(x_test)
+y_predicted = my_crf.predict(x_test)
 print("Predicted: {}".format(y_predicted))
 
 flat_f1 = metrics.flat_f1_score(y_test, y_predicted, average='weighted', labels=labels)

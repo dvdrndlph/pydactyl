@@ -1,5 +1,5 @@
 __author__ = 'David Randolph'
-# Copyright (c) 20212121212121212121212121212121212121212121 David A. Randolph.
+# Copyright (c) 2021-2022 David A. Randolph.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation

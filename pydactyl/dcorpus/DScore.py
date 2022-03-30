@@ -64,6 +64,9 @@ class DScore:
     def segmenter(self, segmenter=None):
         if segmenter:
             self._segmenter = segmenter
+            self._combined_d_part.segmenter(segmenter=segmenter)
+            self._upper_d_part.segmenter(segmenter=segmenter)
+            self._lower_d_part.segmenter(segmenter=segmenter)
         return self._segmenter
 
     def finger(self, staff="both", d_annotation=None, id=1):
@@ -469,6 +472,16 @@ class DScore:
             raise Exception("Specific staff must be specified.")
         ordered_d_notes = d_part.orderly_d_notes(offset=offset)
         return ordered_d_notes
+
+    def orderly_d_note_segments(self, staff="upper", offset=0):
+        if staff == "upper":
+            d_part = self.upper_d_part()
+        elif staff == "lower":
+            d_part = self.lower_d_part()
+        else:
+            raise Exception("Specific staff must be specified.")
+        orderly_segments = d_part.orderly_d_note_segments(offset=offset)
+        return orderly_segments
 
     def _bigram_annotation_data(self, ids=None, staff="upper", common_id=None, offset=0):
         """

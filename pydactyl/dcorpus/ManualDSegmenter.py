@@ -28,15 +28,46 @@ from .DSegmenter import DSegmenter
 class ManualDSegmenter(DSegmenter):
     """A manual phrase-segmentation algorithm. Requires """
 
-    def __init__(self, d_annotation=None):
+    LEVELS = {
+        ',': 1,
+        ';': 2,
+        '.': 3
+    }
+    def __init__(self, d_annotation=None, level=None):
         super().__init__()
         self._d_annotation = d_annotation
+        self._level = level
         return
 
     def d_annotation(self, d_annotation=None):
         if d_annotation:
             self._d_annotation = d_annotation
         return self._d_annotation
+
+    def level(self, level=None):
+        if level:
+            self._level = level
+        return level
+
+    def segment_annotation(self, annotation, staff="upper"):
+        hsd_segments = []
+        hsd_segment = []
+        note_count = self._d_annotation.score_fingering_count(staff=staff)
+        hsds = annotation.handed_strike_digits(staff=staff)
+        hsd_count = len(hsds)
+        if hsd_count != note_count:
+            raise Exception("Segmentation specifics do not match annotation to segment.")
+
+        for i in range(hsd_count):
+            hsd_segment.append(hsds[i])
+            seg_mark = self._d_annotation.phrase_mark_at_index(index=i, staff=staff)
+            if seg_mark and \
+                    (not self._level or ManualDSegmenter.LEVELS[seg_mark] >= ManualDSegmenter.LEVELS[self._level]):
+                hsd_segments.append(hsd_segment)
+                hsd_segment = []
+        if len(hsd_segment) > 0:
+            hsd_segments.append(hsd_segment)
+        return hsd_segments
 
     def segment_to_orderly_streams(self, d_part, offset=0):
         orderly_stream = d_part.orderly_note_stream(offset=offset)
@@ -49,7 +80,9 @@ class ManualDSegmenter(DSegmenter):
             if note_index < offset:
                 continue
             new_note_stream.append(knot)
-            if self._d_annotation.phrase_mark_at_index(note_index):
+            seg_mark = self._d_annotation.phrase_mark_at_index(note_index)
+            if seg_mark and \
+                    (not self._level or ManualDSegmenter.LEVELS[seg_mark] >= ManualDSegmenter.LEVELS[self._level]):
                 new_note_streams.append(new_note_stream)
                 new_note_stream = stream.Score()
                 stream_index += 1
