@@ -1375,6 +1375,9 @@ class Parncutt(D.TrainedDactyler):
             cost = 1
         return cost
 
+    def rules(self):
+        return self._rules
+
     def trigram_node_cost(self, trigram_node):
         """
         Determine the cost associated with a trigram node configured as input.

@@ -35,104 +35,64 @@ from sklearn_crfsuite import scorers
 
 import sklearn_crfsuite as crf
 from sklearn_crfsuite import metrics
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score, cross_validate
 from pydactyl.eval.Corporeal import Corporeal, RANK_HEADINGS, ERR_HEADINGS, ERR_METHODS, WEIGHT_RE, STAFF
 from pydactyl.dcorpus.PianoFingering import PianoFingering
 from pydactyl.dcorpus.DCorpus import DCorpus, DScore, DAnnotation
+from pydactyl.dactyler.Parncutt import Parncutt, TrigramNode, Badgerow, Balliauw, Jacobs
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 
 VERSION = '0000'
 CORPUS_NAMES = ['full_american_by_annotator']
 CORPUS_NAMES = ['layer_one_by_annotator']
-# CORPUS_NAMES = ['scales']
+CORPUS_NAMES = ['scales']
+CROSS_VALIDATE = False
+CROSS_VALIDATE = True
 # CORPUS_NAMES = ['arpeggios']
 # CORPUS_NAMES = ['broken']
-# CORPUS_NAMES = ['layer_one_by_annotator', 'scales', 'arpeggios', 'broken']
-CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
+CORPUS_NAMES = ['layer_one_by_annotator', 'scales', 'arpeggios', 'broken']
+# CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
+
 
 #####################################################
 # FUNCTIONS
 #####################################################
-def note2features(notes, i):
-    note = notes[i]
-    # FIXME: Chord features?
-    features = {
-        'bias': 1.0,
-        'midi': note.midi(),
-        'black': note.is_black(),
-        'cramped': note.is_cramped(),
-        'first': True,
-        'last': True,
-        '-1+1:between': False,
-        '-2+2:between': False,
-        '-1:black': False,
-        '-1:cramped': False,
-        '-1:semitone_delta': 0,
-        '-1:balliauw_delta': 0,
-        '-2:black': False,
-        '-2:cramped': False,
-        '-2:semitone_delta': 0,
-        '-2:balliauw_delta': 0,
-        '+1:black': False,
-        '+1:cramped': False,
-        '+1:semitone_delta': 0,
-        '+1:balliauw_delta': 0,
-        '+2:black': False,
-        '+2:cramped': False,
-        '+2:semitone_delta': 0,
-        '+2:balliauw_delta': 0
-    }
+def get_trigram_node(notes, annotations, i):
+    midi_1 = None
+    handed_digit_1 = '-'
     if i > 0:
-        prior_note = notes[i-1]
-        features.update({
-            'first': False,
-            '-1:black': prior_note.is_black(),
-            '-1:cramped': prior_note.is_cramped(),
-            '-1:semitone_delta': note.signed_semitone_delta(),
-            '-1:balliauw_delta': note.signed_balliauw_delta(),
-        })
-    if i > 1:
-        left_note = notes[i-2]
-        features.update({
-            '-2:black': left_note.is_black(),
-            '-2:cramped': left_note.is_cramped(),
-            '-2:semitone_delta': note.signed_semitone_delta_from(left_note),
-            '-2:balliauw_delta': note.signed_balliauw_delta_from(left_note),
-        })
+        midi_1 = notes[i-1].midi()
+        handed_digit_1 = annotations[i-1]
+    midi_2 = notes[i].midi()
+    handed_digit_2 = annotations[i]
+
+    midi_3 = None
+    handed_digit_3 = '-'
     if i < len(notes) - 1:
-        next_note = notes[i+1]
-        features.update({
-            'last': False,
-            '+1:black': next_note.is_black(),
-            '+1:cramped': next_note.is_cramped(),
-            '+1:semitone_delta': next_note.signed_semitone_delta(),
-            '+1:balliauw_delta': next_note.signed_balliauw_delta()
-        })
-    if i < len(notes) - 2:
-        right_note = notes[i+1]
-        features.update({
-            '+2:black': right_note.is_black(),
-            '+2:cramped': right_note.is_cramped(),
-            '+2:semitone_delta': right_note.signed_semitone_delta_from(note),
-            '+2:balliauw_delta': right_note.signed_balliauw_delta_from(note)
-        })
-    if 0 < i < len(notes) - 1:
-        prior_note = notes[i-1]
-        next_note = notes[i+1]
-        features['-1+1:between'] = note.is_between(prior_note, next_note)
-    if 1 < i < len(notes) - 2:
-        left_note = notes[i-2]
-        right_note = notes[i+2]
-        features['-2+2:between'] = note.is_between(left_note, right_note)
+        midi_3 = notes[i+1].midi()
+        handed_digit_3 = annotations[i+1]
+    trigram_node = TrigramNode(midi_1=midi_1, handed_digit_1=handed_digit_1,
+                               midi_2=midi_2, handed_digit_2=handed_digit_2,
+                               midi_3=midi_3, handed_digit_3=handed_digit_3)
+    return trigram_node
+
+
+def note2features(notes, annotations, i):
+    trigram_node = get_trigram_node(notes, annotations, i)
+    # FIXME: Chord features?
+    features = {}
+    functions = judge.rules()
+    for tag, rule_method in functions.items():
+        raw_cost = rule_method(trigram_node)
+        features[tag] = raw_cost
 
     return features
 
 
-def phrase2features(notes):
+def phrase2features(notes, annotations):
     feature_list = []
     for i in range(len(notes)):
-        features = note2features(notes, i)
+        features = note2features(notes, annotations, i)
         feature_list.append(features)
     return feature_list
 
@@ -168,13 +128,11 @@ def has_wildcard(hsd_seq):
 # MAIN BLOCK
 #####################################################
 creal = Corporeal()
-file_mode = 'a'
+judge = Parncutt()
 
 # token_lists = []
-x_train = []
-y_train = []
-x_test = []
-y_test = []
+x = []
+y = []
 test_annot_id = 3
 bad_annot_count = 0
 wildcarded_count = 0
@@ -218,21 +176,16 @@ for corpus_name in CORPUS_NAMES:
                         authority, score_title, hsd_seg))
                     wildcarded_count += 1
                     continue
-                if annot_id == test_annot_id:
-                    x_test.append(phrase2features(ordered_notes))
-                    y_test.append(phrase2labels(hsd_seg))
-                else:
-                    x_train.append(phrase2features(ordered_notes))
-                    y_train.append(phrase2labels(hsd_seg))
+                x.append(phrase2features(ordered_notes, hsd_seg))
+                y.append(phrase2labels(hsd_seg))
                 good_annot_count += 1
 
 # print(token_lists)
-print("Training examples: {}".format(len(x_train)))
-print("Training values: {}".format(len(y_train)))
+print("Example count: {}".format(len(x)))
+print("Training count: {}".format(len(y)))
 print("Good examples: {}".format(good_annot_count))
 print("Bad examples: {}".format(bad_annot_count))
 print("Wildcarded examples: {}".format(wildcarded_count))
-print("Test values: {}".format(len(y_test)))
 
 my_crf = crf.CRF(
     algorithm='lbfgs',
@@ -241,18 +194,24 @@ my_crf = crf.CRF(
     max_iterations=100,
     all_possible_transitions=True
 )
-my_crf.fit(x_train, y_train)
-labels = list(my_crf.classes_)
-print(labels)
+if CROSS_VALIDATE:
+    scores = cross_val_score(my_crf, x, y, cv=5)
+    # scores = cross_validate(my_crf, x, y, cv=5, scoring="flat_precision_score")
+    print(scores)
+else:
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.4, random_state=0)
+    my_crf.fit(x_train, y_train)
+    labels = list(my_crf.classes_)
+    print(labels)
 
-y_predicted = my_crf.predict(x_test)
-print("Predicted: {}".format(y_predicted))
+    y_predicted = my_crf.predict(x_test)
+    print("Predicted: {}".format(y_predicted))
 
-flat_f1 = metrics.flat_f1_score(y_test, y_predicted, average='weighted', labels=labels)
-print("Flat F1: {}".format(flat_f1))
+    flat_f1 = metrics.flat_f1_score(y_test, y_predicted, average='weighted', labels=labels)
+    print("Flat F1: {}".format(flat_f1))
 
-sorted_labels = sorted(
-    labels,
-    key=lambda name: (name[1:], name[0])
-)
-print(metrics.flat_classification_report(y_test, y_predicted, labels=sorted_labels, digits=3))
+    sorted_labels = sorted(
+        labels,
+        key=lambda name: (name[1:], name[0])
+    )
+    print(metrics.flat_classification_report(y_test, y_predicted, labels=sorted_labels, digits=3))
