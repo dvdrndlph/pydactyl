@@ -145,11 +145,16 @@ class PigIn:
          pi = PigIn()
          pi.transform(standardize_channels=False)
     """
-    def __init__(self, base_dir="/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/"):
+    def __init__(self, standardize=False, base_dir="/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/"):
+        self._standardize = standardize
         self._base_dir = base_dir
         self._input_dir = base_dir + 'FingeringFiles/'
-        self._midi_dir = base_dir + 'abcd/'
-        self._abcd_dir = base_dir + 'abcd/'
+        if standardize:
+            self._midi_dir = base_dir + 'abcd/'
+            self._abcd_dir = base_dir + 'abcd/'
+        else:
+            self._midi_dir = base_dir + 'individual_abcd/'
+            self._abcd_dir = base_dir + 'individual_abcd/'
         self._fingered_note_streams = {}  # Hashed by "piece_id-annotator_id" (e.g., "009-5").
 
     @staticmethod
@@ -170,7 +175,10 @@ class PigIn:
                 return annotator_id
         return ""
 
-    def transform(self, standardize_channels=True):
+    def transform(self):
+        if not self._standardize:
+            return self.transform_individual()
+
         file_re = r"^(\d+)-(\d+)_fingering.txt$"
         empty_pig_tracks = [
             {'notes_on': {}, 'notes_off': {}},
@@ -186,7 +194,7 @@ class PigIn:
                     mat = re.match(file_re, file)
                     if mat:
                         piece_id = mat.group(1)
-                        if standardize_channels and piece_id not in channel_for_time_with_note:
+                        if self._standardize and piece_id not in channel_for_time_with_note:
                             channel_for_time_with_note[piece_id] = {}
                             are_defining_channel = True
                         if piece_id not in pig_tracks_for_piece:
@@ -218,6 +226,7 @@ class PigIn:
                                 std_channel = channel_for_time_with_note[piece_id][on][name]
                             knot = PigNote(id, on, off, name, on_vel, off_vel, std_channel, finger)
                             # print(knot)
+                            # Absolute tick counts:
                             on_tick = knot.on_tick()
                             off_tick = knot.off_tick()
                             if on_tick not in pig_tracks[knot.channel]['notes_on']:
@@ -243,11 +252,12 @@ class PigIn:
                                     for knot in ons[tick]:
                                         msg = knot.on_message(last_tick=last_tick)
                                         mf.tracks[chan].append(msg)
+                                        last_tick = tick
                                 if tick in offs:
                                     for knot in offs[tick]:
                                         msg = knot.off_message(last_tick=last_tick)
                                         mf.tracks[chan].append(msg)
-                                last_tick = tick
+                                        last_tick = tick
                         abcdf = upper_abcdf + '@' + lower_abcdf
                         authority = "PIG Annotator {}".format(authority_id)
                         annot = DAnnotation(abcdf_id=authority_id, abcdf=abcdf, authority=authority,
@@ -268,6 +278,98 @@ class PigIn:
                             annotations[midi_file].append(annot)
                             # Remember we have processed this version of the piece.
                             pig_tracks_for_piece[piece_id][authority_id] = copy.deepcopy(pig_tracks)
+                        f.close()
+                # break
+        for midi_file in annotations:
+            abcdh = ABCDHeader(annotations=annotations[midi_file])
+            abcdh_str = abcdh.__str__()
+            base_name, extension = midi_file.split('.')
+            abcd_file_name = base_name + '.abcd'
+            abcd_path = self._abcd_dir + abcd_file_name
+            abcd_fh = open(abcd_path, 'w')
+            print(abcdh_str, file=abcd_fh)
+            abcd_fh.close()
+
+    def transform_individual(self):
+        file_re = r"^(\d+)-(\d+)_fingering.txt$"
+        empty_pig_tracks = [
+            {'notes_on': {}, 'notes_off': {}},
+            {'notes_on': {}, 'notes_off': {}}
+        ]
+        annotations = {}
+        pig_tracks_for_piece = {}
+        for root, dirs, files in os.walk(self._input_dir):
+            for file in sorted(files):
+                if file.endswith(".txt"):
+                    mat = re.match(file_re, file)
+                    if mat:
+                        authority_id = mat.group(2)
+                        piece_id = mat.group(1) + '_' + authority_id;
+                        if piece_id not in pig_tracks_for_piece:
+                            pig_tracks_for_piece[piece_id] = {}
+                        file_path = os.path.join(root, file)
+                        f = open(file_path, "r")
+                        mf = mido.MidiFile(type=1, ticks_per_beat=PigNote.TICKS_PER_BEAT)
+                        upper = mido.MidiTrack()
+                        mf.tracks.append(upper)
+                        lower = mido.MidiTrack()
+                        mf.tracks.append(lower)
+                        # We generate the note_on and note_off messages and interleave them by
+                        # relative "times" (ticks since the last event of any kind on the track).
+                        pig_tracks = copy.deepcopy(empty_pig_tracks)
+                        upper_abcdf = ''
+                        lower_abcdf = ''
+                        for line in f:
+                            if line.startswith("//"):
+                                continue
+                            line = line.rstrip()
+                            id, on, off, name, on_vel, off_vel, channel, finger = line.split()
+                            knot = PigNote(id, on, off, name, on_vel, off_vel, channel, finger)
+                            print(knot)
+                            on_tick = knot.on_tick()
+                            off_tick = knot.off_tick()
+                            if on_tick not in pig_tracks[knot.channel]['notes_on']:
+                                pig_tracks[knot.channel]['notes_on'][on_tick] = []
+                            if off_tick not in pig_tracks[knot.channel]['notes_off']:
+                                pig_tracks[knot.channel]['notes_off'][off_tick] = []
+                            pig_tracks[knot.channel]['notes_on'][on_tick].append(knot)
+                            pig_tracks[knot.channel]['notes_off'][off_tick].append(knot)
+                            if knot.channel == 0:
+                                upper_abcdf += knot.handed_abcdf()
+                            else:
+                                lower_abcdf += knot.handed_abcdf()
+                        for chan in [0, 1]:
+                            ons = pig_tracks[chan]['notes_on']
+                            offs = pig_tracks[chan]['notes_off']
+                            ticks = list(ons.keys())
+                            ticks.extend(list(offs.keys()))
+                            ticks = list(set(ticks))  # Deduplicate.
+                            ticks = sorted(ticks)
+                            last_tick = 0
+                            for tick in ticks:
+                                if tick in ons:
+                                    for knot in ons[tick]:
+                                        msg = knot.on_message(last_tick=last_tick)
+                                        mf.tracks[chan].append(msg)
+                                        last_tick = tick
+                                if tick in offs:
+                                    for knot in offs[tick]:
+                                        msg = knot.off_message(last_tick=last_tick)
+                                        mf.tracks[chan].append(msg)
+                                        last_tick = tick
+                        abcdf = upper_abcdf + '@' + lower_abcdf
+                        authority = "PIG Annotator {}".format(authority_id)
+                        annot = DAnnotation(abcdf_id=authority_id, abcdf=abcdf, authority=authority,
+                                            authority_year="2019", transcriber="PIG Team")
+                        # Print the MIDI for the file just processed.
+                        midi_file = piece_id + '.mid'
+                        midi_path = self._midi_dir + midi_file
+                        mf.save(midi_path)
+                        # Start spooling annotation for the new version of the piece.
+                        annotations[midi_file] = []
+                        annotations[midi_file].append(annot)
+                        # Remember we have processed this version of the piece.
+                        pig_tracks_for_piece[piece_id][authority_id] = copy.deepcopy(pig_tracks)
                         f.close()
                 # break
         for midi_file in annotations:
