@@ -108,7 +108,7 @@ class PigNote:
                 release_hand = '<'
             if mat.group(4):
                 release_digit = mat.group(4)
-                abcdf += release_hand + release_digit
+                abcdf += '-' + release_hand + release_digit
             return abcdf
         else:
             raise Exception("Ill-defined PigNote fingering.")
@@ -239,6 +239,9 @@ class PigIn:
                                 upper_abcdf += knot.handed_abcdf()
                             else:
                                 lower_abcdf += knot.handed_abcdf()
+                        # Mark the whole tune as one phrase.
+                        upper_abcdf += '.'
+                        lower_abcdf += '.'
                         are_defining_channel = False
                         for chan in [0, 1]:
                             ons = pig_tracks[chan]['notes_on']
@@ -264,7 +267,7 @@ class PigIn:
                                             authority_year="2019", transcriber="PIG Team")
                         last_annotator_id = PigIn.heard_song_before(pig_tracks, pig_tracks_for_piece[piece_id])
                         if last_annotator_id:
-                            print("We have heard this {}-{} song before from {}".
+                            print("We have heard this {}-{} song before from {}" .
                                   format(piece_id, authority_id, last_annotator_id))
                             prior_midi_file = piece_id + '-' + last_annotator_id + '.mid'
                             annotations[prior_midi_file].append(annot)
@@ -338,6 +341,9 @@ class PigIn:
                                 upper_abcdf += knot.handed_abcdf()
                             else:
                                 lower_abcdf += knot.handed_abcdf()
+                        # Mark the whole tune as one phrase.
+                        upper_abcdf += '.'
+                        lower_abcdf += '.'
                         for chan in [0, 1]:
                             ons = pig_tracks[chan]['notes_on']
                             offs = pig_tracks[chan]['notes_off']
@@ -371,7 +377,6 @@ class PigIn:
                         # Remember we have processed this version of the piece.
                         pig_tracks_for_piece[piece_id][authority_id] = copy.deepcopy(pig_tracks)
                         f.close()
-                # break
         for midi_file in annotations:
             abcdh = ABCDHeader(annotations=annotations[midi_file])
             abcdh_str = abcdh.__str__()
