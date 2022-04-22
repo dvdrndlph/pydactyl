@@ -34,7 +34,9 @@ from pydactyl.dactyler.Random import Random
 
 STAFF = 'upper'
 OUTPUT_DIR = '/Users/dave/tb2/doc/data/badgerow'
+# PIG_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/individual_abcd/'
 PIG_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/abcd/'
+PIG_DIR = '/tmp/abcd/'
 BERINGER_DIR = '/Users/dave/tb2/didactyl/dd/corpora/beringer/'
 SCALES_DIR = BERINGER_DIR + 'scales'
 ARPEGGIOS_DIR = BERINGER_DIR + 'arpeggios'

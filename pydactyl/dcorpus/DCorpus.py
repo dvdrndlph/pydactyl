@@ -199,6 +199,8 @@ class DCorpus:
             if score_title is None:
                 score_title = os.path.basename(corpus_path)
                 score_title = score_title.split(sep='.')[0]
+            if header_str:
+                abcd_header = ABCDHeader(abcd_str=header_str)
             da_score = DScore(music21_stream=score, segmenter=self.segmenter(),
                               abcd_header=abcd_header, title=score_title)
             self._d_scores.append(da_score)

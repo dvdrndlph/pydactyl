@@ -52,6 +52,7 @@ CROSS_VALIDATE = True
 # CORPUS_NAMES = ['broken']
 CORPUS_NAMES = ['layer_one_by_annotator', 'scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
+CORPUS_NAMES = ['pig']
 
 
 #####################################################
