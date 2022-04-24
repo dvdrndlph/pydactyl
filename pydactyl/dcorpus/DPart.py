@@ -85,12 +85,14 @@ class DPart:
            scores (i.e., ones with chords). We also want to approximate note durations
            in case this information is useful for some models.
         """
-        short_dur = duration.Duration()
-        short_dur.type = '2048th'
+        short_dur = duration.Duration(0.0001)
+        # short_dur.type = '2048th'
 
         chords = self._stream.flat.getElementsByClass(chord.Chord)
         chord_stream = chords.stream()
         notes_at_offset = {}
+        chord_notes = []
+        offsetted_notes = []
         for ch in chords:
             chord_offset = ch.getOffsetBySite(chord_stream)
             notes_at_offset[chord_offset] = []
@@ -98,6 +100,8 @@ class DPart:
                 new_note = note.Note(pit)
                 new_note.quarterLength = ch.quarterLength
                 notes_at_offset[chord_offset].append(new_note)
+                offsetted_notes.append(new_note)
+                chord_notes.append(new_note)
 
         notes = self._stream.flat.getElementsByClass(note.Note)
         note_list = list(notes)
@@ -108,22 +112,36 @@ class DPart:
                 notes_at_offset[note_offset] = [old_note]
             else:
                 notes_at_offset[note_offset].append(old_note)
+            offsetted_notes.append(old_note)
 
+        stream_index = 0
+        prior_stream_size = 0
         new_note_stream = stream.Score()
         for note_offset in sorted(notes_at_offset):
-            notes = notes_at_offset[note_offset]
-            if len(notes) > 1:
-                sorted_notes = sorted(notes, key=lambda x: x.pitch.midi)
+            offset_notes = notes_at_offset[note_offset]
+            notes_len = len(offset_notes)
+            if len(offset_notes) > 1:
+                sorted_notes = sorted(offset_notes, key=lambda x: x.pitch.midi)
             else:
-                sorted_notes = notes
-
+                sorted_notes = offset_notes
+            sorted_notes_len = len(sorted_notes)
+            if sorted_notes_len != notes_len:
+                raise Exception("Sorting has gone off the rails.")
             note_index = 0
-            # for old_note in notes.sort(key=lambda x: x.pitch.midi):
+            prior_old_note = None
             for old_note in sorted_notes:
+                if prior_old_note and old_note.pitch.midi == prior_old_note.pitch.midi:
+                    raise Exception("Duplicate pitches at same point in part near note index {}.".format(stream_index))
                 new_note_offset = note_offset + note_index * short_dur.quarterLength
                 new_note_stream.insert(new_note_offset, old_note)
+                new_stream_size = len(new_note_stream.elements)
+                if new_stream_size != prior_stream_size + 1:
+                    raise Exception("Bad stream insert at index {} of note{}".format(stream_index, old_note))
+                prior_stream_size = new_stream_size
+                prior_old_note = old_note
                 # print("Note offset: {}".format(note_offset))
                 note_index += 1
+                stream_index += 1
 
         if not offset:
             return new_note_stream

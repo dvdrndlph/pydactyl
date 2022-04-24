@@ -32,8 +32,8 @@ from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
 from mido import MidiFile
 
 PIG_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/abcd/'
-mf_path = PIG_DIR + '001-1.mid'
-hdr_path = PIG_DIR + '001-1.abcd'
+mf_path = PIG_DIR + '031-1.mid'
+hdr_path = PIG_DIR + '031-1.abcd'
 s = converter.parse(mf_path)
 
 mid = MidiFile(mf_path)

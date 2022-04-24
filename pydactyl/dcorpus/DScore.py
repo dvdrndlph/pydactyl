@@ -920,6 +920,13 @@ class DScore:
             return annots
         return []
 
+    def annotation_by_index(self, index):
+        hdr = self._abcd_header
+        if hdr:
+            annot = hdr.annotation_by_index(index=index)
+            return annot
+        return None
+
     def annotation_by_id(self, identifier):
         hdr = self._abcd_header
         if hdr:

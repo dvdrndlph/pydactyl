@@ -36,13 +36,14 @@ from sklearn_crfsuite import scorers
 import sklearn_crfsuite as crf
 from sklearn_crfsuite import metrics
 from sklearn.model_selection import train_test_split, cross_val_score, cross_validate
-from pydactyl.eval.Corporeal import Corporeal, RANK_HEADINGS, ERR_HEADINGS, ERR_METHODS, WEIGHT_RE, STAFF
+from pydactyl.eval.Corporeal import Corporeal, RANK_HEADINGS, ERR_HEADINGS, ERR_METHODS, WEIGHT_RE
 from pydactyl.dcorpus.PianoFingering import PianoFingering
 from pydactyl.dcorpus.DCorpus import DCorpus, DScore, DAnnotation
 from pydactyl.dactyler.Parncutt import Parncutt, TrigramNode, Badgerow, Balliauw, Jacobs
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 
 VERSION = '0000'
+STAFF = "upper"
 CORPUS_NAMES = ['full_american_by_annotator']
 CORPUS_NAMES = ['layer_one_by_annotator']
 CORPUS_NAMES = ['scales']
@@ -53,6 +54,7 @@ CROSS_VALIDATE = True
 CORPUS_NAMES = ['layer_one_by_annotator', 'scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
 CORPUS_NAMES = ['pig']
+CORPUS_NAMES = ['pig_indy']
 
 
 #####################################################
@@ -111,9 +113,12 @@ def phrase2tokens(notes):
     return tokens
 
 
-def has_left_hand(hsd_seq):
+def has_nondefault_hand(hsd_seq, staff="upper"):
+    nondefault_hand = '<'
+    if staff == 'lower':
+        nondefault_hand = '>'
     for fingering in hsd_seq:
-        if fingering[0] == '<':
+        if fingering[0] == nondefault_hand:
             return True
     return False
 
@@ -134,7 +139,6 @@ judge = Parncutt()
 # token_lists = []
 x = []
 y = []
-test_annot_id = 3
 bad_annot_count = 0
 wildcarded_count = 0
 
@@ -142,19 +146,20 @@ good_annot_count = 0
 for corpus_name in CORPUS_NAMES:
     da_corpus = creal.get_corpus(corpus_name=corpus_name)
     for da_score in da_corpus.d_score_list():
+        score_title = da_score.title()
+        print("Processing {}".format(score_title))
         abcdh = da_score.abcd_header()
         annot_count = abcdh.annotation_count()
-        annot = da_score.annotation_by_id(identifier=1)
+        annot = da_score.annotation_by_index(index=0)
         segger = ManualDSegmenter(level='.', d_annotation=annot)
         da_score.segmenter(segger)
-        score_title = da_score.title()
         orderly_note_segments = da_score.orderly_d_note_segments(staff=STAFF)
         seg_count = len(orderly_note_segments)
-        for annot_id in range(1, annot_count + 1, 1):
-            annot = da_score.annotation_by_id(identifier=annot_id)
+        for annot_index in range(annot_count):
+            annot = da_score.annotation_by_index(annot_index)
             authority = annot.authority()
             hsd_segments = segger.segment_annotation(annotation=annot, staff=STAFF)
-            print(hsd_segments)
+            # print(hsd_segments)
             seg_index = 0
             for hsd_seg in hsd_segments:
                 ordered_notes = orderly_note_segments[seg_index]
@@ -162,18 +167,20 @@ for corpus_name in CORPUS_NAMES:
                 note_len = len(ordered_notes)
                 seg_len = len(hsd_seg)
                 if note_len != seg_len:
-                    print("Bad annotation. Notes: {} Fingers: {}".format(note_len, seg_len))
-                    print(da_score)
-                    print(annot)
-                    raise Exception("Bad")
-                if STAFF == "upper":
-                    if has_left_hand(hsd_seq=hsd_seg):
-                        print("Left hand disallowed by annotator {} in score {}: {}".format(
-                            authority, score_title, hsd_seg))
-                        bad_annot_count += 1
-                        continue
+                    print("Bad annotation by {} for score {}. Notes: {} Fingers: {}".format(
+                        authority, score_title, note_len, seg_len))
+                    # print(da_score)
+                    # print(annot)
+                    bad_annot_count += 1
+                    continue
+                    # raise Exception("Bad")
+                if has_nondefault_hand(hsd_seq=hsd_seg, staff=STAFF):
+                    print("Non-default hand disallowed from annotator {} in score {}: {}".format(
+                        authority, score_title, hsd_seg))
+                    bad_annot_count += 1
+                    continue
                 if has_wildcard(hsd_seq=hsd_seg):
-                    print("Wildcard disallowed by annotator {} in score {}: {}".format(
+                    print("Wildcard disallowed from annotator {} in score {}: {}".format(
                         authority, score_title, hsd_seg))
                     wildcarded_count += 1
                     continue

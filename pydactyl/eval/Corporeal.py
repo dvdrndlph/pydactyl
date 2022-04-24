@@ -32,11 +32,10 @@ from pydactyl.dactyler.Parncutt import FINGER_SPANS, BALLIAUW_LARGE_FINGER_SPANS
     BALLIAUW_MEDIUM_FINGER_SPANS, BALLIAUW_SMALL_FINGER_SPANS, ImaginaryBlackKeyRuler
 from pydactyl.dactyler.Random import Random
 
-STAFF = 'upper'
 OUTPUT_DIR = '/Users/dave/tb2/doc/data/badgerow'
-# PIG_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/individual_abcd/'
+PIG_INDY_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/individual_abcd/'
 PIG_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/abcd/'
-PIG_DIR = '/tmp/abcd/'
+# PIG_INDY_DIR = '/tmp/abcd/'
 BERINGER_DIR = '/Users/dave/tb2/didactyl/dd/corpora/beringer/'
 SCALES_DIR = BERINGER_DIR + 'scales'
 ARPEGGIOS_DIR = BERINGER_DIR + 'arpeggios'
@@ -158,7 +157,7 @@ WEIGHT_RE = r"^Weight:\s*(\d+)$"
 
 
 class Corporeal(ABC):
-    def __init__(self, output_dir=OUTPUT_DIR, rank_methods=RANK_METHODS, err_methods=ERR_METHODS):
+    def __init__(self, output_dir=OUTPUT_DIR, rank_methods=RANK_METHODS, err_methods=ERR_METHODS, staff="upper"):
         self.output_dir = output_dir
         self.rank_methods = rank_methods
         self.rank_headings = copy.deepcopy(BASE_RANK_HEADINGS)
@@ -169,11 +168,17 @@ class Corporeal(ABC):
         self._err_result_cache = {}
         self._pivot_report_cache = {}
         self._rank_result_cache = {}
+        self._staff = staff
 
     def get_corpus(self, corpus_name):
         if corpus_name == 'pig':
             the_corpus = DCorpus()
             the_corpus.append_dir(corpus_dir=PIG_DIR, split_header_extension='abcd')
+            return the_corpus
+
+        if corpus_name == 'pig_indy':
+            the_corpus = DCorpus()
+            the_corpus.append_dir(corpus_dir=PIG_INDY_DIR, split_header_extension='abcd')
             return the_corpus
 
         if corpus_name == 'scales':
@@ -252,7 +257,7 @@ class Corporeal(ABC):
         return model
 
     def get_fingered_system_scores(self, loaded_model: Parncutt, model_name, version=None, score_count=5, weights=None):
-        advice = loaded_model.generate_advice(staff=STAFF, score_index=0, k=score_count)
+        advice = loaded_model.generate_advice(staff=self._staff, score_index=0, k=score_count)
         # print(advice)
 
         authority = model_name
@@ -266,17 +271,17 @@ class Corporeal(ABC):
             abcdf = advice[0][i]
             ann = DAnnotation(abcdf=abcdf, authority=authority)
             sys_score.annotate(d_annotation=ann)
-            PianoFingering.finger_score(d_score=sys_score, staff=STAFF)
+            PianoFingering.finger_score(d_score=sys_score, staff=self._staff)
             sys_scores.append(sys_score)
         return sys_scores
 
     # Deprecate?
     def get_system_scores(self, model_name, d_score, k=5, weights=None):
         if model_name == 'ideal':
-            return DEvaluation.get_best_pseudo_model_scores(d_score=d_score, staff=STAFF)
+            return DEvaluation.get_best_pseudo_model_scores(d_score=d_score, staff=self._staff)
 
         model = self.get_model(model_name=model_name, weights=weights)
-        advice = model.generate_advice(staff=STAFF, score_index=0, k=k)
+        advice = model.generate_advice(staff=self._staff, score_index=0, k=k)
         # print(advice)
 
         sys_scores = []
@@ -286,7 +291,7 @@ class Corporeal(ABC):
             abcdf = advice[0][r]
             ann = DAnnotation(abcdf=abcdf, authority=model_name)
             sys_score.annotate(d_annotation=ann)
-            PianoFingering.finger_score(d_score=sys_score, staff=STAFF)
+            PianoFingering.finger_score(d_score=sys_score, staff=self._staff)
             sys_scores.append(sys_score)
         return sys_scores
 
@@ -439,7 +444,7 @@ class Corporeal(ABC):
             system_scores = self.get_fingered_system_scores(loaded_model=model,
                                                             model_name=model_name, version=version)
             title = da_score.title()
-            note_count = da_score.note_count(staff=STAFF)
+            note_count = da_score.note_count(staff=self._staff)
             abcdh = da_score.abcd_header()
             last_annot_id = abcdh.annotation_count()
             for annot_id in range(1, last_annot_id + 1):
@@ -452,7 +457,7 @@ class Corporeal(ABC):
                     weight = 1
 
                 human_score = copy.deepcopy(da_score)
-                PianoFingering.finger_score(d_score=human_score, staff=STAFF, id=annot_id)
+                PianoFingering.finger_score(d_score=human_score, staff=self._staff, id=annot_id)
 
                 evil = DEvaluation(human_score=human_score, system_scores=system_scores,
                                    staff=staff, full_context=full_context)
@@ -492,7 +497,7 @@ class Corporeal(ABC):
             system_scores = self.get_fingered_system_scores(loaded_model=model,
                                                             model_name=model_name, version=version)
             title = da_score.title()
-            note_count = da_score.note_count(staff=STAFF)
+            note_count = da_score.note_count(staff=self._staff)
             abcdh = da_score.abcd_header()
             last_annot_id = abcdh.annotation_count()
             for annot_id in range(1, last_annot_id + 1):
@@ -505,7 +510,7 @@ class Corporeal(ABC):
                     weight = 1
 
                 human_score = copy.deepcopy(da_score)
-                PianoFingering.finger_score(d_score=human_score, staff=STAFF, id=annot_id)
+                PianoFingering.finger_score(d_score=human_score, staff=self._staff, id=annot_id)
 
                 evil = DEvaluation(human_score=human_score, system_scores=system_scores,
                                    staff=staff, full_context=full_context)

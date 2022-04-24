@@ -212,9 +212,11 @@ class PigIn:
                         pig_tracks = copy.deepcopy(empty_pig_tracks)
                         upper_abcdf = ''
                         lower_abcdf = ''
+                        note_count = 0
                         for line in f:
                             if line.startswith("//"):
                                 continue
+                            note_count += 1
                             line = line.rstrip()
                             id, on, off, name, on_vel, off_vel, channel, finger = line.split()
                             if are_defining_channel:
@@ -242,6 +244,9 @@ class PigIn:
                         # Mark the whole tune as one phrase.
                         upper_abcdf += '.'
                         lower_abcdf += '.'
+
+                        print("Note count/line count: {}".format(note_count))
+
                         are_defining_channel = False
                         for chan in [0, 1]:
                             ons = pig_tracks[chan]['notes_on']
@@ -308,6 +313,8 @@ class PigIn:
                     if mat:
                         authority_id = mat.group(2)
                         piece_id = mat.group(1) + '_' + authority_id;
+                        if piece_id != '031_1':
+                            continue
                         if piece_id not in pig_tracks_for_piece:
                             pig_tracks_for_piece[piece_id] = {}
                         file_path = os.path.join(root, file)
@@ -322,13 +329,15 @@ class PigIn:
                         pig_tracks = copy.deepcopy(empty_pig_tracks)
                         upper_abcdf = ''
                         lower_abcdf = ''
+                        note_count = 0
                         for line in f:
                             if line.startswith("//"):
                                 continue
+                            note_count += 1
                             line = line.rstrip()
                             id, on, off, name, on_vel, off_vel, channel, finger = line.split()
                             knot = PigNote(id, on, off, name, on_vel, off_vel, channel, finger)
-                            print(knot)
+                            # print(knot)
                             on_tick = knot.on_tick()
                             off_tick = knot.off_tick()
                             if on_tick not in pig_tracks[knot.channel]['notes_on']:
@@ -344,6 +353,9 @@ class PigIn:
                         # Mark the whole tune as one phrase.
                         upper_abcdf += '.'
                         lower_abcdf += '.'
+
+                        print("Note count/line count: {}".format(note_count))
+
                         for chan in [0, 1]:
                             ons = pig_tracks[chan]['notes_on']
                             offs = pig_tracks[chan]['notes_off']
@@ -367,6 +379,10 @@ class PigIn:
                         authority = "PIG Annotator {}".format(authority_id)
                         annot = DAnnotation(abcdf_id=authority_id, abcdf=abcdf, authority=authority,
                                             authority_year="2019", transcriber="PIG Team")
+
+                        upper_note_on_count = len(mf.tracks[0])
+                        lower_note_on_count = len(mf.tracks[1])
+                        print("Upper note_on: {} Lower note_on: {}".format(upper_note_on_count, lower_note_on_count))
                         # Print the MIDI for the file just processed.
                         midi_file = piece_id + '.mid'
                         midi_path = self._midi_dir + midi_file

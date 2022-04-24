@@ -35,8 +35,8 @@ from pydactyl.dcorpus.PigIn import PigIn
 # print(s.get_available_midi_output_devices())
 # exit(0)
 
-pig_eater = PigIn(standardize=True)
-pig_eater.transform()
+# pig_eater = PigIn(standardize=True)
+# pig_eater.transform()
 pig_eater = PigIn()
 pig_eater.transform()
 

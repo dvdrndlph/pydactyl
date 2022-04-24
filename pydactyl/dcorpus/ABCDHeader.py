@@ -129,6 +129,11 @@ class ABCDHeader:
             if count_for_id[annot_id] != count:
                 raise Exception("abcD header for {} is inconsistent: {}".format(staff, count_for_id))
 
+    def annotation_by_index(self, index):
+        if index < len(self._annotations):
+            return self._annotations[index]
+        return None
+
     def annotation_by_id(self, identifier=1):
         for annotation in self._annotations:
             abcdf_id = annotation.abcdf_id()
