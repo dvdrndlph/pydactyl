@@ -22,8 +22,9 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 import re
+import os
 import numpy as np
-from music21 import abcFormat, stream 
+from music21 import abcFormat, stream, midi
 from pydactyl.dactyler import Constant
 from nltk.metrics.distance import binary_distance
 from .DNote import DNote
@@ -482,6 +483,17 @@ class DScore:
             raise Exception("Specific staff must be specified.")
         orderly_segments = d_part.orderly_d_note_segments(offset=offset)
         return orderly_segments
+
+    @staticmethod
+    def score_via_midi(corpus_path):
+        mf = midi.MidiFile()
+        mf.open(corpus_path, attrib='rb')
+        mf.read()
+        mf.close()
+        if len(mf.tracks) != 2:
+            raise Exception("Two-track MIDI file required.")
+        score = midi.translate.midiFileToStream(mf=mf, quantizePost=False)
+        return score
 
     def _bigram_annotation_data(self, ids=None, staff="upper", common_id=None, offset=0):
         """

@@ -35,10 +35,8 @@ from sklearn_crfsuite import scorers
 
 import sklearn_crfsuite as crf
 from sklearn_crfsuite import metrics
-from sklearn.model_selection import train_test_split, cross_val_score, cross_validate
-from pydactyl.eval.Corporeal import Corporeal, RANK_HEADINGS, ERR_HEADINGS, ERR_METHODS, WEIGHT_RE
-from pydactyl.dcorpus.PianoFingering import PianoFingering
-from pydactyl.dcorpus.DCorpus import DCorpus, DScore, DAnnotation
+from sklearn.model_selection import train_test_split, cross_val_score
+from pydactyl.eval.Corporeal import Corporeal
 from pydactyl.dactyler.Parncutt import Parncutt, TrigramNode, Badgerow, Balliauw, Jacobs
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 
@@ -53,7 +51,7 @@ CROSS_VALIDATE = True
 # CORPUS_NAMES = ['broken']
 CORPUS_NAMES = ['layer_one_by_annotator', 'scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
-CORPUS_NAMES = ['pig']
+# CORPUS_NAMES = ['pig']
 CORPUS_NAMES = ['pig_indy']
 
 

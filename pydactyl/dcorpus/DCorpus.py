@@ -157,7 +157,7 @@ class DCorpus:
         return Constant.CORPUS_ABC
         # FIXME: Support xml, and mxl
 
-    def append_dir(self, corpus_dir, split_header_extension=""):
+    def append_dir(self, corpus_dir, as_xml=True, via_midi=False, split_header_extension=""):
         print("Appending directory {} to corpus.".format(corpus_dir))
         for file_name in sorted(os.listdir(corpus_dir)):
             if file_name == '.DS_Store':
@@ -172,14 +172,14 @@ class DCorpus:
                     print("Appending MIDI file {} to corpus.".format(file_name))
                     header_path = corpus_dir + '/' + base_name + '.' + split_header_extension
                     file_path = corpus_dir + "/" + file_name
-                    self.append(corpus_path=file_path, header_path=header_path)
+                    self.append(corpus_path=file_path, header_path=header_path, as_xml=as_xml, via_midi=via_midi)
             else:
                 print("Appending abcD file {} to corpus.".format(file_name))
                 file_path = corpus_dir + "/" + file_name
-                self.append(corpus_path=file_path)
+                self.append(corpus_path=file_path, as_xml=as_xml, via_midi=via_midi)
 
     def append(self, corpus_path=None, corpus_str=None, d_score=None, header_path=None,
-               header_str=None, as_xml=True, title=None):
+               header_str=None, as_xml=True, via_midi=False, title=None):
         corpus_type = None
 
         if corpus_path:
@@ -194,7 +194,10 @@ class DCorpus:
         abc_body = ''
 
         if corpus_type == Constant.CORPUS_MIDI:
-            score = converter.parseFile(corpus_path)
+            if via_midi:
+                score = DScore.score_via_midi(corpus_path)
+            else:
+                score = converter.parseFile(corpus_path)
             score_title = title
             if score_title is None:
                 score_title = os.path.basename(corpus_path)

@@ -21,7 +21,7 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-from music21 import note, chord, stream, duration
+from music21 import note, chord, stream, duration, tempo
 from .DNote import DNote
 
 
@@ -73,6 +73,12 @@ class DPart:
                 return False
         return True
 
+    @staticmethod
+    def is_pitch_in_note_list(pitch, note_list):
+        for note in note_list:
+            if note.pitch.midi == pitch.midi:
+                return True
+
     def orderly_note_stream(self, offset=0):
         """Return part as stream of notes with no notes starting at the same
            offset. Chords turned into a sequence of notes with starting points
@@ -89,19 +95,35 @@ class DPart:
         # short_dur.type = '2048th'
 
         chords = self._stream.flat.getElementsByClass(chord.Chord)
+        chord_cnt = len(chords)
         chord_stream = chords.stream()
         notes_at_offset = {}
         chord_notes = []
         offsetted_notes = []
         for ch in chords:
             chord_offset = ch.getOffsetBySite(chord_stream)
-            notes_at_offset[chord_offset] = []
+            if chord_offset not in notes_at_offset:
+                notes_at_offset[chord_offset] = []
             for pit in ch.pitches:
                 new_note = note.Note(pit)
                 new_note.quarterLength = ch.quarterLength
-                notes_at_offset[chord_offset].append(new_note)
-                offsetted_notes.append(new_note)
-                chord_notes.append(new_note)
+                if not DPart.is_pitch_in_note_list(pit, notes_at_offset[chord_offset]):
+                    notes_at_offset[chord_offset].append(new_note)
+                    offsetted_notes.append(new_note)
+                    chord_notes.append(new_note)
+                else:
+                    print("music21 MIDI spawned extra note in chord.")
+
+        offset_cnt = len(notes_at_offset)
+        if chord_cnt != offset_cnt:
+            print("{} chord(s) subsumed by other(s).".format(chord_cnt - offset_cnt))
+
+        offsetted_cnt = len(offsetted_notes)
+        nao_cnt = 0
+        for note_offset in notes_at_offset:
+            nao_cnt += len(notes_at_offset[note_offset])
+        if offsetted_cnt != nao_cnt:
+            raise Exception("Count mismatch for chord notes at offsets.")
 
         notes = self._stream.flat.getElementsByClass(note.Note)
         note_list = list(notes)
@@ -117,6 +139,7 @@ class DPart:
         stream_index = 0
         prior_stream_size = 0
         new_note_stream = stream.Score()
+        epoch_num = 1
         for note_offset in sorted(notes_at_offset):
             offset_notes = notes_at_offset[note_offset]
             notes_len = len(offset_notes)
@@ -131,7 +154,8 @@ class DPart:
             prior_old_note = None
             for old_note in sorted_notes:
                 if prior_old_note and old_note.pitch.midi == prior_old_note.pitch.midi:
-                    raise Exception("Duplicate pitches at same point in part near note index {}.".format(stream_index))
+                    raise Exception("Duplicate {} pitches at epoch {} (offset {}) in part near note index {}.".format(
+                        prior_old_note.pitch, epoch_num, note_offset, stream_index))
                 new_note_offset = note_offset + note_index * short_dur.quarterLength
                 new_note_stream.insert(new_note_offset, old_note)
                 new_stream_size = len(new_note_stream.elements)
@@ -142,6 +166,7 @@ class DPart:
                 # print("Note offset: {}".format(note_offset))
                 note_index += 1
                 stream_index += 1
+            epoch_num += 1
 
         if not offset:
             return new_note_stream

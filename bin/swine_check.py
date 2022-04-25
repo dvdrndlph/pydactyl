@@ -31,9 +31,10 @@ from music21 import abcFormat, converter, stream
 from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
 from mido import MidiFile
 
-PIG_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/abcd/'
-mf_path = PIG_DIR + '031-1.mid'
-hdr_path = PIG_DIR + '031-1.abcd'
+ID = '002_1'
+PIG_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/individual_abcd/'
+mf_path = PIG_DIR + ID + '.mid'
+hdr_path = PIG_DIR + ID + '.abcd'
 s = converter.parse(mf_path)
 
 mid = MidiFile(mf_path)

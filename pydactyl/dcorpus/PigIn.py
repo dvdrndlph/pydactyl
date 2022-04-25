@@ -313,8 +313,8 @@ class PigIn:
                     if mat:
                         authority_id = mat.group(2)
                         piece_id = mat.group(1) + '_' + authority_id;
-                        if piece_id != '031_1':
-                            continue
+                        # if piece_id != '002_1':
+                            # continue
                         if piece_id not in pig_tracks_for_piece:
                             pig_tracks_for_piece[piece_id] = {}
                         file_path = os.path.join(root, file)
@@ -382,7 +382,7 @@ class PigIn:
 
                         upper_note_on_count = len(mf.tracks[0])
                         lower_note_on_count = len(mf.tracks[1])
-                        print("Upper note_on: {} Lower note_on: {}".format(upper_note_on_count, lower_note_on_count))
+                        print("Upper msg count: {} Lower msg_cnt: {}".format(upper_note_on_count, lower_note_on_count))
                         # Print the MIDI for the file just processed.
                         midi_file = piece_id + '.mid'
                         midi_path = self._midi_dir + midi_file

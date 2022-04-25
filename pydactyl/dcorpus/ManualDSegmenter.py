@@ -80,7 +80,7 @@ class ManualDSegmenter(DSegmenter):
             if note_index < offset:
                 continue
             new_note_stream.append(knot)
-            seg_mark = self._d_annotation.phrase_mark_at_index(note_index)
+            seg_mark = self._d_annotation.phrase_mark_at_index(note_index, staff=d_part.staff())
             if seg_mark and \
                     (not self._level or ManualDSegmenter.LEVELS[seg_mark] >= ManualDSegmenter.LEVELS[self._level]):
                 new_note_streams.append(new_note_stream)

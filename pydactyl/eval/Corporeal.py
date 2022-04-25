@@ -173,12 +173,12 @@ class Corporeal(ABC):
     def get_corpus(self, corpus_name):
         if corpus_name == 'pig':
             the_corpus = DCorpus()
-            the_corpus.append_dir(corpus_dir=PIG_DIR, split_header_extension='abcd')
+            the_corpus.append_dir(corpus_dir=PIG_DIR, via_midi=True, split_header_extension='abcd')
             return the_corpus
 
         if corpus_name == 'pig_indy':
             the_corpus = DCorpus()
-            the_corpus.append_dir(corpus_dir=PIG_INDY_DIR, split_header_extension='abcd')
+            the_corpus.append_dir(corpus_dir=PIG_INDY_DIR, via_midi=True, split_header_extension='abcd')
             return the_corpus
 
         if corpus_name == 'scales':
