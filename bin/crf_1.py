@@ -43,6 +43,7 @@ from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 VERSION = '0000'
 # CROSS_VALIDATE = False
 CROSS_VALIDATE = True
+SEGREGATE_HANDS = False
 STAFFS = ['upper', 'lower']
 # STAFFS = ['upper']
 # CORPUS_NAMES = ['full_american_by_annotator']
@@ -50,8 +51,8 @@ STAFFS = ['upper', 'lower']
 # CORPUS_NAMES = ['scales']
 # CORPUS_NAMES = ['arpeggios']
 # CORPUS_NAMES = ['broken']
-# CORPUS_NAMES = ['layer_one_by_annotator', 'scales', 'arpeggios', 'broken']
-CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
+CORPUS_NAMES = ['layer_one_by_annotator', 'scales', 'arpeggios', 'broken']
+# CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['pig']
 # CORPUS_NAMES = ['pig_indy']
 
@@ -116,14 +117,15 @@ def phrase2tokens(notes):
     return tokens
 
 
-def has_nondefault_hand(hsd_seq, staff="upper"):
+def nondefault_hand_count(hsd_seq, staff="upper"):
     nondefault_hand = '<'
     if staff == 'lower':
         nondefault_hand = '>'
+    bad_hand_cnt = 0
     for fingering in hsd_seq:
         if fingering[0] == nondefault_hand:
-            return True
-    return False
+            bad_hand_cnt += 1
+    return bad_hand_cnt
 
 
 def has_wildcard(hsd_seq):
@@ -146,6 +148,8 @@ bad_annot_count = 0
 wildcarded_count = 0
 good_annot_count = 0
 included_note_count = 0
+total_nondefault_hand_finger_count = 0
+total_nondefault_hand_segment_count = 0
 for corpus_name in CORPUS_NAMES:
     da_corpus = creal.get_corpus(corpus_name=corpus_name)
     for da_score in da_corpus.d_score_list():
@@ -163,7 +167,6 @@ for corpus_name in CORPUS_NAMES:
                 annot = da_score.annotation_by_index(annot_index)
                 authority = annot.authority()
                 hsd_segments = segger.segment_annotation(annotation=annot, staff=staff)
-                # print(hsd_segments)
                 seg_index = 0
                 for hsd_seg in hsd_segments:
                     ordered_notes = orderly_note_segments[seg_index]
@@ -177,15 +180,18 @@ for corpus_name in CORPUS_NAMES:
                         # print(annot)
                         bad_annot_count += 1
                         continue
-                        # raise Exception("Bad")
-                    if has_nondefault_hand(hsd_seq=hsd_seg, staff=staff):
-                        print("Non-default hand disallowed from annotator {} in score {}: {}".format(
+                    nondefault_hand_finger_count = nondefault_hand_count(hsd_seq=hsd_seg, staff=staff)
+                    if nondefault_hand_finger_count:
+                        total_nondefault_hand_segment_count += 1
+                        print("Non-default hand specified vy annotator {} in score {}: {}".format(
                             authority, score_title, hsd_seg))
-                        bad_annot_count += 1
-                        continue
+                        total_nondefault_hand_finger_count += nondefault_hand_finger_count
+                        if SEGREGATE_HANDS:
+                            bad_annot_count += 1
+                            continue
                     if has_wildcard(hsd_seq=hsd_seg):
-                        print("Wildcard disallowed from annotator {} in score {}: {}".format(
-                            authority, score_title, hsd_seg))
+                        # print("Wildcard disallowed from annotator {} in score {}: {}".format(
+                            # authority, score_title, hsd_seg))
                         wildcarded_count += 1
                         continue
                     included_note_count += note_len
@@ -200,6 +206,8 @@ print("Good examples: {}".format(good_annot_count))
 print("Bad examples: {}".format(bad_annot_count))
 print("Wildcarded examples: {}".format(wildcarded_count))
 print("Total notes included: {}".format(included_note_count))
+print("Total nondefault hand fingerings: {}".format(total_nondefault_hand_finger_count))
+print("Total nondefault hand phrases: {}".format(total_nondefault_hand_segment_count))
 
 my_crf = crf.CRF(
     algorithm='lbfgs',

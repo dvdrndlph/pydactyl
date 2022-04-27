@@ -423,6 +423,12 @@ class TrigramNode(ABC):
 
         return hand_1, hand_2, hand_3
 
+    def same_hands(self):
+        hands = self._hands()
+        if hands[0] == hands[1] == hands[2]:
+            return True
+        return False
+
     def __init__(self, midi_1, handed_digit_1, midi_2, handed_digit_2, midi_3, handed_digit_3):
         """
         Initialize a TrigramNode object.
@@ -789,6 +795,8 @@ class Parncutt(D.TrainedDactyler):
         return self._ruler.distance(from_midi, to_midi)
 
     def assess_stretch(self, trigram):
+        if not trigram.same_hands():
+            return 0
         # Rule 1 ("Stretch")
         cost = 0
         if not trigram.midi_1:
@@ -806,6 +814,8 @@ class Parncutt(D.TrainedDactyler):
         return cost
 
     def assess_small_per_rule(self, trigram):
+        if not trigram.same_hands():
+            return 0
         # Rule 2 ("Small-Span")
         # "For finger pairs including the thumb, assign 1 point for each semitone that an interval is
         # less than MinRel. For finger pairs not including the thumb, assign 2 points per semitone."
@@ -824,6 +834,8 @@ class Parncutt(D.TrainedDactyler):
         return cost
 
     def assess_small_span(self, trigram, span_penalty=2, thumb_penalty=1):
+        if not trigram.same_hands():
+            return 0
         # Rule 2 ("Small-Span")
         # "For finger pairs including the thumb, assign 1 point for each semitone that an interval is
         # less than MinRel. For finger pairs not including the thumb, assign 2 points per semitone."
@@ -868,6 +880,8 @@ class Parncutt(D.TrainedDactyler):
         # Rule 3 ("Large-Span")
         # "For finger pairs including the thumb, assign 1 point for each semitone that an interval
         # exceeds MaxRel. For finger pairs not including the thumb, assign 2 points per semitone."
+        if not trigram.same_hands():
+            return 0
         cost = 0
         if not trigram.midi_1:
             return cost
@@ -886,6 +900,8 @@ class Parncutt(D.TrainedDactyler):
     def assess_large_span(self, trigram, severe_penalty=2, penalty=1):
         # Rule 3 ("Large-Span") as described in Parncutt text and implied in results reported,
         # NOT as defined in the stated Rule 3.
+        if not trigram.same_hands():
+            return 0
         cost = 0
         if not trigram.midi_1:
             return cost
@@ -930,6 +946,8 @@ class Parncutt(D.TrainedDactyler):
         return cost
 
     def raw_position_change_count(self, trigram):
+        if not trigram.same_hands():
+            return 0
         if not trigram.midi_1 or not trigram.midi_3:
             return 0
 
@@ -979,6 +997,9 @@ class Parncutt(D.TrainedDactyler):
         if not trigram.midi_1 or not trigram.midi_3:
             return cost
 
+        if not trigram.same_hands():
+            return 0
+
         semitone_diff_13 = self.distance(trigram.midi_1, trigram.midi_3)
         max_comf_13 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_3)]['MaxComf']
         min_comf_13 = self._finger_spans[(trigram.handed_digit_1, trigram.handed_digit_3)]['MinComf']
@@ -1000,6 +1021,10 @@ class Parncutt(D.TrainedDactyler):
         # Rule 7 ("Three-Four-Five")
         # "Assign 1 point every time fingers 3, 4, and 5 occur consecutively in any order,
         # even when groups overlap."
+
+        if not trigram.same_hands():
+            return 0
+
         cost = 0
         finger_hash = {
             trigram.digit_1: True,
@@ -1013,6 +1038,8 @@ class Parncutt(D.TrainedDactyler):
     def assess_3_to_4(self, trigram):
         # Rule 8 ("Three-to-Four")
         # "Assign 1 point each time finger 3 is immediately followed by finger 4."
+        if not trigram.same_hands():
+            return 0
         if trigram.digit_1 == C.MIDDLE and trigram.digit_2 == C.RING:
             return 1
         return 0
@@ -1067,6 +1094,8 @@ class Parncutt(D.TrainedDactyler):
         # other than the thumb, and the upper is black, played by the thumb." Invert logic for
         # the left hand. Passing (pivoting) with the thumb on white and the finger on black
         # is not penalized. The cost of 3 is configurable.
+        if not trigram.same_hands():
+            return 0
         cost = 0
         if not trigram.digit_1:
             return cost
@@ -1107,6 +1136,8 @@ class Parncutt(D.TrainedDactyler):
         # each semitone that an interval exceeds MaxComf. For finger pairs not including
         # the thumb, assign 2 points per semitone than [that] an interval exceeds MaxComf."
         #
+        if not trigram.same_hands():
+            return 0
         cost = 0
         if not trigram.midi_1:
             return cost
@@ -1151,6 +1182,8 @@ class Parncutt(D.TrainedDactyler):
         # New Rule ("Alternation-Pairing") from Justin Badgerow
         # "Assign 1 point for 3-4-3 or 4-3-4 combinations and 1 point for 4-5-4 or 5-4-5 combinations."
         ### FIXME: Justin says, "MAYBE DELETE??"
+        if not trigram.same_hands():
+            return 0
         cost = 0
         if (trigram.digit_1 == 3 and trigram.digit_2 == 4 and trigram.digit_3 == 3) or \
                 (trigram.digit_1 == 4 and trigram.digit_2 == 3 and trigram.digit_3 == 4) or \
@@ -1163,6 +1196,8 @@ class Parncutt(D.TrainedDactyler):
         # New Rule ("Alternation-Finger-Change") from Justin Badgerow
         # "On three note passages where the 1st and 3rd note are the same, add a 1 point
         # deduction when a different finger is on the 1st and 3rd pitch.
+        if not trigram.same_hands():
+            return 0
         cost = 0
         if trigram.digit_1 and trigram.digit_3 and trigram.midi_1 == trigram.midi_3 and \
                 trigram.digit_1 != trigram.digit_3:
@@ -1170,6 +1205,8 @@ class Parncutt(D.TrainedDactyler):
         return cost
 
     def assess_black_thumb_pivot_badgerow(self, trigram):
+        if not trigram.same_hands():
+            return 0
         cost = 0
         if trigram.midi_1 == trigram.midi_2:
             return cost
@@ -1197,6 +1234,8 @@ class Parncutt(D.TrainedDactyler):
         return cost
 
     def assess_thumb_on_black_to_weak_badgerow(self, trigram):
+        if not trigram.same_hands():
+            return 0
         cost = 0
         if trigram.midi_1 == trigram.midi_2:
             return cost
@@ -1235,6 +1274,8 @@ class Parncutt(D.TrainedDactyler):
         return cost
 
     def assess_weak_to_thumb_on_black_badgerow(self, trigram):
+        if not trigram.same_hands():
+            return 0
         cost = 0
         if not trigram.midi_1 or trigram.midi_1 == trigram.midi_2:
             return cost
@@ -1299,6 +1340,8 @@ class Parncutt(D.TrainedDactyler):
         # note is between the other two pitches, is played by the thumb and the distance between the first and
         # third note is below MinPrac or exceeds MaxPrac: add another point. Finally, if the first and third note
         # have the same pitch, but are played by a different finger: add another point."
+        if not trigram.same_hands():
+            return 0
         cost = 0
         if not trigram.midi_1 or not trigram.midi_3:
             return cost
@@ -1321,6 +1364,8 @@ class Parncutt(D.TrainedDactyler):
     def assess_position_comfort_balliauw(self, trigram):
         # Balliauw Rule 4: "For every unit the distance between a first and third note is below MinComf
         # or exceeds MaxComf."
+        if not trigram.same_hands():
+            return 0
         cost = 0
         if not trigram.midi_1 or not trigram.midi_3:
             return cost
@@ -1339,6 +1384,8 @@ class Parncutt(D.TrainedDactyler):
         # and the second pitch being the middle one." This is clarified this way: "Rule 12 prevents the repetitive
         # use of a finger in combination with a hand position change. For instance, a sequenceC4–G4–C5fingered 2–1–2
         # in the right hand forces the pianist to reuse the second finger very quickly" (p.516).
+        if not trigram.same_hands():
+            return 0
         cost = 0
         if not trigram.midi_1 or not trigram.midi_3:
             return cost
@@ -1350,6 +1397,8 @@ class Parncutt(D.TrainedDactyler):
     def assess_impractical_balliauw(self, trigram, penalty=10):
         # Balliauw Rule 13: "For every unit where the distance between two following notes
         # is below MinPrac or exceeds MaxPrac." Penalize +10.
+        if not trigram.same_hands():
+            return 0
         cost = 0
         if not trigram.midi_1:
             return 0
