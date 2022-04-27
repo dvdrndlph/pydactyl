@@ -49,7 +49,7 @@ CROSS_VALIDATE = False
 CROSS_VALIDATE = True
 # CORPUS_NAMES = ['arpeggios']
 # CORPUS_NAMES = ['broken']
-CORPUS_NAMES = ['layer_one_by_annotator', 'scales', 'arpeggios', 'broken']
+# CORPUS_NAMES = ['layer_one_by_annotator', 'scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['pig']
 CORPUS_NAMES = ['pig_indy']
@@ -139,8 +139,8 @@ x = []
 y = []
 bad_annot_count = 0
 wildcarded_count = 0
-
 good_annot_count = 0
+included_note_count = 0
 for corpus_name in CORPUS_NAMES:
     da_corpus = creal.get_corpus(corpus_name=corpus_name)
     for da_score in da_corpus.d_score_list():
@@ -182,6 +182,7 @@ for corpus_name in CORPUS_NAMES:
                         authority, score_title, hsd_seg))
                     wildcarded_count += 1
                     continue
+                included_note_count += note_len
                 x.append(phrase2features(ordered_notes, hsd_seg))
                 y.append(phrase2labels(hsd_seg))
                 good_annot_count += 1
@@ -192,6 +193,7 @@ print("Training count: {}".format(len(y)))
 print("Good examples: {}".format(good_annot_count))
 print("Bad examples: {}".format(bad_annot_count))
 print("Wildcarded examples: {}".format(wildcarded_count))
+print("Total notes included: {}".format(included_note_count))
 
 my_crf = crf.CRF(
     algorithm='lbfgs',

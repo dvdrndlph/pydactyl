@@ -37,8 +37,8 @@ from pydactyl.dcorpus.PigIn import PigIn
 
 pig_eater = PigIn(standardize=True)
 pig_eater.transform()
-pig_eater = PigIn()
-pig_eater.transform()
+# pig_eater = PigIn()
+# pig_eater.transform()
 
 # staff = 'upper'
 # k = 5

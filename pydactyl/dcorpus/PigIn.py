@@ -40,22 +40,23 @@ class PigNote:
         self.on = float(on)
         self.off = float(off)
         self.name = name
+        self.midi_pitch = self.name_to_midi_pitch()
         self.on_vel = int(on_vel)
         self.off_vel = int(off_vel)
         self.channel = int(channel)
         self.finger = finger
         self.bpm = bpm
 
-    def __str__(self):
-        stringy = "id:{}, on:{}, off:{}, name:{}, on_vel:{}, off_vel:{}, channel:{}, finger:{}".format(
-            self.id, self.on, self.off, self.name, self.on_vel, self.off_vel, self.channel, self.finger)
+    def __repr__(self):
+        stringy = "id:{}, on:{}, off:{}, name:{}, pitch:{}, on_vel:{}, off_vel:{}, channel:{}, finger:{}".format(
+            self.id, self.on, self.off, self.name, self.midi_pitch, self.on_vel, self.off_vel, self.channel, self.finger)
         return stringy
 
     def tempo(self):
         tempo = mido.bpm2tempo(bpm=self.bpm)
         return tempo
 
-    def midi_pitch(self):
+    def name_to_midi_pitch(self):
         mat = re.match(PigNote.PITCH_RE, self.name)
         base_name = mat.group(1)
         accidental = mat.group(2)
@@ -83,15 +84,13 @@ class PigNote:
 
     def on_message(self, last_tick):
         ticks_since = self.on_tick() - last_tick
-        midi_pitch = self.midi_pitch()
-        on_msg = mido.Message('note_on', channel=self.channel, note=midi_pitch,
+        on_msg = mido.Message('note_on', channel=self.channel, note=self.midi_pitch,
                               velocity=self.on_vel, time=ticks_since)
         return on_msg
 
     def off_message(self, last_tick):
         ticks_since = self.off_tick() - last_tick
-        midi_pitch = self.midi_pitch()
-        off_msg = mido.Message('note_off', channel=self.channel, note=midi_pitch, time=ticks_since)
+        off_msg = mido.Message('note_off', channel=self.channel, note=self.midi_pitch, time=ticks_since)
         return off_msg
 
     def handed_abcdf(self):
@@ -130,20 +129,29 @@ class PigIn:
     sort of channel separation in Pydactyl, we would need to have more than one MIDI/abcdh
     combination for some pieces.
 
-    To correct this, we modify the PIG source files to make the channel assignments
+    To correct this, we adapt the PIG source files to make the channel assignments
     consistent. For simplicity, we simply adopt the channel assignments from the first
     fingering file for each piece. As the assignment of notes to a staff can be influenced
     by the editorial concepts of voice and to avoid unnecessary ledger lines, we often see
     quite different typesetting to express the same sequence of notes.
 
+    Note that 17 fingering assignments in the corpus are inconsistent with the stated
+    "hand part." It seems possible that the hand part does convey the staff assignment
+    for the note. We changed these in the interests of simplicity. This may be ill-advised.
+
     For our purposes of simplifying the problem to "segregated" fingerings of melodic phrase
     segments, we think this standardization should be sufficient to provide a target rich
     corpus.
 
-    To override this behavior and generate the multiple MIDI/abcdh files as needed, do this:
+    To adopt this behavior, you must toggle it on:
+
+         pi = PigIn(standardize=True)
+         pi.transform()
+
+    To generate multiple MIDI/abcdh files for each piece, do this:
 
          pi = PigIn()
-         pi.transform(standardize_channels=False)
+         pi.transform()
     """
     def __init__(self, standardize=False, base_dir="/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/"):
         self._standardize = standardize
@@ -174,6 +182,21 @@ class PigIn:
             if PigIn.is_same_song(pig_tracks, pt_history[annotator_id]):
                 return annotator_id
         return ""
+
+    @staticmethod
+    def sorted_pig_notes(file_path):
+        f = open(file_path, "r")
+        pig_notes = []
+        for line in f:
+            if line.startswith("//"):
+                continue
+            line = line.rstrip()
+            msg_id, on, off, name, on_vel, off_vel, channel, finger = line.split()
+            note = PigNote(msg_id, on, off, name, on_vel, off_vel, channel, finger)
+            pig_notes.append(note)
+        f.close()
+        pig_notes.sort(key=lambda x: (x.on, x.midi_pitch))
+        return pig_notes
 
     def transform(self):
         if not self._standardize:
@@ -212,21 +235,18 @@ class PigIn:
                         pig_tracks = copy.deepcopy(empty_pig_tracks)
                         upper_abcdf = ''
                         lower_abcdf = ''
-                        note_count = 0
-                        for line in f:
-                            if line.startswith("//"):
-                                continue
-                            note_count += 1
-                            line = line.rstrip()
-                            id, on, off, name, on_vel, off_vel, channel, finger = line.split()
+
+                        sorted_pig_notes = PigIn.sorted_pig_notes(file_path=file_path)
+                        note_count = len(sorted_pig_notes)
+                        for knot in sorted_pig_notes:
                             if are_defining_channel:
-                                std_channel = channel
-                                if on not in channel_for_time_with_note[piece_id]:
-                                    channel_for_time_with_note[piece_id][on] = {}
-                                channel_for_time_with_note[piece_id][on][name] = channel
+                                std_channel = knot.channel
+                                if knot.on not in channel_for_time_with_note[piece_id]:
+                                    channel_for_time_with_note[piece_id][knot.on] = {}
+                                channel_for_time_with_note[piece_id][knot.on][knot.name] = knot.channel
                             else:
-                                std_channel = channel_for_time_with_note[piece_id][on][name]
-                            knot = PigNote(id, on, off, name, on_vel, off_vel, std_channel, finger)
+                                std_channel = channel_for_time_with_note[piece_id][knot.on][knot.name]
+                            knot.channel = std_channel
                             # print(knot)
                             # Absolute tick counts:
                             on_tick = knot.on_tick()
@@ -286,8 +306,6 @@ class PigIn:
                             annotations[midi_file].append(annot)
                             # Remember we have processed this version of the piece.
                             pig_tracks_for_piece[piece_id][authority_id] = copy.deepcopy(pig_tracks)
-                        f.close()
-                # break
         for midi_file in annotations:
             abcdh = ABCDHeader(annotations=annotations[midi_file])
             abcdh_str = abcdh.__str__()
@@ -313,12 +331,11 @@ class PigIn:
                     if mat:
                         authority_id = mat.group(2)
                         piece_id = mat.group(1) + '_' + authority_id;
-                        # if piece_id != '002_1':
+                        # if piece_id != '113_1':
                             # continue
                         if piece_id not in pig_tracks_for_piece:
                             pig_tracks_for_piece[piece_id] = {}
                         file_path = os.path.join(root, file)
-                        f = open(file_path, "r")
                         mf = mido.MidiFile(type=1, ticks_per_beat=PigNote.TICKS_PER_BEAT)
                         upper = mido.MidiTrack()
                         mf.tracks.append(upper)
@@ -329,14 +346,9 @@ class PigIn:
                         pig_tracks = copy.deepcopy(empty_pig_tracks)
                         upper_abcdf = ''
                         lower_abcdf = ''
-                        note_count = 0
-                        for line in f:
-                            if line.startswith("//"):
-                                continue
-                            note_count += 1
-                            line = line.rstrip()
-                            id, on, off, name, on_vel, off_vel, channel, finger = line.split()
-                            knot = PigNote(id, on, off, name, on_vel, off_vel, channel, finger)
+                        sorted_pig_notes = PigIn.sorted_pig_notes(file_path=file_path)
+                        note_count = len(sorted_pig_notes)
+                        for knot in sorted_pig_notes:
                             # print(knot)
                             on_tick = knot.on_tick()
                             off_tick = knot.off_tick()
@@ -361,7 +373,7 @@ class PigIn:
                             offs = pig_tracks[chan]['notes_off']
                             ticks = list(ons.keys())
                             ticks.extend(list(offs.keys()))
-                            ticks = list(set(ticks))  # Deduplicate.
+                            ticks = list(set(ticks))  # Deduplicate since the same ticks can be in on and off messages.
                             ticks = sorted(ticks)
                             last_tick = 0
                             for tick in ticks:
@@ -392,7 +404,6 @@ class PigIn:
                         annotations[midi_file].append(annot)
                         # Remember we have processed this version of the piece.
                         pig_tracks_for_piece[piece_id][authority_id] = copy.deepcopy(pig_tracks)
-                        f.close()
         for midi_file in annotations:
             abcdh = ABCDHeader(annotations=annotations[midi_file])
             abcdh_str = abcdh.__str__()
