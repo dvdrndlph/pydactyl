@@ -153,7 +153,8 @@ class DPart:
             note_index = 0
             prior_old_note = None
             for old_note in sorted_notes:
-                if prior_old_note and old_note.pitch.midi == prior_old_note.pitch.midi:
+                if prior_old_note and old_note.pitch.midi == prior_old_note.pitch.midi \
+                        and not prior_old_note.duration.linked and not old_note.duration.linked:  # Neither are grace notes.
                     raise Exception("Duplicate {} pitches at epoch {} (offset {}) in part near note index {}.".format(
                         prior_old_note.pitch, epoch_num, note_offset, stream_index))
                 new_note_offset = note_offset + note_index * short_dur.quarterLength
