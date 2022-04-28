@@ -42,8 +42,11 @@ from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 
 VERSION = '0000'
 # CROSS_VALIDATE = False
-CROSS_VALIDATE = True
+# One of 'cross-validate', 'preset', 'random'
+TEST_METHOD = 'cross-validate'
+TEST_METHOD = 'preset'
 SEGREGATE_HANDS = False
+# pig-indy sans chord features: [0.59737277 0.63973301 0.69766982 0.65833153 0.66159304]
 STAFFS = ['upper', 'lower']
 # STAFFS = ['upper']
 # CORPUS_NAMES = ['full_american_by_annotator']
@@ -51,15 +54,25 @@ STAFFS = ['upper', 'lower']
 # CORPUS_NAMES = ['scales']
 # CORPUS_NAMES = ['arpeggios']
 # CORPUS_NAMES = ['broken']
-CORPUS_NAMES = ['layer_one_by_annotator', 'scales', 'arpeggios', 'broken']
+# CORPUS_NAMES = ['layer_one_by_annotator', 'scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['pig']
-# CORPUS_NAMES = ['pig_indy']
+CORPUS_NAMES = ['pig_indy']
 
 
 #####################################################
 # FUNCTIONS
 #####################################################
+def is_in_test_set(title: str, corpus='pig_indy'):
+    if corpus in ('pig_indy', 'pig'):
+        example, annotator_id = title.split('_')
+        example_int = int(example)
+        if example_int <= 30:
+            return True
+    else:
+        raise Exception("Not implemented yet.")
+    return False
+
 def get_trigram_node(notes, annotations, i):
     midi_1 = None
     handed_digit_1 = '-'
@@ -82,7 +95,6 @@ def get_trigram_node(notes, annotations, i):
 
 def note2features(notes, annotations, i, staff):
     trigram_node = get_trigram_node(notes, annotations, i)
-    # FIXME: Chord features?
     features = {}
     functions = judge.rules()
     for tag, rule_method in functions.items():
@@ -92,6 +104,9 @@ def note2features(notes, annotations, i, staff):
     features['staff'] = 0
     if staff == "upper":
         features[staff] = 1
+        # @100: [0.54495717 0.81059147 0.81998371 0.68739401 0.73993751]
+        # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
+    # FIXME: Add chord features.
 
     return features
 
@@ -135,6 +150,24 @@ def has_wildcard(hsd_seq):
     return False
 
 
+def train_and_evaluate(the_model, x_train, y_train, x_test, y_test):
+    the_model.fit(x_train, y_train)
+    labels = list(my_crf.classes_)
+    print(labels)
+
+    y_predicted = my_crf.predict(x_test)
+    print("Predicted: {}".format(y_predicted))
+
+    flat_f1 = metrics.flat_f1_score(y_test, y_predicted, average='weighted', labels=labels)
+    print("Flat F1: {}".format(flat_f1))
+
+    sorted_labels = sorted(
+        labels,
+        key=lambda name: (name[1:], name[0])
+    )
+    print(metrics.flat_classification_report(y_test, y_predicted, labels=sorted_labels, digits=3))
+
+
 #####################################################
 # MAIN BLOCK
 #####################################################
@@ -144,6 +177,11 @@ judge = Parncutt()
 # token_lists = []
 x = []
 y = []
+x_train = []
+x_test = []
+y_train = []
+y_test = []
+
 bad_annot_count = 0
 wildcarded_count = 0
 good_annot_count = 0
@@ -176,8 +214,6 @@ for corpus_name in CORPUS_NAMES:
                     if note_len != seg_len:
                         print("Bad annotation by {} for score {}. Notes: {} Fingers: {}".format(
                             authority, score_title, note_len, seg_len))
-                        # print(da_score)
-                        # print(annot)
                         bad_annot_count += 1
                         continue
                     nondefault_hand_finger_count = nondefault_hand_count(hsd_seq=hsd_seg, staff=staff)
@@ -197,11 +233,21 @@ for corpus_name in CORPUS_NAMES:
                     included_note_count += note_len
                     x.append(phrase2features(ordered_notes, hsd_seg, staff))
                     y.append(phrase2labels(hsd_seg))
+                    if TEST_METHOD == 'preset':
+                        if is_in_test_set(title=score_title, corpus=corpus_name):
+                            x_test.append(phrase2features(ordered_notes, hsd_seg, staff))
+                            y_test.append(phrase2labels(hsd_seg))
+                        else:
+                            x_train.append(phrase2features(ordered_notes, hsd_seg, staff))
+                            y_train.append(phrase2labels(hsd_seg))
+
                     good_annot_count += 1
 
 # print(token_lists)
 print("Example count: {}".format(len(x)))
-print("Training count: {}".format(len(y)))
+if TEST_METHOD == 'preset':
+    print("Training count: {}".format(len(y_train)))
+    print("Test count: {}".format(len(y_test)))
 print("Good examples: {}".format(good_annot_count))
 print("Bad examples: {}".format(bad_annot_count))
 print("Wildcarded examples: {}".format(wildcarded_count))
@@ -216,24 +262,13 @@ my_crf = crf.CRF(
     # max_iterations=100,
     all_possible_transitions=True
 )
-if CROSS_VALIDATE:
+if TEST_METHOD == 'cross-validate':
     scores = cross_val_score(my_crf, x, y, cv=5)
     # scores = cross_validate(my_crf, x, y, cv=5, scoring="flat_precision_score")
     print(scores)
+elif TEST_METHOD == 'preset':
+    my_crf.fit(x_train, y_train)
+    train_and_evaluate(the_model=my_crf, x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test)
 else:
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.4, random_state=0)
-    my_crf.fit(x_train, y_train)
-    labels = list(my_crf.classes_)
-    print(labels)
-
-    y_predicted = my_crf.predict(x_test)
-    print("Predicted: {}".format(y_predicted))
-
-    flat_f1 = metrics.flat_f1_score(y_test, y_predicted, average='weighted', labels=labels)
-    print("Flat F1: {}".format(flat_f1))
-
-    sorted_labels = sorted(
-        labels,
-        key=lambda name: (name[1:], name[0])
-    )
-    print(metrics.flat_classification_report(y_test, y_predicted, labels=sorted_labels, digits=3))
+    train_and_evaluate(the_model=my_crf, x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test)
