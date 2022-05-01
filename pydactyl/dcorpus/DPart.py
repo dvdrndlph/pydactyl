@@ -91,8 +91,9 @@ class DPart:
            scores (i.e., ones with chords). We also want to approximate note durations
            in case this information is useful for some models.
         """
-        short_dur = duration.Duration(0.0001)
-        # short_dur.type = '2048th'
+        # short_dur = duration.Duration(0.0001)
+        short_dur = duration.Duration()
+        short_dur.type = '2048th'
 
         chords = self._stream.flat.getElementsByClass(chord.Chord)
         chord_cnt = len(chords)

@@ -451,6 +451,10 @@ class TrigramNode(ABC):
 
 
 class Ruler(ABC):
+    def __init__(self, max_leap=16):
+        # The precise semantics of max_leap are defined by derived classes.
+        self._max_leap = max_leap
+
     def distance(self, from_midi, to_midi):
         """
         Estimate the distance between two piano keys identified by MIDI code.
@@ -459,11 +463,23 @@ class Ruler(ABC):
         :param to_midi: The ending piano key.
         :return: The distance between the two keys.
         """
-        return to_midi - from_midi
+        calculated_d = to_midi - from_midi
+        abs_max_d = self.absolute_max_distance()
+        if abs(calculated_d) > abs_max_d:
+            if calculated_d < 0:
+                return abs_max_d * -1
+            else:
+                return abs_max_d
+        return calculated_d
+
+    def absolute_max_distance(self):
+        max_d = self._max_leap + 1
+        return max_d
 
 
 class CacheRuler(Ruler):
-    def __init__(self, preload=False):
+    def __init__(self, max_leap=16, preload=False):
+        super().__init__(max_leap=max_leap)
         self._preload_cache = preload
         self._cache = {}
         self._distance_method = None
@@ -500,7 +516,8 @@ class CacheRuler(Ruler):
 
 
 class PhysicalRuler(Ruler):
-    def __init__(self):
+    def __init__(self, max_leap=16):
+        super().__init__(max_leap=max_leap)
         self._key_positions = PhysicalRuler.horizontal_key_positions()
         self._bounds_for_semitone_interval = None
         self.set_bounds_for_semitone_intervals()
@@ -516,11 +533,14 @@ class PhysicalRuler(Ruler):
         for i in range(len(self._bounds_for_semitone_interval) - 1):
             if self._bounds_for_semitone_interval[i] <= dist <= self._bounds_for_semitone_interval[i+1]:
                 return multiplier * i
-        raise Exception("Distance between {0} and {1} could not be calculated".format(from_midi, to_midi))
+        # raise Exception("Distance between {0} and {1} could not be calculated".format(from_midi, to_midi))
+        # Following Nakamura's lead, we treat all distances over a certain length the same.
+        i += 1
+        return multiplier * i
 
     def set_bounds_for_semitone_intervals(self):
         avg_distances = list()
-        for interval_size in range(0, 24):
+        for interval_size in range(0, self._max_leap):
             distance = 0
             for manifestation_num in range(0, 12):
                 start_midi = 21 + manifestation_num
@@ -544,7 +564,7 @@ class PhysicalRuler(Ruler):
         to their lengthwise center lines on the keyboard.
         """
         positions = dict()
-        #           A    A#    B  C     C#   D   D#  E     F  F#    G
+        #           A    A#    B  C     C#   D   D#  E     F   F#  G     G#
         offsets = [11.5, 15.5, 8, 23.5, 9.5, 14, 14, 9.5, 23.5, 8, 15.5, 11.5]
         cycle_index = 0
         value = 0
@@ -557,8 +577,8 @@ class PhysicalRuler(Ruler):
 
 
 class ImaginaryBlackKeyRuler(CacheRuler):
-    def __init__(self, preload=False):
-        super().__init__(preload=preload)
+    def __init__(self, max_leap=16, preload=False):
+        super().__init__(max_leap=max_leap, preload=preload)
 
     def calculated_distance(self, from_midi, to_midi):
         d = 0

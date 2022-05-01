@@ -37,16 +37,20 @@ import sklearn_crfsuite as crf
 from sklearn_crfsuite import metrics
 from sklearn.model_selection import train_test_split, cross_val_score
 from pydactyl.eval.Corporeal import Corporeal
-from pydactyl.dactyler.Parncutt import Parncutt, TrigramNode, Badgerow, Balliauw, Jacobs
+from pydactyl.dactyler.Parncutt import TrigramNode
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 
 VERSION = '0000'
+MAX_LEAP = 16
+MICROSECONDS_PER_BEAT = 500000
+MS_PER_BEAT = MICROSECONDS_PER_BEAT / 1000
+CHORD_MS_THRESHOLD = 30
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
 TEST_METHOD = 'cross-validate'
 TEST_METHOD = 'preset'
+# TEST_METHOD = 'random'
 SEGREGATE_HANDS = False
-# pig-indy sans chord features: [0.59737277 0.63973301 0.69766982 0.65833153 0.66159304]
 STAFFS = ['upper', 'lower']
 # STAFFS = ['upper']
 # CORPUS_NAMES = ['full_american_by_annotator']
@@ -93,7 +97,44 @@ def get_trigram_node(notes, annotations, i):
     return trigram_node
 
 
-def note2features(notes, annotations, i, staff):
+def leap_is_excessive(notes, middle_i):
+    left_i = middle_i - 1
+    if left_i in notes:
+        leap = notes[middle_i].pitch.midi - notes[left_i].pitch.midi
+        if abs(leap) > MAX_LEAP:
+            return True
+    else:
+        return True  # That first step is a doozy. Infinite leap.
+    return False
+
+
+def chordings(stream, middle_i):
+    middle_offset_beats = stream[middle_i].offset
+    middle_offset_ms = middle_offset_beats * MS_PER_BEAT
+    min_left_offset_ms = middle_offset_ms - CHORD_MS_THRESHOLD
+    max_right_offset_ms = middle_offset_ms + CHORD_MS_THRESHOLD
+    # Notes (other than the leftmost--lowest--note) in chords with identical
+    # onset times in the performance have been shifted right by a 1/2048th
+    # note duration to provide a total-order to coincide with the ABCDF fingering
+    # sequence.
+    left_chord_notes = 0
+    for i in range(middle_i, middle_i - 6, -1):
+        if i < 0:
+            break
+        i_offet_ms = stream[i].offset * MS_PER_BEAT
+        if i_offet_ms > min_left_offset_ms:
+            left_chord_notes += 1
+    right_chord_notes = 0
+    for i in range(middle_i, middle_i + 6, 1):
+        if i >= len(stream):
+            break
+        i_offet_ms = stream[i].offset * MS_PER_BEAT
+        if i_offet_ms < max_right_offset_ms:
+            right_chord_notes += 1
+    return left_chord_notes, right_chord_notes
+
+
+def note2features(notes, stream, annotations, i, staff):
     trigram_node = get_trigram_node(notes, annotations, i)
     features = {}
     functions = judge.rules()
@@ -106,15 +147,30 @@ def note2features(notes, annotations, i, staff):
         features[staff] = 1
         # @100: [0.54495717 0.81059147 0.81998371 0.68739401 0.73993751]
         # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
-    # FIXME: Add chord features.
+
+    # FIXME: Add chord features. Approximate with 30 ms offset deltas.
+    left_chord_notes, right_chord_notes = chordings(stream=stream, middle_i=i)
+    features['left_chord'] = left_chord_notes
+    features['right_chord'] = right_chord_notes
+
+    # FIXME: Impact of large leaps? Costs max out, no? Maybe not.
+    # features['leap'] = 0
+    # if leap_is_excessive(notes, i):
+    # features['leap'] = 1
+
+    # FIXME: Lattice distance in Parncutt rules? Approximated by Jacobs.
+    #        Mitigated by Balliauw (which just makes the x-distance more
+    #        accurate between same-colored keys).
+    # FIXME: Articulation (legato, staccato)?
+    # FIXME: tempo (window duration)?
 
     return features
 
 
-def phrase2features(notes, annotations, staff):
+def phrase2features(notes, stream, annotations, staff):
     feature_list = []
     for i in range(len(notes)):
-        features = note2features(notes, annotations, i, staff)
+        features = note2features(notes, stream, annotations, i, staff)
         feature_list.append(features)
     return feature_list
 
@@ -172,7 +228,9 @@ def train_and_evaluate(the_model, x_train, y_train, x_test, y_test):
 # MAIN BLOCK
 #####################################################
 creal = Corporeal()
-judge = Parncutt()
+judge = creal.get_model('parncutt')
+# judge = creal.get_model('badball')
+# judge = creal.get_model('jacobs')
 
 # token_lists = []
 x = []
@@ -193,12 +251,16 @@ for corpus_name in CORPUS_NAMES:
     for da_score in da_corpus.d_score_list():
         for staff in STAFFS:
             score_title = da_score.title()
-            print("Processing {}".format(score_title))
+            # if score_title != 'Sonatina 4.1':
+                # continue
+            print("Processing {} staff of {} score from {} corpus.".format(staff, score_title, corpus_name))
             abcdh = da_score.abcd_header()
             annot_count = abcdh.annotation_count()
             annot = da_score.annotation_by_index(index=0)
             segger = ManualDSegmenter(level='.', d_annotation=annot)
             da_score.segmenter(segger)
+            # FIXME: Calling both of the following is probably not necessary...
+            orderly_stream_segments = da_score.orderly_note_stream_segments(staff=staff)
             orderly_note_segments = da_score.orderly_d_note_segments(staff=staff)
             seg_count = len(orderly_note_segments)
             for annot_index in range(annot_count):
@@ -208,6 +270,7 @@ for corpus_name in CORPUS_NAMES:
                 seg_index = 0
                 for hsd_seg in hsd_segments:
                     ordered_notes = orderly_note_segments[seg_index]
+                    ordered_stream = orderly_stream_segments[seg_index]
                     # token_lists.append(phrase2tokens(ordered_notes))
                     note_len = len(ordered_notes)
                     seg_len = len(hsd_seg)
@@ -231,14 +294,14 @@ for corpus_name in CORPUS_NAMES:
                         wildcarded_count += 1
                         continue
                     included_note_count += note_len
-                    x.append(phrase2features(ordered_notes, hsd_seg, staff))
+                    x.append(phrase2features(ordered_notes, ordered_stream, hsd_seg, staff))
                     y.append(phrase2labels(hsd_seg))
                     if TEST_METHOD == 'preset':
                         if is_in_test_set(title=score_title, corpus=corpus_name):
-                            x_test.append(phrase2features(ordered_notes, hsd_seg, staff))
+                            x_test.append(phrase2features(ordered_notes, ordered_stream, hsd_seg, staff))
                             y_test.append(phrase2labels(hsd_seg))
                         else:
-                            x_train.append(phrase2features(ordered_notes, hsd_seg, staff))
+                            x_train.append(phrase2features(ordered_notes, ordered_stream, hsd_seg, staff))
                             y_train.append(phrase2labels(hsd_seg))
 
                     good_annot_count += 1
