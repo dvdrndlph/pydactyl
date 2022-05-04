@@ -58,6 +58,15 @@ class PigNote:
             self.id, self.on, self.off, self.name, self.midi_pitch, self.on_vel, self.off_vel, self.channel, self.finger)
         return stringy
 
+    def to_file_line(self):
+        stringy = "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+            self.id, self.on, self.off, self.name, self.on_vel, self.off_vel, self.channel, self.finger)
+        return stringy
+
+    @staticmethod
+    def header_line():
+        return "//Version: PianoFingering_v170101\n"
+
     def tempo(self):
         tempo = mido.bpm2tempo(bpm=self.bpm)
         return tempo
@@ -500,7 +509,9 @@ class PigOut:
                 off_velocity = 80
                 hsd = hsds[i]
                 pig_fingering = PigNote.abcdf_to_pig_fingering(handed_digit=hsd)
-                pig_note = PigNote(id=note_id, on=note_on_ms/1000, off=note_off_ms/1000,
+                note_on_s = round(note_on_ms/1000, 6)
+                note_off_s = round(note_off_ms/1000, 6)
+                pig_note = PigNote(id=note_id, on=note_on_s, off=note_off_s,
                                    name=pig_name, on_vel=on_velocity, off_vel=off_velocity,
                                    channel=channel, finger=pig_fingering)
                 pig_notes.append(pig_note)
@@ -508,5 +519,18 @@ class PigOut:
             channel +=1
 
         pig_notes.sort(key=lambda x: (x.on, x.midi_pitch))
-        print("Wait")
+        contents = PigNote.header_line()
+        note_id = 0
+        for pn in pig_notes:
+            pn.id = note_id
+            contents += pn.to_file_line()
+            note_id += 1
+
+        # print(contents)
+        if to_file:
+            f = open(to_file, "w")
+            f.write(contents)
+            f.close()
+
+        return contents
 

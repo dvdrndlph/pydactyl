@@ -52,5 +52,6 @@ corpse = DCorpus()
 corpse.append(corpus_path=mf_path, header_path=hdr_path)
 for da_score in corpse.d_score_list():
     piggo = PigOut(d_score=da_score)
-    pork = piggo.transform(annotation_index=0)
+    to_file = "/tmp/" + ID + "_fingering.txt"
+    pork = piggo.transform(annotation_index=0, to_file=to_file)
 print("Done")
