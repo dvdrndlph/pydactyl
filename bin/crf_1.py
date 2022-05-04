@@ -77,6 +77,7 @@ def is_in_test_set(title: str, corpus='pig_indy'):
         raise Exception("Not implemented yet.")
     return False
 
+
 def get_trigram_node(notes, annotations, i):
     midi_1 = None
     handed_digit_1 = '-'

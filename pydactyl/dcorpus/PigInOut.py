@@ -25,14 +25,20 @@ import os
 import re
 import copy
 import mido
-from music21 import pitch
+from music21 import pitch, note
 from .DAnnotation import DAnnotation
 from .ABCDHeader import ABCDHeader
+from .DScore import DScore
+
+MICROSECONDS_PER_BEAT = 500000  # at 120 bpm
+MS_PER_BEAT = MICROSECONDS_PER_BEAT / 1000
 
 
 class PigNote:
     PITCH_RE = r"^([A-G])([#b]*)(\d+)$"
+    M21_PITCH_RE = r"^([A-G])([#-]*)(\d+)$"
     FINGER_RE = r"(\-?)([1-5])_?(\-?)([1-5]?)"
+    HANDED_DIGIT_RE = r'([><]+)([1-5]+)'
     TICKS_PER_BEAT = 960
 
     def __init__(self, id, on, off, name, on_vel, off_vel, channel, finger, bpm=120):
@@ -56,21 +62,66 @@ class PigNote:
         tempo = mido.bpm2tempo(bpm=self.bpm)
         return tempo
 
-    def name_to_midi_pitch(self):
-        mat = re.match(PigNote.PITCH_RE, self.name)
-        base_name = mat.group(1)
-        accidental = mat.group(2)
-        octave = mat.group(3)
-        m21_accidental = ''
-        for acc in accidental:
-            if acc == 'b':
-                m21_accidental += '-'
+    @staticmethod
+    def abcdf_to_pig_fingering(handed_digit):
+        mat = re.match(PigNote.HANDED_DIGIT_RE, handed_digit)
+        if mat:
+            if mat.group(1) == '<':
+                hand = '-'
             else:
-                m21_accidental += '#'
-        m21_name = base_name + m21_accidental + octave
+                hand = ''
+            digit = mat.group(2)
+            pig_fingering = hand + digit
+            return pig_fingering
+        raise Exception("Handed digit {} is ill-formed".format(handed_digit))
+
+    @staticmethod
+    def m21_name_to_pig_name(m21_note_name):
+        mat = re.match(PigNote.M21_PITCH_RE, m21_note_name)
+        if mat:
+            base_name = mat.group(1)
+            accidental = mat.group(2)
+            octave = mat.group(3)
+            pig_accidental = ''
+            for acc in accidental:
+                if acc == '-':
+                    pig_accidental += 'b'
+                else:
+                    pig_accidental += '#'
+            pig_name = base_name + pig_accidental + octave
+            return pig_name
+        raise Exception("Bad music21 pitch name: {}".format(m21_note_name))
+
+    @staticmethod
+    def pig_name_to_m21_name(pig_note_name):
+        mat = re.match(PigNote.PITCH_RE, pig_note_name)
+        if mat:
+            base_name = mat.group(1)
+            accidental = mat.group(2)
+            octave = mat.group(3)
+            m21_accidental = ''
+            for acc in accidental:
+                if acc == 'b':
+                    m21_accidental += '-'
+                else:
+                    m21_accidental += '#'
+            m21_name = base_name + m21_accidental + octave
+            return m21_name
+        else:
+            raise Exception("Bad PigNote name: {}.".format(pig_note_name))
+
+    def name_to_midi_pitch(self):
+        m21_name = PigNote.pig_name_to_m21_name(self.name)
         pit = pitch.Pitch(m21_name)
         # print("{} ==> {} and {}".format(self.name, m21_name, pit.midi))
         return pit.midi
+
+    @staticmethod
+    def midi_pitch_to_name(midi_pitch):
+        p = pitch.Pitch(midi=midi_pitch)
+        m21_note_name = p.name + p.octave
+        pig_note_name = PigNote.m21_name_to_pig_name(m21_note_name=m21_note_name)
+        return pig_note_name
 
     def on_tick(self):
         tempo = self.tempo()
@@ -413,3 +464,49 @@ class PigIn:
             abcd_fh = open(abcd_path, 'w')
             print(abcdh_str, file=abcd_fh)
             abcd_fh.close()
+
+
+class PigOut:
+    def __init__(self, d_score: DScore):
+        self._d_score = d_score
+
+    def transform(self, annotation_index=None, annotation_id=None, to_file=None):
+        if annotation_index is not None:
+            annot = self._d_score.annotation_by_index(annotation_index)
+        elif annotation_id is not None:
+            annot = self._d_score.annotation_by_id(annotation_id)
+        channel = 0
+        note_id = 0
+        pig_notes = []
+        for staff in ['upper', 'lower']:
+            hsds = annot.handed_strike_digits(staff=staff)
+            hsd_count = len(hsds)
+            notes = self._d_score.orderly_note_stream(staff=staff)
+            note_count = len(notes)
+            if hsd_count != note_count:
+                raise Exception("Note count does not equal annotation count.")
+            for i in range(len(notes)):
+                m21_note: note.Note = notes[i]
+                pig_name = PigNote.m21_name_to_pig_name(m21_note.nameWithOctave)
+                offset_beats = m21_note.offset
+                ms_per_beat = MS_PER_BEAT  # FIXME: should check metronome marking
+                note_on_ms = offset_beats * ms_per_beat
+                duration_ms = m21_note.duration.quarterLength * ms_per_beat
+                note_off_ms = note_on_ms + duration_ms
+                on_velocity = m21_note.volume.velocity
+                if on_velocity is None:
+                    raise Exception(
+                        "Velocity is not set for note {} at index {} on channel {}.".format(pig_name, i, channel))
+                off_velocity = 80
+                hsd = hsds[i]
+                pig_fingering = PigNote.abcdf_to_pig_fingering(handed_digit=hsd)
+                pig_note = PigNote(id=note_id, on=note_on_ms/1000, off=note_off_ms/1000,
+                                   name=pig_name, on_vel=on_velocity, off_vel=off_velocity,
+                                   channel=channel, finger=pig_fingering)
+                pig_notes.append(pig_note)
+                note_id += 1
+            channel +=1
+
+        pig_notes.sort(key=lambda x: (x.on, x.midi_pitch))
+        print("Wait")
+

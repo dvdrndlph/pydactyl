@@ -28,7 +28,7 @@ import re
 import sys
 from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
 from pydactyl.dactyler.Parncutt import Parncutt
-from pydactyl.dcorpus.PigIn import PigIn
+from pydactyl.dcorpus.PigInOut import PigIn
 # import scamp
 
 # s = scamp.Session()

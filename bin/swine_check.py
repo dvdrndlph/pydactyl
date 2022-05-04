@@ -29,6 +29,7 @@ import re
 import sys
 from music21 import abcFormat, converter, stream
 from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
+from pydactyl.dcorpus.PigInOut import PigOut
 from mido import MidiFile
 
 ID = '002_1'
@@ -49,4 +50,7 @@ for i, track in enumerate(mid.tracks):
 
 corpse = DCorpus()
 corpse.append(corpus_path=mf_path, header_path=hdr_path)
+for da_score in corpse.d_score_list():
+    piggo = PigOut(d_score=da_score)
+    pork = piggo.transform(annotation_index=0)
 print("Done")

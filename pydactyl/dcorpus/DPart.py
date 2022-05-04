@@ -103,10 +103,12 @@ class DPart:
         offsetted_notes = []
         for ch in chords:
             chord_offset = ch.getOffsetBySite(chord_stream)
+            chord_volume = ch.volume
             if chord_offset not in notes_at_offset:
                 notes_at_offset[chord_offset] = []
             for pit in ch.pitches:
                 new_note = note.Note(pit)
+                new_note.volume = chord_volume
                 new_note.quarterLength = ch.quarterLength
                 if not DPart.is_pitch_in_note_list(pit, notes_at_offset[chord_offset]):
                     notes_at_offset[chord_offset].append(new_note)
