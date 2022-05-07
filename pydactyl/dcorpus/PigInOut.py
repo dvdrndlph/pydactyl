@@ -1,5 +1,5 @@
 __author__ = 'David Randolph'
-# Copyright (c) 2021 David A. Randolph.
+# Copyright (c) 2021, 2022 David A. Randolph.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -220,9 +220,11 @@ class PigIn:
         if standardize:
             self._midi_dir = base_dir + 'abcd/'
             self._abcd_dir = base_dir + 'abcd/'
+            self._std_pig_dir = None
         else:
             self._midi_dir = base_dir + 'individual_abcd/'
             self._abcd_dir = base_dir + 'individual_abcd/'
+            self._std_pig_dir = base_dir + 'std_pig/'
         self._fingered_note_streams = {}  # Hashed by "piece_id-annotator_id" (e.g., "009-5").
 
     @staticmethod
@@ -390,7 +392,7 @@ class PigIn:
                     mat = re.match(file_re, file)
                     if mat:
                         authority_id = mat.group(2)
-                        piece_id = mat.group(1) + '_' + authority_id;
+                        piece_id = mat.group(1) + '-' + authority_id
                         # if piece_id != '113_1':
                             # continue
                         if piece_id not in pig_tracks_for_piece:
@@ -459,31 +461,65 @@ class PigIn:
                         midi_file = piece_id + '.mid'
                         midi_path = self._midi_dir + midi_file
                         mf.save(midi_path)
-                        # Start spooling annotation for the new version of the piece.
-                        annotations[midi_file] = []
-                        annotations[midi_file].append(annot)
+                        annotations[piece_id] = []
+                        annotations[piece_id].append(annot)
                         # Remember we have processed this version of the piece.
                         pig_tracks_for_piece[piece_id][authority_id] = copy.deepcopy(pig_tracks)
-        for midi_file in annotations:
-            abcdh = ABCDHeader(annotations=annotations[midi_file])
+        for piece_id in annotations:
+            abcdh = ABCDHeader(annotations=annotations[piece_id])
             abcdh_str = abcdh.__str__()
-            base_name, extension = midi_file.split('.')
-            abcd_file_name = base_name + '.abcd'
-            abcd_path = self._abcd_dir + abcd_file_name
+            midi_file = piece_id + '.mid'
+            midi_path = self._midi_dir + midi_file
+            abcd_file = piece_id + '.abcd'
+            abcd_path = self._abcd_dir + abcd_file
             abcd_fh = open(abcd_path, 'w')
             print(abcdh_str, file=abcd_fh)
             abcd_fh.close()
+            m21_score = DScore.score_via_midi(corpus_path=midi_path)
+            d_score = DScore(music21_stream=m21_score, abcd_header=abcdh, title=piece_id)
+            pout = PigOut(d_score=d_score)
+            std_pig_file = piece_id + '_fingering.txt'
+            std_pig_path = self._std_pig_dir + std_pig_file
+            pout.transform(to_file=std_pig_path)
 
 
 class PigOut:
+    """
+    Class to export a DScore to "standardized" PIG FingerFile format. The _fingering.txt files
+    provided in the PIG dataset are sorted by note start times (in seconds offset from the
+    beginning of the piece). But in the event of ties, it does not fix the notes in any
+    particular order. This conflicts with the way ABCD works and aligns fingering annotations
+    with notes. We therefore enforce a "left-to-right, low-to-high" total order in the output
+    produced here.
+
+    Note that transforming an original PIG file to a DScore via the PigIn class above and
+    subsequently transforming that DScore to a PIG file using this class, will NOT produce
+    output identical to the original. The notes will be reordered and renumbered. Also,
+    offset times, while similar, will not be exactly the same. There are three known potential
+    sources for these discrepancies. First, the original PIG files are translated to MIDI format,
+    via midi.translate.midiFileToStream(mf=mf, quantizePost=False), provided by music21.
+    Time resolution may deviate by the MICROSECONDS_PER_BEAT setting for the MIDI file.
+    It may not be possible to capture the full resolution dictated in the PIG source file.
+    A more significant problem is with quantization performed by music21, as it defines a notion
+    of "quarterLength" in its efforts to create a symbolic representation of the music.
+    Durations are therefore modified as needed to support no more than 1/2048th note
+    granularity. This can can cause offset timestamps to shift. Finally, for historical
+    reasons, within each channel (staff), our code imposes an explicit total order in which
+    no two notes are allowed to start at the same time. We accomplish this by simply shaving
+    1/2048th-note durations from the beginning of notes in a chord to ensure a total order.
+    (Performing this operation was done to allow models that do not take chords into effect to
+    at least be able to process music that contains chords. FIXME: This was a kludge, and we
+    are nearing the point when we will be modifying these models to deal with this issue
+    more intelligently.)
+    """
     def __init__(self, d_score: DScore):
         self._d_score = d_score
 
-    def transform(self, annotation_index=None, annotation_id=None, to_file=None):
-        if annotation_index is not None:
-            annot = self._d_score.annotation_by_index(annotation_index)
-        elif annotation_id is not None:
+    def transform(self, annotation_index=0, annotation_id=None, to_file=None):
+        if annotation_id is not None:
             annot = self._d_score.annotation_by_id(annotation_id)
+        elif annotation_index is not None:
+            annot = self._d_score.annotation_by_index(annotation_index)
         channel = 0
         note_id = 0
         pig_notes = []

@@ -32,19 +32,29 @@ import sklearn
 import scipy.stats
 from sklearn.metrics import make_scorer
 from sklearn_crfsuite import scorers
-
+import os
 import sklearn_crfsuite as crf
 from sklearn_crfsuite import metrics
+import pickle
+from pathlib import Path
 from sklearn.model_selection import train_test_split, cross_val_score
 from pydactyl.eval.Corporeal import Corporeal
 from pydactyl.dactyler.Parncutt import TrigramNode
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
+from pydactyl.dcorpus.DAnnotation import DAnnotation
+from pydactyl.dcorpus.DScore import DScore
+from pydactyl.dcorpus.ABCDHeader import ABCDHeader
+from pydactyl.dcorpus.PigInOut import PigOut
 
 VERSION = '0000'
+PICKLE_BASE_DIR = '/tmp/pickle/'
 MAX_LEAP = 16
 MICROSECONDS_PER_BEAT = 500000
 MS_PER_BEAT = MICROSECONDS_PER_BEAT / 1000
 CHORD_MS_THRESHOLD = 30
+CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
+# CLEAN_LIST = {'crf': True}
+# CLEAN_LIST = {}
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
 TEST_METHOD = 'cross-validate'
@@ -67,9 +77,47 @@ CORPUS_NAMES = ['pig_indy']
 #####################################################
 # FUNCTIONS
 #####################################################
-def is_in_test_set(title: str, corpus='pig_indy'):
-    if corpus in ('pig_indy', 'pig'):
-        example, annotator_id = title.split('_')
+def pickle_directory(obj_type):
+    my_dir = PICKLE_BASE_DIR + obj_type + '/'
+    return my_dir
+
+
+def pickle_it(obj, obj_type, file_name):
+    pickle_dir = pickle_directory(obj_type)
+    pickle_path = pickle_dir + file_name
+    print("Pickling {} to path {}.".format(obj_type, pickle_path))
+    pickle_fh = open(pickle_path, 'wb')
+    pickle.dump(obj, pickle_fh)
+    pickle_fh.close()
+
+
+def unpickle_it(obj_type, file_name):
+    pickle_dir = pickle_directory(obj_type)
+    pickle_path = pickle_dir + file_name
+
+    path = Path(pickle_path)
+    if path.is_file():
+        if obj_type in CLEAN_LIST:
+            os.remove(pickle_path)
+            print("Pickle file {} removed because {} ia on the CLEAN_LIST.".format(pickle_path, obj_type))
+            return None
+        pickle_fh = open(pickle_path, 'rb')
+        unpickled_obj = pickle.load(pickle_fh)
+        pickle_fh.close()
+        print("Unpickled {} from path {}.".format(obj_type, pickle_path))
+        return unpickled_obj
+    return None
+
+
+def has_preset_evaluation_defined(corpus_name):
+    if corpus_name in ('pig_indy', 'pig'):
+        return True
+    return False
+
+
+def is_in_test_set(title: str, corpus_name='pig_indy'):
+    if corpus_name in ('pig_indy', 'pig'):
+        example, annotator_id = title.split('-')
         example_int = int(example)
         if example_int <= 30:
             return True
@@ -207,13 +255,27 @@ def has_wildcard(hsd_seq):
     return False
 
 
+def evaluate_trained_model(the_model, x_test, y_test):
+    labels = list(the_model.classes_)
+    print(labels)
+    y_predicted = my_crf.predict(x_test)
+    flat_f1 = metrics.flat_f1_score(y_test, y_predicted, average='weighted', labels=labels)
+    print("Flat F1: {}".format(flat_f1))
+
+    sorted_labels = sorted(
+        labels,
+        key=lambda name: (name[1:], name[0])
+    )
+    print(metrics.flat_classification_report(y_test, y_predicted, labels=sorted_labels, digits=3))
+
+
 def train_and_evaluate(the_model, x_train, y_train, x_test, y_test):
     the_model.fit(x_train, y_train)
-    labels = list(my_crf.classes_)
+    labels = list(the_model.classes_)
     print(labels)
 
     y_predicted = my_crf.predict(x_test)
-    print("Predicted: {}".format(y_predicted))
+    # print("Predicted: {}".format(y_predicted))
 
     flat_f1 = metrics.flat_f1_score(y_test, y_predicted, average='weighted', labels=labels)
     print("Flat F1: {}".format(flat_f1))
@@ -225,6 +287,28 @@ def train_and_evaluate(the_model, x_train, y_train, x_test, y_test):
     print(metrics.flat_classification_report(y_test, y_predicted, labels=sorted_labels, digits=3))
 
 
+class DExperiment:
+    def __init__(self, x=[], y=[], model_version=VERSION, corpus_name='pig_indy',
+                 x_train=[], y_train=[], x_test=[], y_test=[]):
+        self.model_version = model_version
+        self.corpus_name = corpus_name
+        self.x = x
+        self.y = y
+        self.x_train = x_train
+        self.y_train = y_train
+        self.x_test = x_test
+        self.y_test = y_test
+
+        self.bad_annot_count = 0
+        self.wildcarded_count = 0
+        self.good_annot_count = 0
+        self.included_note_count = 0
+        self.total_nondefault_hand_finger_count = 0
+        self.total_nondefault_hand_segment_count = 0
+        self.test_streams = {}
+        self.test_indices = {}
+
+
 #####################################################
 # MAIN BLOCK
 #####################################################
@@ -234,105 +318,139 @@ judge = creal.get_model('parncutt')
 # judge = creal.get_model('jacobs')
 
 # token_lists = []
-x = []
-y = []
-x_train = []
-x_test = []
-y_train = []
-y_test = []
 
-bad_annot_count = 0
-wildcarded_count = 0
-good_annot_count = 0
-included_note_count = 0
-total_nondefault_hand_finger_count = 0
-total_nondefault_hand_segment_count = 0
-for corpus_name in CORPUS_NAMES:
-    da_corpus = creal.get_corpus(corpus_name=corpus_name)
-    for da_score in da_corpus.d_score_list():
-        for staff in STAFFS:
+corpora_str = "-".join(CORPUS_NAMES)
+ex = unpickle_it(obj_type="DExperiment", file_name=corpora_str)
+if ex is None:
+    ex = DExperiment()
+    for corpus_name in CORPUS_NAMES:
+        da_corpus = unpickle_it(obj_type="DCorpus", file_name=corpus_name)
+        if da_corpus is None:
+            da_corpus = creal.get_corpus(corpus_name=corpus_name)
+            pickle_it(obj=da_corpus, obj_type="DCorpus", file_name=corpus_name)
+        for da_score in da_corpus.d_score_list():
             score_title = da_score.title()
             # if score_title != 'Sonatina 4.1':
-                # continue
-            print("Processing {} staff of {} score from {} corpus.".format(staff, score_title, corpus_name))
-            abcdh = da_score.abcd_header()
-            annot_count = abcdh.annotation_count()
-            annot = da_score.annotation_by_index(index=0)
-            segger = ManualDSegmenter(level='.', d_annotation=annot)
-            da_score.segmenter(segger)
-            # FIXME: Calling both of the following is probably not necessary...
-            orderly_stream_segments = da_score.orderly_note_stream_segments(staff=staff)
-            orderly_note_segments = da_score.orderly_d_note_segments(staff=staff)
-            seg_count = len(orderly_note_segments)
-            for annot_index in range(annot_count):
-                annot = da_score.annotation_by_index(annot_index)
-                authority = annot.authority()
-                hsd_segments = segger.segment_annotation(annotation=annot, staff=staff)
-                seg_index = 0
-                for hsd_seg in hsd_segments:
-                    ordered_notes = orderly_note_segments[seg_index]
-                    ordered_stream = orderly_stream_segments[seg_index]
-                    # token_lists.append(phrase2tokens(ordered_notes))
-                    note_len = len(ordered_notes)
-                    seg_len = len(hsd_seg)
-                    if note_len != seg_len:
-                        print("Bad annotation by {} for score {}. Notes: {} Fingers: {}".format(
-                            authority, score_title, note_len, seg_len))
-                        bad_annot_count += 1
-                        continue
-                    nondefault_hand_finger_count = nondefault_hand_count(hsd_seq=hsd_seg, staff=staff)
-                    if nondefault_hand_finger_count:
-                        total_nondefault_hand_segment_count += 1
-                        print("Non-default hand specified vy annotator {} in score {}: {}".format(
-                            authority, score_title, hsd_seg))
-                        total_nondefault_hand_finger_count += nondefault_hand_finger_count
-                        if SEGREGATE_HANDS:
-                            bad_annot_count += 1
+            # continue
+            for staff in STAFFS:
+                print("Processing {} staff of {} score from {} corpus.".format(staff, score_title, corpus_name))
+                abcdh = da_score.abcd_header()
+                annot_count = abcdh.annotation_count()
+                annot = da_score.annotation_by_index(index=0)
+                segger = ManualDSegmenter(level='.', d_annotation=annot)
+                da_score.segmenter(segger)
+                # FIXME: Calling both of the following is probably not necessary...
+                orderly_stream_segments = da_score.orderly_note_stream_segments(staff=staff)
+                orderly_note_segments = da_score.orderly_d_note_segments(staff=staff)
+                seg_count = len(orderly_note_segments)
+                for annot_index in range(annot_count):
+                    annot = da_score.annotation_by_index(annot_index)
+                    authority = annot.authority()
+                    hsd_segments = segger.segment_annotation(annotation=annot, staff=staff)
+                    seg_index = 0
+                    for hsd_seg in hsd_segments:
+                        ordered_notes = orderly_note_segments[seg_index]
+                        ordered_stream = orderly_stream_segments[seg_index]
+                        note_len = len(ordered_notes)
+                        seg_len = len(hsd_seg)
+                        if note_len != seg_len:
+                            print("Bad annotation by {} for score {}. Notes: {} Fingers: {}".format(
+                                authority, score_title, note_len, seg_len))
+                            ex.bad_annot_count += 1
                             continue
-                    if has_wildcard(hsd_seq=hsd_seg):
-                        # print("Wildcard disallowed from annotator {} in score {}: {}".format(
-                            # authority, score_title, hsd_seg))
-                        wildcarded_count += 1
-                        continue
-                    included_note_count += note_len
-                    x.append(phrase2features(ordered_notes, ordered_stream, hsd_seg, staff))
-                    y.append(phrase2labels(hsd_seg))
-                    if TEST_METHOD == 'preset':
-                        if is_in_test_set(title=score_title, corpus=corpus_name):
-                            x_test.append(phrase2features(ordered_notes, ordered_stream, hsd_seg, staff))
-                            y_test.append(phrase2labels(hsd_seg))
-                        else:
-                            x_train.append(phrase2features(ordered_notes, ordered_stream, hsd_seg, staff))
-                            y_train.append(phrase2labels(hsd_seg))
-
-                    good_annot_count += 1
+                        nondefault_hand_finger_count = nondefault_hand_count(hsd_seq=hsd_seg, staff=staff)
+                        if nondefault_hand_finger_count:
+                            ex.total_nondefault_hand_segment_count += 1
+                            print("Non-default hand specified vy annotator {} in score {}: {}".format(
+                                authority, score_title, hsd_seg))
+                            ex.total_nondefault_hand_finger_count += nondefault_hand_finger_count
+                            if SEGREGATE_HANDS:
+                                ex.bad_annot_count += 1
+                                continue
+                        if has_wildcard(hsd_seq=hsd_seg):
+                            # print("Wildcard disallowed from annotator {} in score {}: {}".format(
+                                # authority, score_title, hsd_seg))
+                            ex.wildcarded_count += 1
+                            continue
+                        ex.included_note_count += note_len
+                        ex.x.append(phrase2features(ordered_notes, ordered_stream, hsd_seg, staff))
+                        ex.y.append(phrase2labels(hsd_seg))
+                        if has_preset_evaluation_defined(corpus_name=corpus_name):
+                            if is_in_test_set(title=score_title, corpus_name=corpus_name):
+                                test_key = (corpus_name, score_title, annot_index)
+                                if test_key not in ex.test_streams:
+                                    ex.test_streams[test_key] = []
+                                    ex.test_indices[test_key] = []
+                                ex.test_streams[test_key].append(ordered_stream)
+                                ex.test_indices[test_key].append(len(ex.y_test))
+                                ex.x_test.append(phrase2features(ordered_notes, ordered_stream, hsd_seg, staff))
+                                ex.y_test.append(phrase2labels(hsd_seg))
+                            else:
+                                ex.x_train.append(phrase2features(ordered_notes, ordered_stream, hsd_seg, staff))
+                                ex.y_train.append(phrase2labels(hsd_seg))
+                        ex.good_annot_count += 1
+    pickle_it(obj=ex, obj_type="DExperiment", file_name=corpora_str)
 
 # print(token_lists)
-print("Example count: {}".format(len(x)))
+print("Example count: {}".format(len(ex.x)))
 if TEST_METHOD == 'preset':
-    print("Training count: {}".format(len(y_train)))
-    print("Test count: {}".format(len(y_test)))
-print("Good examples: {}".format(good_annot_count))
-print("Bad examples: {}".format(bad_annot_count))
-print("Wildcarded examples: {}".format(wildcarded_count))
-print("Total notes included: {}".format(included_note_count))
-print("Total nondefault hand fingerings: {}".format(total_nondefault_hand_finger_count))
-print("Total nondefault hand phrases: {}".format(total_nondefault_hand_segment_count))
+    print("Training count: {}".format(len(ex.y_train)))
+    print("Test count: {}".format(len(ex.y_test)))
+print("Good examples: {}".format(ex.good_annot_count))
+print("Bad examples: {}".format(ex.bad_annot_count))
+print("Wildcarded examples: {}".format(ex.wildcarded_count))
+print("Total notes included: {}".format(ex.included_note_count))
+print("Total nondefault hand fingerings: {}".format(ex.total_nondefault_hand_finger_count))
+print("Total nondefault hand phrases: {}".format(ex.total_nondefault_hand_segment_count))
 
-my_crf = crf.CRF(
-    algorithm='lbfgs',
-    c1=0.1,
-    c2=0.1,
-    # max_iterations=100,
-    all_possible_transitions=True
-)
+crf_pickle_file_name = 'crf_' + VERSION + '__' + corpora_str + '__' + TEST_METHOD
+have_trained_model = False
+my_crf = unpickle_it(obj_type="crf", file_name=crf_pickle_file_name)
+if my_crf:
+    have_trained_model = True
+else:
+    my_crf = crf.CRF(
+        algorithm='lbfgs',
+        c1=0.1,
+        c2=0.1,
+        # max_iterations=100,
+        all_possible_transitions=True
+    )
+
 if TEST_METHOD == 'cross-validate':
-    scores = cross_val_score(my_crf, x, y, cv=5)
-    # scores = cross_validate(my_crf, x, y, cv=5, scoring="flat_precision_score")
+    scores = cross_val_score(my_crf, ex.x, ex.y, cv=5)
+    # scores = cross_validate(my_crf, ex.x, ex.y, cv=5, scoring="flat_precision_score")
     print(scores)
 elif TEST_METHOD == 'preset':
-    my_crf.fit(x_train, y_train)
-    train_and_evaluate(the_model=my_crf, x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test)
+    # my_crf.fit(ex.x_train, ex.y_train)
+    if have_trained_model:
+        evaluate_trained_model(the_model=my_crf, x_test=ex.x_test, y_test=ex.y_test)
+    else:
+        train_and_evaluate(the_model=my_crf, x_train=ex.x_train, y_train=ex.y_train, x_test=ex.x_test, y_test=ex.y_test)
+    # y_pred = my_crf.predict(x_test)
+    # for test_key in test_streams:
+    #     (corpus_name, score_title, annot_index) = test_key
+    #     upper_index, lower_index = test_indices[test_key]
+    #     pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
+    #     test_abcdf = "".join(y_test[upper_index]) + '@' + "".join(y_test[lower_index])
+    #     pred_annot = DAnnotation(abcdf=pred_abcdf, authority=VERSION)
+    #     test_annot = DAnnotation(abcdf=test_abcdf, authority=annot_index)
+    #     pred_abcdh = ABCDHeader(annotations=[pred_annot, test_annot])
+    #     d_score = DScore(music21_stream=test_streams[test_key], abcd_header=pred_abcdh, title=score_title)
+    #     pred_pout = PigOut(d_score=d_score, annot_index=0)
+    #     pred_pig_content = pred_pout.transform()
+    #     test_pout = PigOut(d_score=d_score, annot_index=1)
+    #     test_pig_content = test_pout.transform()
 else:
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.4, random_state=0)
-    train_and_evaluate(the_model=my_crf, x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test)
+    split_x_train, split_x_test, split_y_train, split_y_test = \
+        train_test_split(ex.x, ex.y, test_size=0.4, random_state=0)
+    train_and_evaluate(the_model=my_crf, x_train=split_x_train, y_train=split_y_train,
+                       x_test=split_x_test, y_test=split_y_test)
+
+# pickle_it(obj=my_crf, obj_type='crf', file_name=pickle_file_name)
+
+# unpickled_crf = unpickle_it(obj_type="crf", file_name=pickle_file_name)
+# y_predicted = unpickled_crf.predict(ex.x_test)
+# print("Unpickled CRF result: {}".format(y_predicted))
+# flat_f1 = metrics.flat_f1_score(ex.y_test, y_predicted, average='weighted')
+# print("Unpickled Flat F1: {}".format(flat_f1))

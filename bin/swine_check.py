@@ -32,10 +32,14 @@ from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
 from pydactyl.dcorpus.PigInOut import PigOut
 from mido import MidiFile
 
-ID = '002_1'
-PIG_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/individual_abcd/'
-mf_path = PIG_DIR + ID + '.mid'
-hdr_path = PIG_DIR + ID + '.abcd'
+ID = '002-1'
+PIG_BASE_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/'
+PIG_ABCD_DIR = PIG_BASE_DIR + 'PianoFingeringDataset_v1.00/individual_abcd/'
+PIG_STD_DIR = PIG_BASE_DIR + 'PianoFingeringDataset_v1.00/std_pig/'
+PREDICTION_DIR = '/tmp/prediction/'
+
+mf_path = PIG_ABCD_DIR + ID + '.mid'
+hdr_path = PIG_ABCD_DIR + ID + '.abcd'
 s = converter.parse(mf_path)
 
 mid = MidiFile(mf_path)
@@ -48,6 +52,8 @@ for i, track in enumerate(mid.tracks):
             # print(msg)
     print("note_on count: {}".format(msg_cnt))
 
+# ABCDF/MIDI => DCorpus => Standardized PIG
+# Then compare
 corpse = DCorpus()
 corpse.append(corpus_path=mf_path, header_path=hdr_path)
 for da_score in corpse.d_score_list():
