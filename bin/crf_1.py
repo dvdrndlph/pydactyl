@@ -33,6 +33,7 @@ import scipy.stats
 from sklearn.metrics import make_scorer
 from sklearn_crfsuite import scorers
 import os
+import subprocess
 import sklearn_crfsuite as crf
 from sklearn_crfsuite import metrics
 import pickle
@@ -47,14 +48,20 @@ from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 from pydactyl.dcorpus.PigInOut import PigOut
 
 VERSION = '0000'
+PIG_BASE_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/'
+PIG_BIN_DIR = PIG_BASE_DIR + 'SourceCode/Binary/'
+SIMPLE_MATCH_RATE_CMD = PIG_BIN_DIR + 'Evaluate_SimpleMatchRate'
+PIG_ABCD_DIR = PIG_BASE_DIR + 'PianoFingeringDataset_v1.00/individual_abcd/'
+PIG_STD_DIR = PIG_BASE_DIR + 'PianoFingeringDataset_v1.00/std_pig/'
+PREDICTION_DIR = '/tmp/prediction/'
 PICKLE_BASE_DIR = '/tmp/pickle/'
 MAX_LEAP = 16
 MICROSECONDS_PER_BEAT = 500000
 MS_PER_BEAT = MICROSECONDS_PER_BEAT / 1000
 CHORD_MS_THRESHOLD = 30
-CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
+# CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CLEAN_LIST = {'crf': True}
-# CLEAN_LIST = {}
+CLEAN_LIST = {}
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
 TEST_METHOD = 'cross-validate'
@@ -99,7 +106,7 @@ def unpickle_it(obj_type, file_name):
     if path.is_file():
         if obj_type in CLEAN_LIST:
             os.remove(pickle_path)
-            print("Pickle file {} removed because {} ia on the CLEAN_LIST.".format(pickle_path, obj_type))
+            print("Pickle file {} removed because {} is on the CLEAN_LIST.".format(pickle_path, obj_type))
             return None
         pickle_fh = open(pickle_path, 'rb')
         unpickled_obj = pickle.load(pickle_fh)
@@ -193,7 +200,7 @@ def note2features(notes, stream, annotations, i, staff):
 
     features['staff'] = 0
     if staff == "upper":
-        features[staff] = 1
+        features['staff'] = 1
         # @100: [0.54495717 0.81059147 0.81998371 0.68739401 0.73993751]
         # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
 
@@ -266,25 +273,12 @@ def evaluate_trained_model(the_model, x_test, y_test):
         labels,
         key=lambda name: (name[1:], name[0])
     )
-    print(metrics.flat_classification_report(y_test, y_predicted, labels=sorted_labels, digits=3))
+    print(metrics.flat_classification_report(y_test, y_predicted, labels=sorted_labels, digits=4))
 
 
 def train_and_evaluate(the_model, x_train, y_train, x_test, y_test):
     the_model.fit(x_train, y_train)
-    labels = list(the_model.classes_)
-    print(labels)
-
-    y_predicted = my_crf.predict(x_test)
-    # print("Predicted: {}".format(y_predicted))
-
-    flat_f1 = metrics.flat_f1_score(y_test, y_predicted, average='weighted', labels=labels)
-    print("Flat F1: {}".format(flat_f1))
-
-    sorted_labels = sorted(
-        labels,
-        key=lambda name: (name[1:], name[0])
-    )
-    print(metrics.flat_classification_report(y_test, y_predicted, labels=sorted_labels, digits=3))
+    evaluate_trained_model(the_model=the_model, x_test=x_test, y_test=y_test)
 
 
 class DExperiment:
@@ -307,6 +301,38 @@ class DExperiment:
         self.total_nondefault_hand_segment_count = 0
         self.test_streams = {}
         self.test_indices = {}
+
+
+def get_simple_match_rate(ex: DExperiment):
+    total_simple_match_count = 0
+    total_note_count = 0
+    for test_key in ex.test_streams:
+        (corpus_name, score_title, annot_index) = test_key
+        upper_index, lower_index = ex.test_indices[test_key]
+        y_pred = my_crf.predict(ex.x_test)
+        pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
+        pred_annot = DAnnotation(abcdf=pred_abcdf)
+        pred_abcdh = ABCDHeader(annotations=[pred_annot])
+        # d_score = DScore(music21_stream=test_streams[test_key], abcd_header=pred_abcdh, title=score_title)
+        midi_file_path = PIG_ABCD_DIR + score_title + '.mid'
+        d_score = DScore(midi_file_path=midi_file_path, abcd_header=pred_abcdh, title=score_title)
+        pred_pout = PigOut(d_score=d_score)
+        pred_pig_path = PREDICTION_DIR + score_title + "_fingering.txt"
+        pred_pig_content = pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
+        # print(pred_pig_content)
+        test_pig_file_path = PIG_STD_DIR + score_title + '_fingering.txt'
+        cmd = "{} {} {}".format(SIMPLE_MATCH_RATE_CMD, test_pig_file_path, pred_pig_path)
+        result = subprocess.run([SIMPLE_MATCH_RATE_CMD, test_pig_file_path, pred_pig_path],
+                                capture_output=True, encoding='utf-8')
+        mat = re.match(r'MatchRate:\s*(\d+)/(\d+)', result.stdout)
+        if mat:
+            simple_match_count = int(mat.group(1))
+            note_count = int(mat.group(2))
+            total_simple_match_count += simple_match_count
+            total_note_count += note_count
+        # print(result.stdout)
+        simple_match_rate = total_simple_match_count / total_note_count
+    return total_simple_match_count, total_note_count, simple_match_rate
 
 
 #####################################################
@@ -427,30 +453,20 @@ elif TEST_METHOD == 'preset':
         evaluate_trained_model(the_model=my_crf, x_test=ex.x_test, y_test=ex.y_test)
     else:
         train_and_evaluate(the_model=my_crf, x_train=ex.x_train, y_train=ex.y_train, x_test=ex.x_test, y_test=ex.y_test)
-    # y_pred = my_crf.predict(x_test)
-    # for test_key in test_streams:
-    #     (corpus_name, score_title, annot_index) = test_key
-    #     upper_index, lower_index = test_indices[test_key]
-    #     pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
-    #     test_abcdf = "".join(y_test[upper_index]) + '@' + "".join(y_test[lower_index])
-    #     pred_annot = DAnnotation(abcdf=pred_abcdf, authority=VERSION)
-    #     test_annot = DAnnotation(abcdf=test_abcdf, authority=annot_index)
-    #     pred_abcdh = ABCDHeader(annotations=[pred_annot, test_annot])
-    #     d_score = DScore(music21_stream=test_streams[test_key], abcd_header=pred_abcdh, title=score_title)
-    #     pred_pout = PigOut(d_score=d_score, annot_index=0)
-    #     pred_pig_content = pred_pout.transform()
-    #     test_pout = PigOut(d_score=d_score, annot_index=1)
-    #     test_pig_content = test_pout.transform()
+    total_simple_match_count, total_note_count, simple_match_rate = get_simple_match_rate(ex=ex)
+    print("SimpleMatchRate: {}/{} = {}".format(total_simple_match_count, total_note_count, simple_match_rate))
 else:
     split_x_train, split_x_test, split_y_train, split_y_test = \
         train_test_split(ex.x, ex.y, test_size=0.4, random_state=0)
     train_and_evaluate(the_model=my_crf, x_train=split_x_train, y_train=split_y_train,
                        x_test=split_x_test, y_test=split_y_test)
 
-# pickle_it(obj=my_crf, obj_type='crf', file_name=pickle_file_name)
+if not have_trained_model:
+    pickle_it(obj=my_crf, obj_type='crf', file_name=crf_pickle_file_name)
 
 # unpickled_crf = unpickle_it(obj_type="crf", file_name=pickle_file_name)
 # y_predicted = unpickled_crf.predict(ex.x_test)
 # print("Unpickled CRF result: {}".format(y_predicted))
 # flat_f1 = metrics.flat_f1_score(ex.y_test, y_predicted, average='weighted')
 # print("Unpickled Flat F1: {}".format(flat_f1))
+print("Wait")

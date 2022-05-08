@@ -39,19 +39,10 @@ from .ABCDHeader import ABCDHeader
 class DCorpus:
     """A corpus for the rest of us."""
 
-    @staticmethod
-    def file_to_string(file_path):
-        string = ''
-        file = open(file_path, "r")
-        for line in file:
-            string += line
-        file.close()
-        return string
-
     # @staticmethod
     # def abc2xml(file_path=None, abc_content=None):
     #     if file_path:
-    #         abc_content = DCorpus.file_to_string(file_path)
+    #         abc_content = DScore.file_to_string(file_path)
     #     global abc_header, abc_voice, abc_scoredef, abc_percmap # keep computed grammars
     #     mxm = abc2xml.MusicXml()
     #     abc_header, abc_voice, abc_scoredef, abc_percmap = abc2xml.abc_grammar()   
@@ -62,7 +53,7 @@ class DCorpus:
     @staticmethod
     def abc2xml(file_path=None, abc_content=None):
         if file_path:
-            abc_content = DCorpus.file_to_string(file_path)
+            abc_content = DScore.file_to_string(file_path)
         xml_strings = abc2xml.getXmlScores(abc_string=abc_content)
         xml_str = xml_strings[0]
         return xml_str
@@ -70,14 +61,14 @@ class DCorpus:
     @staticmethod
     def abc2xmlScores(file_path=None, abc_content=None, skip=None, r=False, b=False, f=False):
         if file_path:
-            abc_content = DCorpus.file_to_string(file_path)
+            abc_content = DScore.file_to_string(file_path)
         xml_strings = abc2xml.getXmlScores(abc_string=abc_content, skip=skip, rOpt=r, bOpt=b, fOpt=f)
         return xml_strings
 
     @staticmethod
     def xml2abc(file_path=None, xml_content=None):
         if file_path:
-            xml_content = DCorpus.file_to_string(file_path)
+            xml_content = DScore.file_to_string(file_path)
         abc_str = xml2abc.getAbc(xml_string=xml_content)
         return abc_str
 
@@ -87,7 +78,7 @@ class DCorpus:
            staves. There should be one hash for each tune in the abc file.
         """
         if abc_file_path:
-            abc_content = DCorpus.file_to_string(abc_file_path)
+            abc_content = DScore.file_to_string(abc_file_path)
 
         map_for_tune = []
         reggie = r'^%%score\s*{\s*\(([\d\s]+)\)\s*\|\s*\(([\d\s]+)\)\s*}'
@@ -111,7 +102,7 @@ class DCorpus:
     @staticmethod
     def abcd_header(path=None, string=None):
         if path:
-            string = DCorpus.file_to_string(file_path=path)
+            string = DScore.file_to_string(file_path=path)
         if ABCDHeader.is_abcd(string):
             hdr = ABCDHeader(abcd_str=string)
             return hdr
@@ -126,7 +117,7 @@ class DCorpus:
     @staticmethod
     def abc_body_str(path=None, string=None):
         if path:
-            string = DCorpus.file_to_string(file_path=path)
+            string = DScore.file_to_string(file_path=path)
         body_str = ''
         past_hdr = False
         if not ABCDHeader.is_abcd(string):
@@ -149,7 +140,7 @@ class DCorpus:
             # print(file_type)
             if re.match(Constant.MIDI_FILE_RE, file_type):
                 return Constant.CORPUS_MIDI
-            corpus_str = DCorpus.file_to_string(file_path=corpus_path)
+            corpus_str = DScore.file_to_string(file_path=corpus_path)
         if ABCDHeader.is_abcd(corpus_str):
             return Constant.CORPUS_ABCD
         if corpus_str[0] == '<':
@@ -185,10 +176,10 @@ class DCorpus:
         if corpus_path:
             corpus_type = DCorpus.corpus_type(corpus_path=corpus_path)
             if corpus_type in [Constant.CORPUS_ABC, Constant.CORPUS_ABCD]:
-                corpus_str = DCorpus.file_to_string(corpus_path)
+                corpus_str = DScore.file_to_string(corpus_path)
 
         if header_path:
-            header_str = DCorpus.file_to_string(header_path)
+            header_str = DScore.file_to_string(header_path)
 
         abcd_header = None
         abc_body = ''

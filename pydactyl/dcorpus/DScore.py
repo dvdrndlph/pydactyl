@@ -22,18 +22,17 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 import re
-import os
 import numpy as np
 from music21 import abcFormat, stream, midi
 from pydactyl.dactyler import Constant
 from nltk.metrics.distance import binary_distance
 from .DNote import DNote
 from .DPart import DPart
+from .ABCDHeader import ABCDHeader
 from .PianoFingering import PianoFingering
 from sklearn.metrics import cohen_kappa_score
 from krippendorff import alpha
 from nltk.metrics.agreement import AnnotationTask
-# from .ManualDSegmenter import ManualDSegmenter
 
 # The locations of the various data in a bigram string
 FROM_HAND_INDEX = 0
@@ -47,6 +46,15 @@ class DScore:
     _bigram_t = 1
     _bigram_p = 1
     _bigram_big_n_bar = 16
+
+    @staticmethod
+    def file_to_string(file_path):
+        string = ''
+        file = open(file_path, "r")
+        for line in file:
+            string += line
+        file.close()
+        return string
 
     @staticmethod
     def _voice_id(abc_voice):
@@ -81,11 +89,19 @@ class DScore:
         self.finger(staff=staff, d_annotation=d_annotation, id=id)
 
     def __init__(self, music21_stream=None, segmenter=None, abc_handle=None,
+                 midi_file_path=None, abcd_header_path=None,
                  voice_map=None, abcd_header=None, abc_body='', title=None):
         self._lower_d_part = None
         self._upper_d_part = None
         self._abc_body = abc_body
         self._title = title
+
+        if midi_file_path is not None:
+            music21_stream = DScore.score_via_midi(corpus_path=midi_file_path)
+
+        if abcd_header_path is not None:
+            abcd_str = DScore.file_to_string(file_path=abcd_header_path)
+            abcd_header = ABCDHeader(abcd_str=abcd_str)
 
         if music21_stream:
             self._combined_d_part = DPart(music21_stream=music21_stream, staff="both")
