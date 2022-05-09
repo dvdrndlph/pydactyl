@@ -51,6 +51,7 @@ VERSION = '0000'
 PIG_BASE_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/'
 PIG_BIN_DIR = PIG_BASE_DIR + 'SourceCode/Binary/'
 SIMPLE_MATCH_RATE_CMD = PIG_BIN_DIR + 'Evaluate_SimpleMatchRate'
+COMPLEX_MATCH_RATES_CMD = PIG_BIN_DIR + 'Evaluate_MultipleGroundTruth'
 PIG_ABCD_DIR = PIG_BASE_DIR + 'PianoFingeringDataset_v1.00/individual_abcd/'
 PIG_STD_DIR = PIG_BASE_DIR + 'PianoFingeringDataset_v1.00/std_pig/'
 PREDICTION_DIR = '/tmp/prediction/'
@@ -60,6 +61,7 @@ MICROSECONDS_PER_BEAT = 500000
 MS_PER_BEAT = MICROSECONDS_PER_BEAT / 1000
 CHORD_MS_THRESHOLD = 30
 # CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
+# CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CLEAN_LIST = {'crf': True}
 CLEAN_LIST = {}
 # CROSS_VALIDATE = False
@@ -299,14 +301,16 @@ class DExperiment:
         self.included_note_count = 0
         self.total_nondefault_hand_finger_count = 0
         self.total_nondefault_hand_segment_count = 0
-        self.test_streams = {}
         self.test_indices = {}
+        self.ordered_test_d_score_titles = []
+        self.test_d_scores = {}  # Indexed by score title.
 
 
-def get_simple_match_rate(ex: DExperiment):
+def get_simple_match_rate(ex: DExperiment, output=False):
     total_simple_match_count = 0
     total_note_count = 0
-    for test_key in ex.test_streams:
+    simple_match_rate = 0
+    for test_key in ex.test_indices:
         (corpus_name, score_title, annot_index) = test_key
         upper_index, lower_index = ex.test_indices[test_key]
         y_pred = my_crf.predict(ex.x_test)
@@ -314,14 +318,15 @@ def get_simple_match_rate(ex: DExperiment):
         pred_annot = DAnnotation(abcdf=pred_abcdf)
         pred_abcdh = ABCDHeader(annotations=[pred_annot])
         # d_score = DScore(music21_stream=test_streams[test_key], abcd_header=pred_abcdh, title=score_title)
-        midi_file_path = PIG_ABCD_DIR + score_title + '.mid'
-        d_score = DScore(midi_file_path=midi_file_path, abcd_header=pred_abcdh, title=score_title)
+        # midi_file_path = PIG_ABCD_DIR + score_title + '.mid'
+        # d_score = DScore(midi_file_path=midi_file_path, abcd_header=pred_abcdh, title=score_title)
+        d_score = ex.test_d_scores[score_title]
+        d_score.abcd_header(abcd_header=pred_abcdh)
         pred_pout = PigOut(d_score=d_score)
         pred_pig_path = PREDICTION_DIR + score_title + "_fingering.txt"
         pred_pig_content = pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
         # print(pred_pig_content)
         test_pig_file_path = PIG_STD_DIR + score_title + '_fingering.txt'
-        cmd = "{} {} {}".format(SIMPLE_MATCH_RATE_CMD, test_pig_file_path, pred_pig_path)
         result = subprocess.run([SIMPLE_MATCH_RATE_CMD, test_pig_file_path, pred_pig_path],
                                 capture_output=True, encoding='utf-8')
         mat = re.match(r'MatchRate:\s*(\d+)/(\d+)', result.stdout)
@@ -332,7 +337,87 @@ def get_simple_match_rate(ex: DExperiment):
             total_note_count += note_count
         # print(result.stdout)
         simple_match_rate = total_simple_match_count / total_note_count
+    if output:
+        print("SimpleMatchRate: {}/{} = {}".format(total_simple_match_count, total_note_count, simple_match_rate))
     return total_simple_match_count, total_note_count, simple_match_rate
+
+
+def single_prediction_complex_match_rates(gt_pig_paths, pred_pig_path):
+    cmd_tokens = list()
+    cmd_tokens.append(COMPLEX_MATCH_RATES_CMD)
+    cmd_tokens.append(str(len(gt_pig_paths)))
+    for gt_pig_path in gt_pig_paths:
+        cmd_tokens.append(gt_pig_path)
+    cmd_tokens.append(pred_pig_path)
+    result = subprocess.run(cmd_tokens, capture_output=True, encoding='utf-8')
+    mat = re.match(r'General,Highest,Soft,Recomb:\s*([\.\d]+)\s+([\.\d]+)\s+([\.\d]+)\s+([\.\d]+)', result.stdout)
+    result = {}
+    if mat:
+        result['general'] = float(mat.group(1))
+        result['highest'] = float(mat.group(2))
+        result['soft'] = float(mat.group(3))
+        result['recomb'] = float(mat.group(4))
+    else:
+        raise Exception("No matchy.")
+    # print(result.stdout)
+    return result
+
+
+def get_complex_match_rates(ex: DExperiment, normalize=False, output=False):
+    pred_d_score = None
+    last_base_title = ''
+    total_note_count = 0
+    d_score_count = 0
+    pred_pig_path = ''
+    test_pig_paths = list()
+    total_result = {}
+    for test_key in ex.test_indices:
+        # FIXME: We need to restore the channels to the original. We are only supposed to
+        # run our model against the 150 individual scores in the PIG corpus, not every
+        # slightly different score. The channels should be uniform across all files.
+        # We changed all channel assignments that were inconsistent with the assigned hand.
+        # This seems wrong.
+        (corpus_name, score_title, annot_index) = test_key
+        base_title, annot_id = str(score_title).split('-')
+        if base_title != last_base_title:
+            if pred_pig_path:
+                result = single_prediction_complex_match_rates(gt_pig_paths=test_pig_paths, pred_pig_path=pred_pig_path)
+                note_count = pred_d_score.note_count()
+                total_note_count += note_count
+                for key in result:
+                    if normalize:
+                        result[key] *= note_count
+                    if key not in total_result:
+                        total_result[key] = 0
+                    total_result[key] += result[key]
+            test_pig_paths = list()
+            upper_index, lower_index = ex.test_indices[test_key]
+            y_pred = my_crf.predict(ex.x_test)
+            pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
+            pred_annot = DAnnotation(abcdf=pred_abcdf)
+            pred_abcdh = ABCDHeader(annotations=[pred_annot])
+            pred_d_score = ex.test_d_scores[score_title]
+            d_score_count += 1
+            pred_d_score.abcd_header(abcd_header=pred_abcdh)
+            pred_pout = PigOut(d_score=pred_d_score)
+            pred_pig_path = PREDICTION_DIR + score_title + "_fingering.txt"
+            pred_pig_content = pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
+            last_base_title = base_title
+        test_pig_path = PIG_STD_DIR + score_title + '_fingering.txt'
+        test_pig_paths.append(test_pig_path)
+
+    result = single_prediction_complex_match_rates(gt_pig_paths=test_pig_paths, pred_pig_path=pred_pig_path)
+    note_count = pred_d_score.note_count()
+    total_note_count += note_count
+    for key in result:
+        if normalize:
+            result[key] *= note_count
+        total_result[key] += result[key]
+        if normalize:
+            total_result[key] /= total_note_count
+        else:
+            total_result[key] /= d_score_count
+    return total_result
 
 
 #####################################################
@@ -355,6 +440,7 @@ if ex is None:
             da_corpus = creal.get_corpus(corpus_name=corpus_name)
             pickle_it(obj=da_corpus, obj_type="DCorpus", file_name=corpus_name)
         for da_score in da_corpus.d_score_list():
+            da_unannotated_score = copy.deepcopy(da_score)
             score_title = da_score.title()
             # if score_title != 'Sonatina 4.1':
             # continue
@@ -404,13 +490,14 @@ if ex is None:
                         if has_preset_evaluation_defined(corpus_name=corpus_name):
                             if is_in_test_set(title=score_title, corpus_name=corpus_name):
                                 test_key = (corpus_name, score_title, annot_index)
-                                if test_key not in ex.test_streams:
-                                    ex.test_streams[test_key] = []
+                                if test_key not in ex.test_indices:
                                     ex.test_indices[test_key] = []
-                                ex.test_streams[test_key].append(ordered_stream)
                                 ex.test_indices[test_key].append(len(ex.y_test))
                                 ex.x_test.append(phrase2features(ordered_notes, ordered_stream, hsd_seg, staff))
                                 ex.y_test.append(phrase2labels(hsd_seg))
+                                if staff == "upper" and annot_index == 0:
+                                    ex.ordered_test_d_score_titles.append(da_score)
+                                    ex.test_d_scores[score_title] = da_unannotated_score
                             else:
                                 ex.x_train.append(phrase2features(ordered_notes, ordered_stream, hsd_seg, staff))
                                 ex.y_train.append(phrase2labels(hsd_seg))
@@ -453,8 +540,9 @@ elif TEST_METHOD == 'preset':
         evaluate_trained_model(the_model=my_crf, x_test=ex.x_test, y_test=ex.y_test)
     else:
         train_and_evaluate(the_model=my_crf, x_train=ex.x_train, y_train=ex.y_train, x_test=ex.x_test, y_test=ex.y_test)
-    total_simple_match_count, total_note_count, simple_match_rate = get_simple_match_rate(ex=ex)
-    print("SimpleMatchRate: {}/{} = {}".format(total_simple_match_count, total_note_count, simple_match_rate))
+    # total_simple_match_count, total_note_count, simple_match_rate = get_simple_match_rate(ex=ex, output=True)
+    result = get_complex_match_rates(ex=ex, normalize=False, output=True)
+    print(result)
 else:
     split_x_train, split_x_test, split_y_train, split_y_test = \
         train_test_split(ex.x, ex.y, test_size=0.4, random_state=0)
