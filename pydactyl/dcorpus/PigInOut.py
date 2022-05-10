@@ -22,16 +22,35 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 import os
+import subprocess
 import re
 import copy
 import mido
 from music21 import pitch, note
+from pathlib import Path
 from .DAnnotation import DAnnotation
 from .ABCDHeader import ABCDHeader
 from .DScore import DScore
 
 MICROSECONDS_PER_BEAT = 500000  # at 120 bpm
 MS_PER_BEAT = MICROSECONDS_PER_BEAT / 1000
+REPO_DIR = '/Users/dave/tb2/'
+PIG_BASE_DIR = REPO_DIR + 'didactyl/dd/corpora/pig/'
+PIG_DATASET_DIR = PIG_BASE_DIR + 'PianoFingeringDataset_v1.00/'
+PIG_BIN_DIR = PIG_BASE_DIR + 'SourceCode/Binary/'
+SIMPLE_MATCH_RATE_CMD = PIG_BIN_DIR + 'Evaluate_SimpleMatchRate'
+COMPLEX_MATCH_RATES_CMD = PIG_BIN_DIR + 'Evaluate_MultipleGroundTruth'
+PIG_FINGERING_DIR = PIG_DATASET_DIR + 'FingeringFiles/'
+PIG_ABCD_DIR = PIG_DATASET_DIR + 'individual_abcd/'
+PIG_MERGED_ABCD_DIR = PIG_DATASET_DIR + 'abcd/'
+PIG_STD_DIR = PIG_DATASET_DIR + 'std_pig/'
+PIG_SCRIPT_DIR = PIG_BASE_DIR + 'SourceCode/'
+PIG_PREDICTION_DIR = '/tmp/pig_test/'
+HMM1_CMD = PIG_SCRIPT_DIR + 'run_FHMM1.sh'
+HMM2_CMD = PIG_SCRIPT_DIR + 'run_FHMM2.sh'
+HMM3_CMD = PIG_SCRIPT_DIR + 'run_FHMM3.sh'
+CHMM_CMD = PIG_SCRIPT_DIR + 'run_CHMM.sh'
+PIG_FILE_SUFFIX = '_fingering.txt'
 
 
 class PigNote:
@@ -514,6 +533,128 @@ class PigOut:
     """
     def __init__(self, d_score: DScore):
         self._d_score = d_score
+
+    @staticmethod
+    def simple_match_rate(gt_pig_path, pred_pig_path):
+        result = subprocess.run([SIMPLE_MATCH_RATE_CMD, gt_pig_path, pred_pig_path],
+                                capture_output=True, encoding='utf-8')
+        mat = re.match(r'MatchRate:\s*(\d+)/(\d+)', result.stdout)
+        match_rate = {}
+        if mat:
+            match_rate['match_count'] = int(mat.group(1))
+            match_rate['note_count'] = int(mat.group(2))
+            match_rate['rate'] = 1.0*match_rate['match_count'] / match_rate['note_count']
+        # print(result.stdout)
+        return match_rate
+
+    @staticmethod
+    def single_prediction_complex_match_rates(gt_pig_paths, pred_pig_path):
+        cmd_tokens = list()
+        cmd_tokens.append(COMPLEX_MATCH_RATES_CMD)
+        cmd_tokens.append(str(len(gt_pig_paths)))
+        for gt_pig_path in gt_pig_paths:
+            cmd_tokens.append(gt_pig_path)
+        cmd_tokens.append(pred_pig_path)
+        result = subprocess.run(cmd_tokens, capture_output=True, encoding='utf-8')
+        mat = re.match(r'General,Highest,Soft,Recomb:\s*([\.\d]+)\s+([\.\d]+)\s+([\.\d]+)\s+([\.\d]+)', result.stdout)
+        result = {}
+        if mat:
+            result['general'] = float(mat.group(1))
+            result['highest'] = float(mat.group(2))
+            result['soft'] = float(mat.group(3))
+            result['recomb'] = float(mat.group(4))
+        else:
+            raise Exception("No matchy.")
+        # print(result.stdout)
+        return result
+
+    @staticmethod
+    def run_hmm(in_fin, out_fin, model='fhmm3'):
+        model = model.lower()
+        cmd = HMM3_CMD
+        if model == 'fhmm2':
+            cmd = HMM2_CMD
+        elif model == 'fhmm1':
+            cmd = HMM1_CMD
+        elif model == 'chmm':
+            cmd = CHMM_CMD
+
+        out_path = Path(out_fin)
+        if out_path.is_file():
+            os.remove(out_fin)
+
+        result = subprocess.run([cmd, in_fin, out_fin], capture_output=True, encoding='utf-8')
+        if result.returncode != 0:
+            raise Exception("{} returned non-zero exit code: {}.".format(cmd, result.stderr))
+        if not out_path.is_file():
+            raise Exception("{} created no output file.".format(cmd))
+        stats = os.stat(out_fin)
+        if stats.st_size < 100:
+            raise Exception("{} generated too little data in {} file.".format(cmd, out_fin))
+
+    @staticmethod
+    def nakamura_published(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_PREDICTION_DIR,
+                           model='fhmm3', normalize=True):
+        prediction_path = Path(prediction_dir)
+        if not prediction_path.is_dir():
+            os.makedirs(prediction_dir)
+
+        file_re = r"^((\d+)-(\d+))_fingering.txt$"
+        current_piece_id = None
+        gt_files = dict()
+        prediction_files = dict()
+        note_counts = dict()
+        total_note_count = 0
+        for root, dirs, files in os.walk(fingering_files_dir):
+            for file in sorted(files):
+                if file.endswith(".txt"):
+                    mat = re.match(file_re, file)
+                    if mat:
+                        piece_id = mat.group(2)
+                        input_path = os.path.join(root, file)
+                        # annot_id = mat.group(3)
+                        # name = mat.group(1)
+                        piece_number = int(piece_id)
+                        if piece_number > 30:
+                            break
+                        if piece_id != current_piece_id:
+                            if normalize:
+                                with open(input_path, 'r') as fp:
+                                    note_count = len(fp.readlines()) - 1  # Ignore comment on first line.
+                                    note_counts[piece_id] = note_count
+                                    total_note_count += note_count
+                            output_path = prediction_dir + file
+                            PigOut.run_hmm(model=model, in_fin=input_path, out_fin=output_path)
+                            prediction_files[piece_id] = output_path
+                            current_piece_id = piece_id
+                        if piece_id not in gt_files:
+                            gt_files[piece_id] = list()
+                        gt_files[piece_id].append(input_path)
+
+        totals = dict()
+        for key_piece_id in gt_files:
+            result = PigOut.single_prediction_complex_match_rates(gt_pig_paths=gt_files[key_piece_id],
+                                                                  pred_pig_path=prediction_files[key_piece_id])
+            for metric in result:
+                if metric not in totals:
+                    totals[metric] = 0
+                if normalize:
+                    totals[metric] += result[metric] * note_counts[key_piece_id] / total_note_count
+                else:
+                    totals[metric] += result[metric]/30
+        # print(totals)
+        return totals
+
+
+    def get_pig_corpus_path(piece_id):
+        file_name = piece_id + PIG_FILE_SUFFIX
+        path = PIG_FINGERING_DIR + file_name
+        return path
+
+    def get_std_pig_corpus_path(piece_id):
+        file_name = piece_id + PIG_FILE_SUFFIX
+        path = PIG_STD_DIR + file_name
+        return path
 
     def transform(self, annotation_index=0, annotation_id=None, to_file=None):
         if annotation_id is not None:

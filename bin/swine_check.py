@@ -36,10 +36,15 @@ from mido import MidiFile
 ID = '002-1'
 PIG_BASE_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/'
 PIG_BIN_DIR = PIG_BASE_DIR + 'SourceCode/Binary/'
+PIG_SCRIPT_DIR = PIG_BASE_DIR + 'SourceCode/'
+HMM1_CMD = PIG_SCRIPT_DIR + 'run_FHMM1.sh'
+HMM2_CMD = PIG_SCRIPT_DIR + 'run_FHMM2.sh'
+HMM3_CMD = PIG_SCRIPT_DIR + 'run_FHMM3.sh'
 SIMPLE_MATCH_RATE_CMD = PIG_BIN_DIR + 'Evaluate_SimpleMatchRate'
 PIG_ABCD_DIR = PIG_BASE_DIR + 'PianoFingeringDataset_v1.00/individual_abcd/'
 PIG_STD_DIR = PIG_BASE_DIR + 'PianoFingeringDataset_v1.00/std_pig/'
 PREDICTION_DIR = '/tmp/prediction/'
+NAKAMURA_PREDICTION_DIR = '/tmp/nakamura'
 
 mf_path = PIG_ABCD_DIR + ID + '.mid'
 hdr_path = PIG_ABCD_DIR + ID + '.abcd'
@@ -74,4 +79,16 @@ print('returned value:', returned_value)
 #     piggo = PigOut(d_score=da_score)
 #     to_file = "/tmp/" + ID + "_fingering.txt"
 #     pork = piggo.transform(annotation_index=0, to_file=to_file)
+
+# Reproduce the Nakamura results with the code they have provided.
+# We use the pretrained model.
+model_names = ['fhmm1', 'fhmm2', 'fhmm3', 'chmm']
+for model in model_names:
+    results = PigOut.nakamura_published(model=model, normalize=False)
+    print("Nakamura {:>5} model (non-normalized): {}".format(model, results))
+print("")
+for model in model_names:
+    normalized_results = PigOut.nakamura_published(model=model, normalize=True)
+    print("Nakamura {:>5} model (normalized)    : {}".format(model, normalized_results))
+
 print("Done")
