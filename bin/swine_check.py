@@ -83,7 +83,7 @@ print('returned value:', returned_value)
 # Reproduce the Nakamura results with the code they have provided.
 # We use the pretrained model.
 print("")
-model_names = ['fhmm1', 'fhmm2', 'fhmm3', 'chmm']
+model_names = ['fhmm1', 'fhmm2', 'fhmm3', 'chmm', 'human']
 PigOut.output_nakamura_metrics_heading()
 for model in model_names:
     results = PigOut.nakamura_published(model=model, normalize=False)

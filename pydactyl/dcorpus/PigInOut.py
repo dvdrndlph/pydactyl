@@ -645,6 +645,9 @@ class PigOut:
     @staticmethod
     def nakamura_published(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_PREDICTION_DIR,
                            model='fhmm3', normalize=True, output="text"):
+        if model == 'human':
+            return PigOut.nakamura_human(fingering_files_dir=fingering_files_dir, output=output, normalize=normalize)
+
         prediction_path = Path(prediction_dir)
         if not prediction_path.is_dir():
             os.makedirs(prediction_dir)
@@ -701,16 +704,69 @@ class PigOut:
 
         return totals
 
-    def nakamura_human(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_PREDICTION_DIR, normalize=True):
-        pass
+    @staticmethod
+    def nakamura_human(fingering_files_dir=PIG_FINGERING_DIR, output="text", normalize=True):
+        file_re = r"^((\d+)-(\d+))_fingering.txt$"
+        current_piece_id = None
+        piece_files = dict()
+        note_counts = dict()
+        total_note_count = 0
+        for root, dirs, files in os.walk(fingering_files_dir):
+            for file in sorted(files):
+                if file.endswith(".txt"):
+                    mat = re.match(file_re, file)
+                    if mat:
+                        piece_id = mat.group(2)
+                        input_path = os.path.join(root, file)
+                        # annot_id = mat.group(3)
+                        # name = mat.group(1)
+                        piece_number = int(piece_id)
+                        if piece_number > 30:
+                            break
+                        if piece_id != current_piece_id:
+                            if normalize:
+                                with open(input_path, 'r') as fp:
+                                    note_count = len(fp.readlines()) - 1  # Ignore comment on first line.
+                                    note_counts[piece_id] = note_count
+                                    total_note_count += note_count
+                            current_piece_id = piece_id
+                        if piece_id not in piece_files:
+                            piece_files[piece_id] = list()
+                        piece_files[piece_id].append(input_path)
 
+        totals = dict()
+        for piece_id in piece_files:
+            for prediction_file in piece_files[piece_id]:
+                piece_file_count = len(piece_files[piece_id])
+                gt_files = list()
+                for gt_file in piece_files[piece_id]:
+                    if gt_file != prediction_file:
+                        gt_files.append(gt_file)
 
+                result = PigOut.single_prediction_complex_match_rates(gt_pig_paths=gt_files,
+                                                                      pred_pig_path=prediction_file)
+                for metric in result:
+                    if metric not in totals:
+                        totals[metric] = 0
+                    if normalize:
+                        totals[metric] += (result[metric]*note_counts[piece_id])/(total_note_count*piece_file_count)
+                    else:
+                        totals[metric] += result[metric]/(30*piece_file_count)
+        if output:
+            corpus_name = 'pig_std'
+            if fingering_files_dir == PIG_FINGERING_DIR:
+                corpus_name = 'pig'
+            PigOut.output_nakamura_metrics(results=totals, corpus_name=corpus_name, model="human",
+                                           normalize=normalize, output_type=output)
+        return totals
 
+    @staticmethod
     def get_pig_corpus_path(piece_id):
         file_name = piece_id + PIG_FILE_SUFFIX
         path = PIG_FINGERING_DIR + file_name
         return path
 
+    @staticmethod
     def get_std_pig_corpus_path(piece_id):
         file_name = piece_id + PIG_FILE_SUFFIX
         path = PIG_STD_DIR + file_name
