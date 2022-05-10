@@ -52,6 +52,14 @@ HMM3_CMD = PIG_SCRIPT_DIR + 'run_FHMM3.sh'
 CHMM_CMD = PIG_SCRIPT_DIR + 'run_CHMM.sh'
 PIG_FILE_SUFFIX = '_fingering.txt'
 
+NAKAMURA_METRICS = ('general', 'highest', 'soft', 'recomb')
+NAKAMURA_METRIC_SUBSCRIPTS = {
+    'general': 'gen',
+    'highest': 'high',
+    'soft': 'soft',
+    'recomb': 'rec'
+}
+
 
 class PigNote:
     PITCH_RE = r"^([A-G])([#b]*)(\d+)$"
@@ -593,8 +601,50 @@ class PigOut:
             raise Exception("{} generated too little data in {} file.".format(cmd, out_fin))
 
     @staticmethod
+    def get_max_model_str_len():
+        model_str = 'std_pig FHMM3 (un-normalized)'
+        max_model_str_len = len(model_str)
+        return max_model_str_len
+
+    @staticmethod
+    def output_nakamura_metrics_heading(output_type="text", decimals=4):
+        if output_type == 'text':
+            max_model_str_len = PigOut.get_max_model_str_len()
+            output_str = "{:>" + str(max_model_str_len) + '}'
+            output_str = output_str.format("Method") + "\t"
+            width = decimals + 2
+            format_str = '{:>' + str(width) + '}'
+
+            for metric in NAKAMURA_METRICS:
+                output_str += format_str.format(NAKAMURA_METRIC_SUBSCRIPTS[metric]) + "\t"
+            print(output_str)
+
+    @staticmethod
+    def output_nakamura_metrics(results, corpus_name, model, normalize, output_type="text", decimals=4):
+        output_str = ''
+        metrics = NAKAMURA_METRICS
+        rounded_results = dict()
+        for metric in metrics:
+            rounded_results[metric] = round(results[metric], ndigits=decimals)
+        if output_type == 'text':
+            normal_str = '(un-normalized)'
+            if normalize:
+                normal_str = '(normalized)'
+            max_model_str_len = PigOut.get_max_model_str_len()
+            name_str = "{} {} {}".format(corpus_name, model, normal_str)
+
+            output_str = "{:>" + str(max_model_str_len) + '}'
+            output_str = output_str.format(name_str) + "\t"
+            template_str = ''
+            for metric in metrics:
+                format_str = '{' + metric + ':.' + str(decimals) + 'f}'
+                template_str += format_str + "\t"
+            output_str += template_str.format(**rounded_results)
+        print(output_str)
+
+    @staticmethod
     def nakamura_published(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_PREDICTION_DIR,
-                           model='fhmm3', normalize=True):
+                           model='fhmm3', normalize=True, output="text"):
         prediction_path = Path(prediction_dir)
         if not prediction_path.is_dir():
             os.makedirs(prediction_dir)
@@ -642,8 +692,18 @@ class PigOut:
                     totals[metric] += result[metric] * note_counts[key_piece_id] / total_note_count
                 else:
                     totals[metric] += result[metric]/30
-        # print(totals)
+        if output:
+            corpus_name = 'pig_std'
+            if fingering_files_dir == PIG_FINGERING_DIR:
+                corpus_name = 'pig'
+            PigOut.output_nakamura_metrics(results=totals, corpus_name=corpus_name, model=model,
+                                           normalize=normalize, output_type=output)
+
         return totals
+
+    def nakamura_human(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_PREDICTION_DIR, normalize=True):
+        pass
+
 
 
     def get_pig_corpus_path(piece_id):

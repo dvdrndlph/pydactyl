@@ -30,7 +30,7 @@ from pathlib import Path
 from music21 import abcFormat, converter, stream
 # from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
 from pydactyl.dcorpus.DScore import DScore
-from pydactyl.dcorpus.PigInOut import PigOut
+from pydactyl.dcorpus.PigInOut import PigOut, PIG_STD_DIR
 from mido import MidiFile
 
 ID = '002-1'
@@ -82,13 +82,19 @@ print('returned value:', returned_value)
 
 # Reproduce the Nakamura results with the code they have provided.
 # We use the pretrained model.
+print("")
 model_names = ['fhmm1', 'fhmm2', 'fhmm3', 'chmm']
+PigOut.output_nakamura_metrics_heading()
 for model in model_names:
     results = PigOut.nakamura_published(model=model, normalize=False)
-    print("Nakamura {:>5} model (non-normalized): {}".format(model, results))
+    # print("Nakamura {:>5} model (non-normalized): {}".format(model, results))
+    std_results = PigOut.nakamura_published(fingering_files_dir=PIG_STD_DIR, model=model, normalize=False)
+    # print("std_pig  {:>5} model (non-normalized): {}".format(model, std_results))
 print("")
 for model in model_names:
     normalized_results = PigOut.nakamura_published(model=model, normalize=True)
-    print("Nakamura {:>5} model (normalized)    : {}".format(model, normalized_results))
+    # print("Nakamura {:>5} model (normalized)    : {}".format(model, normalized_results))
+    normalized_std_results = PigOut.nakamura_published(fingering_files_dir=PIG_STD_DIR, model=model, normalize=True)
+    # print("std_pig  {:>5} model (normalized): {}".format(model, normalized_std_results))
 
 print("Done")
