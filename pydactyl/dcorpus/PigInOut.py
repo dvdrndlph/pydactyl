@@ -26,6 +26,7 @@ import subprocess
 import re
 import copy
 import mido
+from sklearn_crfsuite import metrics
 from music21 import pitch, note
 from pathlib import Path
 from .DAnnotation import DAnnotation
@@ -46,12 +47,19 @@ PIG_MERGED_ABCD_DIR = PIG_DATASET_DIR + 'abcd/'
 PIG_STD_DIR = PIG_DATASET_DIR + 'std_pig/'
 PIG_SCRIPT_DIR = PIG_BASE_DIR + 'SourceCode/'
 PIG_PREDICTION_DIR = '/tmp/pig_test/'
-HMM1_CMD = PIG_SCRIPT_DIR + 'run_FHMM1.sh'
-HMM2_CMD = PIG_SCRIPT_DIR + 'run_FHMM2.sh'
-HMM3_CMD = PIG_SCRIPT_DIR + 'run_FHMM3.sh'
-CHMM_CMD = PIG_SCRIPT_DIR + 'run_CHMM.sh'
 PIG_FILE_SUFFIX = '_fingering.txt'
+PIG_FILE_RE = r"^((\d+)-(\d+))_fingering.txt$"
+PIG_FILE_NAME_LOC = 1
+PIG_FILE_PIECE_LOC = 2
+PIG_FILE_ANNOT_LOC = 3
+PIG_STRIKE_LABELS = ['-1', '1', '-2', '2', '-3', '3', '-4', '4', '-5', '5']
 
+NAKAMURA_MODEL_CMDS = {
+    'fhmm1': PIG_SCRIPT_DIR + 'run_FHMM1.sh',
+    'fhmm2': PIG_SCRIPT_DIR + 'run_FHMM2.sh',
+    'fhmm3': PIG_SCRIPT_DIR + 'run_FHMM3.sh',
+    'chmm':  PIG_SCRIPT_DIR + 'run_CHMM.sh'
+}
 NAKAMURA_METRICS = ('general', 'highest', 'soft', 'recomb')
 NAKAMURA_METRIC_SUBSCRIPTS = {
     'general': 'gen',
@@ -59,7 +67,6 @@ NAKAMURA_METRIC_SUBSCRIPTS = {
     'soft': 'soft',
     'recomb': 'rec'
 }
-
 
 class PigNote:
     PITCH_RE = r"^([A-G])([#b]*)(\d+)$"
@@ -291,7 +298,6 @@ class PigIn:
         if not self._standardize:
             return self.transform_individual()
 
-        file_re = r"^(\d+)-(\d+)_fingering.txt$"
         empty_pig_tracks = [
             {'notes_on': {}, 'notes_off': {}},
             {'notes_on': {}, 'notes_off': {}}
@@ -302,16 +308,16 @@ class PigIn:
         pig_tracks_for_piece = {}
         for root, dirs, files in os.walk(self._input_dir):
             for file in sorted(files):
-                if file.endswith(".txt"):
-                    mat = re.match(file_re, file)
+                if file.endswith(PIG_FILE_SUFFIX):
+                    mat = re.match(PIG_FILE_RE, file)
                     if mat:
-                        piece_id = mat.group(1)
+                        piece_id = mat.group(PIG_FILE_PIECE_LOC)
                         if self._standardize and piece_id not in channel_for_time_with_note:
                             channel_for_time_with_note[piece_id] = {}
                             are_defining_channel = True
                         if piece_id not in pig_tracks_for_piece:
                             pig_tracks_for_piece[piece_id] = {}
-                        authority_id = mat.group(2)
+                        authority_id = mat.group(PIG_FILE_ANNOT_LOC)
                         file_path = os.path.join(root, file)
                         f = open(file_path, "r")
                         mf = mido.MidiFile(type=1, ticks_per_beat=PigNote.TICKS_PER_BEAT)
@@ -406,24 +412,23 @@ class PigIn:
             abcd_fh.close()
 
     def transform_individual(self):
-        file_re = r"^(\d+)-(\d+)_fingering.txt$"
         empty_pig_tracks = [
             {'notes_on': {}, 'notes_off': {}},
             {'notes_on': {}, 'notes_off': {}}
         ]
         annotations = {}
-        pig_tracks_for_piece = {}
+        pig_tracks_for_file = {}
         for root, dirs, files in os.walk(self._input_dir):
             for file in sorted(files):
-                if file.endswith(".txt"):
-                    mat = re.match(file_re, file)
+                if file.endswith(PIG_FILE_SUFFIX):
+                    mat = re.match(PIG_FILE_RE, file)
                     if mat:
-                        authority_id = mat.group(2)
-                        piece_id = mat.group(1) + '-' + authority_id
+                        authority_id = mat.group(PIG_FILE_ANNOT_LOC)
+                        file_id = mat.group(PIG_FILE_NAME_LOC)
                         # if piece_id != '113_1':
                             # continue
-                        if piece_id not in pig_tracks_for_piece:
-                            pig_tracks_for_piece[piece_id] = {}
+                        if file_id not in pig_tracks_for_file:
+                            pig_tracks_for_file[file_id] = {}
                         file_path = os.path.join(root, file)
                         mf = mido.MidiFile(type=1, ticks_per_beat=PigNote.TICKS_PER_BEAT)
                         upper = mido.MidiTrack()
@@ -485,27 +490,27 @@ class PigIn:
                         lower_note_on_count = len(mf.tracks[1])
                         print("Upper msg count: {} Lower msg_cnt: {}".format(upper_note_on_count, lower_note_on_count))
                         # Print the MIDI for the file just processed.
-                        midi_file = piece_id + '.mid'
+                        midi_file = file_id + '.mid'
                         midi_path = self._midi_dir + midi_file
                         mf.save(midi_path)
-                        annotations[piece_id] = []
-                        annotations[piece_id].append(annot)
+                        annotations[file_id] = []
+                        annotations[file_id].append(annot)
                         # Remember we have processed this version of the piece.
-                        pig_tracks_for_piece[piece_id][authority_id] = copy.deepcopy(pig_tracks)
-        for piece_id in annotations:
-            abcdh = ABCDHeader(annotations=annotations[piece_id])
+                        pig_tracks_for_file[file_id][authority_id] = copy.deepcopy(pig_tracks)
+        for file_id in annotations:
+            abcdh = ABCDHeader(annotations=annotations[file_id])
             abcdh_str = abcdh.__str__()
-            midi_file = piece_id + '.mid'
+            midi_file = file_id + '.mid'
             midi_path = self._midi_dir + midi_file
-            abcd_file = piece_id + '.abcd'
+            abcd_file = file_id + '.abcd'
             abcd_path = self._abcd_dir + abcd_file
             abcd_fh = open(abcd_path, 'w')
             print(abcdh_str, file=abcd_fh)
             abcd_fh.close()
             m21_score = DScore.score_via_midi(corpus_path=midi_path)
-            d_score = DScore(music21_stream=m21_score, abcd_header=abcdh, title=piece_id)
+            d_score = DScore(music21_stream=m21_score, abcd_header=abcdh, title=file_id)
             pout = PigOut(d_score=d_score)
-            std_pig_file = piece_id + '_fingering.txt'
+            std_pig_file = file_id + PIG_FILE_SUFFIX
             std_pig_path = self._std_pig_dir + std_pig_file
             pout.transform(to_file=std_pig_path)
 
@@ -579,13 +584,7 @@ class PigOut:
     @staticmethod
     def run_hmm(in_fin, out_fin, model='fhmm3'):
         model = model.lower()
-        cmd = HMM3_CMD
-        if model == 'fhmm2':
-            cmd = HMM2_CMD
-        elif model == 'fhmm1':
-            cmd = HMM1_CMD
-        elif model == 'chmm':
-            cmd = CHMM_CMD
+        cmd = NAKAMURA_MODEL_CMDS[model]
 
         out_path = Path(out_fin)
         if out_path.is_file():
@@ -643,6 +642,71 @@ class PigOut:
         print(output_str)
 
     @staticmethod
+    def pig_fingers(pig_path):
+        fingers = list()
+        with open(pig_path, 'r') as fp:
+            lines = fp.readlines()
+            for line in lines:
+                if line[0:2] == "//":
+                    continue
+                fields = line.split()
+                finger = fields[-1]
+                fingers.append(finger)
+        return fingers
+
+    @staticmethod
+    def pig_strike_digits(pig_path):
+        fingers = PigOut.pig_fingers(pig_path=pig_path)
+        digits = list()
+        for finger in fingers:
+            tokens = finger.split('_')
+            digit = tokens[0]
+            digits.append(digit)
+        return digits
+
+    @staticmethod
+    def nakamura_accuracy(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_PREDICTION_DIR,
+                          model='fhmm3', output="text"):
+        prediction_path = Path(prediction_dir)
+        if not prediction_path.is_dir():
+            os.makedirs(prediction_dir)
+
+        file_type = 'pig_std'
+        if fingering_files_dir == PIG_FINGERING_DIR:
+            file_type = 'pig'
+
+        y_test = list()
+        y_pred = list()
+
+        for root, dirs, files in os.walk(fingering_files_dir):
+            for file in sorted(files):
+                if file.endswith(PIG_FILE_SUFFIX):
+                    mat = re.match(PIG_FILE_RE, file)
+                    piece_id = mat.group(PIG_FILE_PIECE_LOC)
+                    piece_number = int(piece_id)
+                    if piece_number > 30:  # First 30 are in test corpus.
+                        break
+                    input_path = os.path.join(root, file)
+                    output_path = prediction_dir + file
+                    PigOut.run_hmm(model=model, in_fin=input_path, out_fin=output_path)
+                    pred_strike_digits = PigOut.pig_strike_digits(output_path)
+                    y_pred.append(pred_strike_digits)
+                    test_strike_digits = PigOut.pig_strike_digits(input_path)
+                    y_test.append(test_strike_digits)
+
+        labels = PIG_STRIKE_LABELS
+        flat_weighted_f1 = metrics.flat_f1_score(y_test, y_pred, average='weighted', labels=labels)
+        if output == 'text':
+            method_str = "{:>7} {:>5}".format(file_type, model)
+            print("{} flat weighted F1: {}".format(method_str, flat_weighted_f1))
+
+            # sorted_labels = sorted(
+                # labels,
+                # key=lambda name: (name[1:], name[0])
+            # )
+            print(metrics.flat_classification_report(y_test, y_pred, labels=labels, digits=4))
+
+    @staticmethod
     def nakamura_published(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_PREDICTION_DIR,
                            model='fhmm3', normalize=True, output="text"):
         if model == 'human':
@@ -652,7 +716,6 @@ class PigOut:
         if not prediction_path.is_dir():
             os.makedirs(prediction_dir)
 
-        file_re = r"^((\d+)-(\d+))_fingering.txt$"
         current_piece_id = None
         gt_files = dict()
         prediction_files = dict()
@@ -660,13 +723,13 @@ class PigOut:
         total_note_count = 0
         for root, dirs, files in os.walk(fingering_files_dir):
             for file in sorted(files):
-                if file.endswith(".txt"):
-                    mat = re.match(file_re, file)
+                if file.endswith(PIG_FILE_SUFFIX):
+                    mat = re.match(PIG_FILE_RE, file)
                     if mat:
-                        piece_id = mat.group(2)
+                        piece_id = mat.group(PIG_FILE_PIECE_LOC)
                         input_path = os.path.join(root, file)
-                        # annot_id = mat.group(3)
-                        # name = mat.group(1)
+                        annot_id = mat.group(PIG_FILE_ANNOT_LOC)
+                        name = mat.group(PIG_FILE_NAME_LOC)
                         piece_number = int(piece_id)
                         if piece_number > 30:
                             break
@@ -706,20 +769,19 @@ class PigOut:
 
     @staticmethod
     def nakamura_human(fingering_files_dir=PIG_FINGERING_DIR, output="text", normalize=True):
-        file_re = r"^((\d+)-(\d+))_fingering.txt$"
         current_piece_id = None
         piece_files = dict()
         note_counts = dict()
         total_note_count = 0
         for root, dirs, files in os.walk(fingering_files_dir):
             for file in sorted(files):
-                if file.endswith(".txt"):
-                    mat = re.match(file_re, file)
+                if file.endswith(PIG_FILE_SUFFIX):
+                    mat = re.match(PIG_FILE_RE, file)
                     if mat:
-                        piece_id = mat.group(2)
+                        piece_id = mat.group(PIG_FILE_PIECE_LOC)
                         input_path = os.path.join(root, file)
-                        # annot_id = mat.group(3)
-                        # name = mat.group(1)
+                        # annot_id = mat.group(PIG_FILE_ANNOT_LOC)
+                        # name = mat.group(PIG_FILE_NAME_LOC)
                         piece_number = int(piece_id)
                         if piece_number > 30:
                             break

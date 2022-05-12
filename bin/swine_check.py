@@ -30,7 +30,7 @@ from pathlib import Path
 from music21 import abcFormat, converter, stream
 # from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
 from pydactyl.dcorpus.DScore import DScore
-from pydactyl.dcorpus.PigInOut import PigOut, PIG_STD_DIR
+from pydactyl.dcorpus.PigInOut import PigOut, PIG_STD_DIR, PIG_FINGERING_DIR
 from mido import MidiFile
 
 ID = '002-1'
@@ -60,6 +60,8 @@ for i, track in enumerate(mid.tracks):
             # print(msg)
     print("note_on count: {}".format(msg_cnt))
 
+# dig_on_swine.py has translated the original PIG to ABCDF/MIDI.
+# We now perform the follwing transforms:
 # ABCDF/MIDI => DScore => Standardized PIG
 # Then compare generated std_pig to original std_pig.
 d_score = DScore(midi_file_path=mf_path, abcd_header_path=hdr_path, title=ID)
@@ -72,6 +74,10 @@ cmd = "{} {} {}".format(SIMPLE_MATCH_RATE_CMD, original_pig_file, to_file)
 
 returned_value = subprocess.call(cmd, shell=True)  # returns the exit code in unix
 print('returned value:', returned_value)
+
+# Test the overall accuracy and label-wise P/R/F for the order-three HMM model.
+results = PigOut.nakamura_accuracy(fingering_files_dir=PIG_FINGERING_DIR, model='fhmm3', output="text")
+results = PigOut.nakamura_accuracy(fingering_files_dir=PIG_STD_DIR, model='fhmm3', output="text")
 
 # corpse = DCorpus()
 # corpse.append(corpus_path=mf_path, header_path=hdr_path)
@@ -96,5 +102,5 @@ for model in model_names:
     # print("Nakamura {:>5} model (normalized)    : {}".format(model, normalized_results))
     normalized_std_results = PigOut.nakamura_published(fingering_files_dir=PIG_STD_DIR, model=model, normalize=True)
     # print("std_pig  {:>5} model (normalized): {}".format(model, normalized_std_results))
-
+print("")
 print("Done")

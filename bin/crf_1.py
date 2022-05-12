@@ -54,10 +54,10 @@ MAX_LEAP = 16
 MICROSECONDS_PER_BEAT = 500000
 MS_PER_BEAT = MICROSECONDS_PER_BEAT / 1000
 CHORD_MS_THRESHOLD = 30
-# CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
+CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CLEAN_LIST = {'crf': True}
-CLEAN_LIST = {}  # Reuse all pickled results.
+# CLEAN_LIST = {}  # Reuse all pickled results.
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
 TEST_METHOD = 'cross-validate'
@@ -200,7 +200,7 @@ def note2features(notes, stream, annotations, i, staff):
         # @100: [0.54495717 0.81059147 0.81998371 0.68739401 0.73993751]
         # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
 
-    # FIXME: Add chord features. Approximate with 30 ms offset deltas.
+    # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
     left_chord_notes, right_chord_notes = chordings(stream=stream, middle_i=i)
     features['left_chord'] = left_chord_notes
     features['right_chord'] = right_chord_notes
@@ -262,8 +262,8 @@ def evaluate_trained_model(the_model, x_test, y_test):
     labels = list(the_model.classes_)
     print(labels)
     y_predicted = my_crf.predict(x_test)
-    flat_f1 = metrics.flat_f1_score(y_test, y_predicted, average='weighted', labels=labels)
-    print("Flat F1: {}".format(flat_f1))
+    flat_weighted_f1 = metrics.flat_f1_score(y_test, y_predicted, average='weighted', labels=labels)
+    print("Flat weighted F1: {}".format(flat_weighted_f1))
 
     sorted_labels = sorted(
         labels,
