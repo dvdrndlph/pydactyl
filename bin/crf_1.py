@@ -54,10 +54,10 @@ MAX_LEAP = 16
 MICROSECONDS_PER_BEAT = 500000
 MS_PER_BEAT = MICROSECONDS_PER_BEAT / 1000
 CHORD_MS_THRESHOLD = 30
-CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
+# CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CLEAN_LIST = {'crf': True}
-# CLEAN_LIST = {}  # Reuse all pickled results.
+CLEAN_LIST = {}  # Reuse all pickled results.
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
 TEST_METHOD = 'cross-validate'
@@ -87,6 +87,9 @@ def pickle_directory(obj_type):
 
 def pickle_it(obj, obj_type, file_name):
     pickle_dir = pickle_directory(obj_type)
+    path = Path(pickle_dir)
+    if not path.is_dir():
+        os.makedirs(pickle_dir)
     pickle_path = pickle_dir + file_name
     print("Pickling {} to path {}.".format(obj_type, pickle_path))
     pickle_fh = open(pickle_path, 'wb')
@@ -301,6 +304,9 @@ class DExperiment:
 
 
 def get_simple_match_rate(ex: DExperiment, output=False):
+    pp_path = Path(PREDICTION_DIR)
+    if not pp_path.is_dir():
+        os.makedirs(PREDICTION_DIR)
     total_simple_match_count = 0
     total_note_count = 0
     simple_match_rate = 0
