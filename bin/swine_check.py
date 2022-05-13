@@ -30,7 +30,7 @@ from pathlib import Path
 from music21 import abcFormat, converter, stream
 # from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
 from pydactyl.dcorpus.DScore import DScore
-from pydactyl.dcorpus.PigInOut import PigOut, PIG_STD_DIR, PIG_FINGERING_DIR
+from pydactyl.dcorpus.PigInOut import PigOut, PIG_STD_DIR, PIG_FINGERING_DIR, PIG_FILE_SUFFIX
 from mido import MidiFile
 
 ID = '002-1'
@@ -74,6 +74,22 @@ cmd = "{} {} {}".format(SIMPLE_MATCH_RATE_CMD, original_pig_file, to_file)
 
 returned_value = subprocess.call(cmd, shell=True)  # returns the exit code in unix
 print('returned value:', returned_value)
+
+# Check that Nakamura uses channel information for predictions.
+pig_file_name = '001-1' + PIG_FILE_SUFFIX
+pig_path = PIG_FINGERING_DIR + pig_file_name
+pig_pred_path = '/tmp/' + pig_file_name
+PigOut.run_hmm(model='fhmm3', in_fin=pig_path, out_fin=pig_pred_path)
+zero_path = '/tmp/zero' + PIG_FILE_SUFFIX
+zero_pred_path = '/tmp/zero-result' + PIG_FILE_SUFFIX
+PigOut.zero_all_channels(pig_path=pig_path, to_file=zero_path)
+PigOut.run_hmm(model='fhmm3', in_fin=zero_path, out_fin=zero_pred_path)
+match_rate = PigOut.simple_match_rate(pig_pred_path, zero_pred_path)
+# Should match 100% if channel is not an input to the model.
+if match_rate['rate'] < 1.0:
+    print("The FHMM3 model does rely on channels as input.")
+print(match_rate)
+exit
 
 # Test the overall accuracy and label-wise P/R/F for the order-three HMM model.
 results = PigOut.nakamura_accuracy(fingering_files_dir=PIG_FINGERING_DIR, model='fhmm3', output="text")

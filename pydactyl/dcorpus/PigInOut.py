@@ -281,6 +281,12 @@ class PigIn:
 
     @staticmethod
     def sorted_pig_notes(file_path):
+        pig_notes = PigIn.pig_notes(file_path)
+        pig_notes.sort(key=lambda x: (x.on, x.midi_pitch))
+        return pig_notes
+
+    @staticmethod
+    def pig_notes(file_path):
         f = open(file_path, "r")
         pig_notes = []
         for line in f:
@@ -288,10 +294,9 @@ class PigIn:
                 continue
             line = line.rstrip()
             msg_id, on, off, name, on_vel, off_vel, channel, finger = line.split()
-            note = PigNote(msg_id, on, off, name, on_vel, off_vel, channel, finger)
-            pig_notes.append(note)
+            pig_note = PigNote(msg_id, on, off, name, on_vel, off_vel, channel, finger)
+            pig_notes.append(pig_note)
         f.close()
-        pig_notes.sort(key=lambda x: (x.on, x.midi_pitch))
         return pig_notes
 
     def transform(self):
@@ -597,7 +602,7 @@ class PigOut:
             raise Exception("{} created no output file.".format(cmd))
         stats = os.stat(out_fin)
         if stats.st_size < 100:
-            raise Exception("{} generated too little data in {} file.".format(cmd, out_fin))
+            raise Exception("{} generated too little data in {} file for {} file.".format(cmd, out_fin, in_fin))
 
     @staticmethod
     def get_max_model_str_len():
@@ -839,6 +844,8 @@ class PigOut:
             annot = self._d_score.annotation_by_id(annotation_id)
         elif annotation_index is not None:
             annot = self._d_score.annotation_by_index(annotation_index)
+        else:
+            raise Exception("Annotation to transform is not specified.")
         channel = 0
         note_id = 0
         pig_notes = []
@@ -874,12 +881,7 @@ class PigOut:
             channel +=1
 
         pig_notes.sort(key=lambda x: (x.on, x.midi_pitch))
-        contents = PigNote.header_line()
-        note_id = 0
-        for pn in pig_notes:
-            pn.id = note_id
-            contents += pn.to_file_line()
-            note_id += 1
+        contents = PigOut.pig_notes_to_string(pig_notes=pig_notes)
 
         # print(contents)
         if to_file:
@@ -889,3 +891,26 @@ class PigOut:
 
         return contents
 
+    @staticmethod
+    def pig_notes_to_string(pig_notes):
+        contents = PigNote.header_line()
+        note_id = 0
+        for pn in pig_notes:
+            pn.id = note_id
+            contents += pn.to_file_line()
+            note_id += 1
+        return contents
+
+    @staticmethod
+    def pig_notes_to_file(pig_notes, to_file):
+        contents = PigOut.pig_notes_to_string(pig_notes=pig_notes)
+        f = open(to_file, "w")
+        f.write(contents)
+        f.close()
+
+    @staticmethod
+    def zero_all_channels(pig_path, to_file):
+        pig_notes = PigIn.pig_notes(file_path=pig_path)
+        for pig_note in pig_notes:
+            pig_note.channel = 0
+        PigOut.pig_notes_to_file(pig_notes=pig_notes, to_file=to_file)
