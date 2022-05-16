@@ -25,6 +25,7 @@ from abc import ABC
 import copy
 import re
 from pydactyl.dcorpus.DCorpus import DCorpus, DScore, DAnnotation
+from pydactyl.dcorpus.PigInOut import PIG_SEGREGATED_ABCD_DIR
 from pydactyl.dcorpus.PianoFingering import PianoFingering
 from pydactyl.dcorpus.DEvaluation import DEvaluation, DEvalFunction
 from pydactyl.dactyler.Parncutt import Parncutt, Jacobs, Badgerow, Balliauw, Ruler
@@ -32,10 +33,10 @@ from pydactyl.dactyler.Parncutt import FINGER_SPANS, BALLIAUW_LARGE_FINGER_SPANS
     BALLIAUW_MEDIUM_FINGER_SPANS, BALLIAUW_SMALL_FINGER_SPANS, ImaginaryBlackKeyRuler
 from pydactyl.dactyler.Random import Random
 
+
 OUTPUT_DIR = '/Users/dave/tb2/doc/data/badgerow'
 PIG_INDY_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/individual_abcd/'
 PIG_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/abcd/'
-# PIG_INDY_DIR = '/tmp/abcd/'
 BERINGER_DIR = '/Users/dave/tb2/didactyl/dd/corpora/beringer/'
 SCALES_DIR = BERINGER_DIR + 'scales'
 ARPEGGIOS_DIR = BERINGER_DIR + 'arpeggios'
@@ -179,6 +180,11 @@ class Corporeal(ABC):
         if corpus_name == 'pig_indy':
             the_corpus = DCorpus()
             the_corpus.append_dir(corpus_dir=PIG_INDY_DIR, via_midi=True, split_header_extension='abcd')
+            return the_corpus
+
+        if corpus_name == 'pig_seg':
+            the_corpus = DCorpus()
+            the_corpus.append_dir(corpus_dir=PIG_SEGREGATED_ABCD_DIR, via_midi=True, split_header_extension='abcd')
             return the_corpus
 
         if corpus_name == 'scales':

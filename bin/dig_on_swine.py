@@ -28,16 +28,18 @@ import re
 import sys
 from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
 from pydactyl.dactyler.Parncutt import Parncutt
-from pydactyl.dcorpus.PigInOut import PigIn
+from pydactyl.dcorpus.PigInOut import PigIn, PIG_SEGREGATED_DATASET_DIR
 # import scamp
 
 # s = scamp.Session()
 # print(s.get_available_midi_output_devices())
 # exit(0)
 
-pig_eater = PigIn(standardize=True)
-pig_eater.transform()
-pig_eater = PigIn()
+# pig_eater = PigIn(standardize=True)
+# pig_eater.transform()
+# pig_eater = PigIn()
+# pig_eater.transform()
+pig_eater = PigIn(base_dir=PIG_SEGREGATED_DATASET_DIR, start_over=True)
 pig_eater.transform()
 
 # staff = 'upper'

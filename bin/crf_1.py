@@ -25,6 +25,7 @@ __author__ = 'David Randolph'
 import pprint
 import re
 import copy
+import shutil
 import sys
 import time
 
@@ -45,10 +46,11 @@ from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dcorpus.DAnnotation import DAnnotation
 from pydactyl.dcorpus.DScore import DScore
 from pydactyl.dcorpus.ABCDHeader import ABCDHeader
-from pydactyl.dcorpus.PigInOut import PigOut, PIG_STD_DIR
+from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_STD_DIR, PIG_SEGREGATED_STD_DIR
 
 VERSION = '0000'
-PREDICTION_DIR = '/tmp/prediction/'
+PREDICTION_DIR = '/tmp/crf' + VERSION + 'prediction/'
+TEST_DIR = '/tmp/crf' + VERSION + 'test/'
 PICKLE_BASE_DIR = '/tmp/pickle/'
 MAX_LEAP = 16
 MICROSECONDS_PER_BEAT = 500000
@@ -60,7 +62,7 @@ CHORD_MS_THRESHOLD = 30
 CLEAN_LIST = {}  # Reuse all pickled results.
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
-TEST_METHOD = 'cross-validate'
+# TEST_METHOD = 'cross-validate'
 TEST_METHOD = 'preset'
 # TEST_METHOD = 'random'
 SEGREGATE_HANDS = False
@@ -74,7 +76,8 @@ STAFFS = ['upper', 'lower']
 # CORPUS_NAMES = ['layer_one_by_annotator', 'scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['pig']
-CORPUS_NAMES = ['pig_indy']
+# CORPUS_NAMES = ['pig_indy']
+CORPUS_NAMES = ['pig_seg']
 
 
 #####################################################
@@ -93,7 +96,7 @@ def pickle_it(obj, obj_type, file_name):
     pickle_path = pickle_dir + file_name
     print("Pickling {} to path {}.".format(obj_type, pickle_path))
     pickle_fh = open(pickle_path, 'wb')
-    pickle.dump(obj, pickle_fh)
+    pickle.dump(obj, pickle_fh, protocol=pickle.HIGHEST_PROTOCOL)
     pickle_fh.close()
 
 
@@ -116,13 +119,13 @@ def unpickle_it(obj_type, file_name):
 
 
 def has_preset_evaluation_defined(corpus_name):
-    if corpus_name in ('pig_indy', 'pig'):
+    if corpus_name in ('pig_seg', 'pig_indy', 'pig'):
         return True
     return False
 
 
 def is_in_test_set(title: str, corpus_name='pig_indy'):
-    if corpus_name in ('pig_indy', 'pig'):
+    if corpus_name in ('pig_seg', 'pig_indy', 'pig'):
         example, annotator_id = title.split('-')
         example_int = int(example)
         if example_int <= 30:
@@ -304,6 +307,9 @@ class DExperiment:
 
 
 def get_simple_match_rate(ex: DExperiment, output=False):
+    """
+    Use the executable from Nakamura to calculate SimpleMatchRate.
+    """
     pp_path = Path(PREDICTION_DIR)
     if not pp_path.is_dir():
         os.makedirs(PREDICTION_DIR)
@@ -337,7 +343,44 @@ def get_simple_match_rate(ex: DExperiment, output=False):
     return total_simple_match_count, total_note_count, simple_match_rate
 
 
+def predict_and_persist(ex: DExperiment, pig_std_dir=PIG_STD_DIR, prediction_dir=PREDICTION_DIR):
+    PigIn.mkdir_if_missing(path_str=prediction_dir, make_missing=True)
+    last_base_title = ''
+    test_pig_paths = list()
+    for test_key in ex.test_indices:
+        (corpus_name, score_title, annot_index) = test_key
+        base_title, annot_id = str(score_title).split('-')
+        if base_title != last_base_title:
+            upper_index, lower_index = ex.test_indices[test_key]
+            y_pred = my_crf.predict(ex.x_test)
+            pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
+            pred_annot = DAnnotation(abcdf=pred_abcdf)
+            pred_abcdh = ABCDHeader(annotations=[pred_annot])
+            pred_d_score = ex.test_d_scores[score_title]
+            pred_d_score.abcd_header(abcd_header=pred_abcdh)
+            pred_pout = PigOut(d_score=pred_d_score)
+            pred_pig_path = prediction_dir + score_title + "_fingering.txt"
+            pred_pig_content = pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
+            last_base_title = base_title
+        test_pig_path = pig_std_dir + score_title + '_fingering.txt'
+        test_pig_paths.append(test_pig_path)
+    return test_pig_paths
+
+
+def get_my_avg_m_gen(ex: DExperiment, prediction_dir=PREDICTION_DIR, test_dir=TEST_DIR, reuse=False, normalize=False):
+    if reuse:
+        PigIn.mkdir_if_missing(path_str=test_dir, make_missing=False)
+    else:
+        PigIn.mkdir_if_missing(path_str=test_dir, make_missing=True)
+        test_pig_paths = predict_and_persist(ex=ex, prediction_dir=prediction_dir)
+        for tpp in test_pig_paths:
+            shutil.copy2(tpp, test_dir)
+    avg_m_gen = PigOut.average_m_gen(fingering_files_dir=test_dir, prediction_dir=prediction_dir, normalize=normalize)
+    return avg_m_gen
+
+
 def get_complex_match_rates(ex: DExperiment, normalize=False, output=False):
+    PigIn.mkdir_if_missing(path_str=PREDICTION_DIR, make_missing=True)
     pred_d_score = None
     last_base_title = ''
     total_note_count = 0
@@ -346,11 +389,6 @@ def get_complex_match_rates(ex: DExperiment, normalize=False, output=False):
     test_pig_paths = list()
     combined_match_rates = {}
     for test_key in ex.test_indices:
-        # FIXME: We need to restore the channels to the original. We are only supposed to
-        # run our model against the 150 individual scores in the PIG corpus, not every
-        # slightly different score. The channels should be uniform across all files.
-        # We changed all channel assignments that were inconsistent with the assigned hand.
-        # This seems wrong.
         (corpus_name, score_title, annot_index) = test_key
         base_title, annot_id = str(score_title).split('-')
         if base_title != last_base_title:
@@ -406,7 +444,8 @@ judge = creal.get_model('parncutt')
 # token_lists = []
 
 corpora_str = "-".join(CORPUS_NAMES)
-ex = unpickle_it(obj_type="DExperiment", file_name=corpora_str)
+experiment_name = corpora_str + '__' + TEST_METHOD + '__' + VERSION
+ex = unpickle_it(obj_type="DExperiment", file_name=experiment_name)
 if ex is None:
     ex = DExperiment()
     for corpus_name in CORPUS_NAMES:
@@ -477,7 +516,7 @@ if ex is None:
                                 ex.x_train.append(phrase2features(ordered_notes, ordered_stream, hsd_seg, staff))
                                 ex.y_train.append(phrase2labels(hsd_seg))
                         ex.good_annot_count += 1
-    pickle_it(obj=ex, obj_type="DExperiment", file_name=corpora_str)
+    pickle_it(obj=ex, obj_type="DExperiment", file_name=experiment_name)
 
 # print(token_lists)
 print("Example count: {}".format(len(ex.x)))
@@ -491,7 +530,7 @@ print("Total notes included: {}".format(ex.included_note_count))
 print("Total nondefault hand fingerings: {}".format(ex.total_nondefault_hand_finger_count))
 print("Total nondefault hand phrases: {}".format(ex.total_nondefault_hand_segment_count))
 
-crf_pickle_file_name = 'crf_' + VERSION + '__' + corpora_str + '__' + TEST_METHOD
+crf_pickle_file_name = 'crf_' + experiment_name
 have_trained_model = False
 my_crf = unpickle_it(obj_type="crf", file_name=crf_pickle_file_name)
 if my_crf:
@@ -515,9 +554,15 @@ elif TEST_METHOD == 'preset':
         evaluate_trained_model(the_model=my_crf, x_test=ex.x_test, y_test=ex.y_test)
     else:
         train_and_evaluate(the_model=my_crf, x_train=ex.x_train, y_train=ex.y_train, x_test=ex.x_test, y_test=ex.y_test)
-    total_simple_match_count, total_note_count, simple_match_rate = get_simple_match_rate(ex=ex, output=True)
-    result = get_complex_match_rates(ex=ex, normalize=False, output=True)
-    print(result)
+    # total_simple_match_count, total_note_count, simple_match_rate = get_simple_match_rate(ex=ex, output=True)
+    result = get_complex_match_rates(ex=ex, normalize=False)
+    print("Non-normalized M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+    result = get_my_avg_m_gen(ex=ex, normalize=False, reuse=False)
+    print("Non-normalized m_gen for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+    result = get_complex_match_rates(ex=ex, normalize=True)
+    print("Normalized M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+    result = get_my_avg_m_gen(ex=ex, normalize=True, reuse=True)
+    print("Normalized m_gen for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
 else:
     split_x_train, split_x_test, split_y_train, split_y_test = \
         train_test_split(ex.x, ex.y, test_size=0.4, random_state=0)

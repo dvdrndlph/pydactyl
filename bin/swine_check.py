@@ -24,25 +24,21 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 # Validate event count in dig_on_swine output files.
-import os
 import subprocess
-from pathlib import Path
-from music21 import abcFormat, converter, stream
-# from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
+from music21 import converter
 from pydactyl.dcorpus.DScore import DScore
-from pydactyl.dcorpus.PigInOut import PigOut, PIG_STD_DIR, PIG_FINGERING_DIR, PIG_FILE_SUFFIX
-from mido import MidiFile
+from pydactyl.dcorpus.PigInOut import PigOut, PIG_BASE_DIR, PIG_SCRIPT_DIR, \
+    PIG_ABCD_DIR, PIG_FINGERING_DIR, PIG_STD_DIR, PIG_FILE_SUFFIX, \
+    PIG_SEGREGATED_STD_DIR, PIG_SEGREGATED_FINGERING_DIR, \
+    PIG_RESULT_FHMM3_DIR
+import mido
 
 ID = '002-1'
-PIG_BASE_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/'
 PIG_BIN_DIR = PIG_BASE_DIR + 'SourceCode/Binary/'
-PIG_SCRIPT_DIR = PIG_BASE_DIR + 'SourceCode/'
 HMM1_CMD = PIG_SCRIPT_DIR + 'run_FHMM1.sh'
 HMM2_CMD = PIG_SCRIPT_DIR + 'run_FHMM2.sh'
 HMM3_CMD = PIG_SCRIPT_DIR + 'run_FHMM3.sh'
 SIMPLE_MATCH_RATE_CMD = PIG_BIN_DIR + 'Evaluate_SimpleMatchRate'
-PIG_ABCD_DIR = PIG_BASE_DIR + 'PianoFingeringDataset_v1.00/individual_abcd/'
-PIG_STD_DIR = PIG_BASE_DIR + 'PianoFingeringDataset_v1.00/std_pig/'
 PREDICTION_DIR = '/tmp/prediction/'
 NAKAMURA_PREDICTION_DIR = '/tmp/nakamura'
 
@@ -50,7 +46,7 @@ mf_path = PIG_ABCD_DIR + ID + '.mid'
 hdr_path = PIG_ABCD_DIR + ID + '.abcd'
 s = converter.parse(mf_path)
 
-mid = MidiFile(mf_path)
+mid = mido.MidiFile(mf_path)
 for i, track in enumerate(mid.tracks):
     print('Track {}: {}'.format(i, track.name))
     msg_cnt = 0
@@ -75,6 +71,23 @@ cmd = "{} {} {}".format(SIMPLE_MATCH_RATE_CMD, original_pig_file, to_file)
 returned_value = subprocess.call(cmd, shell=True)  # returns the exit code in unix
 print('returned value:', returned_value)
 
+gt_pig_files, gt_pig_paths = PigOut.pig_files_and_paths(piece_id='001')
+pred_pig_path = PIG_RESULT_FHMM3_DIR + '001-1' + PIG_FILE_SUFFIX
+print(gt_pig_paths)
+print(pred_pig_path)
+result = PigOut.single_prediction_complex_match_rates(gt_pig_paths=gt_pig_paths, pred_pig_path=pred_pig_path)
+print(result)
+match_count, note_count, m_gen = \
+    PigOut.my_single_prediction_m_gen(gt_pig_paths=gt_pig_paths, pred_pig_path=pred_pig_path)
+print(m_gen)
+print("Difference between my M_gen and EvaluateMultipleGroundTruth: {}".format(m_gen - result['general']))
+print("")
+avg_m_gen = PigOut.average_m_gen(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_RESULT_FHMM3_DIR, normalize=False)
+print("My average M_gen for FHMM3: {}".format(avg_m_gen))
+avg_m_gen = PigOut.average_m_gen(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_RESULT_FHMM3_DIR, normalize=True)
+print("My normalized average M_gen for FHMM3: {}".format(avg_m_gen))
+exit()
+
 # Check that Nakamura uses channel information for predictions.
 pig_file_name = '001-1' + PIG_FILE_SUFFIX
 pig_path = PIG_FINGERING_DIR + pig_file_name
@@ -89,11 +102,12 @@ match_rate = PigOut.simple_match_rate(pig_pred_path, zero_pred_path)
 if match_rate['rate'] < 1.0:
     print("The FHMM3 model does rely on channels as input.")
 print(match_rate)
-exit
 
 # Test the overall accuracy and label-wise P/R/F for the order-three HMM model.
 results = PigOut.nakamura_accuracy(fingering_files_dir=PIG_FINGERING_DIR, model='fhmm3', output="text")
-results = PigOut.nakamura_accuracy(fingering_files_dir=PIG_STD_DIR, model='fhmm3', output="text")
+# results = PigOut.nakamura_accuracy(fingering_files_dir=PIG_STD_DIR, model='fhmm3', output="text")
+results = PigOut.nakamura_accuracy(fingering_files_dir=PIG_SEGREGATED_FINGERING_DIR, model='fhmm3', output="text")
+# results = PigOut.nakamura_accuracy(fingering_files_dir=PIG_SEGREGATED_STD_DIR, model='fhmm3', output="text")
 
 # corpse = DCorpus()
 # corpse.append(corpus_path=mf_path, header_path=hdr_path)
@@ -108,15 +122,19 @@ print("")
 model_names = ['fhmm1', 'fhmm2', 'fhmm3', 'chmm', 'human']
 PigOut.output_nakamura_metrics_heading()
 for model in model_names:
-    results = PigOut.nakamura_published(model=model, normalize=False)
+    results = PigOut.nakamura_metrics(model=model, normalize=False)
     # print("Nakamura {:>5} model (non-normalized): {}".format(model, results))
-    std_results = PigOut.nakamura_published(fingering_files_dir=PIG_STD_DIR, model=model, normalize=False)
+    # std_results = PigOut.nakamura_published(fingering_files_dir=PIG_STD_DIR, model=model, normalize=False)
     # print("std_pig  {:>5} model (non-normalized): {}".format(model, std_results))
+    segregated_results = PigOut.nakamura_metrics(fingering_files_dir=PIG_SEGREGATED_FINGERING_DIR,
+                                                 model=model, normalize=False)
 print("")
 for model in model_names:
-    normalized_results = PigOut.nakamura_published(model=model, normalize=True)
+    normalized_results = PigOut.nakamura_metrics(model=model, normalize=True)
     # print("Nakamura {:>5} model (normalized)    : {}".format(model, normalized_results))
-    normalized_std_results = PigOut.nakamura_published(fingering_files_dir=PIG_STD_DIR, model=model, normalize=True)
+    # normalized_std_results = PigOut.nakamura_published(fingering_files_dir=PIG_STD_DIR, model=model, normalize=True)
     # print("std_pig  {:>5} model (normalized): {}".format(model, normalized_std_results))
+    segregated_normalized_results = PigOut.nakamura_metrics(fingering_files_dir=PIG_SEGREGATED_FINGERING_DIR,
+                                                            model=model, normalize=True)
 print("")
 print("Done")

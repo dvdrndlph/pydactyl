@@ -23,6 +23,7 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 import os
 import subprocess
+import shutil
 import re
 import copy
 import mido
@@ -37,14 +38,19 @@ MICROSECONDS_PER_BEAT = 500000  # at 120 bpm
 MS_PER_BEAT = MICROSECONDS_PER_BEAT / 1000
 REPO_DIR = '/Users/dave/tb2/'
 PIG_BASE_DIR = REPO_DIR + 'didactyl/dd/corpora/pig/'
+PIG_RESULT_FHMM3_DIR = PIG_BASE_DIR + 'Result_FHMM3/'
 PIG_DATASET_DIR = PIG_BASE_DIR + 'PianoFingeringDataset_v1.00/'
-PIG_BIN_DIR = PIG_BASE_DIR + 'SourceCode/Binary/'
-SIMPLE_MATCH_RATE_CMD = PIG_BIN_DIR + 'Evaluate_SimpleMatchRate'
-COMPLEX_MATCH_RATES_CMD = PIG_BIN_DIR + 'Evaluate_MultipleGroundTruth'
 PIG_FINGERING_DIR = PIG_DATASET_DIR + 'FingeringFiles/'
 PIG_ABCD_DIR = PIG_DATASET_DIR + 'individual_abcd/'
 PIG_MERGED_ABCD_DIR = PIG_DATASET_DIR + 'abcd/'
 PIG_STD_DIR = PIG_DATASET_DIR + 'std_pig/'
+PIG_SEGREGATED_DATASET_DIR = PIG_DATASET_DIR + 'segregated_pig/'
+PIG_SEGREGATED_FINGERING_DIR = PIG_SEGREGATED_DATASET_DIR + 'FingeringFiles/'
+PIG_SEGREGATED_ABCD_DIR = PIG_SEGREGATED_DATASET_DIR + 'individual_abcd/'
+PIG_SEGREGATED_STD_DIR = PIG_SEGREGATED_DATASET_DIR + 'std_pig/'
+PIG_BIN_DIR = PIG_BASE_DIR + 'SourceCode/Binary/'
+SIMPLE_MATCH_RATE_CMD = PIG_BIN_DIR + 'Evaluate_SimpleMatchRate'
+COMPLEX_MATCH_RATES_CMD = PIG_BIN_DIR + 'Evaluate_MultipleGroundTruth'
 PIG_SCRIPT_DIR = PIG_BASE_DIR + 'SourceCode/'
 PIG_PREDICTION_DIR = '/tmp/pig_test/'
 PIG_FILE_SUFFIX = '_fingering.txt'
@@ -67,6 +73,7 @@ NAKAMURA_METRIC_SUBSCRIPTS = {
     'soft': 'soft',
     'recomb': 'rec'
 }
+
 
 class PigNote:
     PITCH_RE = r"^([A-G])([#b]*)(\d+)$"
@@ -96,6 +103,13 @@ class PigNote:
         stringy = "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
             self.id, self.on, self.off, self.name, self.on_vel, self.off_vel, self.channel, self.finger)
         return stringy
+
+    def strike_pig_finger(self):
+        mat = re.match(PigNote.FINGER_RE, self.finger)
+        if mat:
+            strike_piggy = "{}{}".format(mat.group(1), mat.group(2))
+            return strike_piggy
+        raise Exception("Ill-formed PIG finger: {}".format(self.finger))
 
     @staticmethod
     def header_line():
@@ -162,7 +176,7 @@ class PigNote:
     @staticmethod
     def midi_pitch_to_name(midi_pitch):
         p = pitch.Pitch(midi=midi_pitch)
-        m21_note_name = p.name + p.octave
+        m21_note_name = p.name + str(p.octave)
         pig_note_name = PigNote.m21_name_to_pig_name(m21_note_name=m21_note_name)
         return pig_note_name
 
@@ -247,7 +261,7 @@ class PigIn:
          pi = PigIn()
          pi.transform()
     """
-    def __init__(self, standardize=False, base_dir="/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/"):
+    def __init__(self, standardize=False, base_dir=PIG_DATASET_DIR, start_over=False):
         self._standardize = standardize
         self._base_dir = base_dir
         self._input_dir = base_dir + 'FingeringFiles/'
@@ -259,7 +273,18 @@ class PigIn:
             self._midi_dir = base_dir + 'individual_abcd/'
             self._abcd_dir = base_dir + 'individual_abcd/'
             self._std_pig_dir = base_dir + 'std_pig/'
+            PigIn.mkdir_if_missing(self._std_pig_dir, make_missing=start_over)
         self._fingered_note_streams = {}  # Hashed by "piece_id-annotator_id" (e.g., "009-5").
+        PigIn.mkdir_if_missing(self._midi_dir, make_missing=start_over)
+        PigIn.mkdir_if_missing(self._abcd_dir, make_missing=start_over)
+
+    @staticmethod
+    def mkdir_if_missing(path_str, make_missing=False):
+        path = Path(path_str)
+        if make_missing and path.is_dir():
+            shutil.rmtree(path_str)
+        if not path.is_dir():
+            os.makedirs(path_str)
 
     @staticmethod
     def is_same_song(pt_one, pt_other):
@@ -566,6 +591,30 @@ class PigOut:
         return match_rate
 
     @staticmethod
+    def my_single_prediction_m_gen(gt_pig_paths, pred_pig_path):
+        pred_pig_notes = PigIn.pig_notes(file_path=pred_pig_path)
+        note_count = len(pred_pig_notes)
+        gt_note_total_count = note_count*len(gt_pig_paths)
+        gt_match_counts = list()
+        match_total_count = 0
+        for gt_pp in gt_pig_paths:
+            gt_match_count = 0
+            gt_pig_notes = PigIn.pig_notes(file_path=gt_pp)
+            if len(gt_pig_notes) != note_count:
+                raise Exception("Files are of unequal length.")
+            for i in range(note_count):
+                pred_note = pred_pig_notes[i]
+                pred_strike_finger = pred_note.strike_pig_finger()
+                gt_note = gt_pig_notes[i]
+                gt_strike_finger = gt_note.strike_pig_finger()
+                if gt_strike_finger == pred_strike_finger:
+                    gt_match_count += 1
+            gt_match_counts.append(gt_match_count )
+            match_total_count += gt_match_count
+        m_gen = match_total_count/gt_note_total_count
+        return match_total_count, gt_note_total_count, m_gen
+
+    @staticmethod
     def single_prediction_complex_match_rates(gt_pig_paths, pred_pig_path):
         cmd_tokens = list()
         cmd_tokens.append(COMPLEX_MATCH_RATES_CMD)
@@ -582,7 +631,8 @@ class PigOut:
             result['soft'] = float(mat.group(3))
             result['recomb'] = float(mat.group(4))
         else:
-            raise Exception("No matchy.")
+            # raise Exception("No matchy.")
+            return None
         # print(result.stdout)
         return result
 
@@ -676,10 +726,7 @@ class PigOut:
         if not prediction_path.is_dir():
             os.makedirs(prediction_dir)
 
-        file_type = 'pig_std'
-        if fingering_files_dir == PIG_FINGERING_DIR:
-            file_type = 'pig'
-
+        corpus_name = PigOut.corpus_name_for_dir(fingering_files_dir)
         y_test = list()
         y_pred = list()
 
@@ -702,7 +749,7 @@ class PigOut:
         labels = PIG_STRIKE_LABELS
         flat_weighted_f1 = metrics.flat_f1_score(y_test, y_pred, average='weighted', labels=labels)
         if output == 'text':
-            method_str = "{:>7} {:>5}".format(file_type, model)
+            method_str = "{:>7} {:>5}".format(corpus_name, model)
             print("{} flat weighted F1: {}".format(method_str, flat_weighted_f1))
 
             # sorted_labels = sorted(
@@ -712,8 +759,71 @@ class PigOut:
             print(metrics.flat_classification_report(y_test, y_pred, labels=labels, digits=4))
 
     @staticmethod
-    def nakamura_published(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_PREDICTION_DIR,
-                           model='fhmm3', normalize=True, output="text"):
+    def piece_id_for_file_name(file_name):
+        mat = re.match(PIG_FILE_RE, file_name)
+        if mat:
+            piece_id = mat.group(PIG_FILE_PIECE_LOC)
+            return piece_id
+        raise Exception("Ill-formed file: {}".format(file_name))
+
+    @staticmethod
+    def pig_files_and_paths(fingering_files_dir=PIG_FINGERING_DIR, piece_id=None):
+        pig_files = list()
+        pig_paths = list()
+        for root, dirs, files in os.walk(fingering_files_dir):
+            sorted_files = sorted(files)
+            for file in sorted_files:
+                if file.endswith(PIG_FILE_SUFFIX):
+                    if piece_id is not None:
+                        mat = re.match(PIG_FILE_RE, file)
+                        if mat:
+                            this_piece_id = mat.group(PIG_FILE_PIECE_LOC)
+                            if this_piece_id != piece_id:
+                                continue
+                    pig_files.append(file)
+                    path = os.path.join(root, file)
+                    pig_paths.append(path)
+        return pig_files, pig_paths
+
+    @staticmethod
+    def average_m_gen(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_RESULT_FHMM3_DIR, normalize=True):
+        pred_files, pred_paths = PigOut.pig_files_and_paths(fingering_files_dir=prediction_dir)
+        total_match_count = 0
+        total_note_count = 0
+        total_annot_count = 0
+        piece_count = len(pred_paths)
+        piece_match_counts = list()
+        piece_annot_counts = list()
+        piece_note_counts = list()
+        for i in range(piece_count):
+            pred_path = pred_paths[i]
+            pred_notes = PigIn.pig_notes(file_path=pred_path)
+            note_count = len(pred_notes)
+            piece_note_counts.append(note_count)
+            piece_id = PigOut.piece_id_for_file_name(file_name=pred_files[i])
+            gt_files, gt_paths = PigOut.pig_files_and_paths(fingering_files_dir=fingering_files_dir, piece_id=piece_id)
+            match_count, annot_count, m_gen = \
+                PigOut.my_single_prediction_m_gen(gt_pig_paths=gt_paths, pred_pig_path=pred_path)
+            total_annot_count += annot_count
+            total_match_count += match_count
+            total_note_count += note_count
+            piece_match_counts.append(match_count)
+            piece_annot_counts.append(annot_count)
+        if normalize:
+            avg_m_gen = 0
+            for i in range(piece_count):
+                piece_rate = piece_match_counts[i]/piece_annot_counts[i]
+                contribution = piece_note_counts[i]/total_note_count
+                avg_m_gen += piece_rate*contribution
+        else:
+            avg_m_gen = total_match_count/total_annot_count
+        if avg_m_gen > 1.0:
+            raise Exception("Bad average m_gen calculated: {}".format(avg_m_gen))
+        return avg_m_gen
+
+    @staticmethod
+    def nakamura_metrics(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_PREDICTION_DIR,
+                         model='fhmm3', normalize=True, output="text"):
         if model == 'human':
             return PigOut.nakamura_human(fingering_files_dir=fingering_files_dir, output=output, normalize=normalize)
 
@@ -764,18 +874,31 @@ class PigOut:
                 else:
                     totals[metric] += result[metric]/30
         if output:
-            corpus_name = 'pig_std'
-            if fingering_files_dir == PIG_FINGERING_DIR:
-                corpus_name = 'pig'
+            corpus_name = PigOut.corpus_name_for_dir(fingering_files_dir=fingering_files_dir)
             PigOut.output_nakamura_metrics(results=totals, corpus_name=corpus_name, model=model,
                                            normalize=normalize, output_type=output)
 
         return totals
 
     @staticmethod
+    def corpus_name_for_dir(fingering_files_dir):
+        if fingering_files_dir == PIG_SEGREGATED_FINGERING_DIR:
+            corpus_name = 'pig_std'
+        if fingering_files_dir == PIG_FINGERING_DIR:
+            corpus_name = 'pig'
+        elif fingering_files_dir == PIG_SEGREGATED_FINGERING_DIR:
+            corpus_name = 'pig_seg'
+        elif fingering_files_dir == PIG_SEGREGATED_STD_DIR:
+            corpus_name = 'pig_sts'
+        else:
+            raise Exception("Unrecognized fingering files directory: {}".format(fingering_files_dir))
+        return corpus_name
+
+    @staticmethod
     def nakamura_human(fingering_files_dir=PIG_FINGERING_DIR, output="text", normalize=True):
         current_piece_id = None
         piece_files = dict()
+        comparable_piece_id_set = set()
         note_counts = dict()
         total_note_count = 0
         for root, dirs, files in os.walk(fingering_files_dir):
@@ -786,7 +909,7 @@ class PigOut:
                         piece_id = mat.group(PIG_FILE_PIECE_LOC)
                         input_path = os.path.join(root, file)
                         # annot_id = mat.group(PIG_FILE_ANNOT_LOC)
-                        # name = mat.group(PIG_FILE_NAME_LOC)
+                        file_name = mat.group(PIG_FILE_NAME_LOC)
                         piece_number = int(piece_id)
                         if piece_number > 30:
                             break
@@ -800,29 +923,38 @@ class PigOut:
                         if piece_id not in piece_files:
                             piece_files[piece_id] = list()
                         piece_files[piece_id].append(input_path)
+                        if len(piece_files[piece_id]) > 1:
+                            comparable_piece_id_set.add(piece_id)
 
-        totals = dict()
+        piece_results = dict()
         for piece_id in piece_files:
             for prediction_file in piece_files[piece_id]:
-                piece_file_count = len(piece_files[piece_id])
                 gt_files = list()
                 for gt_file in piece_files[piece_id]:
                     if gt_file != prediction_file:
                         gt_files.append(gt_file)
-
                 result = PigOut.single_prediction_complex_match_rates(gt_pig_paths=gt_files,
                                                                       pred_pig_path=prediction_file)
+                if piece_id not in piece_results:
+                    piece_results[piece_id] = []
+                if result is not None:
+                    piece_results[piece_id].append(result)
+
+        piece_count = len(comparable_piece_id_set)
+        totals = dict()
+
+        for piece_id in piece_files:
+            piece_file_count = len(piece_files[piece_id])
+            for result in piece_results[piece_id]:
                 for metric in result:
                     if metric not in totals:
                         totals[metric] = 0
                     if normalize:
                         totals[metric] += (result[metric]*note_counts[piece_id])/(total_note_count*piece_file_count)
                     else:
-                        totals[metric] += result[metric]/(30*piece_file_count)
+                        totals[metric] += result[metric]/(piece_count*piece_file_count)
         if output:
-            corpus_name = 'pig_std'
-            if fingering_files_dir == PIG_FINGERING_DIR:
-                corpus_name = 'pig'
+            corpus_name = PigOut.corpus_name_for_dir(fingering_files_dir)
             PigOut.output_nakamura_metrics(results=totals, corpus_name=corpus_name, model="human",
                                            normalize=normalize, output_type=output)
         return totals
