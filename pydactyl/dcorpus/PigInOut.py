@@ -817,6 +817,7 @@ class PigOut:
                 avg_m_gen += piece_rate*contribution
         else:
             avg_m_gen = total_match_count/total_annot_count
+            print("{}/{} = {}".format(total_match_count, total_annot_count, avg_m_gen))
         if avg_m_gen > 1.0:
             raise Exception("Bad average m_gen calculated: {}".format(avg_m_gen))
         return avg_m_gen

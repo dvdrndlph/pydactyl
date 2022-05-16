@@ -46,7 +46,7 @@ from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dcorpus.DAnnotation import DAnnotation
 from pydactyl.dcorpus.DScore import DScore
 from pydactyl.dcorpus.ABCDHeader import ABCDHeader
-from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_STD_DIR, PIG_SEGREGATED_STD_DIR
+from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_STD_DIR, PIG_FILE_SUFFIX, PIG_SEGREGATED_STD_DIR
 
 VERSION = '0000'
 PREDICTION_DIR = '/tmp/crf' + VERSION + 'prediction/'
@@ -306,7 +306,7 @@ class DExperiment:
         self.test_d_scores = {}  # Indexed by score title.
 
 
-def get_simple_match_rate(ex: DExperiment, output=False):
+def get_simple_match_rate(ex: DExperiment, pig_std_dir=PIG_STD_DIR, prediction_dir=PREDICTION_DIR, output=False):
     """
     Use the executable from Nakamura to calculate SimpleMatchRate.
     """
@@ -314,33 +314,40 @@ def get_simple_match_rate(ex: DExperiment, output=False):
     if not pp_path.is_dir():
         os.makedirs(PREDICTION_DIR)
     total_simple_match_count = 0
-    total_note_count = 0
-    simple_match_rate = 0
+    total_annot_count = 0
+    test_file_count = 0
     for test_key in ex.test_indices:
         (corpus_name, score_title, annot_index) = test_key
-        upper_index, lower_index = ex.test_indices[test_key]
-        y_pred = my_crf.predict(ex.x_test)
-        pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
-        pred_annot = DAnnotation(abcdf=pred_abcdf)
-        pred_abcdh = ABCDHeader(annotations=[pred_annot])
-        # d_score = DScore(music21_stream=test_streams[test_key], abcd_header=pred_abcdh, title=score_title)
-        # midi_file_path = PIG_ABCD_DIR + score_title + '.mid'
-        # d_score = DScore(midi_file_path=midi_file_path, abcd_header=pred_abcdh, title=score_title)
-        d_score = ex.test_d_scores[score_title]
-        d_score.abcd_header(abcd_header=pred_abcdh)
-        pred_pout = PigOut(d_score=d_score)
-        pred_pig_path = PREDICTION_DIR + score_title + "_fingering.txt"
-        pred_pig_content = pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
-        # print(pred_pig_content)
-        test_pig_path = PIG_STD_DIR + score_title + '_fingering.txt'
+        pred_pig_path = predict_and_persist_file(ex=ex, test_key=test_key, pig_std_dir=pig_std_dir,
+                                                 prediction_dir=prediction_dir)
+        test_pig_path = pig_std_dir + score_title + PIG_FILE_SUFFIX
         match_rate = PigOut.simple_match_rate(gt_pig_path=test_pig_path, pred_pig_path=pred_pig_path)
         total_simple_match_count += match_rate['match_count']
-        total_note_count += match_rate['note_count']
+        total_annot_count += match_rate['note_count']
+        test_file_count += 1
         # print(result.stdout)
-        simple_match_rate = total_simple_match_count / total_note_count
+    simple_match_rate = total_simple_match_count / total_annot_count
     if output:
-        print("SimpleMatchRate: {}/{} = {}".format(total_simple_match_count, total_note_count, simple_match_rate))
-    return total_simple_match_count, total_note_count, simple_match_rate
+        print("SimpleMatchRate: {}/{} = {}".format(total_simple_match_count, total_annot_count, simple_match_rate))
+        print("over {} test files.".format(test_file_count))
+    return total_simple_match_count, total_annot_count, simple_match_rate
+
+
+def predict_and_persist_file(ex: DExperiment, test_key,
+                             pig_std_dir=PIG_STD_DIR, prediction_dir=PREDICTION_DIR):
+    (corpus_name, score_title, annot_index) = test_key
+    # base_title, annot_id = str(score_title).split('-')
+    upper_index, lower_index = ex.test_indices[test_key]
+    y_pred = my_crf.predict(ex.x_test)
+    pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
+    pred_annot = DAnnotation(abcdf=pred_abcdf)
+    pred_abcdh = ABCDHeader(annotations=[pred_annot])
+    pred_d_score = ex.test_d_scores[score_title]
+    pred_d_score.abcd_header(abcd_header=pred_abcdh)
+    pred_pout = PigOut(d_score=pred_d_score)
+    pred_pig_path = prediction_dir + score_title + PIG_FILE_SUFFIX
+    pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
+    return pred_pig_path
 
 
 def predict_and_persist(ex: DExperiment, pig_std_dir=PIG_STD_DIR, prediction_dir=PREDICTION_DIR):
@@ -351,18 +358,9 @@ def predict_and_persist(ex: DExperiment, pig_std_dir=PIG_STD_DIR, prediction_dir
         (corpus_name, score_title, annot_index) = test_key
         base_title, annot_id = str(score_title).split('-')
         if base_title != last_base_title:
-            upper_index, lower_index = ex.test_indices[test_key]
-            y_pred = my_crf.predict(ex.x_test)
-            pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
-            pred_annot = DAnnotation(abcdf=pred_abcdf)
-            pred_abcdh = ABCDHeader(annotations=[pred_annot])
-            pred_d_score = ex.test_d_scores[score_title]
-            pred_d_score.abcd_header(abcd_header=pred_abcdh)
-            pred_pout = PigOut(d_score=pred_d_score)
-            pred_pig_path = prediction_dir + score_title + "_fingering.txt"
-            pred_pig_content = pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
+            predict_and_persist_file(ex=ex, test_key=test_key, pig_std_dir=pig_std_dir, prediction_dir=prediction_dir)
             last_base_title = base_title
-        test_pig_path = pig_std_dir + score_title + '_fingering.txt'
+        test_pig_path = pig_std_dir + score_title + PIG_FILE_SUFFIX
         test_pig_paths.append(test_pig_path)
     return test_pig_paths
 
@@ -373,6 +371,7 @@ def get_my_avg_m_gen(ex: DExperiment, prediction_dir=PREDICTION_DIR, test_dir=TE
     else:
         PigIn.mkdir_if_missing(path_str=test_dir, make_missing=True)
         test_pig_paths = predict_and_persist(ex=ex, prediction_dir=prediction_dir)
+        print("There are {} PIG test paths.".format(len(test_pig_paths)))
         for tpp in test_pig_paths:
             shutil.copy2(tpp, test_dir)
     avg_m_gen = PigOut.average_m_gen(fingering_files_dir=test_dir, prediction_dir=prediction_dir, normalize=normalize)
@@ -554,7 +553,7 @@ elif TEST_METHOD == 'preset':
         evaluate_trained_model(the_model=my_crf, x_test=ex.x_test, y_test=ex.y_test)
     else:
         train_and_evaluate(the_model=my_crf, x_train=ex.x_train, y_train=ex.y_train, x_test=ex.x_test, y_test=ex.y_test)
-    # total_simple_match_count, total_note_count, simple_match_rate = get_simple_match_rate(ex=ex, output=True)
+    total_simple_match_count, total_annot_count, simple_match_rate = get_simple_match_rate(ex=ex, output=True)
     result = get_complex_match_rates(ex=ex, normalize=False)
     print("Non-normalized M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
     result = get_my_avg_m_gen(ex=ex, normalize=False, reuse=False)

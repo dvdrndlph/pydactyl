@@ -118,8 +118,8 @@ class DPart:
                     print("music21 MIDI spawned extra note in chord.")
 
         offset_cnt = len(notes_at_offset)
-        if chord_cnt != offset_cnt:
-            print("{} chord(s) subsumed by other(s).".format(chord_cnt - offset_cnt))
+        # if chord_cnt != offset_cnt:
+            # print("{} chord(s) subsumed by other(s).".format(chord_cnt - offset_cnt))
 
         offsetted_cnt = len(offsetted_notes)
         nao_cnt = 0
