@@ -56,10 +56,10 @@ MAX_LEAP = 16
 MICROSECONDS_PER_BEAT = 500000
 MS_PER_BEAT = MICROSECONDS_PER_BEAT / 1000
 CHORD_MS_THRESHOLD = 30
-# CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
-# CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
-# CLEAN_LIST = {'crf': True}
 CLEAN_LIST = {}  # Reuse all pickled results.
+# CLEAN_LIST = {'crf': True}
+# CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
+# CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
 # TEST_METHOD = 'cross-validate'
@@ -76,8 +76,8 @@ STAFFS = ['upper', 'lower']
 # CORPUS_NAMES = ['layer_one_by_annotator', 'scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['pig']
-# CORPUS_NAMES = ['pig_indy']
-CORPUS_NAMES = ['pig_seg']
+CORPUS_NAMES = ['pig_indy']
+# CORPUS_NAMES = ['pig_seg']
 
 
 #####################################################
@@ -284,16 +284,21 @@ def train_and_evaluate(the_model, x_train, y_train, x_test, y_test):
 
 
 class DExperiment:
-    def __init__(self, x=[], y=[], model_version=VERSION, corpus_name='pig_indy',
-                 x_train=[], y_train=[], x_test=[], y_test=[]):
+    corpus_dir = {
+        'pig_indy': PIG_STD_DIR,
+        'pig_seg': PIG_SEGREGATED_STD_DIR
+    }
+
+    def __init__(self, corpus_names, x=None, y=None, model_version=VERSION,
+                 x_train=None, y_train=None, x_test=None, y_test=None):
         self.model_version = model_version
-        self.corpus_name = corpus_name
-        self.x = x
-        self.y = y
-        self.x_train = x_train
-        self.y_train = y_train
-        self.x_test = x_test
-        self.y_test = y_test
+        self.corpus_names = corpus_names
+        self.x = x or []
+        self.y = y or []
+        self.x_train = x_train or []
+        self.y_train = y_train or []
+        self.x_test = x_test or []
+        self.y_test = y_test or []
 
         self.bad_annot_count = 0
         self.wildcarded_count = 0
@@ -304,6 +309,55 @@ class DExperiment:
         self.test_indices = {}
         self.ordered_test_d_score_titles = []
         self.test_d_scores = {}  # Indexed by score title.
+
+    def test_paths_by_piece(self, corpus=None):
+        test_pig_paths = dict()
+        for test_key in self.test_indices:
+            (corpus_name, score_title, annot_index) = test_key
+            if corpus is not None and corpus_name != corpus:
+                continue
+            piece_id, annot_id = str(score_title).split('-')
+            if piece_id not in test_pig_paths:
+                test_pig_paths[piece_id] = list()
+            test_pig_path = DExperiment.corpus_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
+            test_pig_paths[piece_id].append(test_pig_path)
+        return test_pig_paths
+
+    def test_d_scores_by_piece(self, corpus=None):
+        test_d_scores = dict()
+        for test_key in self.test_indices:
+            (corpus_name, score_title, annot_index) = test_key
+            if corpus is not None and corpus_name != corpus:
+                continue
+            piece_id, annot_id = str(score_title).split('-')
+            if piece_id not in test_d_scores:
+                test_d_scores[piece_id] = list()
+            test_d_score = self.test_d_scores[score_title]
+            test_d_scores[piece_id].append(test_d_score)
+        return test_d_scores
+
+    def test_indices_by_piece(self, corpus, piece_id=None):
+        index = 0
+        done = False
+        indices_by_piece = dict()
+        if piece_id is not None:
+            while not done:
+                key = (corpus, piece_id, index)
+                if key in sorted(self.test_indices):
+                    if piece_id not in indices_by_piece:
+                        indices_by_piece[piece_id] = []
+                    indices_by_piece[piece_id].append(self.test_indices[key])
+                else:
+                    done = True
+        else:
+            for key in sorted(self.test_indices):
+                (corpus_name, score_title, annot_index) = key
+                the_piece_id, annot_id = str(score_title).split('-')
+                if corpus_name == corpus:
+                    if the_piece_id not in indices_by_piece:
+                        indices_by_piece[the_piece_id] = []
+                    indices_by_piece[the_piece_id].append(self.test_indices[key])
+        return indices_by_piece
 
 
 def get_simple_match_rate(ex: DExperiment, pig_std_dir=PIG_STD_DIR, prediction_dir=PREDICTION_DIR, output=False):
@@ -365,7 +419,7 @@ def predict_and_persist(ex: DExperiment, pig_std_dir=PIG_STD_DIR, prediction_dir
     return test_pig_paths
 
 
-def get_my_avg_m_gen(ex: DExperiment, prediction_dir=PREDICTION_DIR, test_dir=TEST_DIR, reuse=False, normalize=False):
+def get_my_avg_m_gen(ex: DExperiment, prediction_dir=PREDICTION_DIR, test_dir=TEST_DIR, reuse=False, weight=False):
     if reuse:
         PigIn.mkdir_if_missing(path_str=test_dir, make_missing=False)
     else:
@@ -374,62 +428,66 @@ def get_my_avg_m_gen(ex: DExperiment, prediction_dir=PREDICTION_DIR, test_dir=TE
         print("There are {} PIG test paths.".format(len(test_pig_paths)))
         for tpp in test_pig_paths:
             shutil.copy2(tpp, test_dir)
-    avg_m_gen = PigOut.average_m_gen(fingering_files_dir=test_dir, prediction_dir=prediction_dir, normalize=normalize)
-    return avg_m_gen
+    avg_m_gen, piece_m_gens = PigOut.my_average_m_gen(fingering_files_dir=test_dir,
+                                                      prediction_dir=prediction_dir, weight=weight)
+    return avg_m_gen, piece_m_gens
 
 
-def get_complex_match_rates(ex: DExperiment, normalize=False, output=False):
+def get_complex_match_rates(ex: DExperiment, weight=False, prediction_dir=PREDICTION_DIR, output=False):
     PigIn.mkdir_if_missing(path_str=PREDICTION_DIR, make_missing=True)
-    pred_d_score = None
-    last_base_title = ''
+    y_pred = my_crf.predict(ex.x_test)
     total_note_count = 0
     d_score_count = 0
     pred_pig_path = ''
-    test_pig_paths = list()
     combined_match_rates = {}
-    for test_key in ex.test_indices:
-        (corpus_name, score_title, annot_index) = test_key
-        base_title, annot_id = str(score_title).split('-')
-        if base_title != last_base_title:
-            if pred_pig_path:
-                match_rates = PigOut.single_prediction_complex_match_rates(
-                    gt_pig_paths=test_pig_paths, pred_pig_path=pred_pig_path)
+    piece_data = dict()
+    for corpus_name in CORPUS_NAMES:
+        test_indices = ex.test_indices_by_piece(corpus=corpus_name)
+        test_pig_paths = ex.test_paths_by_piece(corpus=corpus_name)
+        test_d_scores = ex.test_d_scores_by_piece(corpus=corpus_name)
+        tested_pieces = dict()
+        for piece_id in test_pig_paths:
+            note_count = 0
+            annot_count = 0
+            if piece_id not in tested_pieces:
+                upper_index, lower_index = test_indices[piece_id][0]
+                pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
+                pred_annot = DAnnotation(abcdf=pred_abcdf)
+                pred_abcdh = ABCDHeader(annotations=[pred_annot])
+                pred_d_score = test_d_scores[piece_id][0]
+                d_score_count += 1
+                pred_d_score.abcd_header(abcd_header=pred_abcdh)
+                pred_pout = PigOut(d_score=pred_d_score)
+                file_id = "{}-1".format(piece_id)
+                pred_pig_path = prediction_dir + file_id + PIG_FILE_SUFFIX
+                pred_pig_content = pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
                 note_count = pred_d_score.note_count()
-                total_note_count += note_count
-                for key in match_rates:
-                    if normalize:
-                        match_rates[key] *= note_count
-                    if key not in combined_match_rates:
-                        combined_match_rates[key] = 0
-                    combined_match_rates[key] += match_rates[key]
-            test_pig_paths = list()
-            upper_index, lower_index = ex.test_indices[test_key]
-            y_pred = my_crf.predict(ex.x_test)
-            pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
-            pred_annot = DAnnotation(abcdf=pred_abcdf)
-            pred_abcdh = ABCDHeader(annotations=[pred_annot])
-            pred_d_score = ex.test_d_scores[score_title]
-            d_score_count += 1
-            pred_d_score.abcd_header(abcd_header=pred_abcdh)
-            pred_pout = PigOut(d_score=pred_d_score)
-            pred_pig_path = PREDICTION_DIR + score_title + "_fingering.txt"
-            pred_pig_content = pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
-            last_base_title = base_title
-        test_pig_path = PIG_STD_DIR + score_title + '_fingering.txt'
-        test_pig_paths.append(test_pig_path)
+                annot_count = note_count * len(test_pig_paths[piece_id])
+            match_rates = PigOut.single_prediction_complex_match_rates(gt_pig_paths=test_pig_paths[piece_id],
+                                                                       pred_pig_path=pred_pig_path)
+            total_note_count += note_count
+            piece_data[piece_id] = dict()
+            for key in match_rates:
+                match_count = round(match_rates[key] * annot_count)
+                raw_rate = match_rates[key]
+                piece_data[piece_id][key] = {
+                    'match_count': match_count,
+                    'note_count': note_count,
+                    'annot_count': annot_count,
+                    'raw_rate': raw_rate
+                }
+                if weight:
+                    match_rates[key] *= note_count
+                if key not in combined_match_rates:
+                    combined_match_rates[key] = 0
+                combined_match_rates[key] += match_rates[key]
 
-    match_rates = PigOut.single_prediction_complex_match_rates(gt_pig_paths=test_pig_paths, pred_pig_path=pred_pig_path)
-    note_count = pred_d_score.note_count()
-    total_note_count += note_count
     for key in match_rates:
-        if normalize:
-            match_rates[key] *= note_count
-        combined_match_rates[key] += match_rates[key]
-        if normalize:
+        if weight:
             combined_match_rates[key] /= total_note_count
         else:
             combined_match_rates[key] /= d_score_count
-    return combined_match_rates
+    return combined_match_rates, piece_data
 
 
 #####################################################
@@ -446,7 +504,7 @@ corpora_str = "-".join(CORPUS_NAMES)
 experiment_name = corpora_str + '__' + TEST_METHOD + '__' + VERSION
 ex = unpickle_it(obj_type="DExperiment", file_name=experiment_name)
 if ex is None:
-    ex = DExperiment()
+    ex = DExperiment(corpus_names=CORPUS_NAMES)
     for corpus_name in CORPUS_NAMES:
         da_corpus = unpickle_it(obj_type="DCorpus", file_name=corpus_name)
         if da_corpus is None:
@@ -554,14 +612,15 @@ elif TEST_METHOD == 'preset':
     else:
         train_and_evaluate(the_model=my_crf, x_train=ex.x_train, y_train=ex.y_train, x_test=ex.x_test, y_test=ex.y_test)
     total_simple_match_count, total_annot_count, simple_match_rate = get_simple_match_rate(ex=ex, output=True)
-    result = get_complex_match_rates(ex=ex, normalize=False)
-    print("Non-normalized M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
-    result = get_my_avg_m_gen(ex=ex, normalize=False, reuse=False)
-    print("Non-normalized m_gen for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
-    result = get_complex_match_rates(ex=ex, normalize=True)
-    print("Normalized M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
-    result = get_my_avg_m_gen(ex=ex, normalize=True, reuse=True)
-    print("Normalized m_gen for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+    result, piece_results = get_complex_match_rates(ex=ex, weight=False)
+    print("Unweighted avg M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+    pprint.pprint(piece_results)
+    result, piece_results = get_my_avg_m_gen(ex=ex, weight=False, reuse=False)
+    print("Unweighted avg m_gen for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+    result, piece_results = get_complex_match_rates(ex=ex, weight=True)
+    print("Weighted avg M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+    result, piece_results = get_my_avg_m_gen(ex=ex, weight=True, reuse=True)
+    print("Weighted avg m_gen for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
 else:
     split_x_train, split_x_test, split_y_train, split_y_test = \
         train_test_split(ex.x, ex.y, test_size=0.4, random_state=0)

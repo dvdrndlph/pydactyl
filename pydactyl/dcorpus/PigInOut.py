@@ -609,7 +609,7 @@ class PigOut:
                 gt_strike_finger = gt_note.strike_pig_finger()
                 if gt_strike_finger == pred_strike_finger:
                     gt_match_count += 1
-            gt_match_counts.append(gt_match_count )
+            gt_match_counts.append(gt_match_count)
             match_total_count += gt_match_count
         m_gen = match_total_count/gt_note_total_count
         return match_total_count, gt_note_total_count, m_gen
@@ -656,7 +656,7 @@ class PigOut:
 
     @staticmethod
     def get_max_model_str_len():
-        model_str = 'std_pig FHMM3 (un-normalized)'
+        model_str = 'std_pig FHMM3 (unweighted)'
         max_model_str_len = len(model_str)
         return max_model_str_len
 
@@ -674,18 +674,18 @@ class PigOut:
             print(output_str)
 
     @staticmethod
-    def output_nakamura_metrics(results, corpus_name, model, normalize, output_type="text", decimals=4):
+    def output_nakamura_metrics(results, corpus_name, model, weight, output_type="text", decimals=4):
         output_str = ''
         metrics = NAKAMURA_METRICS
         rounded_results = dict()
         for metric in metrics:
             rounded_results[metric] = round(results[metric], ndigits=decimals)
         if output_type == 'text':
-            normal_str = '(un-normalized)'
-            if normalize:
-                normal_str = '(normalized)'
+            weight_str = '(unweighted)'
+            if weight:
+                weight_str = '(weighted)'
             max_model_str_len = PigOut.get_max_model_str_len()
-            name_str = "{} {} {}".format(corpus_name, model, normal_str)
+            name_str = "{} {} {}".format(corpus_name, model, weight_str)
 
             output_str = "{:>" + str(max_model_str_len) + '}'
             output_str = output_str.format(name_str) + "\t"
@@ -764,6 +764,7 @@ class PigOut:
         if mat:
             piece_id = mat.group(PIG_FILE_PIECE_LOC)
             return piece_id
+
         raise Exception("Ill-formed file: {}".format(file_name))
 
     @staticmethod
@@ -786,7 +787,8 @@ class PigOut:
         return pig_files, pig_paths
 
     @staticmethod
-    def average_m_gen(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_RESULT_FHMM3_DIR, normalize=True):
+    def my_average_m_gen(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_RESULT_FHMM3_DIR, weight=True):
+        piece_results = list()
         pred_files, pred_paths = PigOut.pig_files_and_paths(fingering_files_dir=prediction_dir)
         total_match_count = 0
         total_note_count = 0
@@ -809,7 +811,21 @@ class PigOut:
             total_note_count += note_count
             piece_match_counts.append(match_count)
             piece_annot_counts.append(annot_count)
-        if normalize:
+        for i in range(piece_count):
+            piece_rate = piece_match_counts[i] / piece_annot_counts[i]
+            contribution = 1.0 / piece_count
+            if weight:
+                contribution = piece_note_counts[i]/total_note_count
+            piece_result = {
+                'piece_id': i + 1,
+                'match_count': piece_match_counts[i],
+                'annot_count': piece_annot_counts[i],
+                'note_count': piece_note_counts[i],
+                'contribution': contribution,
+                'raw_rate': piece_rate
+            }
+            piece_results.append(piece_result)
+        if weight:
             avg_m_gen = 0
             for i in range(piece_count):
                 piece_rate = piece_match_counts[i]/piece_annot_counts[i]
@@ -820,13 +836,13 @@ class PigOut:
             print("{}/{} = {}".format(total_match_count, total_annot_count, avg_m_gen))
         if avg_m_gen > 1.0:
             raise Exception("Bad average m_gen calculated: {}".format(avg_m_gen))
-        return avg_m_gen
+        return avg_m_gen, piece_results
 
     @staticmethod
     def nakamura_metrics(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_PREDICTION_DIR,
-                         model='fhmm3', normalize=True, output="text"):
+                         model='fhmm3', weight=True, output="text"):
         if model == 'human':
-            return PigOut.nakamura_human(fingering_files_dir=fingering_files_dir, output=output, normalize=normalize)
+            return PigOut.nakamura_human(fingering_files_dir=fingering_files_dir, output=output, weight=weight)
 
         prediction_path = Path(prediction_dir)
         if not prediction_path.is_dir():
@@ -850,11 +866,10 @@ class PigOut:
                         if piece_number > 30:
                             break
                         if piece_id != current_piece_id:
-                            if normalize:
-                                with open(input_path, 'r') as fp:
-                                    note_count = len(fp.readlines()) - 1  # Ignore comment on first line.
-                                    note_counts[piece_id] = note_count
-                                    total_note_count += note_count
+                            with open(input_path, 'r') as fp:
+                                note_count = len(fp.readlines()) - 1  # Ignore comment on first line.
+                                note_counts[piece_id] = note_count
+                                total_note_count += note_count
                             output_path = prediction_dir + file
                             PigOut.run_hmm(model=model, in_fin=input_path, out_fin=output_path)
                             prediction_files[piece_id] = output_path
@@ -863,23 +878,36 @@ class PigOut:
                             gt_files[piece_id] = list()
                         gt_files[piece_id].append(input_path)
 
+        piece_results = dict()
         totals = dict()
         for key_piece_id in gt_files:
+            piece_results[key_piece_id] = {}
             result = PigOut.single_prediction_complex_match_rates(gt_pig_paths=gt_files[key_piece_id],
                                                                   pred_pig_path=prediction_files[key_piece_id])
             for metric in result:
+                piece_annot_count = note_counts[key_piece_id] * len(gt_files[key_piece_id])
+                piece_match_count = round(result[metric] * piece_annot_count)
+                piece_metric = {
+                    'annot_count': piece_annot_count,
+                    'match_count': piece_match_count,
+                    'note_count': note_counts[key_piece_id],
+                    'raw_rate': piece_match_count / piece_annot_count
+                }
+                piece_results[key_piece_id][metric] = piece_metric
                 if metric not in totals:
                     totals[metric] = 0
-                if normalize:
+                if weight:
                     totals[metric] += result[metric] * note_counts[key_piece_id] / total_note_count
                 else:
                     totals[metric] += result[metric]/30
         if output:
             corpus_name = PigOut.corpus_name_for_dir(fingering_files_dir=fingering_files_dir)
             PigOut.output_nakamura_metrics(results=totals, corpus_name=corpus_name, model=model,
-                                           normalize=normalize, output_type=output)
+                                           weight=weight, output_type=output)
+            # for piece_id in sorted(piece_results):
+                # print("{}: {}".format(piece_id, piece_results[piece_id]))
 
-        return totals
+        return totals, piece_results
 
     @staticmethod
     def corpus_name_for_dir(fingering_files_dir):
@@ -896,7 +924,7 @@ class PigOut:
         return corpus_name
 
     @staticmethod
-    def nakamura_human(fingering_files_dir=PIG_FINGERING_DIR, output="text", normalize=True):
+    def nakamura_human(fingering_files_dir=PIG_FINGERING_DIR, output="text", weight=True):
         current_piece_id = None
         piece_files = dict()
         comparable_piece_id_set = set()
@@ -915,7 +943,7 @@ class PigOut:
                         if piece_number > 30:
                             break
                         if piece_id != current_piece_id:
-                            if normalize:
+                            if weight:
                                 with open(input_path, 'r') as fp:
                                     note_count = len(fp.readlines()) - 1  # Ignore comment on first line.
                                     note_counts[piece_id] = note_count
@@ -950,15 +978,15 @@ class PigOut:
                 for metric in result:
                     if metric not in totals:
                         totals[metric] = 0
-                    if normalize:
+                    if weight:
                         totals[metric] += (result[metric]*note_counts[piece_id])/(total_note_count*piece_file_count)
                     else:
                         totals[metric] += result[metric]/(piece_count*piece_file_count)
         if output:
             corpus_name = PigOut.corpus_name_for_dir(fingering_files_dir)
             PigOut.output_nakamura_metrics(results=totals, corpus_name=corpus_name, model="human",
-                                           normalize=normalize, output_type=output)
-        return totals
+                                           weight=weight, output_type=output)
+        return totals, {}
 
     @staticmethod
     def get_pig_corpus_path(piece_id):
