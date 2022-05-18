@@ -788,48 +788,48 @@ class PigOut:
 
     @staticmethod
     def my_average_m_gen(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_RESULT_FHMM3_DIR, weight=True):
-        piece_results = list()
+        piece_results = dict()
         pred_files, pred_paths = PigOut.pig_files_and_paths(fingering_files_dir=prediction_dir)
         total_match_count = 0
         total_note_count = 0
         total_annot_count = 0
         piece_count = len(pred_paths)
-        piece_match_counts = list()
-        piece_annot_counts = list()
-        piece_note_counts = list()
+        piece_match_counts = dict()
+        piece_annot_counts = dict()
+        piece_note_counts = dict()
         for i in range(piece_count):
             pred_path = pred_paths[i]
             pred_notes = PigIn.pig_notes(file_path=pred_path)
             note_count = len(pred_notes)
-            piece_note_counts.append(note_count)
             piece_id = PigOut.piece_id_for_file_name(file_name=pred_files[i])
+            piece_note_counts[piece_id] = note_count
             gt_files, gt_paths = PigOut.pig_files_and_paths(fingering_files_dir=fingering_files_dir, piece_id=piece_id)
             match_count, annot_count, m_gen = \
                 PigOut.my_single_prediction_m_gen(gt_pig_paths=gt_paths, pred_pig_path=pred_path)
             total_annot_count += annot_count
             total_match_count += match_count
             total_note_count += note_count
-            piece_match_counts.append(match_count)
-            piece_annot_counts.append(annot_count)
-        for i in range(piece_count):
-            piece_rate = piece_match_counts[i] / piece_annot_counts[i]
+            piece_match_counts[piece_id] = match_count
+            piece_annot_counts[piece_id] = annot_count
+        for piece_id in sorted(piece_annot_counts):
+            piece_results[piece_id] = dict()
+            piece_rate = piece_match_counts[piece_id] / piece_annot_counts[piece_id]
             contribution = 1.0 / piece_count
             if weight:
                 contribution = piece_note_counts[i]/total_note_count
-            piece_result = {
-                'piece_id': i + 1,
-                'match_count': piece_match_counts[i],
-                'annot_count': piece_annot_counts[i],
-                'note_count': piece_note_counts[i],
-                'contribution': contribution,
-                'raw_rate': piece_rate
+            general_result = {
+                'match_count': piece_match_counts[piece_id],
+                'note_count': piece_note_counts[piece_id],
+                'annot_count': piece_annot_counts[piece_id],
+                'raw_rate': piece_rate,
+                'contribution': contribution
             }
-            piece_results.append(piece_result)
+            piece_results[piece_id]['general'] = general_result
         if weight:
             avg_m_gen = 0
-            for i in range(piece_count):
-                piece_rate = piece_match_counts[i]/piece_annot_counts[i]
-                contribution = piece_note_counts[i]/total_note_count
+            for piece_id in sorted(piece_annot_counts):
+                piece_rate = piece_match_counts[piece_id]/piece_annot_counts[piece_id]
+                contribution = piece_note_counts[piece_id]/total_note_count
                 avg_m_gen += piece_rate*contribution
         else:
             avg_m_gen = total_match_count/total_annot_count

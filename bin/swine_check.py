@@ -125,20 +125,24 @@ results = PigOut.nakamura_accuracy(fingering_files_dir=PIG_SEGREGATED_FINGERING_
 print("")
 model_names = ['fhmm1', 'fhmm2', 'fhmm3', 'chmm', 'human']
 PigOut.output_nakamura_metrics_heading()
+model_piece_results = dict()
 for model in model_names:
     results, piece_results = PigOut.nakamura_metrics(model=model, weight=False)
+    model_piece_results[model] = piece_results
     # print("Nakamura {:>5} model (non-weighted): {}".format(model, results))
     # std_results = PigOut.nakamura_published(fingering_files_dir=PIG_STD_DIR, model=model, weight=False)
     # print("std_pig  {:>5} model (non-weighted): {}".format(model, std_results))
-    results, piece_results = PigOut.nakamura_metrics(fingering_files_dir=PIG_SEGREGATED_FINGERING_DIR,
+    results, seg_piece_results = PigOut.nakamura_metrics(fingering_files_dir=PIG_SEGREGATED_FINGERING_DIR,
                                                      model=model, weight=False)
+    seg_model = model + '_seg'
+    model_piece_results[seg_model] = seg_piece_results
 print("")
-for model in model_names:
-    results, piece_results = PigOut.nakamura_metrics(model=model, weight=True)
+# for model in model_names:
+    # results, piece_results = PigOut.nakamura_metrics(model=model, weight=True)
     # print("Nakamura {:>5} model (normalized)    : {}".format(model, normalized_results))
     # normalized_std_results = PigOut.nakamura_published(fingering_files_dir=PIG_STD_DIR, model=model, weight=True)
     # print("std_pig  {:>5} model (normalized): {}".format(model, normalized_std_results))
-    results, piece_results = PigOut.nakamura_metrics(fingering_files_dir=PIG_SEGREGATED_FINGERING_DIR,
-                                                     model=model, weight=True)
+    # results, piece_results = PigOut.nakamura_metrics(fingering_files_dir=PIG_SEGREGATED_FINGERING_DIR,
+                                                     # model=model, weight=True)
 print("")
 print("Done")

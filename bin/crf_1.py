@@ -611,16 +611,19 @@ elif TEST_METHOD == 'preset':
         evaluate_trained_model(the_model=my_crf, x_test=ex.x_test, y_test=ex.y_test)
     else:
         train_and_evaluate(the_model=my_crf, x_train=ex.x_train, y_train=ex.y_train, x_test=ex.x_test, y_test=ex.y_test)
-    total_simple_match_count, total_annot_count, simple_match_rate = get_simple_match_rate(ex=ex, output=True)
-    result, piece_results = get_complex_match_rates(ex=ex, weight=False)
+    ###total_simple_match_count, total_annot_count, simple_match_rate = get_simple_match_rate(ex=ex, output=True)
+    result, complex_piece_results = get_complex_match_rates(ex=ex, weight=False)
     print("Unweighted avg M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
-    pprint.pprint(piece_results)
-    result, piece_results = get_my_avg_m_gen(ex=ex, weight=False, reuse=False)
+    result, my_piece_results = get_my_avg_m_gen(ex=ex, weight=False, reuse=False)
     print("Unweighted avg m_gen for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
-    result, piece_results = get_complex_match_rates(ex=ex, weight=True)
-    print("Weighted avg M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
-    result, piece_results = get_my_avg_m_gen(ex=ex, weight=True, reuse=True)
-    print("Weighted avg m_gen for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+    for key in sorted(complex_piece_results):
+        print("nak {} => {}".format (key, complex_piece_results[key]))
+        print(" my {} => {}".format(key, my_piece_results[key]))
+        print("")
+    # result, piece_results = get_complex_match_rates(ex=ex, weight=True)
+    # print("Weighted avg M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+    # result, piece_results = get_my_avg_m_gen(ex=ex, weight=True, reuse=True)
+    # print("Weighted avg m_gen for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
 else:
     split_x_train, split_x_test, split_y_train, split_y_test = \
         train_test_split(ex.x, ex.y, test_size=0.4, random_state=0)
