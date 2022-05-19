@@ -615,6 +615,48 @@ class PigOut:
         return match_total_count, gt_note_total_count, m_gen
 
     @staticmethod
+    def my_single_prediction_m(gt_pig_paths, pred_pig_path):
+        pred_pig_notes = PigIn.pig_notes(file_path=pred_pig_path)
+        note_count = len(pred_pig_notes)
+        gt_annot_total_count = note_count*len(gt_pig_paths)
+        gt_match_counts = list()
+        match_total_counts = {
+            'general': 0,
+            'highest': 0,
+            'soft': 0,
+            'recomb': 0
+        }
+        m = {
+            'general': 0,
+            'highest': 0,
+            'soft': 0,
+            'recomb': 0
+        }
+        highest_gt_match_count = 0
+        match_bits = [0]*note_count
+        for gt_pp in gt_pig_paths:
+            gt_match_count = 0
+            gt_pig_notes = PigIn.pig_notes(file_path=gt_pp)
+            if len(gt_pig_notes) != note_count:
+                raise Exception("Files are of unequal length.")
+            for i in range(note_count):
+                pred_note = pred_pig_notes[i]
+                pred_strike_finger = pred_note.strike_pig_finger()
+                gt_note = gt_pig_notes[i]
+                gt_strike_finger = gt_note.strike_pig_finger()
+                if gt_strike_finger == pred_strike_finger:
+                    gt_match_count += 1
+                    match_bits[i] = 1
+            if gt_match_count > highest_gt_match_count:
+                highest_gt_match_count = gt_match_count
+            gt_match_counts.append(gt_match_count)
+            match_total_counts['general'] += gt_match_count
+        m['general'] = match_total_counts['general'] / gt_annot_total_count
+        m['highest'] = highest_gt_match_count / note_count
+        m['soft'] = match_bits.count(1) / note_count
+        return m
+
+    @staticmethod
     def single_prediction_complex_match_rates(gt_pig_paths, pred_pig_path):
         cmd_tokens = list()
         cmd_tokens.append(COMPLEX_MATCH_RATES_CMD)
@@ -787,9 +829,9 @@ class PigOut:
         return pig_files, pig_paths
 
     @staticmethod
-    def my_average_m_gen(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_RESULT_FHMM3_DIR, weight=True):
+    def my_average_m_gen(fingering_files_dir=PIG_FINGERING_DIR, prediction_input_dir=PIG_RESULT_FHMM3_DIR, weight=False):
         piece_results = dict()
-        pred_files, pred_paths = PigOut.pig_files_and_paths(fingering_files_dir=prediction_dir)
+        pred_files, pred_paths = PigOut.pig_files_and_paths(fingering_files_dir=prediction_input_dir)
         total_match_count = 0
         total_note_count = 0
         total_annot_count = 0
@@ -806,6 +848,15 @@ class PigOut:
             gt_files, gt_paths = PigOut.pig_files_and_paths(fingering_files_dir=fingering_files_dir, piece_id=piece_id)
             match_count, annot_count, m_gen = \
                 PigOut.my_single_prediction_m_gen(gt_pig_paths=gt_paths, pred_pig_path=pred_path)
+            complex = PigOut.single_prediction_complex_match_rates(gt_pig_paths=gt_paths, pred_pig_path=pred_path)
+            complex_m_gen = complex['general']
+            complex_match_count = round(complex_m_gen * annot_count)
+
+            if match_count != complex_match_count:
+                msg = "{} has conflicting match counts: {} vs. {}.\n".format(piece_id, match_count, complex_match_count)
+                msg += "pred_file: {}, test_files: {}".format(pred_path, gt_paths)
+                print(msg)
+
             total_annot_count += annot_count
             total_match_count += match_count
             total_note_count += note_count
@@ -816,7 +867,7 @@ class PigOut:
             piece_rate = piece_match_counts[piece_id] / piece_annot_counts[piece_id]
             contribution = 1.0 / piece_count
             if weight:
-                contribution = piece_note_counts[i]/total_note_count
+                contribution = piece_note_counts[piece_id]/total_note_count
             general_result = {
                 'match_count': piece_match_counts[piece_id],
                 'note_count': piece_note_counts[piece_id],
@@ -839,14 +890,83 @@ class PigOut:
         return avg_m_gen, piece_results
 
     @staticmethod
-    def nakamura_metrics(fingering_files_dir=PIG_FINGERING_DIR, prediction_dir=PIG_PREDICTION_DIR,
-                         model='fhmm3', weight=True, output="text"):
+    def my_average_m(fingering_files_dir=PIG_FINGERING_DIR, prediction_input_dir=PIG_RESULT_FHMM3_DIR, weight=False):
+        piece_results = dict()
+        piece_details = dict()
+        pred_files, pred_paths = PigOut.pig_files_and_paths(fingering_files_dir=prediction_input_dir)
+        total_note_count = 0
+        total_annot_count = 0
+        piece_count = len(pred_paths)
+        piece_annot_counts = dict()
+        piece_note_counts = dict()
+        for i in range(piece_count):
+            pred_path = pred_paths[i]
+            pred_notes = PigIn.pig_notes(file_path=pred_path)
+            note_count = len(pred_notes)
+            piece_id = PigOut.piece_id_for_file_name(file_name=pred_files[i])
+            piece_note_counts[piece_id] = note_count
+            gt_files, gt_paths = PigOut.pig_files_and_paths(fingering_files_dir=fingering_files_dir, piece_id=piece_id)
+            m_i = PigOut.my_single_prediction_m(gt_pig_paths=gt_paths, pred_pig_path=pred_path)
+            piece_results[piece_id] = m_i
+            piece_annot_counts[piece_id] = note_count * len(gt_paths)
+            total_annot_count += piece_annot_counts[piece_id]
+            total_note_count += note_count
+        for piece_id in sorted(piece_results):
+            piece_details[piece_id] = dict()
+            for metric in NAKAMURA_METRICS:
+                metric_val = piece_results[piece_id][metric]
+                if metric == 'general':
+                    contribution = 1.0 / piece_count
+                    if weight:
+                        contribution = piece_note_counts[piece_id]/total_note_count
+                    details = {
+                        'match_count': round(piece_annot_counts[piece_id] * metric_val),
+                        'note_count': piece_note_counts[piece_id],
+                        'annot_count': piece_annot_counts[piece_id],
+                        'raw_rate': metric_val,
+                        'contribution': contribution
+                    }
+                elif metric == 'recomb':
+                    details = {}
+                else:
+                    contribution = 1.0 / piece_count
+                    if weight:
+                        contribution = piece_note_counts[piece_id]/total_note_count
+                    details = {
+                        'match_count': round(piece_note_counts[piece_id] * metric_val),
+                        'note_count': piece_note_counts[piece_id],
+                        'annot_count': piece_annot_counts[piece_id],
+                        'raw_rate': metric_val,
+                        'contribution': contribution
+                    }
+                piece_details[piece_id][metric] = details
+
+        avg_m = {}
+        for metric in NAKAMURA_METRICS:
+            avg_m[metric] = 0
+
+        for metric in NAKAMURA_METRICS:
+            if metric == 'recomb':
+                continue
+            for piece_id in sorted(piece_details):
+                piece_rate = piece_details[piece_id][metric]['raw_rate']
+                contribution = piece_details[piece_id][metric]['contribution']
+                avg_m[metric] += piece_rate * contribution
+            if avg_m[metric] > 1.0:
+                raise Exception("Bad average M_{} calculated: {}".format(metric, avg_m[metric]))
+        return avg_m, piece_details
+
+    @staticmethod
+    def nakamura_metrics(fingering_files_dir=PIG_FINGERING_DIR, prediction_output_dir=None,
+                         prediction_input_dir=PIG_RESULT_FHMM3_DIR,
+                         model='fhmm3', weight=False, output="text"):
         if model == 'human':
             return PigOut.nakamura_human(fingering_files_dir=fingering_files_dir, output=output, weight=weight)
 
-        prediction_path = Path(prediction_dir)
-        if not prediction_path.is_dir():
-            os.makedirs(prediction_dir)
+        if prediction_output_dir:
+            prediction_output_path = Path(prediction_output_dir)
+            if not prediction_output_path.is_dir():
+                os.makedirs(prediction_output_dir)
 
         current_piece_id = None
         gt_files = dict()
@@ -870,23 +990,33 @@ class PigOut:
                                 note_count = len(fp.readlines()) - 1  # Ignore comment on first line.
                                 note_counts[piece_id] = note_count
                                 total_note_count += note_count
-                            output_path = prediction_dir + file
-                            PigOut.run_hmm(model=model, in_fin=input_path, out_fin=output_path)
+                            if prediction_output_dir:
+                                output_path = prediction_output_dir + file
+                                PigOut.run_hmm(model=model, in_fin=input_path, out_fin=output_path)
+                            else:
+                                output_path = prediction_input_dir + file
                             prediction_files[piece_id] = output_path
                             current_piece_id = piece_id
                         if piece_id not in gt_files:
                             gt_files[piece_id] = list()
                         gt_files[piece_id].append(input_path)
 
+        total_annot_count = 0
+        total_match_counts_by_metric = dict()
         piece_results = dict()
-        totals = dict()
+        metrics = NAKAMURA_METRICS
         for key_piece_id in gt_files:
+            total_annot_count += note_counts[key_piece_id] * len(gt_files[key_piece_id])
             piece_results[key_piece_id] = {}
             result = PigOut.single_prediction_complex_match_rates(gt_pig_paths=gt_files[key_piece_id],
                                                                   pred_pig_path=prediction_files[key_piece_id])
             for metric in result:
                 piece_annot_count = note_counts[key_piece_id] * len(gt_files[key_piece_id])
                 piece_match_count = round(result[metric] * piece_annot_count)
+                if metric not in total_match_counts_by_metric:
+                    total_match_counts_by_metric[metric] = piece_match_count
+                else:
+                    total_match_counts_by_metric[metric] += piece_match_count
                 piece_metric = {
                     'annot_count': piece_annot_count,
                     'match_count': piece_match_count,
@@ -894,12 +1024,26 @@ class PigOut:
                     'raw_rate': piece_match_count / piece_annot_count
                 }
                 piece_results[key_piece_id][metric] = piece_metric
+
+        totals = dict()
+        for metric in metrics:
+            if weight:
                 if metric not in totals:
                     totals[metric] = 0
-                if weight:
-                    totals[metric] += result[metric] * note_counts[key_piece_id] / total_note_count
-                else:
-                    totals[metric] += result[metric]/30
+                for key_piece_id in sorted(gt_files):
+                    piece_match_count = piece_results[key_piece_id][metric]['match_count']
+                    piece_annot_count = piece_results[key_piece_id][metric]['annot_count']
+                    piece_note_count = piece_results[key_piece_id][metric]['note_count']
+                    piece_rate = piece_match_count / piece_annot_count
+                    contribution = piece_note_count/total_note_count
+                    totals[metric] += piece_rate * contribution
+            else:
+                totals[metric] = total_match_counts_by_metric[metric]/total_annot_count
+                # print("M_{} = {}/{} = {}".format(metric, total_match_counts_by_metric[metric],
+                #                                  total_annot_count, totals[metric]))
+            if totals[metric] >= 1.0:
+                raise Exception("Metric {} is invalid: {}".format(metric, totals[metric]))
+
         if output:
             corpus_name = PigOut.corpus_name_for_dir(fingering_files_dir=fingering_files_dir)
             PigOut.output_nakamura_metrics(results=totals, corpus_name=corpus_name, model=model,

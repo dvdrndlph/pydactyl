@@ -83,12 +83,24 @@ match_count, note_count, m_gen = \
 print(m_gen)
 print("Difference between my m_gen and EvaluateMultipleGroundTruth: {}".format(m_gen - result['general']))
 print("")
-avg_m_gen, piece_m_gens = PigOut.my_average_m_gen(fingering_files_dir=PIG_FINGERING_DIR,
-                                                  prediction_dir=PIG_RESULT_FHMM3_DIR, weight=False)
-pprint.pprint(piece_m_gens)
-print("My average M_gen for FHMM3: {}".format(avg_m_gen))
-avg_m_gen, piece_m_gens = PigOut.my_average_m_gen(fingering_files_dir=PIG_FINGERING_DIR,
-                                                  prediction_dir=PIG_RESULT_FHMM3_DIR, weight=True)
+avg_m_gen, my_piece_results = PigOut.my_average_m_gen(fingering_files_dir=PIG_FINGERING_DIR,
+                                                      prediction_input_dir=PIG_RESULT_FHMM3_DIR, weight=False)
+complex_m, complex_piece_results = PigOut.nakamura_metrics(fingering_files_dir=PIG_FINGERING_DIR, weight=False,
+                                                           prediction_input_dir=PIG_RESULT_FHMM3_DIR)
+
+my_avg_m, my_m_piece_results = PigOut.my_average_m(fingering_files_dir=PIG_FINGERING_DIR, weight=False,
+                                                   prediction_input_dir=PIG_RESULT_FHMM3_DIR)
+print("{} {}".format(my_avg_m, my_m_piece_results))
+exit()
+
+for key in sorted(my_piece_results):
+    print("nak {} => {}".format(key, complex_piece_results[key]))
+    print(" my {} => {}".format(key, my_piece_results[key]))
+    print("")
+# print("My average M_gen for FHMM3: {}".format(avg_m_gen))
+# avg_m_gen, piece_m_gens = PigOut.my_average_m_gen(fingering_files_dir=PIG_FINGERING_DIR,
+                                                  # prediction_dir=PIG_RESULT_FHMM3_DIR, weight=True)
+
 print("My normalized average M_gen for FHMM3: {}".format(avg_m_gen))
 # exit()
 
@@ -112,6 +124,8 @@ results = PigOut.nakamura_accuracy(fingering_files_dir=PIG_FINGERING_DIR, model=
 # results = PigOut.nakamura_accuracy(fingering_files_dir=PIG_STD_DIR, model='fhmm3', output="text")
 results = PigOut.nakamura_accuracy(fingering_files_dir=PIG_SEGREGATED_FINGERING_DIR, model='fhmm3', output="text")
 # results = PigOut.nakamura_accuracy(fingering_files_dir=PIG_SEGREGATED_STD_DIR, model='fhmm3', output="text")
+exit()
+
 
 # corpse = DCorpus()
 # corpse.append(corpus_path=mf_path, header_path=hdr_path)
@@ -133,7 +147,7 @@ for model in model_names:
     # std_results = PigOut.nakamura_published(fingering_files_dir=PIG_STD_DIR, model=model, weight=False)
     # print("std_pig  {:>5} model (non-weighted): {}".format(model, std_results))
     results, seg_piece_results = PigOut.nakamura_metrics(fingering_files_dir=PIG_SEGREGATED_FINGERING_DIR,
-                                                     model=model, weight=False)
+                                                         model=model, weight=False)
     seg_model = model + '_seg'
     model_piece_results[seg_model] = seg_piece_results
 print("")
