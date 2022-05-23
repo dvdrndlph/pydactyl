@@ -38,6 +38,8 @@ import subprocess
 import sklearn_crfsuite as crf
 from sklearn_crfsuite import metrics
 import pickle
+import dill
+import weakref
 from pathlib import Path
 from sklearn.model_selection import train_test_split, cross_val_score
 from pydactyl.eval.Corporeal import Corporeal
@@ -58,6 +60,7 @@ MS_PER_BEAT = MICROSECONDS_PER_BEAT / 1000
 CHORD_MS_THRESHOLD = 30
 CLEAN_LIST = {}  # Reuse all pickled results.
 # CLEAN_LIST = {'crf': True}
+# CLEAN_LIST = {'DCorpus': True}
 # CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CROSS_VALIDATE = False
@@ -76,8 +79,8 @@ STAFFS = ['upper', 'lower']
 # CORPUS_NAMES = ['layer_one_by_annotator', 'scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['pig']
-CORPUS_NAMES = ['pig_indy']
-# CORPUS_NAMES = ['pig_seg']
+# CORPUS_NAMES = ['pig_indy']
+CORPUS_NAMES = ['pig_seg']
 
 
 #####################################################
@@ -88,7 +91,7 @@ def pickle_directory(obj_type):
     return my_dir
 
 
-def pickle_it(obj, obj_type, file_name):
+def pickle_it(obj, obj_type, file_name, use_dill=False):
     pickle_dir = pickle_directory(obj_type)
     path = Path(pickle_dir)
     if not path.is_dir():
@@ -96,11 +99,14 @@ def pickle_it(obj, obj_type, file_name):
     pickle_path = pickle_dir + file_name
     print("Pickling {} to path {}.".format(obj_type, pickle_path))
     pickle_fh = open(pickle_path, 'wb')
-    pickle.dump(obj, pickle_fh, protocol=pickle.HIGHEST_PROTOCOL)
+    if use_dill:
+        dill.dump(obj, pickle_fh, protocol=pickle.HIGHEST_PROTOCOL)
+    else:
+        pickle.dump(obj, pickle_fh, protocol=pickle.HIGHEST_PROTOCOL)
     pickle_fh.close()
 
 
-def unpickle_it(obj_type, file_name):
+def unpickle_it(obj_type, file_name, use_dill=False):
     pickle_dir = pickle_directory(obj_type)
     pickle_path = pickle_dir + file_name
 
@@ -111,7 +117,10 @@ def unpickle_it(obj_type, file_name):
             print("Pickle file {} removed because {} is on the CLEAN_LIST.".format(pickle_path, obj_type))
             return None
         pickle_fh = open(pickle_path, 'rb')
-        unpickled_obj = pickle.load(pickle_fh)
+        if use_dill:
+            unpickled_obj = dill.load(pickle_fh)
+        else:
+            unpickled_obj = pickle.load(pickle_fh)
         pickle_fh.close()
         print("Unpickled {} from path {}.".format(obj_type, pickle_path))
         return unpickled_obj
@@ -429,8 +438,22 @@ def get_my_avg_m_gen(ex: DExperiment, prediction_dir=PREDICTION_DIR, test_dir=TE
         for tpp in test_pig_paths:
             shutil.copy2(tpp, test_dir)
     avg_m_gen, piece_m_gens = PigOut.my_average_m_gen(fingering_files_dir=test_dir,
-                                                      prediction_dir=prediction_dir, weight=weight)
+                                                      prediction_input_dir=prediction_dir, weight=weight)
     return avg_m_gen, piece_m_gens
+
+
+def get_my_avg_m(ex: DExperiment, prediction_dir=PREDICTION_DIR, test_dir=TEST_DIR, reuse=False, weight=False):
+    if reuse:
+        PigIn.mkdir_if_missing(path_str=test_dir, make_missing=False)
+    else:
+        PigIn.mkdir_if_missing(path_str=test_dir, make_missing=True)
+        test_pig_paths = predict_and_persist(ex=ex, prediction_dir=prediction_dir)
+        print("There are {} PIG test paths.".format(len(test_pig_paths)))
+        for tpp in test_pig_paths:
+            shutil.copy2(tpp, test_dir)
+    avg_m, piece_ms = PigOut.my_average_m(fingering_files_dir=test_dir,
+                                          prediction_input_dir=prediction_dir, weight=weight)
+    return avg_m, piece_ms
 
 
 def get_complex_match_rates(ex: DExperiment, weight=False, prediction_dir=PREDICTION_DIR, output=False):
@@ -506,10 +529,10 @@ ex = unpickle_it(obj_type="DExperiment", file_name=experiment_name)
 if ex is None:
     ex = DExperiment(corpus_names=CORPUS_NAMES)
     for corpus_name in CORPUS_NAMES:
-        da_corpus = unpickle_it(obj_type="DCorpus", file_name=corpus_name)
+        da_corpus = unpickle_it(obj_type="DCorpus", file_name=corpus_name, use_dill=True)
         if da_corpus is None:
             da_corpus = creal.get_corpus(corpus_name=corpus_name)
-            pickle_it(obj=da_corpus, obj_type="DCorpus", file_name=corpus_name)
+            pickle_it(obj=da_corpus, obj_type="DCorpus", file_name=corpus_name, use_dill=True)
         for da_score in da_corpus.d_score_list():
             da_unannotated_score = copy.deepcopy(da_score)
             score_title = da_score.title()
@@ -605,17 +628,19 @@ if TEST_METHOD == 'cross-validate':
     scores = cross_val_score(my_crf, ex.x, ex.y, cv=5)
     # scores = cross_validate(my_crf, ex.x, ex.y, cv=5, scoring="flat_precision_score")
     print(scores)
+    avg_score = sum(scores) / len(scores)
+    print("Average cross-validation score: {}".format(avg_score))
 elif TEST_METHOD == 'preset':
     # my_crf.fit(ex.x_train, ex.y_train)
     if have_trained_model:
         evaluate_trained_model(the_model=my_crf, x_test=ex.x_test, y_test=ex.y_test)
     else:
         train_and_evaluate(the_model=my_crf, x_train=ex.x_train, y_train=ex.y_train, x_test=ex.x_test, y_test=ex.y_test)
-    ###total_simple_match_count, total_annot_count, simple_match_rate = get_simple_match_rate(ex=ex, output=True)
+    total_simple_match_count, total_annot_count, simple_match_rate = get_simple_match_rate(ex=ex, output=True)
     result, complex_piece_results = get_complex_match_rates(ex=ex, weight=False)
     print("Unweighted avg M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
-    result, my_piece_results = get_my_avg_m_gen(ex=ex, weight=False, reuse=False)
-    print("Unweighted avg m_gen for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+    result, my_piece_results = get_my_avg_m(ex=ex, weight=False, reuse=False)
+    print("My unweighted avg m for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
     for key in sorted(complex_piece_results):
         print("nak {} => {}".format (key, complex_piece_results[key]))
         print(" my {} => {}".format(key, my_piece_results[key]))

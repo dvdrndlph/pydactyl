@@ -91,7 +91,7 @@ complex_m, complex_piece_results = PigOut.nakamura_metrics(fingering_files_dir=P
 my_avg_m, my_m_piece_results = PigOut.my_average_m(fingering_files_dir=PIG_FINGERING_DIR, weight=False,
                                                    prediction_input_dir=PIG_RESULT_FHMM3_DIR)
 print("{} {}".format(my_avg_m, my_m_piece_results))
-exit()
+
 
 for key in sorted(my_piece_results):
     print("nak {} => {}".format(key, complex_piece_results[key]))
@@ -124,7 +124,7 @@ results = PigOut.nakamura_accuracy(fingering_files_dir=PIG_FINGERING_DIR, model=
 # results = PigOut.nakamura_accuracy(fingering_files_dir=PIG_STD_DIR, model='fhmm3', output="text")
 results = PigOut.nakamura_accuracy(fingering_files_dir=PIG_SEGREGATED_FINGERING_DIR, model='fhmm3', output="text")
 # results = PigOut.nakamura_accuracy(fingering_files_dir=PIG_SEGREGATED_STD_DIR, model='fhmm3', output="text")
-exit()
+
 
 
 # corpse = DCorpus()
