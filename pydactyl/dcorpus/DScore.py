@@ -243,11 +243,24 @@ class DScore:
             return self.lower_orderly_note_stream(offset=offset)
         return self._combined_d_part.orderly_note_stream(offset=offset)
 
+    def ordered_offset_notes(self, staff="both", offset=0):
+        if staff == "upper":
+            return self.upper_ordered_offset_notes(offset=offset)
+        elif staff == "lower":
+            return self.lower_ordered_offset_notes(offset=offset)
+        return self._combined_d_part.ordered_offset_notes(offset=offset)
+
     def upper_orderly_note_stream(self, offset=0):
         if self._upper_d_part:
             return self._upper_d_part.orderly_note_stream(offset=offset)
         else:
             return self._combined_d_part.orderly_note_stream(offset=offset)
+
+    def upper_ordered_offset_notes(self, offset=0):
+        if self._upper_d_part:
+            return self._upper_d_part.ordered_offset_notes(offset=offset)
+        else:
+            return self._combined_d_part.ordered_offset_notes(offset=offset)
 
     def lower_stream(self):
         if self._lower_d_part:
@@ -257,6 +270,11 @@ class DScore:
     def lower_orderly_note_stream(self, offset=0):
         if self._lower_d_part:
             return self._lower_d_part.orderly_note_stream(offset=offset)
+        return None
+
+    def lower_ordered_offset_notes(self, offset=0):
+        if self._lower_d_part:
+            return self._lower_d_part.ordered_offset_notes(offset=offset)
         return None
 
     def part_count(self):

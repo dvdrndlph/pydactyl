@@ -22,6 +22,7 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 from music21 import note, chord, stream, duration, tempo
+from music21.exceptions21 import StreamException
 from .DNote import DNote
 
 
@@ -79,24 +80,9 @@ class DPart:
             if note.pitch.midi == pitch.midi:
                 return True
 
-    def orderly_note_stream(self, offset=0):
-        """Return part as stream of notes with no notes starting at the same
-           offset. Chords turned into a sequence of notes with starting points
-           separated by the shortest duration (a 2048th note) ordered from
-           low to high. The lowest individual note at a given offset will remain
-           in place. All other notes at a given offset will be nudged to the right.
-           The goal here is to provide an orderly sequence of notes that can be
-           processed by Dactylers that only support monophonic streams. They can
-           ignore the stacking of notes and at least take a stab at more complex
-           scores (i.e., ones with chords). We also want to approximate note durations
-           in case this information is useful for some models.
-        """
-        # short_dur = duration.Duration(0.0001)
-        short_dur = duration.Duration()
-        short_dur.type = '2048th'
-
+    def chord_notes_by_offset(self):
         chords = self._stream.flat.getElementsByClass(chord.Chord)
-        chord_cnt = len(chords)
+        # chord_cnt = len(chords)
         chord_stream = chords.stream()
         notes_at_offset = {}
         chord_notes = []
@@ -117,9 +103,9 @@ class DPart:
                 else:
                     print("music21 MIDI spawned extra note in chord.")
 
-        offset_cnt = len(notes_at_offset)
+        # offset_cnt = len(notes_at_offset)
         # if chord_cnt != offset_cnt:
-            # print("{} chord(s) subsumed by other(s).".format(chord_cnt - offset_cnt))
+        # print("{} chord(s) subsumed by other(s).".format(chord_cnt - offset_cnt))
 
         offsetted_cnt = len(offsetted_notes)
         nao_cnt = 0
@@ -127,7 +113,10 @@ class DPart:
             nao_cnt += len(notes_at_offset[note_offset])
         if offsetted_cnt != nao_cnt:
             raise Exception("Count mismatch for chord notes at offsets.")
+        return notes_at_offset
 
+    def notes_by_offset_sorted_by_pitch(self):
+        notes_at_offset = self.chord_notes_by_offset()
         notes = self._stream.flat.getElementsByClass(note.Note)
         note_list = list(notes)
         note_stream = notes.stream()
@@ -137,25 +126,62 @@ class DPart:
                 notes_at_offset[note_offset] = [old_note]
             else:
                 notes_at_offset[note_offset].append(old_note)
-            offsetted_notes.append(old_note)
+        for o in notes_at_offset:
+            nao = notes_at_offset[o]
+            note_cnt = len(nao)
+            nao.sort(key=lambda x: x.pitch.midi)
+            sorted_note_cnt = len(nao)
+            if sorted_note_cnt != note_cnt:
+                raise Exception("Sorting has gone off the rails.")
+        return notes_at_offset
 
+    @staticmethod
+    def metronome_mark_at_offset(boundaries, q_len_offset):
+        met_mark = None
+        for bounds in boundaries:
+            if bounds[0] <= q_len_offset < bounds[1]:
+                met_mark = bounds[2]
+                break
+        return met_mark
+
+    def ordered_offset_notes(self, offset=0):
+        notes_at_offset = self.notes_by_offset_sorted_by_pitch()
+        metronome_boundaries = self._stream.metronomeMarkBoundaries()
+        ordered_notes = list()
+        for o in sorted(notes_at_offset):
+            if o >= offset:
+                met_mark = DPart.metronome_mark_at_offset(boundaries=metronome_boundaries, q_len_offset=o)
+                second_offset = met_mark.durationToSeconds(o)
+                for knot in notes_at_offset[o]:
+                    offset_note = {'offset': o, 'second_offset': second_offset, 'note': knot}
+                    ordered_notes.append(offset_note)
+        return ordered_notes
+
+    def orderly_note_stream(self, offset=0):
+        """Return part as stream of notes with no notes starting at the same
+           offset. Chords turned into a sequence of notes with starting points
+           separated by the shortest duration (a 2048th note) ordered from
+           low to high. The lowest individual note at a given offset will remain
+           in place. All other notes at a given offset will be nudged to the right.
+           The goal here is to provide an orderly sequence of notes that can be
+           processed by Dactylers that only support monophonic streams. They can
+           ignore the stacking of notes and at least take a stab at more complex
+           scores (i.e., ones with chords). We also want to approximate note durations
+           in case this information is useful for some models.
+        """
+        # short_dur = duration.Duration(0.0001)
+        short_dur = duration.Duration()
+        short_dur.type = '2048th'
+        notes_at_offset = self.notes_by_offset_sorted_by_pitch()
         stream_index = 0
         prior_stream_size = 0
         new_note_stream = stream.Score()
         epoch_num = 1
         for note_offset in sorted(notes_at_offset):
             offset_notes = notes_at_offset[note_offset]
-            notes_len = len(offset_notes)
-            if len(offset_notes) > 1:
-                sorted_notes = sorted(offset_notes, key=lambda x: x.pitch.midi)
-            else:
-                sorted_notes = offset_notes
-            sorted_notes_len = len(sorted_notes)
-            if sorted_notes_len != notes_len:
-                raise Exception("Sorting has gone off the rails.")
             note_index = 0
             prior_old_note = None
-            for old_note in sorted_notes:
+            for old_note in offset_notes:
                 if prior_old_note and old_note.pitch.midi == prior_old_note.pitch.midi \
                         and not prior_old_note.duration.linked and not old_note.duration.linked:  # Neither are grace notes.
                     raise Exception("Duplicate {} pitches at epoch {} (offset {}) in part near note index {}.".format(

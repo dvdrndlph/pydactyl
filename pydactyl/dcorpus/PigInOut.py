@@ -27,6 +27,7 @@ import shutil
 import re
 import copy
 import mido
+from scipy.stats import ttest_rel
 from sklearn_crfsuite import metrics
 from music21 import pitch, note
 from pathlib import Path
@@ -589,6 +590,37 @@ class PigOut:
             match_rate['rate'] = 1.0*match_rate['match_count'] / match_rate['note_count']
         # print(result.stdout)
         return match_rate
+
+    @staticmethod
+    def simple_match_rates(gt_pig_paths, pred_pig_paths):
+        match_rates = list()
+        for i in range(pred_pig_paths):
+            match_rate = PigOut.simple_match_rate(gt_pig_path=gt_pig_paths[i], pred_pig_path=pred_pig_paths[i])
+            match_rates.append(match_rate['rate'])
+        return match_rates
+
+    @staticmethod
+    def simple_match_rates_paired_t_test(self, gt_pig_paths=None, better_pig_paths=None, worse_pig_paths=None,
+                                         gt_pig_dir=None, better_pig_dir=None, worse_pig_dir=None):
+        if gt_pig_dir:
+            gt_pig_paths = PigOut.pig_paths_in_dir(gt_pig_dir)
+        if better_pig_dir:
+            better_pig_paths = PigOut.pig_paths_in_dir(better_pig_dir)
+        if worse_pig_dir:
+            worse_pig_paths = PigOut.pig_paths_in_dir(worse_pig_dir)
+        better_rates = PigOut.simple_match_rate(gt_pig_paths=gt_pig_paths, pred_pig_path=better_pig_paths)
+        worse_rates = PigOut.simple_match_rate(gt_pig_paths=gt_pig_paths, pred_pig_path=worse_pig_paths)
+        stat, p_val = ttest_rel(better_rates, worse_rates)
+        return stat, p_val
+
+    @staticmethod
+    def pig_paths_in_dir(pig_dir):
+        paths = list()
+        for file_name in sorted(os.listdir(pig_dir)):
+            if file_name.endswith(PIG_FILE_SUFFIX):
+                path = "{}/{}".format(pig_dir, file_name)
+                paths.append(path)
+        return paths
 
     @staticmethod
     def my_single_prediction_m_gen(gt_pig_paths, pred_pig_path):
@@ -1157,6 +1189,7 @@ class PigOut:
         for staff in ['upper', 'lower']:
             hsds = annot.handed_strike_digits(staff=staff)
             hsd_count = len(hsds)
+            ordered_offset_notes = self._d_score.ordered_offset_notes(staff=staff)
             notes = self._d_score.orderly_note_stream(staff=staff)
             note_count = len(notes)
             if hsd_count != note_count:

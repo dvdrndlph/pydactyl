@@ -42,7 +42,8 @@ import dill
 import weakref
 from pathlib import Path
 from sklearn.model_selection import train_test_split, cross_val_score
-from pydactyl.eval.Corporeal import Corporeal
+from pydactyl.eval.Corporeal import Corporeal, ARPEGGIOS_DIR, SCALES_DIR, BROKEN_DIR, \
+    ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, LAYER_ONE_STD_PIG_DIR
 from pydactyl.dactyler.Parncutt import TrigramNode
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dcorpus.DAnnotation import DAnnotation
@@ -293,9 +294,13 @@ def train_and_evaluate(the_model, x_train, y_train, x_test, y_test):
 
 
 class DExperiment:
-    corpus_dir = {
+    pig_std_dir = {
         'pig_indy': PIG_STD_DIR,
-        'pig_seg': PIG_SEGREGATED_STD_DIR
+        'pig_seg': PIG_SEGREGATED_STD_DIR,
+        'scales': SCALES_STD_PIG_DIR,
+        'arpeggios': ARPEGGIOS_STD_PIG_DIR,
+        'broken': BROKEN_STD_PIG_DIR,
+        'layer_one_by_annotator': LAYER_ONE_STD_PIG_DIR
     }
 
     def __init__(self, corpus_names, x=None, y=None, model_version=VERSION,
@@ -328,7 +333,7 @@ class DExperiment:
             piece_id, annot_id = str(score_title).split('-')
             if piece_id not in test_pig_paths:
                 test_pig_paths[piece_id] = list()
-            test_pig_path = DExperiment.corpus_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
+            test_pig_path = DExperiment.pig_std_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
             test_pig_paths[piece_id].append(test_pig_path)
         return test_pig_paths
 
@@ -368,149 +373,141 @@ class DExperiment:
                     indices_by_piece[the_piece_id].append(self.test_indices[key])
         return indices_by_piece
 
-
-def get_simple_match_rate(ex: DExperiment, pig_std_dir=PIG_STD_DIR, prediction_dir=PREDICTION_DIR, output=False):
-    """
-    Use the executable from Nakamura to calculate SimpleMatchRate.
-    """
-    pp_path = Path(PREDICTION_DIR)
-    if not pp_path.is_dir():
-        os.makedirs(PREDICTION_DIR)
-    total_simple_match_count = 0
-    total_annot_count = 0
-    test_file_count = 0
-    for test_key in ex.test_indices:
+    def predict_and_persist_file(self, test_key, prediction_dir=PREDICTION_DIR):
         (corpus_name, score_title, annot_index) = test_key
-        pred_pig_path = predict_and_persist_file(ex=ex, test_key=test_key, pig_std_dir=pig_std_dir,
-                                                 prediction_dir=prediction_dir)
-        test_pig_path = pig_std_dir + score_title + PIG_FILE_SUFFIX
-        match_rate = PigOut.simple_match_rate(gt_pig_path=test_pig_path, pred_pig_path=pred_pig_path)
-        total_simple_match_count += match_rate['match_count']
-        total_annot_count += match_rate['note_count']
-        test_file_count += 1
-        # print(result.stdout)
-    simple_match_rate = total_simple_match_count / total_annot_count
-    if output:
-        print("SimpleMatchRate: {}/{} = {}".format(total_simple_match_count, total_annot_count, simple_match_rate))
-        print("over {} test files.".format(test_file_count))
-    return total_simple_match_count, total_annot_count, simple_match_rate
+        # base_title, annot_id = str(score_title).split('-')
+        upper_index, lower_index = self.test_indices[test_key]
+        y_pred = my_crf.predict(self.x_test)
+        pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
+        pred_annot = DAnnotation(abcdf=pred_abcdf)
+        pred_abcdh = ABCDHeader(annotations=[pred_annot])
+        pred_d_score = self.test_d_scores[score_title]
+        pred_d_score.abcd_header(abcd_header=pred_abcdh)
+        pred_pout = PigOut(d_score=pred_d_score)
+        pred_pig_path = prediction_dir + score_title + PIG_FILE_SUFFIX
+        pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
+        return pred_pig_path
 
+    def predict_and_persist(self, prediction_dir=PREDICTION_DIR):
+        PigIn.mkdir_if_missing(path_str=prediction_dir, make_missing=True)
+        last_base_title = ''
+        test_pig_paths = list()
+        for test_key in self.test_indices:
+            (corpus_name, score_title, annot_index) = test_key
+            base_title, annot_id = str(score_title).split('-')
+            if base_title != last_base_title:
+                self.predict_and_persist_file(test_key=test_key, prediction_dir=prediction_dir)
+                last_base_title = base_title
+            test_pig_path = DExperiment.pig_std_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
+            test_pig_paths.append(test_pig_path)
+        return test_pig_paths
 
-def predict_and_persist_file(ex: DExperiment, test_key,
-                             pig_std_dir=PIG_STD_DIR, prediction_dir=PREDICTION_DIR):
-    (corpus_name, score_title, annot_index) = test_key
-    # base_title, annot_id = str(score_title).split('-')
-    upper_index, lower_index = ex.test_indices[test_key]
-    y_pred = my_crf.predict(ex.x_test)
-    pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
-    pred_annot = DAnnotation(abcdf=pred_abcdf)
-    pred_abcdh = ABCDHeader(annotations=[pred_annot])
-    pred_d_score = ex.test_d_scores[score_title]
-    pred_d_score.abcd_header(abcd_header=pred_abcdh)
-    pred_pout = PigOut(d_score=pred_d_score)
-    pred_pig_path = prediction_dir + score_title + PIG_FILE_SUFFIX
-    pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
-    return pred_pig_path
+    def get_simple_match_rate(self, pig_std_dir=PIG_STD_DIR, prediction_dir=PREDICTION_DIR, output=False):
+        """
+        Use the executable from Nakamura to calculate SimpleMatchRate.
+        """
+        pp_path = Path(PREDICTION_DIR)
+        if not pp_path.is_dir():
+            os.makedirs(PREDICTION_DIR)
+        total_simple_match_count = 0
+        total_annot_count = 0
+        test_file_count = 0
+        for test_key in self.test_indices:
+            (corpus_name, score_title, annot_index) = test_key
+            pred_pig_path = self.predict_and_persist_file(test_key=test_key, prediction_dir=prediction_dir)
+            test_pig_path = DExperiment.pig_std_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
+            match_rate = PigOut.simple_match_rate(gt_pig_path=test_pig_path, pred_pig_path=pred_pig_path)
+            total_simple_match_count += match_rate['match_count']
+            total_annot_count += match_rate['note_count']
+            test_file_count += 1
+            # print(result.stdout)
+        simple_match_rate = total_simple_match_count / total_annot_count
+        if output:
+            print("SimpleMatchRate: {}/{} = {}".format(total_simple_match_count, total_annot_count, simple_match_rate))
+            print("over {} test files.".format(test_file_count))
+        return total_simple_match_count, total_annot_count, simple_match_rate
 
-
-def predict_and_persist(ex: DExperiment, pig_std_dir=PIG_STD_DIR, prediction_dir=PREDICTION_DIR):
-    PigIn.mkdir_if_missing(path_str=prediction_dir, make_missing=True)
-    last_base_title = ''
-    test_pig_paths = list()
-    for test_key in ex.test_indices:
-        (corpus_name, score_title, annot_index) = test_key
-        base_title, annot_id = str(score_title).split('-')
-        if base_title != last_base_title:
-            predict_and_persist_file(ex=ex, test_key=test_key, pig_std_dir=pig_std_dir, prediction_dir=prediction_dir)
-            last_base_title = base_title
-        test_pig_path = pig_std_dir + score_title + PIG_FILE_SUFFIX
-        test_pig_paths.append(test_pig_path)
-    return test_pig_paths
-
-
-def get_my_avg_m_gen(ex: DExperiment, prediction_dir=PREDICTION_DIR, test_dir=TEST_DIR, reuse=False, weight=False):
-    if reuse:
-        PigIn.mkdir_if_missing(path_str=test_dir, make_missing=False)
-    else:
-        PigIn.mkdir_if_missing(path_str=test_dir, make_missing=True)
-        test_pig_paths = predict_and_persist(ex=ex, prediction_dir=prediction_dir)
-        print("There are {} PIG test paths.".format(len(test_pig_paths)))
-        for tpp in test_pig_paths:
-            shutil.copy2(tpp, test_dir)
-    avg_m_gen, piece_m_gens = PigOut.my_average_m_gen(fingering_files_dir=test_dir,
-                                                      prediction_input_dir=prediction_dir, weight=weight)
-    return avg_m_gen, piece_m_gens
-
-
-def get_my_avg_m(ex: DExperiment, prediction_dir=PREDICTION_DIR, test_dir=TEST_DIR, reuse=False, weight=False):
-    if reuse:
-        PigIn.mkdir_if_missing(path_str=test_dir, make_missing=False)
-    else:
-        PigIn.mkdir_if_missing(path_str=test_dir, make_missing=True)
-        test_pig_paths = predict_and_persist(ex=ex, prediction_dir=prediction_dir)
-        print("There are {} PIG test paths.".format(len(test_pig_paths)))
-        for tpp in test_pig_paths:
-            shutil.copy2(tpp, test_dir)
-    avg_m, piece_ms = PigOut.my_average_m(fingering_files_dir=test_dir,
-                                          prediction_input_dir=prediction_dir, weight=weight)
-    return avg_m, piece_ms
-
-
-def get_complex_match_rates(ex: DExperiment, weight=False, prediction_dir=PREDICTION_DIR, output=False):
-    PigIn.mkdir_if_missing(path_str=PREDICTION_DIR, make_missing=True)
-    y_pred = my_crf.predict(ex.x_test)
-    total_note_count = 0
-    d_score_count = 0
-    pred_pig_path = ''
-    combined_match_rates = {}
-    piece_data = dict()
-    for corpus_name in CORPUS_NAMES:
-        test_indices = ex.test_indices_by_piece(corpus=corpus_name)
-        test_pig_paths = ex.test_paths_by_piece(corpus=corpus_name)
-        test_d_scores = ex.test_d_scores_by_piece(corpus=corpus_name)
-        tested_pieces = dict()
-        for piece_id in test_pig_paths:
-            note_count = 0
-            annot_count = 0
-            if piece_id not in tested_pieces:
-                upper_index, lower_index = test_indices[piece_id][0]
-                pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
-                pred_annot = DAnnotation(abcdf=pred_abcdf)
-                pred_abcdh = ABCDHeader(annotations=[pred_annot])
-                pred_d_score = test_d_scores[piece_id][0]
-                d_score_count += 1
-                pred_d_score.abcd_header(abcd_header=pred_abcdh)
-                pred_pout = PigOut(d_score=pred_d_score)
-                file_id = "{}-1".format(piece_id)
-                pred_pig_path = prediction_dir + file_id + PIG_FILE_SUFFIX
-                pred_pig_content = pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
-                note_count = pred_d_score.note_count()
-                annot_count = note_count * len(test_pig_paths[piece_id])
-            match_rates = PigOut.single_prediction_complex_match_rates(gt_pig_paths=test_pig_paths[piece_id],
-                                                                       pred_pig_path=pred_pig_path)
-            total_note_count += note_count
-            piece_data[piece_id] = dict()
-            for key in match_rates:
-                match_count = round(match_rates[key] * annot_count)
-                raw_rate = match_rates[key]
-                piece_data[piece_id][key] = {
-                    'match_count': match_count,
-                    'note_count': note_count,
-                    'annot_count': annot_count,
-                    'raw_rate': raw_rate
-                }
-                if weight:
-                    match_rates[key] *= note_count
-                if key not in combined_match_rates:
-                    combined_match_rates[key] = 0
-                combined_match_rates[key] += match_rates[key]
-
-    for key in match_rates:
-        if weight:
-            combined_match_rates[key] /= total_note_count
+    def get_my_avg_m_gen(self, prediction_dir=PREDICTION_DIR, test_dir=TEST_DIR, reuse=False, weight=False):
+        if reuse:
+            PigIn.mkdir_if_missing(path_str=test_dir, make_missing=False)
         else:
-            combined_match_rates[key] /= d_score_count
-    return combined_match_rates, piece_data
+            PigIn.mkdir_if_missing(path_str=test_dir, make_missing=True)
+            test_pig_paths = self.predict_and_persist(prediction_dir=prediction_dir)
+            print("There are {} PIG test paths.".format(len(test_pig_paths)))
+            for tpp in test_pig_paths:
+                shutil.copy2(tpp, test_dir)
+        avg_m_gen, piece_m_gens = PigOut.my_average_m_gen(fingering_files_dir=test_dir,
+                                                          prediction_input_dir=prediction_dir, weight=weight)
+        return avg_m_gen, piece_m_gens
+
+    def get_my_avg_m(self, prediction_dir=PREDICTION_DIR, test_dir=TEST_DIR, reuse=False, weight=False):
+        if reuse:
+            PigIn.mkdir_if_missing(path_str=test_dir, make_missing=False)
+        else:
+            PigIn.mkdir_if_missing(path_str=test_dir, make_missing=True)
+            test_pig_paths = self.predict_and_persist(prediction_dir=prediction_dir)
+            print("There are {} PIG test paths.".format(len(test_pig_paths)))
+            for tpp in test_pig_paths:
+                shutil.copy2(tpp, test_dir)
+        avg_m, piece_ms = PigOut.my_average_m(fingering_files_dir=test_dir,
+                                              prediction_input_dir=prediction_dir, weight=weight)
+        return avg_m, piece_ms
+
+    def get_complex_match_rates(self, weight=False, prediction_dir=PREDICTION_DIR, output=False):
+        PigIn.mkdir_if_missing(path_str=PREDICTION_DIR, make_missing=True)
+        y_pred = my_crf.predict(self.x_test)
+        total_note_count = 0
+        d_score_count = 0
+        pred_pig_path = ''
+        combined_match_rates = {}
+        piece_data = dict()
+        for corpus_name in CORPUS_NAMES:
+            test_indices = self.test_indices_by_piece(corpus=corpus_name)
+            test_pig_paths = self.test_paths_by_piece(corpus=corpus_name)
+            test_d_scores = self.test_d_scores_by_piece(corpus=corpus_name)
+            tested_pieces = dict()
+            for piece_id in test_pig_paths:
+                note_count = 0
+                annot_count = 0
+                if piece_id not in tested_pieces:
+                    upper_index, lower_index = test_indices[piece_id][0]
+                    pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
+                    pred_annot = DAnnotation(abcdf=pred_abcdf)
+                    pred_abcdh = ABCDHeader(annotations=[pred_annot])
+                    pred_d_score = test_d_scores[piece_id][0]
+                    d_score_count += 1
+                    pred_d_score.abcd_header(abcd_header=pred_abcdh)
+                    pred_pout = PigOut(d_score=pred_d_score)
+                    file_id = "{}-1".format(piece_id)
+                    pred_pig_path = prediction_dir + file_id + PIG_FILE_SUFFIX
+                    pred_pig_content = pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
+                    note_count = pred_d_score.note_count()
+                    annot_count = note_count * len(test_pig_paths[piece_id])
+                match_rates = PigOut.single_prediction_complex_match_rates(gt_pig_paths=test_pig_paths[piece_id],
+                                                                           pred_pig_path=pred_pig_path)
+                total_note_count += note_count
+                piece_data[piece_id] = dict()
+                for key in match_rates:
+                    match_count = round(match_rates[key] * annot_count)
+                    raw_rate = match_rates[key]
+                    piece_data[piece_id][key] = {
+                        'match_count': match_count,
+                        'note_count': note_count,
+                        'annot_count': annot_count,
+                        'raw_rate': raw_rate
+                    }
+                    if weight:
+                        match_rates[key] *= note_count
+                    if key not in combined_match_rates:
+                        combined_match_rates[key] = 0
+                    combined_match_rates[key] += match_rates[key]
+
+        for key in match_rates:
+            if weight:
+                combined_match_rates[key] /= total_note_count
+            else:
+                combined_match_rates[key] /= d_score_count
+        return combined_match_rates, piece_data
 
 
 #####################################################
@@ -549,6 +546,7 @@ if ex is None:
                 orderly_stream_segments = da_score.orderly_note_stream_segments(staff=staff)
                 orderly_note_segments = da_score.orderly_d_note_segments(staff=staff)
                 seg_count = len(orderly_note_segments)
+
                 for annot_index in range(annot_count):
                     annot = da_score.annotation_by_index(annot_index)
                     authority = annot.authority()
@@ -636,10 +634,10 @@ elif TEST_METHOD == 'preset':
         evaluate_trained_model(the_model=my_crf, x_test=ex.x_test, y_test=ex.y_test)
     else:
         train_and_evaluate(the_model=my_crf, x_train=ex.x_train, y_train=ex.y_train, x_test=ex.x_test, y_test=ex.y_test)
-    total_simple_match_count, total_annot_count, simple_match_rate = get_simple_match_rate(ex=ex, output=True)
-    result, complex_piece_results = get_complex_match_rates(ex=ex, weight=False)
+    total_simple_match_count, total_annot_count, simple_match_rate = ex.get_simple_match_rate(output=True)
+    result, complex_piece_results = ex.get_complex_match_rates(weight=False)
     print("Unweighted avg M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
-    result, my_piece_results = get_my_avg_m(ex=ex, weight=False, reuse=False)
+    result, my_piece_results = ex.get_my_avg_m(weight=False, reuse=False)
     print("My unweighted avg m for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
     for key in sorted(complex_piece_results):
         print("nak {} => {}".format (key, complex_piece_results[key]))

@@ -29,6 +29,8 @@ import sys
 from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
 from pydactyl.dactyler.Parncutt import Parncutt
 from pydactyl.dcorpus.PigInOut import PigIn, PIG_SEGREGATED_DATASET_DIR
+from pydactyl.eval.Corporeal import Corporeal, LAYER_ONE_STD_PIG_DIR
+from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 # import scamp
 
 # s = scamp.Session()
@@ -39,8 +41,15 @@ from pydactyl.dcorpus.PigInOut import PigIn, PIG_SEGREGATED_DATASET_DIR
 # pig_eater.transform()
 # pig_eater = PigIn()
 # pig_eater.transform()
-pig_eater = PigIn(base_dir=PIG_SEGREGATED_DATASET_DIR, start_over=True)
-pig_eater.transform()
+# pig_eater = PigIn(base_dir=PIG_SEGREGATED_DATASET_DIR, start_over=True)
+# pig_eater.transform()
+
+creal = Corporeal()
+da_corpus = creal.get_corpus(corpus_name='layer_one_by_annotator')
+for da_score in da_corpus.d_score_list():
+    annot = da_score.annotation_by_index(index=0)
+    segger = ManualDSegmenter(level='.', d_annotation=annot)
+    da_score.segmenter(segger)
 
 # staff = 'upper'
 # k = 5

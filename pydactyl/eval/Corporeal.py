@@ -33,14 +33,19 @@ from pydactyl.dactyler.Parncutt import FINGER_SPANS, BALLIAUW_LARGE_FINGER_SPANS
     BALLIAUW_MEDIUM_FINGER_SPANS, BALLIAUW_SMALL_FINGER_SPANS, ImaginaryBlackKeyRuler
 from pydactyl.dactyler.Random import Random
 
-
+CORPORA_DIR = '/Users/dave/tb2/didactyl/dd/corpora/'
 OUTPUT_DIR = '/Users/dave/tb2/doc/data/badgerow'
-PIG_INDY_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/individual_abcd/'
-PIG_DIR = '/Users/dave/tb2/didactyl/dd/corpora/pig/PianoFingeringDataset_v1.00/abcd/'
-BERINGER_DIR = '/Users/dave/tb2/didactyl/dd/corpora/beringer/'
-SCALES_DIR = BERINGER_DIR + 'scales'
-ARPEGGIOS_DIR = BERINGER_DIR + 'arpeggios'
-BROKEN_DIR = BERINGER_DIR + 'broken_chords'
+PIG_INDY_DIR = CORPORA_DIR + 'pig/PianoFingeringDataset_v1.00/individual_abcd/'
+PIG_DIR = CORPORA_DIR + 'pig/PianoFingeringDataset_v1.00/abcd/'
+BERINGER_DIR = CORPORA_DIR + 'beringer/'
+SCALES_DIR = BERINGER_DIR + 'scales/'
+ARPEGGIOS_DIR = BERINGER_DIR + 'arpeggios/'
+BROKEN_DIR = BERINGER_DIR + 'broken_chords/'
+SCALES_STD_PIG_DIR = SCALES_DIR + 'std_pig/'
+ARPEGGIOS_STD_PIG_DIR = ARPEGGIOS_DIR + 'std_pig/'
+BROKEN_STD_PIG_DIR = BROKEN_DIR + 'std_pig/'
+LAYER_ONE_STD_PIG_DIR = CORPORA_DIR + 'clementi/layer_one/std_pig/'
+
 
 QUERY = dict()
 

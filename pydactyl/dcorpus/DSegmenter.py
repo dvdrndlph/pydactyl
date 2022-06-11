@@ -32,3 +32,7 @@ class DSegmenter(ABC):
     @abstractmethod
     def segment_to_orderly_streams(self, d_part, offset=0):
         return
+
+    @abstractmethod
+    def segment_to_ordered_offset_notes(self, d_part, offset=0):
+        return
