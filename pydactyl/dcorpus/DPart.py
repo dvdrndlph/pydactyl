@@ -153,7 +153,8 @@ class DPart:
                 met_mark = DPart.metronome_mark_at_offset(boundaries=metronome_boundaries, q_len_offset=o)
                 second_offset = met_mark.durationToSeconds(o)
                 for knot in notes_at_offset[o]:
-                    offset_note = {'offset': o, 'second_offset': second_offset, 'note': knot}
+                    sec_dur = met_mark.durationToSeconds(knot.duration)
+                    offset_note = {'offset': o, 'second_offset': second_offset, 'second_duration': sec_dur, 'note': knot}
                     ordered_notes.append(offset_note)
         return ordered_notes
 

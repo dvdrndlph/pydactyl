@@ -43,7 +43,7 @@ import weakref
 from pathlib import Path
 from sklearn.model_selection import train_test_split, cross_val_score
 from pydactyl.eval.Corporeal import Corporeal, ARPEGGIOS_DIR, SCALES_DIR, BROKEN_DIR, \
-    ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, LAYER_ONE_STD_PIG_DIR
+    ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, COMPLETE_LAYER_ONE_STD_PIG_DIR
 from pydactyl.dactyler.Parncutt import TrigramNode
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dcorpus.DAnnotation import DAnnotation
@@ -59,29 +59,29 @@ MAX_LEAP = 16
 MICROSECONDS_PER_BEAT = 500000
 MS_PER_BEAT = MICROSECONDS_PER_BEAT / 1000
 CHORD_MS_THRESHOLD = 30
-CLEAN_LIST = {}  # Reuse all pickled results.
+# CLEAN_LIST = {}  # Reuse all pickled results.
 # CLEAN_LIST = {'crf': True}
 # CLEAN_LIST = {'DCorpus': True}
-# CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
+CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
-# TEST_METHOD = 'cross-validate'
-TEST_METHOD = 'preset'
+TEST_METHOD = 'cross-validate'
+# TEST_METHOD = 'preset'
 # TEST_METHOD = 'random'
 SEGREGATE_HANDS = False
 STAFFS = ['upper', 'lower']
 # STAFFS = ['upper']
 # CORPUS_NAMES = ['full_american_by_annotator']
-# CORPUS_NAMES = ['layer_one_by_annotator']
+CORPUS_NAMES = ['complete_layer_one']
 # CORPUS_NAMES = ['scales']
 # CORPUS_NAMES = ['arpeggios']
 # CORPUS_NAMES = ['broken']
-# CORPUS_NAMES = ['layer_one_by_annotator', 'scales', 'arpeggios', 'broken']
+# CORPUS_NAMES = ['complete_layer_one', 'scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['pig']
 # CORPUS_NAMES = ['pig_indy']
-CORPUS_NAMES = ['pig_seg']
+# CORPUS_NAMES = ['pig_seg']
 
 
 #####################################################
@@ -300,7 +300,7 @@ class DExperiment:
         'scales': SCALES_STD_PIG_DIR,
         'arpeggios': ARPEGGIOS_STD_PIG_DIR,
         'broken': BROKEN_STD_PIG_DIR,
-        'layer_one_by_annotator': LAYER_ONE_STD_PIG_DIR
+        'complete_layer_one': COMPLETE_LAYER_ONE_STD_PIG_DIR
     }
 
     def __init__(self, corpus_names, x=None, y=None, model_version=VERSION,
@@ -555,6 +555,7 @@ if ex is None:
                     for hsd_seg in hsd_segments:
                         ordered_notes = orderly_note_segments[seg_index]
                         ordered_stream = orderly_stream_segments[seg_index]
+                        seg_index += 1
                         note_len = len(ordered_notes)
                         seg_len = len(hsd_seg)
                         if note_len != seg_len:

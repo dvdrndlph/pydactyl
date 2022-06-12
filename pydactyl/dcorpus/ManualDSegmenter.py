@@ -72,7 +72,6 @@ class ManualDSegmenter(DSegmenter):
     def segment_to_orderly_streams(self, d_part, offset=0):
         orderly_stream = d_part.orderly_note_stream(offset=offset)
         new_note_streams = list()
-        stream_index = 0
         new_note_stream = stream.Score()
         note_index = -1
         offset_adjustment = 0
@@ -91,34 +90,35 @@ class ManualDSegmenter(DSegmenter):
                 new_note_streams.append(new_note_stream)
                 new_note_stream = stream.Score()
                 offset_adjustment = knot.offset
-                stream_index += 1
         if len(new_note_stream) > 0:
             new_note_streams.append(new_note_stream)
         return new_note_streams
 
     def segment_to_ordered_offset_notes(self, d_part, offset=0):
-        orderly_stream = d_part.ordered_offset_notes(offset=offset)
-        new_note_streams = list()
-        stream_index = 0
-        new_note_stream = stream.Score()
+        ordered_offsets = d_part.ordered_offset_notes(offset=offset)
+        segment_note_list = list()
+        segment_note_lists = list()
         note_index = -1
-        offset_adjustment = 0
-        for knot in orderly_stream:
+        ql_offset_adjustment = 0
+        sec_offset_adjustment = 0
+        for knot in ordered_offsets:
             note_index += 1
             if note_index < offset:
                 continue
             # FIXME: Need to insert at appropriate offset.
             # new_note_stream.append(knot)
             # The following code needs to be validated part with >1 segment.
-            note_offset = knot.offset - offset_adjustment
-            new_note_stream.insert(note_offset, knot)
+            ql_offset = knot['offset'] - ql_offset_adjustment
+            sec_offset = knot['second_offset'] - sec_offset_adjustment
+            sec_dur = knot['second_duration']
+            new_note = {'offset': ql_offset, 'second_offset': sec_offset, 'second_duration': sec_dur, 'note': knot}
+            segment_note_list.append(new_note)
             seg_mark = self._d_annotation.phrase_mark_at_index(note_index, staff=d_part.staff())
             if seg_mark and \
                     (not self._level or ManualDSegmenter.LEVELS[seg_mark] >= ManualDSegmenter.LEVELS[self._level]):
-                new_note_streams.append(new_note_stream)
-                new_note_stream = stream.Score()
-                offset_adjustment = knot.offset
-                stream_index += 1
-        if len(new_note_stream) > 0:
-            new_note_streams.append(new_note_stream)
-        return new_note_streams
+                segment_note_lists.append(segment_note_list)
+                ql_offset_adjustment = knot['offset']
+                sec_offset_adjustment = knot['second_offset']
+        if len(segment_note_list) > 0:
+            segment_note_lists.append(segment_note_list)
+        return segment_note_lists

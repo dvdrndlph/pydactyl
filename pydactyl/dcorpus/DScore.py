@@ -236,6 +236,18 @@ class DScore:
             return self._segmenter.segment_to_orderly_streams(d_part=self._lower_d_part, offset=offset)
         return self._segmenter.segment_to_orderly_streams(d_part=self._combined_d_part, offset=offset)
 
+    def ordered_offset_note_segments(self, staff="both", offset=0):
+        if not self._segmenter or not self._abcd_header:
+            ordered_notes = self.ordered_offset_notes(staff=staff, offset=offset)
+            return ordered_notes
+
+        self._segmenter.d_annotation(self._abcd_header.annotation())  # Phrases are marked in the first annotation.
+        if staff == "upper":
+            return self._segmenter.segment_to_ordered_offset_notes(d_part=self._upper_d_part, offset=offset)
+        elif staff == "lower":
+            return self._segmenter.segment_to_ordered_offset_notes(d_part=self._lower_d_part, offset=offset)
+        return self._segmenter.segment_to_ordered_offset_notes(d_part=self._combined_d_part, offset=offset)
+
     def orderly_note_stream(self, staff="both", offset=0):
         if staff == "upper":
             return self.upper_orderly_note_stream(offset=offset)

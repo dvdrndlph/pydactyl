@@ -44,7 +44,8 @@ BROKEN_DIR = BERINGER_DIR + 'broken_chords/'
 SCALES_STD_PIG_DIR = SCALES_DIR + 'std_pig/'
 ARPEGGIOS_STD_PIG_DIR = ARPEGGIOS_DIR + 'std_pig/'
 BROKEN_STD_PIG_DIR = BROKEN_DIR + 'std_pig/'
-LAYER_ONE_STD_PIG_DIR = CORPORA_DIR + 'clementi/layer_one/std_pig/'
+COMPLETE_LAYER_ONE_DIR = CORPORA_DIR + 'clementi/complete_layer_one/'
+COMPLETE_LAYER_ONE_STD_PIG_DIR = COMPLETE_LAYER_ONE_DIR + 'std_pig/'
 
 
 QUERY = dict()
@@ -211,6 +212,11 @@ class Corporeal(ABC):
             the_corpus = DCorpus()
             for subdir in [SCALES_DIR, ARPEGGIOS_DIR, BROKEN_DIR]:
                 the_corpus.append_dir(corpus_dir=subdir)
+            return the_corpus
+
+        if corpus_name == 'complete_layer_one':
+            the_corpus = DCorpus()
+            the_corpus.append_dir(corpus_dir=COMPLETE_LAYER_ONE_DIR)
             return the_corpus
 
         if corpus_name == 'clementi':
