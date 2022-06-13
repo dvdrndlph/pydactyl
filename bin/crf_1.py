@@ -149,15 +149,15 @@ def get_trigram_node(notes, annotations, i):
     midi_1 = None
     handed_digit_1 = '-'
     if i > 0:
-        midi_1 = notes[i-1].midi()
+        midi_1 = notes[i-1]['note'].pitch.midi
         handed_digit_1 = annotations[i-1]
-    midi_2 = notes[i].midi()
+    midi_2 = notes[i]['note'].pitch.midi
     handed_digit_2 = annotations[i]
 
     midi_3 = None
     handed_digit_3 = '-'
     if i < len(notes) - 1:
-        midi_3 = notes[i+1].midi()
+        midi_3 = notes[i+1]['note'].pitch.midi
         handed_digit_3 = annotations[i+1]
     trigram_node = TrigramNode(midi_1=midi_1, handed_digit_1=handed_digit_1,
                                midi_2=midi_2, handed_digit_2=handed_digit_2,
@@ -176,33 +176,28 @@ def leap_is_excessive(notes, middle_i):
     return False
 
 
-def chordings(stream, middle_i):
-    middle_offset_beats = stream[middle_i].offset
-    middle_offset_ms = middle_offset_beats * MS_PER_BEAT
+def chordings(notes, middle_i):
+    middle_offset_ms = notes[middle_i]['second_offset']/1000
     min_left_offset_ms = middle_offset_ms - CHORD_MS_THRESHOLD
     max_right_offset_ms = middle_offset_ms + CHORD_MS_THRESHOLD
-    # Notes (other than the leftmost--lowest--note) in chords with identical
-    # onset times in the performance have been shifted right by a 1/2048th
-    # note duration to provide a total-order to coincide with the ABCDF fingering
-    # sequence.
     left_chord_notes = 0
     for i in range(middle_i, middle_i - 6, -1):
         if i < 0:
             break
-        i_offet_ms = stream[i].offset * MS_PER_BEAT
+        i_offet_ms = notes[i]['second_offset'] / 1000
         if i_offet_ms > min_left_offset_ms:
             left_chord_notes += 1
     right_chord_notes = 0
     for i in range(middle_i, middle_i + 6, 1):
-        if i >= len(stream):
+        if i >= len(notes):
             break
-        i_offet_ms = stream[i].offset * MS_PER_BEAT
+        i_offet_ms = notes[i]['second_offset'] / 1000
         if i_offet_ms < max_right_offset_ms:
             right_chord_notes += 1
     return left_chord_notes, right_chord_notes
 
 
-def note2features(notes, stream, annotations, i, staff):
+def note2features(notes, annotations, i, staff):
     trigram_node = get_trigram_node(notes, annotations, i)
     features = {}
     functions = judge.rules()
@@ -217,7 +212,7 @@ def note2features(notes, stream, annotations, i, staff):
         # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
 
     # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
-    left_chord_notes, right_chord_notes = chordings(stream=stream, middle_i=i)
+    left_chord_notes, right_chord_notes = chordings(notes=notes, middle_i=i)
     features['left_chord'] = left_chord_notes
     features['right_chord'] = right_chord_notes
 
@@ -235,10 +230,10 @@ def note2features(notes, stream, annotations, i, staff):
     return features
 
 
-def phrase2features(notes, stream, annotations, staff):
+def phrase2features(notes, annotations, staff):
     feature_list = []
     for i in range(len(notes)):
-        features = note2features(notes, stream, annotations, i, staff)
+        features = note2features(notes, annotations, i, staff)
         feature_list.append(features)
     return feature_list
 
@@ -542,10 +537,8 @@ if ex is None:
                 annot = da_score.annotation_by_index(index=0)
                 segger = ManualDSegmenter(level='.', d_annotation=annot)
                 da_score.segmenter(segger)
-                # FIXME: Calling both of the following is probably not necessary...
-                orderly_stream_segments = da_score.orderly_note_stream_segments(staff=staff)
-                orderly_note_segments = da_score.orderly_d_note_segments(staff=staff)
-                seg_count = len(orderly_note_segments)
+                ordered_offset_note_segments = da_score.ordered_offset_note_segments(staff=staff)
+                seg_count = len(ordered_offset_note_segments)
 
                 for annot_index in range(annot_count):
                     annot = da_score.annotation_by_index(annot_index)
@@ -553,8 +546,7 @@ if ex is None:
                     hsd_segments = segger.segment_annotation(annotation=annot, staff=staff)
                     seg_index = 0
                     for hsd_seg in hsd_segments:
-                        ordered_notes = orderly_note_segments[seg_index]
-                        ordered_stream = orderly_stream_segments[seg_index]
+                        ordered_notes = ordered_offset_note_segments[seg_index]
                         seg_index += 1
                         note_len = len(ordered_notes)
                         seg_len = len(hsd_seg)
@@ -578,7 +570,7 @@ if ex is None:
                             ex.wildcarded_count += 1
                             continue
                         ex.included_note_count += note_len
-                        ex.x.append(phrase2features(ordered_notes, ordered_stream, hsd_seg, staff))
+                        ex.x.append(phrase2features(ordered_notes, hsd_seg, staff))
                         ex.y.append(phrase2labels(hsd_seg))
                         if has_preset_evaluation_defined(corpus_name=corpus_name):
                             if is_in_test_set(title=score_title, corpus_name=corpus_name):
@@ -586,13 +578,13 @@ if ex is None:
                                 if test_key not in ex.test_indices:
                                     ex.test_indices[test_key] = []
                                 ex.test_indices[test_key].append(len(ex.y_test))
-                                ex.x_test.append(phrase2features(ordered_notes, ordered_stream, hsd_seg, staff))
+                                ex.x_test.append(phrase2features(ordered_notes, hsd_seg, staff))
                                 ex.y_test.append(phrase2labels(hsd_seg))
                                 if staff == "upper" and annot_index == 0:
                                     ex.ordered_test_d_score_titles.append(da_score)
                                     ex.test_d_scores[score_title] = da_unannotated_score
                             else:
-                                ex.x_train.append(phrase2features(ordered_notes, ordered_stream, hsd_seg, staff))
+                                ex.x_train.append(phrase2features(ordered_notes, hsd_seg, staff))
                                 ex.y_train.append(phrase2labels(hsd_seg))
                         ex.good_annot_count += 1
     pickle_it(obj=ex, obj_type="DExperiment", file_name=experiment_name)

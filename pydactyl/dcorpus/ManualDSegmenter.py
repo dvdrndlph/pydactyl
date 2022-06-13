@@ -111,7 +111,9 @@ class ManualDSegmenter(DSegmenter):
             ql_offset = knot['offset'] - ql_offset_adjustment
             sec_offset = knot['second_offset'] - sec_offset_adjustment
             sec_dur = knot['second_duration']
-            new_note = {'offset': ql_offset, 'second_offset': sec_offset, 'second_duration': sec_dur, 'note': knot}
+            old_note = knot['note']
+            new_note = {'offset': ql_offset, 'second_offset': sec_offset,
+                        'second_duration': sec_dur, 'note': old_note}
             segment_note_list.append(new_note)
             seg_mark = self._d_annotation.phrase_mark_at_index(note_index, staff=d_part.staff())
             if seg_mark and \
@@ -119,6 +121,7 @@ class ManualDSegmenter(DSegmenter):
                 segment_note_lists.append(segment_note_list)
                 ql_offset_adjustment = knot['offset']
                 sec_offset_adjustment = knot['second_offset']
+                segment_note_list = list()
         if len(segment_note_list) > 0:
             segment_note_lists.append(segment_note_list)
         return segment_note_lists
