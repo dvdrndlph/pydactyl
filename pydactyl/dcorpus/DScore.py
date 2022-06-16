@@ -239,7 +239,7 @@ class DScore:
     def ordered_offset_note_segments(self, staff="both", offset=0):
         if not self._segmenter or not self._abcd_header:
             ordered_notes = self.ordered_offset_notes(staff=staff, offset=offset)
-            return ordered_notes
+            return [ordered_notes]
 
         self._segmenter.d_annotation(self._abcd_header.annotation())  # Phrases are marked in the first annotation.
         if staff == "upper":

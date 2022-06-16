@@ -526,17 +526,17 @@ if ex is None:
             da_corpus = creal.get_corpus(corpus_name=corpus_name)
             pickle_it(obj=da_corpus, obj_type="DCorpus", file_name=corpus_name, use_dill=True)
         for da_score in da_corpus.d_score_list():
+            abcdh = da_score.abcd_header()
+            annot_count = abcdh.annotation_count()
+            annot = da_score.annotation_by_index(index=0)
+            segger = ManualDSegmenter(level='.', d_annotation=annot)
+            da_score.segmenter(segger)
             da_unannotated_score = copy.deepcopy(da_score)
             score_title = da_score.title()
             # if score_title != 'Sonatina 4.1':
             # continue
             for staff in STAFFS:
                 print("Processing {} staff of {} score from {} corpus.".format(staff, score_title, corpus_name))
-                abcdh = da_score.abcd_header()
-                annot_count = abcdh.annotation_count()
-                annot = da_score.annotation_by_index(index=0)
-                segger = ManualDSegmenter(level='.', d_annotation=annot)
-                da_score.segmenter(segger)
                 ordered_offset_note_segments = da_score.ordered_offset_note_segments(staff=staff)
                 seg_count = len(ordered_offset_note_segments)
 

@@ -29,6 +29,27 @@ class DSegmenter(ABC):
     def __init__(self):
         return
 
+    @staticmethod
+    def non_default_hand_count(hsd_seq, staff="upper"):
+        """
+        Returns a count of fingerings that employ a non-default hand.
+        """
+        non_default_hand = '<'
+        if staff == 'lower':
+            nondefault_hand = '>'
+        bad_hand_cnt = 0
+        for fingering in hsd_seq:
+            if fingering[0] == non_default_hand:
+                bad_hand_cnt += 1
+        return bad_hand_cnt
+
+    @staticmethod
+    def has_wildcard(hsd_seq):
+        for fingering in hsd_seq:
+            if fingering[0] == 'x':
+                return True
+        return False
+
     @abstractmethod
     def segment_to_orderly_streams(self, d_part, offset=0):
         return

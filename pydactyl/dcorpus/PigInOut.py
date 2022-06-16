@@ -1176,6 +1176,103 @@ class PigOut:
         path = PIG_STD_DIR + file_name
         return path
 
+    @staticmethod
+    def fingered_ordered_offset_note_to_pig_note(foon, note_id, staff, fake_velocity=True, handed_channels=True):
+        note_on_s = foon['second_offset']
+        note_off_s = note_on_s + foon['second_duration']
+        m21_note = foon['note']
+        pig_name = PigNote.m21_name_to_pig_name(m21_note.nameWithOctave)
+        hsd = foon['handed_strike_digit']
+        pig_fingering = PigNote.abcdf_to_pig_fingering(handed_digit=hsd)
+
+        channel = "0"
+        if handed_channels:
+            if pig_fingering[0] == '-':
+                channel = "1"
+        else:
+            if staff == "lower":
+                channel = "1"
+            elif staff == "upper":
+                channel = "0"
+            else:
+                raise Exception("Specific staff must be specified.")
+
+        on_velocity = m21_note.volume.velocity
+        off_velocity = "80"
+        if on_velocity is None:
+            if fake_velocity:
+                on_velocity = 80
+            else:
+                raise Exception("Velocity is not set for note {} at index {} on channel {}.".format(
+                    pig_name, note_id, channel))
+        on_velocity = str(on_velocity)
+
+        pig_note = PigNote(id=note_id, on=note_on_s, off=note_off_s,
+                           name=pig_name, on_vel=on_velocity, off_vel=off_velocity,
+                           channel=channel, finger=pig_fingering)
+        return pig_note
+
+    @staticmethod
+    def transform_fingered_ordered_offset_note_list_set(foonls, combine_staffs=False,
+                                                        align_segments=False,
+                                                        handed_channels=True, to_dir=None, start_over=True):
+        """
+        Output a set of standardized PIG records from the fingered ordered offset note list set.
+        Returns a dictionary of such records indexed by (score_title, staff, annotation_index, segment_index)
+        tuples, like the input foonls.
+
+        If combine_staffs is True, all records with matching (score_title, annotation_index, segment_index)
+        index elements are combined into records with (score_title, 'both', annotation_index, segment_index)
+        keys.
+
+        If align_segments is True, upper and lower staff segments with the same segment_index, are combined into
+        (score_title, 'both', annotation_index, segment_index) records. Any unpaired records are returned with
+        the appropriate staff setting.
+
+        If handed_channels is True, the channel assignment for a note is made according to the hand of the
+        specified fingering. This is the intended semantics of the files in the original PIG dataset per
+        personal correspondence with Nakamura. Therefore, this is the default behavior. We note that this
+        renders channel assignments in PIG files redundant (as they may be directly inferred by the fingerings)
+        and also that this limits models built with PIG files to solving the subproblem of *segregated piano fingering.
+        If handed_channels is False, channel assignments are made according to the staff (0 for upper and 1 f lower).
+
+        If to_dir is specified, PIG files are saved in this location. They are named by joining the key fields
+        with double underscores, replacing all whitespace with single underscores, and appending the
+        PIG file extension, "_annotation.txt". For example,
+
+             Sonatina_1__both__0_None_fingering.txt
+        """
+        all_pig_strings = dict()
+        for foonl_key in foonls:
+            (score_title, staff, annotation_index, segment_index) = foonl_key
+            pig_notes = list()
+            note_id = 0
+            for foon in foonls[foonl_key]:
+                pig_note = PigOut.fingered_ordered_offset_note_to_pig_note(foon=foon, note_id=note_id, staff=staff,
+                                                                           handed_channels=handed_channels)
+                note_id += 1
+                pig_notes.append(pig_note)
+            contents = PigOut.pig_notes_to_string(pig_notes=pig_notes)
+            all_pig_strings[foonl_key] = contents
+        if combine_staffs:
+            raise Exception("combine_staffs not implemented yet.")
+        elif align_segments:
+            raise Exception("align_segments not implemented yet.")
+        else:
+            pig_strings = all_pig_strings
+
+        if to_dir:
+            PigIn.mkdir_if_missing(to_dir, make_missing=start_over)
+            for file_key in pig_strings:
+                file_name = "__".join(file_key)
+                file_name = file_name.replace(" ", "_")
+                to_file = to_dir + "/" + file_name
+                f = open(to_file, "w")
+                f.write(contents)
+                f.close()
+
+        return pig_strings
+
     def transform(self, annotation_index=0, annotation_id=None, to_file=None):
         if annotation_id is not None:
             annot = self._d_score.annotation_by_id(annotation_id)
@@ -1190,18 +1287,16 @@ class PigOut:
             hsds = annot.handed_strike_digits(staff=staff)
             hsd_count = len(hsds)
             ordered_offset_notes = self._d_score.ordered_offset_notes(staff=staff)
-            notes = self._d_score.orderly_note_stream(staff=staff)
-            note_count = len(notes)
+            note_count = len(ordered_offset_notes)
             if hsd_count != note_count:
                 raise Exception("Note count does not equal annotation count.")
-            for i in range(len(notes)):
-                m21_note: note.Note = notes[i]
+            for i in range(len(ordered_offset_notes)):
+                oon = ordered_offset_notes[i]
+                m21_note: note.Note = oon['note']
                 pig_name = PigNote.m21_name_to_pig_name(m21_note.nameWithOctave)
-                offset_beats = m21_note.offset
-                ms_per_beat = MS_PER_BEAT  # FIXME: should check metronome marking
-                note_on_ms = offset_beats * ms_per_beat
-                duration_ms = m21_note.duration.quarterLength * ms_per_beat
-                note_off_ms = note_on_ms + duration_ms
+                note_on_s = oon['second_offset']
+                duration_s = oon['second_duration']
+                note_off_s = note_on_s + duration_s
                 on_velocity = m21_note.volume.velocity
                 if on_velocity is None:
                     raise Exception(
@@ -1209,24 +1304,21 @@ class PigOut:
                 off_velocity = 80
                 hsd = hsds[i]
                 pig_fingering = PigNote.abcdf_to_pig_fingering(handed_digit=hsd)
-                note_on_s = round(note_on_ms/1000, 6)
-                note_off_s = round(note_off_ms/1000, 6)
+                note_on_s = round(note_on_s, 6)
+                note_off_s = round(note_off_s/1000, 6)
                 pig_note = PigNote(id=note_id, on=note_on_s, off=note_off_s,
                                    name=pig_name, on_vel=on_velocity, off_vel=off_velocity,
                                    channel=channel, finger=pig_fingering)
                 pig_notes.append(pig_note)
                 note_id += 1
-            channel +=1
-
+            channel += 1
         pig_notes.sort(key=lambda x: (x.on, x.midi_pitch))
         contents = PigOut.pig_notes_to_string(pig_notes=pig_notes)
-
         # print(contents)
         if to_file:
             f = open(to_file, "w")
             f.write(contents)
             f.close()
-
         return contents
 
     @staticmethod

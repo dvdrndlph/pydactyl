@@ -24,12 +24,13 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 
 import copy
+import pprint
 import re
 import sys
 from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
 from pydactyl.dactyler.Parncutt import Parncutt
-from pydactyl.dcorpus.PigInOut import PigIn, PIG_SEGREGATED_DATASET_DIR
-from pydactyl.eval.Corporeal import Corporeal, LAYER_ONE_STD_PIG_DIR
+from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_SEGREGATED_DATASET_DIR
+from pydactyl.eval.Corporeal import Corporeal, COMPLETE_LAYER_ONE_STD_PIG_DIR
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 # import scamp
 
@@ -45,11 +46,16 @@ from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 # pig_eater.transform()
 
 creal = Corporeal()
-da_corpus = creal.get_corpus(corpus_name='layer_one_by_annotator')
-for da_score in da_corpus.d_score_list():
-    annot = da_score.annotation_by_index(index=0)
-    segger = ManualDSegmenter(level='.', d_annotation=annot)
-    da_score.segmenter(segger)
+da_corpus = creal.get_corpus(corpus_name='complete_layer_one')
+segger = ManualDSegmenter(level='.')
+da_corpus.segmenter(segmenter=segger)
+fingered_segments = da_corpus.fingered_ordered_offset_notes(print_summary=True)
+pig_strings = PigOut.transform_fingered_ordered_offset_note_list_set(foonls=fingered_segments)
+pprint.pprint(pig_strings)
+# da_corpus = creal.get_corpus(corpus_name='complete_layer_one')
+# fingered_staffs = da_corpus.fingered_ordered_offset_notes(print_summary=True)
+print("Whoa")
+
 
 # staff = 'upper'
 # k = 5

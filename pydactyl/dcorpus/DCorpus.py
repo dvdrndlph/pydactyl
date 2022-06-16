@@ -24,6 +24,8 @@ __author__ = 'David Randolph'
 import re
 import pymysql
 import os
+import copy
+import pprint
 import magic
 from music21 import abcFormat, converter, stream
 from pydactyl.dactyler import Constant
@@ -34,6 +36,8 @@ from pydactyl.xml2abc import xml2abc
 from .DScore import DScore
 from .DAnnotation import DAnnotation
 from .ABCDHeader import ABCDHeader
+from .DSegmenter import DSegmenter
+from .ManualDSegmenter import ManualDSegmenter
 
 
 class DCorpus:
@@ -392,3 +396,75 @@ class DCorpus:
             header_str = header.__str__()
             self.append(corpus_str=abc_str, header_str=header_str, as_xml=as_xml)
         print()
+
+    def fingered_ordered_offset_notes(self, segregate_hands=False, no_wildcards=True, print_summary=True):
+        """
+        Returns a dictionary of ordered offset notes with an additional "handed_strike_digit" field.
+        The key for the dictionary is a tuple (score_title, staff, annotation_index, segment_index).
+        If no segmenter is specified for the DCorpus, entire score parts are included as segment 0.
+        Note that generally staff parts may not be recombined if segmentation is performed.
+
+        By default, the output will retain staff (channel) assignments regardless of the hand used in the
+        specified strike fingering. If segregate_hands is set to True, any segments containing such a
+        conflict will be omitted from the output.
+        """
+        summary = {}
+        summary['total_non_default_hand_segment_count'] = 0
+        summary['total_non_default_hand_finger_count'] = 0
+        summary['bad_seg_annot_count'] = 0
+        summary['wildcarded_seg_count'] = 0
+        summary['included_note_count'] = 0
+        fingered_segments = {}
+        for da_score in self.d_score_list():
+            score_title = da_score.title()
+            abcdh = da_score.abcd_header()
+            annot_count = abcdh.annotation_count()
+            annot = da_score.annotation_by_index(index=0)
+            if type(self._segmenter) is ManualDSegmenter:
+                self._segmenter.d_annotation(d_annotation=annot)
+            # We need to create separate PIG files for each staff/phrase
+            for staff in ('upper', 'lower'):
+                ordered_offset_note_segments = da_score.ordered_offset_note_segments(staff=staff)
+                for annot_index in range(annot_count):
+                    annot = da_score.annotation_by_index(annot_index)
+                    authority = annot.authority()
+                    if self._segmenter:
+                        hsd_segments = self._segmenter.segment_annotation(annotation=annot, staff=staff)
+                    else:
+                        hsd_segments = [annot.handed_strike_digits(staff=staff)]
+                    seg_index = 0
+                    for hsd_seg in hsd_segments:
+                        ordered_notes = ordered_offset_note_segments[seg_index]
+                        seg_index += 1
+                        note_len = len(ordered_notes)
+                        seg_len = len(hsd_seg)
+                        if note_len != seg_len:
+                            print("Bad annotation by {} for score {}. Notes: {} Fingers: {}".format(
+                                authority, score_title, note_len, seg_len))
+                            summary['bad_seg_annot_count'] += 1
+                            continue
+                        non_default_hand_finger_count = DSegmenter.non_default_hand_count(hsd_seq=hsd_seg, staff=staff)
+                        if non_default_hand_finger_count:
+                            summary['total_non_default_hand_segment_count'] += 1
+                            print("Non-default hand specified by annotator {} in score {}: {}".format(
+                                authority, score_title, hsd_seg))
+                            summary['total_non_default_hand_finger_count'] += non_default_hand_finger_count
+                            if segregate_hands:
+                                summary['bad_seg_annot_count'] += 1
+                                continue
+                        if DSegmenter.has_wildcard(hsd_seq=hsd_seg):
+                            # print("Wildcard disallowed from annotator {} in score {}: {}".format(
+                            # authority, score_title, hsd_seg))
+                            summary['wildcarded_seg_count'] += 1
+                            if no_wildcards:
+                                continue
+                        fingered_segment = copy.deepcopy(ordered_notes)
+                        for note_index in range(note_len):
+                            fingered_segment[note_index]['handed_strike_digit'] = hsd_seg[note_index]
+                        segment_key = (score_title, staff, annot_index, seg_index - 1)
+                        fingered_segments[segment_key] = fingered_segment
+                        summary['included_note_count'] += note_len
+
+        if print_summary:
+            pprint.pprint(summary)
+        return fingered_segments
