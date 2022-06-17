@@ -34,14 +34,13 @@ import scipy.stats
 from sklearn.metrics import make_scorer
 from sklearn_crfsuite import scorers
 import os
-import subprocess
 import sklearn_crfsuite as crf
 from sklearn_crfsuite import metrics
 import pickle
 import dill
-import weakref
 from pathlib import Path
 from sklearn.model_selection import train_test_split, cross_val_score
+from music21 import pitch, note
 from pydactyl.eval.Corporeal import Corporeal, ARPEGGIOS_DIR, SCALES_DIR, BROKEN_DIR, \
     ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, COMPLETE_LAYER_ONE_STD_PIG_DIR
 from pydactyl.dactyler.Parncutt import TrigramNode
@@ -83,6 +82,19 @@ CORPUS_NAMES = ['complete_layer_one']
 # CORPUS_NAMES = ['pig_indy']
 # CORPUS_NAMES = ['pig_seg']
 
+VERSION_FEATURES = {
+    '0000': {
+        'judge': 'parncutt',
+        'distance': 'integral',
+        'staff': True,
+        'simple_chording:': True,
+        'complex_chording': False,
+        'leap': False,
+        'articulation': False,
+        'tempo': False,
+        'velocity': False,
+    }
+}
 
 #####################################################
 # FUNCTIONS
@@ -175,12 +187,29 @@ def leap_is_excessive(notes, middle_i):
         return True  # That first step is a doozy. Infinite leap.
     return False
 
-
 def chordings(notes, middle_i):
     middle_offset_ms = notes[middle_i]['second_offset']/1000
     min_left_offset_ms = middle_offset_ms - CHORD_MS_THRESHOLD
     max_right_offset_ms = middle_offset_ms + CHORD_MS_THRESHOLD
     left_chord_notes = 0
+    for i in range(middle_i, middle_i - 6, -1):
+        if i < 0:
+            break
+        i_offet_ms = notes[i]['second_offset'] / 1000
+        if i_offet_ms > min_left_offset_ms:
+            left_chord_notes += 1
+    right_chord_notes = 0
+    for i in range(middle_i, middle_i + 6, 1):
+        if i >= len(notes):
+            break
+        i_offet_ms = notes[i]['second_offset'] / 1000
+        if i_offet_ms < max_right_offset_ms:
+            right_chord_notes += 1
+    return left_chord_notes, right_chord_notes
+
+def tempo_indicators(notes, middle_i):
+    middle_offset_ms = notes[middle_i]['second_offset']/1000
+    left_notes = 0
     for i in range(middle_i, middle_i - 6, -1):
         if i < 0:
             break
@@ -205,21 +234,42 @@ def note2features(notes, annotations, i, staff):
         raw_cost = rule_method(trigram_node)
         features[tag] = raw_cost
 
-    features['staff'] = 0
-    if staff == "upper":
-        features['staff'] = 1
-        # @100: [0.54495717 0.81059147 0.81998371 0.68739401 0.73993751]
-        # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
+    settings = VERSION_FEATURES[VERSION]
+    if settings['staff']:
+        features['staff'] = 0
+        if staff == "upper":
+            features['staff'] = 1
+            # @100: [0.54495717 0.81059147 0.81998371 0.68739401 0.73993751]
+            # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
 
-    # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
-    left_chord_notes, right_chord_notes = chordings(notes=notes, middle_i=i)
-    features['left_chord'] = left_chord_notes
-    features['right_chord'] = right_chord_notes
+    if settings['simple_chording']:
+        # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
+        left_chord_notes, right_chord_notes = chordings(notes=notes, middle_i=i)
+        features['left_chord'] = left_chord_notes
+        features['right_chord'] = right_chord_notes
 
-    # FIXME: Impact of large leaps? Costs max out, no? Maybe not.
-    # features['leap'] = 0
-    # if leap_is_excessive(notes, i):
-    # features['leap'] = 1
+    if settings['complex_chording']:
+        pass
+
+    if settings['leap']:
+        # Impact of large leaps? Costs max out, no? Maybe not.
+        features['leap'] = 0
+        if leap_is_excessive(notes, i):
+            features['leap'] = 1
+
+    if settings['velocity']:
+        oon = notes[i]
+        m21_note: note.Note = oon['note']
+        on_velocity = m21_note.volume.velocity
+        if on_velocity is None:
+            on_velocity = 64
+        features['velocity'] = on_velocity
+
+    if settings['tempo']:
+        pass
+
+    if settings['articulation']:
+        pass
 
     # FIXME: Lattice distance in Parncutt rules? Approximated by Jacobs.
     #        Mitigated by Balliauw (which just makes the x-distance more
@@ -509,7 +559,8 @@ class DExperiment:
 # MAIN BLOCK
 #####################################################
 creal = Corporeal()
-judge = creal.get_model('parncutt')
+judge_model_name = VERSION_FEATURES[VERSION]['judge']
+judge = creal.get_model(judge_model_name)
 # judge = creal.get_model('badball')
 # judge = creal.get_model('jacobs')
 

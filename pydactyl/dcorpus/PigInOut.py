@@ -1198,10 +1198,10 @@ class PigOut:
                 raise Exception("Specific staff must be specified.")
 
         on_velocity = m21_note.volume.velocity
-        off_velocity = "80"
+        off_velocity = "64"
         if on_velocity is None:
             if fake_velocity:
-                on_velocity = 80
+                on_velocity = 64
             else:
                 raise Exception("Velocity is not set for note {} at index {} on channel {}.".format(
                     pig_name, note_id, channel))
@@ -1301,7 +1301,7 @@ class PigOut:
                 if on_velocity is None:
                     raise Exception(
                         "Velocity is not set for note {} at index {} on channel {}.".format(pig_name, i, channel))
-                off_velocity = 80
+                off_velocity = 64
                 hsd = hsds[i]
                 pig_fingering = PigNote.abcdf_to_pig_fingering(handed_digit=hsd)
                 note_on_s = round(note_on_s, 6)
