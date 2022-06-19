@@ -22,8 +22,6 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-import pprint
-import re
 import copy
 import shutil
 import sys
@@ -55,8 +53,6 @@ PREDICTION_DIR = '/tmp/crf' + VERSION + 'prediction/'
 TEST_DIR = '/tmp/crf' + VERSION + 'test/'
 PICKLE_BASE_DIR = '/tmp/pickle/'
 MAX_LEAP = 16
-MICROSECONDS_PER_BEAT = 500000
-MS_PER_BEAT = MICROSECONDS_PER_BEAT / 1000
 CHORD_MS_THRESHOLD = 30
 # CLEAN_LIST = {}  # Reuse all pickled results.
 # CLEAN_LIST = {'crf': True}
@@ -93,6 +89,19 @@ VERSION_FEATURES = {
         'articulation': False,
         'tempo': False,
         'velocity': False,
+        'repeat': False
+    },
+    '0001': {
+        'judge': 'parncutt',
+        'distance': 'integral',
+        'staff': True,
+        'simple_chording:': True,
+        'complex_chording': False,
+        'leap': False,
+        'articulation': False,
+        'tempo': True,
+        'velocity': True,
+        'repeat': False
     }
 }
 
@@ -187,19 +196,20 @@ def leap_is_excessive(notes, middle_i):
         return True  # That first step is a doozy. Infinite leap.
     return False
 
+
 def chordings(notes, middle_i):
     middle_offset_ms = notes[middle_i]['second_offset']/1000
     min_left_offset_ms = middle_offset_ms - CHORD_MS_THRESHOLD
     max_right_offset_ms = middle_offset_ms + CHORD_MS_THRESHOLD
     left_chord_notes = 0
-    for i in range(middle_i, middle_i - 6, -1):
+    for i in range(middle_i, middle_i - 5, -1):
         if i < 0:
             break
         i_offet_ms = notes[i]['second_offset'] / 1000
         if i_offet_ms > min_left_offset_ms:
             left_chord_notes += 1
     right_chord_notes = 0
-    for i in range(middle_i, middle_i + 6, 1):
+    for i in range(middle_i, middle_i + 5, 1):
         if i >= len(notes):
             break
         i_offet_ms = notes[i]['second_offset'] / 1000
@@ -207,23 +217,163 @@ def chordings(notes, middle_i):
             right_chord_notes += 1
     return left_chord_notes, right_chord_notes
 
-def tempo_indicators(notes, middle_i):
+
+def complex_chordings(notes, annotations, middle_i, staff):
     middle_offset_ms = notes[middle_i]['second_offset']/1000
-    left_notes = 0
-    for i in range(middle_i, middle_i - 6, -1):
+    min_left_offset_ms = middle_offset_ms - CHORD_MS_THRESHOLD
+    max_right_offset_ms = middle_offset_ms + CHORD_MS_THRESHOLD
+    left_chord_notes = 0
+    for i in range(middle_i, middle_i - 5, -1):
         if i < 0:
             break
         i_offet_ms = notes[i]['second_offset'] / 1000
         if i_offet_ms > min_left_offset_ms:
             left_chord_notes += 1
     right_chord_notes = 0
-    for i in range(middle_i, middle_i + 6, 1):
+    for i in range(middle_i, middle_i + 5, 1):
         if i >= len(notes):
             break
         i_offet_ms = notes[i]['second_offset'] / 1000
         if i_offet_ms < max_right_offset_ms:
             right_chord_notes += 1
-    return left_chord_notes, right_chord_notes
+
+
+def tempo_features(notes, middle_i):
+    """
+    Calculate notes per second left of middle_i, right of middle_i, and throughout the
+    9-note window.
+    """
+    middle_offset_s = notes[middle_i]['second_offset']
+    left_offset_s = 0
+    left_note_count = 0
+    for i in range(middle_i, middle_i - 5, -1):
+        if i < 0:
+            break
+        left_offset_s = notes[i]['second_offset']
+        left_note_count += 1
+    left_seconds = middle_offset_s - left_offset_s
+    right_offset_s = 0
+    right_note_count = 0
+    for i in range(middle_i, middle_i + 5, 1):
+        if i >= len(notes):
+            break
+        right_offset_s = notes[i]['second_offset']
+        right_note_count += 1
+    right_seconds = right_offset_s - middle_offset_s
+    window_seconds = left_seconds + right_seconds
+    note_count = left_note_count + right_note_count - 1
+    if window_seconds == 0:
+        window_nps = 0
+    else:
+        window_nps = note_count / window_seconds
+
+    if left_seconds == 0:
+        left_nps = 0
+    else:
+        left_nps = left_note_count / left_seconds
+
+    if right_seconds == 0:
+        right_nps = 0
+    else:
+        right_nps = right_note_count / right_seconds
+
+    result = {
+        'window_nps': window_nps,
+        'left_nps': left_nps,
+        'right_nps': right_nps
+    }
+    return result
+
+
+def articulation_features(notes, middle_i):
+    """
+    From a segregated fingering standpoint at least, staccato is a purely melodic phenomenon.
+    We are looking for a feature to explain why finger order does not align with note order
+    (where pivoting occurs without the thumb). When chords are sounding, the hand is anchored
+    and is not free to perform such feats. Therefore, we look for a melodic window around the
+    note and calculate measures of separation between notes in the window.
+    :param notes: List of fingered ordered offset notes.
+    :param middle_i: Index of note being evaluated.
+    :return: Dictionary of separation measures with following keys:
+        staccato_count: Number of notes in the 9-note window surrounding that are followed by
+                        silence at least half as long as the note itself.
+        normalized_silence: The sum of silence between notes surrounding the note at middle_i
+                            divided by the total duration of the 9-note window, measured
+                            from the leftmost note onset to the rightmost onset.
+        separated_count: The number of notes surrounding the middle_i note that are separated
+                         by at least 60ms.
+    """
+    result = {
+        'staccato_count': 0,
+        'normalized_silence': 0.0,
+        'separated_count': 0
+    }
+
+    left_consonant_count, right_consonant_count = chordings(notes, middle_i=middle_i)
+    if left_consonant_count or right_consonant_count:
+        return result
+
+    total_silence = 0.0
+    left_off_time = None
+    left_dur = None
+    window_start_time = None
+    window_end_time = None
+    for i in range(middle_i - 4, middle_i + 5, 1):
+        if i < 0:
+            continue
+        if i >= len(notes):
+            break
+        on_time = notes[i]['second_offset']
+        if window_start_time is None:
+            window_start_time = on_time
+        window_end_time = on_time
+        dur = notes[i]['second_duration']
+        off_time = on_time + dur
+        if left_off_time is not None:
+            silence = on_time - left_off_time
+            if silence * 1000 > 2 * CHORD_MS_THRESHOLD:
+                result['separated_count'] += 1
+            if silence >= left_dur / 2:
+                result['staccato_count'] += 1
+            if silence > 0:
+                total_silence += silence
+        left_off_time = off_time
+        left_dur = dur
+    window_dur = window_end_time - window_start_time
+    if window_dur > 0:
+        result['normalized_silence'] = total_silence / window_dur
+    return result
+
+
+def repeat_features(notes, middle_i):
+    """
+    Count notes prior to anf after the note at middle_i with same pitch as the note at middle_i.
+    :param notes: List of fingered ordered offset notes.
+    :param middle_i: Index of note being evaluated.
+    :return: Tuple of (repeats_before, repeats_after).
+    """
+    middle_midi = notes[middle_i]['note'].pitch.midi
+    repeat_before = 0
+    i = middle_i - 1
+    while i >= 0:
+        previous_midi = notes[i]['note'].pitch.midi
+        if previous_midi == middle_midi:
+            repeat_before += 1
+        else:
+            break
+        i -= 1
+
+    repeat_after = 0
+    i = middle_i + 1
+    while i < len(notes):
+        next_midi = notes[i]['note'].pitch.midi
+        if next_midi == middle_midi:
+            repeat_after += 1
+        else:
+            break
+        i += 1
+
+    return repeat_before, repeat_after
 
 
 def note2features(notes, annotations, i, staff):
@@ -266,16 +416,24 @@ def note2features(notes, annotations, i, staff):
         features['velocity'] = on_velocity
 
     if settings['tempo']:
-        pass
+        tempi = tempo_features(notes=notes, middle_i=i)
+        for k in tempi:
+            features[k] = tempi[k]
 
     if settings['articulation']:
-        pass
+        arts = articulation_features(notes=notes, middle_i=i)
+        for k in arts:
+            features[k] = arts[k]
+
+    if settings['repeat']:
+        reps_before, reps_after = repeat_features(notes=notes, middle_i=i)
+        features['repeats_before'] = reps_before
+        features['repeats_after'] = reps_after
+
 
     # FIXME: Lattice distance in Parncutt rules? Approximated by Jacobs.
     #        Mitigated by Balliauw (which just makes the x-distance more
     #        accurate between same-colored keys).
-    # FIXME: Articulation (legato, staccato)?
-    # FIXME: tempo (window duration)?
 
     return features
 
