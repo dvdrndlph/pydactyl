@@ -48,7 +48,7 @@ from pydactyl.dcorpus.DScore import DScore
 from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_STD_DIR, PIG_FILE_SUFFIX, PIG_SEGREGATED_STD_DIR
 
-VERSION = '0000'
+VERSION = '0001'
 PREDICTION_DIR = '/tmp/crf' + VERSION + 'prediction/'
 TEST_DIR = '/tmp/crf' + VERSION + 'test/'
 PICKLE_BASE_DIR = '/tmp/pickle/'
@@ -83,7 +83,7 @@ VERSION_FEATURES = {
         'judge': 'parncutt',
         'distance': 'integral',
         'staff': True,
-        'simple_chording:': True,
+        'simple_chording': True,
         'complex_chording': False,
         'leap': False,
         'articulation': False,
@@ -95,13 +95,13 @@ VERSION_FEATURES = {
         'judge': 'parncutt',
         'distance': 'integral',
         'staff': True,
-        'simple_chording:': True,
+        'simple_chording': True,
         'complex_chording': False,
         'leap': False,
         'articulation': False,
         'tempo': True,
         'velocity': True,
-        'repeat': False
+        'repeat': True
     }
 }
 
@@ -198,44 +198,48 @@ def leap_is_excessive(notes, middle_i):
 
 
 def chordings(notes, middle_i):
-    middle_offset_ms = notes[middle_i]['second_offset']/1000
+    middle_offset_ms = notes[middle_i]['second_offset'] * 1000
     min_left_offset_ms = middle_offset_ms - CHORD_MS_THRESHOLD
     max_right_offset_ms = middle_offset_ms + CHORD_MS_THRESHOLD
     left_chord_notes = 0
-    for i in range(middle_i, middle_i - 5, -1):
+    for i in range(middle_i - 1, middle_i - 5, -1):
         if i < 0:
             break
-        i_offet_ms = notes[i]['second_offset'] / 1000
+        i_offet_ms = notes[i]['second_offset'] * 1000
         if i_offet_ms > min_left_offset_ms:
             left_chord_notes += 1
     right_chord_notes = 0
-    for i in range(middle_i, middle_i + 5, 1):
+    for i in range(middle_i + 1, middle_i + 5, 1):
         if i >= len(notes):
             break
-        i_offet_ms = notes[i]['second_offset'] / 1000
+        i_offet_ms = notes[i]['second_offset'] * 1000
         if i_offet_ms < max_right_offset_ms:
             right_chord_notes += 1
     return left_chord_notes, right_chord_notes
 
 
-def complex_chordings(notes, annotations, middle_i, staff):
-    middle_offset_ms = notes[middle_i]['second_offset']/1000
-    min_left_offset_ms = middle_offset_ms - CHORD_MS_THRESHOLD
-    max_right_offset_ms = middle_offset_ms + CHORD_MS_THRESHOLD
-    left_chord_notes = 0
-    for i in range(middle_i, middle_i - 5, -1):
-        if i < 0:
-            break
-        i_offet_ms = notes[i]['second_offset'] / 1000
-        if i_offet_ms > min_left_offset_ms:
-            left_chord_notes += 1
-    right_chord_notes = 0
-    for i in range(middle_i, middle_i + 5, 1):
-        if i >= len(notes):
-            break
-        i_offet_ms = notes[i]['second_offset'] / 1000
-        if i_offet_ms < max_right_offset_ms:
-            right_chord_notes += 1
+def complex_chording(notes, annotations, middle_i):
+    lower_note_count, higher_note_count = chordings(notes=notes, middle_i=middle_i)
+    prior_left_digit = None
+    prior_right_digit = None
+    penalty = 0
+    for i in range(middle_i - lower_note_count, middle_i + higher_note_count + 1, 1):
+        hand = annotations[i][0]
+        digit = int(annotations[i][1])
+        if hand == ">":
+            if prior_right_digit is not None:
+                if prior_right_digit >= digit:
+                    penalty += 1
+            else:
+                prior_right_digit = digit
+        else:
+            if prior_left_digit is not None:
+                if prior_left_digit <= digit:
+                    penalty += 1
+            else:
+                prior_left_digit = digit
+    return penalty
+
 
 
 def tempo_features(notes, middle_i):
@@ -399,7 +403,7 @@ def note2features(notes, annotations, i, staff):
         features['right_chord'] = right_chord_notes
 
     if settings['complex_chording']:
-        pass
+        features['complex_chord'] = complex_chording(notes=notes, annotations=annotations, middle_i=i)
 
     if settings['leap']:
         # Impact of large leaps? Costs max out, no? Maybe not.
