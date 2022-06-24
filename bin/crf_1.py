@@ -41,14 +41,14 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from music21 import pitch, note
 from pydactyl.eval.Corporeal import Corporeal, ARPEGGIOS_DIR, SCALES_DIR, BROKEN_DIR, \
     ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, COMPLETE_LAYER_ONE_STD_PIG_DIR
-from pydactyl.dactyler.Parncutt import TrigramNode
+from pydactyl.dactyler.Parncutt import TrigramNode, is_black, ImaginaryBlackKeyRuler, PhysicalRuler
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dcorpus.DAnnotation import DAnnotation
 from pydactyl.dcorpus.DScore import DScore
 from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_STD_DIR, PIG_FILE_SUFFIX, PIG_SEGREGATED_STD_DIR
 
-VERSION = '0001'
+VERSION = '0000'
 PREDICTION_DIR = '/tmp/crf' + VERSION + 'prediction/'
 TEST_DIR = '/tmp/crf' + VERSION + 'test/'
 PICKLE_BASE_DIR = '/tmp/pickle/'
@@ -61,14 +61,14 @@ CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regen
 # CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
-TEST_METHOD = 'cross-validate'
-# TEST_METHOD = 'preset'
+# TEST_METHOD = 'cross-validate'
+TEST_METHOD = 'preset'
 # TEST_METHOD = 'random'
 SEGREGATE_HANDS = False
 STAFFS = ['upper', 'lower']
 # STAFFS = ['upper']
 # CORPUS_NAMES = ['full_american_by_annotator']
-CORPUS_NAMES = ['complete_layer_one']
+# CORPUS_NAMES = ['complete_layer_one']
 # CORPUS_NAMES = ['scales']
 # CORPUS_NAMES = ['arpeggios']
 # CORPUS_NAMES = ['broken']
@@ -76,13 +76,22 @@ CORPUS_NAMES = ['complete_layer_one']
 # CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['pig']
 # CORPUS_NAMES = ['pig_indy']
-# CORPUS_NAMES = ['pig_seg']
+CORPUS_NAMES = ['pig_seg']
+
+CHORD_TAG_LIST = {
+    'str': True,
+    'sma': True,
+    'impw': True,
+    'nrfw': True
+}
 
 VERSION_FEATURES = {
     '0000': {
         'judge': 'parncutt',
-        'distance': 'integral',
+        'judge_chords': False,
+        'distance': 'lattice',
         'staff': True,
+        'black': False,
         'simple_chording': True,
         'complex_chording': False,
         'leap': False,
@@ -93,8 +102,10 @@ VERSION_FEATURES = {
     },
     '0001': {
         'judge': 'parncutt',
+        'judge_chords': True,
         'distance': 'integral',
         'staff': True,
+        'black': True,
         'simple_chording': True,
         'complex_chording': False,
         'leap': False,
@@ -241,7 +252,6 @@ def complex_chording(notes, annotations, middle_i):
     return penalty
 
 
-
 def tempo_features(notes, middle_i):
     """
     Calculate notes per second left of middle_i, right of middle_i, and throughout the
@@ -380,15 +390,82 @@ def repeat_features(notes, middle_i):
     return repeat_before, repeat_after
 
 
+def black_key(notes, i):
+    midi = notes[i]['note'].pitch.midi
+    is_black_key = is_black(midi_number=midi)
+    return is_black_key
+
+
+def integral_distance(notes, from_i, to_i, absolute=False):
+    if from_i < 0 or to_i >= len(notes):
+        return 0
+    from_midi = notes[from_i]['note'].pitch.midi
+    to_midi = notes[to_i]['note'].pitch.midi
+    diff = to_midi - from_midi
+    if absolute:
+        diff = abs(diff)
+    return diff
+
+
+def lattice_distance(notes, from_i, to_i, absolute=False):
+    if from_i < 0 or to_i >= len(notes):
+        return 0, 0
+    from_midi = notes[from_i]['note'].pitch.midi
+    to_midi = notes[to_i]['note'].pitch.midi
+    x_distance = six_six_ruler.distance(from_midi=from_midi, to_midi=to_midi)
+    from_is_black = is_black(midi_number=from_midi)
+    to_is_black = is_black(midi_number=to_midi)
+    if from_is_black == to_is_black:
+        y_distance = 0
+    elif to_is_black:
+        y_distance = 1
+    else:
+        y_distance = -1
+    if absolute:
+        x_distance = abs(x_distance)
+        y_distance = abs(y_distance)
+    return x_distance, y_distance
+
+
 def note2features(notes, annotations, i, staff):
     trigram_node = get_trigram_node(notes, annotations, i)
     features = {}
     functions = judge.rules()
-    for tag, rule_method in functions.items():
-        raw_cost = rule_method(trigram_node)
-        features[tag] = raw_cost
 
     settings = VERSION_FEATURES[VERSION]
+
+    if settings['distance'] == 'integral':
+        features['distance:-3'] = integral_distance(notes=notes, from_i=i-3, to_i=i)
+        features['distance:-2'] = integral_distance(notes=notes, from_i=i-2, to_i=i)
+        features['distance:-1'] = integral_distance(notes=notes, from_i=i-1, to_i=i)
+        features['distance:+1'] = integral_distance(notes=notes, from_i=i, to_i=i+1)
+        features['distance:+2'] = integral_distance(notes=notes, from_i=i, to_i=i+2)
+        features['distance:+3'] = integral_distance(notes=notes, from_i=i, to_i=i+3)
+    elif settings['distance'] == 'lattice':
+        features['x_distance:-3'], features['y_distance:-3'] = lattice_distance(notes=notes, from_i=i-3, to_i=i)
+        features['x_distance:-2'], features['y_distance:-2'] = lattice_distance(notes=notes, from_i=i-2, to_i=i)
+        features['x_distance:-1'], features['y_distance:-1'] = lattice_distance(notes=notes, from_i=i-1, to_i=i)
+        features['x_distance:+1'], features['y_distance:+1'] = lattice_distance(notes=notes, from_i=i, to_i=i+1)
+        features['x_distance:+2'], features['y_distance:+2'] = lattice_distance(notes=notes, from_i=i, to_i=i+2)
+        features['x_distance:+3'], features['y_distance:+3'] = lattice_distance(notes=notes, from_i=i, to_i=i+3)
+
+    if settings['simple_chording']:
+        # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
+        left_chord_notes, right_chord_notes = chordings(notes=notes, middle_i=i)
+        features['left_chord'] = left_chord_notes
+        features['right_chord'] = right_chord_notes
+
+    judge_as_chord_trigram = False
+    if settings['judge_chords'] and (features['left_chord'] or features['right_chord']):
+        judge_as_chord_trigram = True
+
+    for tag, rule_method in functions.items():
+        if judge_as_chord_trigram and tag not in CHORD_TAG_LIST:
+            features[tag] = 0
+        else:
+            raw_cost = rule_method(trigram_node)
+            features[tag] = raw_cost
+
     if settings['staff']:
         features['staff'] = 0
         if staff == "upper":
@@ -396,11 +473,8 @@ def note2features(notes, annotations, i, staff):
             # @100: [0.54495717 0.81059147 0.81998371 0.68739401 0.73993751]
             # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
 
-    if settings['simple_chording']:
-        # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
-        left_chord_notes, right_chord_notes = chordings(notes=notes, middle_i=i)
-        features['left_chord'] = left_chord_notes
-        features['right_chord'] = right_chord_notes
+    if settings['black']:
+        features['black_key']: black_key(notes, i)
 
     if settings['complex_chording']:
         features['complex_chord'] = complex_chording(notes=notes, annotations=annotations, middle_i=i)
@@ -720,6 +794,7 @@ class DExperiment:
 #####################################################
 # MAIN BLOCK
 #####################################################
+six_six_ruler = ImaginaryBlackKeyRuler()
 creal = Corporeal()
 judge_model_name = VERSION_FEATURES[VERSION]['judge']
 judge = creal.get_model(judge_model_name)
