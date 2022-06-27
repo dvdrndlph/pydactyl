@@ -1305,7 +1305,7 @@ class PigOut:
                 hsd = hsds[i]
                 pig_fingering = PigNote.abcdf_to_pig_fingering(handed_digit=hsd)
                 note_on_s = round(note_on_s, 6)
-                note_off_s = round(note_off_s/1000, 6)
+                note_off_s = round(note_off_s, 6)
                 pig_note = PigNote(id=note_id, on=note_on_s, off=note_off_s,
                                    name=pig_name, on_vel=on_velocity, off_vel=off_velocity,
                                    channel=channel, finger=pig_fingering)

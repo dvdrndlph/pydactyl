@@ -48,16 +48,16 @@ from pydactyl.dcorpus.DScore import DScore
 from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_STD_DIR, PIG_FILE_SUFFIX, PIG_SEGREGATED_STD_DIR
 
-VERSION = '0000'
+VERSION = '0001'
 PREDICTION_DIR = '/tmp/crf' + VERSION + 'prediction/'
 TEST_DIR = '/tmp/crf' + VERSION + 'test/'
 PICKLE_BASE_DIR = '/tmp/pickle/'
 MAX_LEAP = 16
 CHORD_MS_THRESHOLD = 30
-# CLEAN_LIST = {}  # Reuse all pickled results.
+CLEAN_LIST = {}  # Reuse all pickled results.
 # CLEAN_LIST = {'crf': True}
 # CLEAN_LIST = {'DCorpus': True}
-CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
+# CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
@@ -89,7 +89,8 @@ VERSION_FEATURES = {
     '0000': {
         'judge': 'parncutt',
         'judge_chords': False,
-        'distance': 'lattice',
+        'distance': 'none',
+        # 'distance_window': 4,
         'staff': True,
         'black': False,
         'simple_chording': True,
@@ -102,18 +103,19 @@ VERSION_FEATURES = {
     },
     '0001': {
         'judge': 'parncutt',
-        'judge_chords': True,
-        'distance': 'integral',
+        'judge_chords': False,
+        'distance': 'lattice',
+        # 'distance_window': 4,
         'staff': True,
         'black': True,
         'simple_chording': True,
         'complex_chording': False,
         'leap': False,
-        'articulation': False,
-        'tempo': True,
-        'velocity': True,
-        'repeat': True
-    }
+        'articulation': True,
+        'tempo': False,
+        'velocity': False,
+        'repeat': False
+    },
 }
 
 #####################################################
@@ -434,20 +436,41 @@ def note2features(notes, annotations, i, staff):
 
     settings = VERSION_FEATURES[VERSION]
 
+    # if settings['distance'] != 'none':
+    #     for index_offset in range(1, settings['distance_window'] + 1):
+    #         left_i = i - index_offset
+    #         right_i = i + index_offset
+    #         if settings['distance'] == 'integral':
+    #             left_tag = "distance:{}".format(left_i)
+    #             right_tag = "distance:+{}".format(right_i)
+    #             features[left_tag] = integral_distance(notes=notes, from_i=left_i, to_i=i)
+    #             features[right_tag] = integral_distance(notes=notes, from_i=i, to_i=right_i)
+    #         elif settings['distance'] == 'lattice':
+    #             left_x_tag = "x_distance:{}".format(left_i)
+    #             right_x_tag = "x_distance:+{}".format(right_i)
+    #             left_y_tag = "y_distance:{}".format(left_i)
+    #             right_y_tag = "y_distance:+{}".format(right_i)
+    #             features[left_x_tag], features[left_y_tag] = lattice_distance(notes=notes, from_i=left_i, to_i=i)
+    #             features[right_x_tag], features[right_y_tag] = lattice_distance(notes=notes, from_i=i, to_i=right_i)
+
     if settings['distance'] == 'integral':
+        features['distance:-4'] = integral_distance(notes=notes, from_i=i-4, to_i=i)
         features['distance:-3'] = integral_distance(notes=notes, from_i=i-3, to_i=i)
         features['distance:-2'] = integral_distance(notes=notes, from_i=i-2, to_i=i)
         features['distance:-1'] = integral_distance(notes=notes, from_i=i-1, to_i=i)
         features['distance:+1'] = integral_distance(notes=notes, from_i=i, to_i=i+1)
         features['distance:+2'] = integral_distance(notes=notes, from_i=i, to_i=i+2)
         features['distance:+3'] = integral_distance(notes=notes, from_i=i, to_i=i+3)
+        features['distance:+4'] = integral_distance(notes=notes, from_i=i, to_i=i+4)
     elif settings['distance'] == 'lattice':
+        features['x_distance:-4'], features['y_distance:-4'] = lattice_distance(notes=notes, from_i=i-4, to_i=i)
         features['x_distance:-3'], features['y_distance:-3'] = lattice_distance(notes=notes, from_i=i-3, to_i=i)
         features['x_distance:-2'], features['y_distance:-2'] = lattice_distance(notes=notes, from_i=i-2, to_i=i)
         features['x_distance:-1'], features['y_distance:-1'] = lattice_distance(notes=notes, from_i=i-1, to_i=i)
         features['x_distance:+1'], features['y_distance:+1'] = lattice_distance(notes=notes, from_i=i, to_i=i+1)
         features['x_distance:+2'], features['y_distance:+2'] = lattice_distance(notes=notes, from_i=i, to_i=i+2)
         features['x_distance:+3'], features['y_distance:+3'] = lattice_distance(notes=notes, from_i=i, to_i=i+3)
+        features['x_distance:+4'], features['y_distance:+4'] = lattice_distance(notes=notes, from_i=i, to_i=i+4)
 
     if settings['simple_chording']:
         # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
@@ -598,7 +621,7 @@ class DExperiment:
         self.bad_annot_count = 0
         self.wildcarded_count = 0
         self.good_annot_count = 0
-        self.included_note_count = 0
+        self.annotated_note_count = 0
         self.total_nondefault_hand_finger_count = 0
         self.total_nondefault_hand_segment_count = 0
         self.test_indices = {}
@@ -683,13 +706,13 @@ class DExperiment:
             test_pig_paths.append(test_pig_path)
         return test_pig_paths
 
-    def get_simple_match_rate(self, pig_std_dir=PIG_STD_DIR, prediction_dir=PREDICTION_DIR, output=False):
+    def get_simple_match_rate(self, prediction_dir=PREDICTION_DIR, output=False):
         """
         Use the executable from Nakamura to calculate SimpleMatchRate.
         """
-        pp_path = Path(PREDICTION_DIR)
+        pp_path = Path(prediction_dir)
         if not pp_path.is_dir():
-            os.makedirs(PREDICTION_DIR)
+            os.makedirs(prediction_dir)
         total_simple_match_count = 0
         total_annot_count = 0
         test_file_count = 0
@@ -827,7 +850,6 @@ if ex is None:
                 print("Processing {} staff of {} score from {} corpus.".format(staff, score_title, corpus_name))
                 ordered_offset_note_segments = da_score.ordered_offset_note_segments(staff=staff)
                 seg_count = len(ordered_offset_note_segments)
-
                 for annot_index in range(annot_count):
                     annot = da_score.annotation_by_index(annot_index)
                     authority = annot.authority()
@@ -835,9 +857,9 @@ if ex is None:
                     seg_index = 0
                     for hsd_seg in hsd_segments:
                         ordered_notes = ordered_offset_note_segments[seg_index]
-                        seg_index += 1
                         note_len = len(ordered_notes)
                         seg_len = len(hsd_seg)
+                        seg_index += 1
                         if note_len != seg_len:
                             print("Bad annotation by {} for score {}. Notes: {} Fingers: {}".format(
                                 authority, score_title, note_len, seg_len))
@@ -857,7 +879,7 @@ if ex is None:
                                 # authority, score_title, hsd_seg))
                             ex.wildcarded_count += 1
                             continue
-                        ex.included_note_count += note_len
+                        ex.annotated_note_count += note_len
                         ex.x.append(phrase2features(ordered_notes, hsd_seg, staff))
                         ex.y.append(phrase2labels(hsd_seg))
                         if has_preset_evaluation_defined(corpus_name=corpus_name):
@@ -885,7 +907,7 @@ if TEST_METHOD == 'preset':
 print("Good examples: {}".format(ex.good_annot_count))
 print("Bad examples: {}".format(ex.bad_annot_count))
 print("Wildcarded examples: {}".format(ex.wildcarded_count))
-print("Total notes included: {}".format(ex.included_note_count))
+print("Total annotated notes: {}".format(ex.annotated_note_count))
 print("Total nondefault hand fingerings: {}".format(ex.total_nondefault_hand_finger_count))
 print("Total nondefault hand phrases: {}".format(ex.total_nondefault_hand_segment_count))
 
