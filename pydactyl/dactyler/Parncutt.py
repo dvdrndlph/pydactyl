@@ -449,6 +449,10 @@ class TrigramNode(ABC):
         self.digit_1, self.digit_2, self.digit_3 = self._digits()
         self.hand = self.hand_2
 
+    def __repr__(self):
+        self_str = "Trigram {},{},{}:{},{},{}".format(self.midi_1, self.midi_2, self.midi_3,
+                                                      self.handed_digit_1, self.handed_digit_2, self.handed_digit_3)
+        return self_str
 
 class Ruler(ABC):
     def __init__(self, max_leap=16):

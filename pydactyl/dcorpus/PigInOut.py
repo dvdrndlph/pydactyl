@@ -566,14 +566,7 @@ class PigOut:
     A more significant problem is with quantization performed by music21, as it defines a notion
     of "quarterLength" in its efforts to create a symbolic representation of the music.
     Durations are therefore modified as needed to support no more than 1/2048th note
-    granularity. This can can cause offset timestamps to shift. Finally, for historical
-    reasons, within each channel (staff), our code imposes an explicit total order in which
-    no two notes are allowed to start at the same time. We accomplish this by simply shaving
-    1/2048th-note durations from the beginning of notes in a chord to ensure a total order.
-    (Performing this operation was done to allow models that do not take chords into effect to
-    at least be able to process music that contains chords. FIXME: This was a kludge, and we
-    are nearing the point when we will be modifying these models to deal with this issue
-    more intelligently.)
+    granularity. This can can cause offset timestamps to shift.
     """
     def __init__(self, d_score: DScore):
         self._d_score = d_score
