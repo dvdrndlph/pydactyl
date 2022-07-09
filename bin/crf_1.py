@@ -44,13 +44,12 @@ from pydactyl.eval.Corporeal import Corporeal, ARPEGGIOS_DIR, SCALES_DIR, BROKEN
 from pydactyl.dactyler.Parncutt import TrigramNode, is_black, ImaginaryBlackKeyRuler, PhysicalRuler
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dcorpus.DAnnotation import DAnnotation
-from pydactyl.dcorpus.DScore import DScore
 from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_STD_DIR, PIG_FILE_SUFFIX, PIG_SEGREGATED_STD_DIR
 
-VERSION = '0001'
+VERSION = '0000'
 PREDICTION_DIR = '/tmp/crf' + VERSION + 'prediction/'
-TEST_DIR = '/tmp/crf' + VERSION + 'test/'
+TEST_DIR = '/tmk/crf' + VERSION + 'test/'
 PICKLE_BASE_DIR = '/tmp/pickle/'
 MAX_LEAP = 16
 CHORD_MS_THRESHOLD = 30
@@ -62,8 +61,8 @@ CLEAN_LIST = {}  # Reuse all pickled results.
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
 # TEST_METHOD = 'cross-validate'
-TEST_METHOD = 'preset'
-# TEST_METHOD = 'random'
+# TEST_METHOD = 'preset'
+TEST_METHOD = 'random'
 SEGREGATE_HANDS = False
 STAFFS = ['upper', 'lower']
 # STAFFS = ['upper']
@@ -87,14 +86,15 @@ CHORD_TAG_LIST = {
 
 VERSION_FEATURES = {
     '0000': {
-        'judge': 'parncutt',
+        'judge': 'none',
         'judge_chords': False,
+        'bop': False,
+        'eop': False,
         'distance': 'none',
         # 'distance_window': 4,
         'staff': True,
         'black': False,
         'simple_chording': True,
-        'complex_chording': False,
         'leap': False,
         'articulation': False,
         'tempo': False,
@@ -102,14 +102,47 @@ VERSION_FEATURES = {
         'repeat': False
     },
     '0001': {
-        'judge': 'parncutt',
+        'judge': 'none',
         'judge_chords': False,
+        'bop': False,
+        'eop': False,
         'distance': 'lattice',
         # 'distance_window': 4,
         'staff': True,
         'black': True,
         'simple_chording': True,
-        'complex_chording': False,
+        'leap': False,
+        'articulation': True,
+        'tempo': False,
+        'velocity': False,
+        'repeat': False
+    },
+    '0002': {
+        'judge': 'parncutt',
+        'judge_chords': False,
+        'bop': False,
+        'eop': False,
+        'distance': 'lattice',
+        # 'distance_window': 4,
+        'staff': True,
+        'black': True,
+        'simple_chording': True,
+        'leap': False,
+        'articulation': True,
+        'tempo': False,
+        'velocity': False,
+        'repeat': False
+    },
+    '0003': {
+        'judge': 'parncutt',
+        'judge_chords': False,
+        'bop': True,
+        'eop': True,
+        'distance': 'lattice',
+        # 'distance_window': 4,
+        'staff': True,
+        'black': True,
+        'simple_chording': True,
         'leap': False,
         'articulation': True,
         'tempo': False,
@@ -163,7 +196,7 @@ def unpickle_it(obj_type, file_name, use_dill=False):
 
 
 def has_preset_evaluation_defined(corpus_name):
-    if corpus_name in ('pig_seg', 'pig_indy', 'pig'):
+    if corpus_name in ('pig_seg', 'pig_indy', 'pig', 'complete_layer_one'):
         return True
     return False
 
@@ -173,6 +206,9 @@ def is_in_test_set(title: str, corpus_name='pig_indy'):
         example, annotator_id = title.split('-')
         example_int = int(example)
         if example_int <= 30:
+            return True
+    elif corpus_name == 'complete_layer_one':
+        if title.startswith('Sonatina 6.1'):
             return True
     else:
         raise Exception("Not implemented yet.")
@@ -197,6 +233,63 @@ def get_trigram_node(notes, annotations, i):
                                midi_2=midi_2, handed_digit_2=handed_digit_2,
                                midi_3=midi_3, handed_digit_3=handed_digit_3)
     return trigram_node
+
+
+def get_trigram_nodes(notes, i, staff):
+    trigram_nodes = []
+    hand = '>'
+    if staff == "lower":
+        hand = "<"
+    for left_digit in range(1, 6, 1):
+        if i < 1:
+            midi_1 = None
+            handed_digit_1 = '-'
+        else:
+            midi_1 = notes[i-1]['note'].pitch.midi
+            handed_digit_1 = hand + str(left_digit)
+        for middle_digit in range(1, 6, 1):
+            midi_2 = notes[i]['note'].pitch.midi
+            handed_digit_2 = hand + str(middle_digit)
+            for right_digit in range(1, 6, 1):
+                if i + 1 not in notes:
+                    midi_3 = None
+                    handed_digit_3 = '-'
+                else:
+                    midi_3 = notes[i+1]['note'].pitch.midi
+                    handed_digit_3 = hand + str(right_digit)
+                if handed_digit_1 != handed_digit_2 and handed_digit_2 != handed_digit_3:
+                    trigram_node = TrigramNode(midi_1=midi_1, handed_digit_1=handed_digit_1,
+                                               midi_2=midi_2, handed_digit_2=handed_digit_2,
+                                               midi_3=midi_3, handed_digit_3=handed_digit_3)
+                    trigram_nodes.append(trigram_node)
+    return trigram_nodes
+
+
+def judgments(notes, middle_i, staff):
+    trigram_nodes = get_trigram_nodes(notes=notes, i=middle_i, staff=staff)
+    nodes_by_cost = {}
+    lowest_cost = 999999
+    for node in trigram_nodes:
+        cost, _ = judge.trigram_node_cost(trigram_node=node)
+        if cost < lowest_cost:
+            lowest_cost = cost
+        if cost not in nodes_by_cost:
+            nodes_by_cost[cost] = []
+        nodes_by_cost[cost].append(node)
+    bad_fingers = dict()
+    bad_fingers['-1'] = dict.fromkeys(['1', '2', '3', '4', '5'], 1)
+    bad_fingers['0'] = dict.fromkeys(['1', '2', '3', '4', '5'], 1)
+    bad_fingers['+1'] = dict.fromkeys(['1', '2', '3', '4', '5'], 1)
+    for good_trigram in nodes_by_cost[lowest_cost]:
+        if good_trigram.midi_1 is not None:
+            digit_1 = good_trigram.handed_digit_1[1]
+            bad_fingers['-1'][digit_1] = 0
+        digit_2 = good_trigram.handed_digit_2[1]
+        bad_fingers['0'][digit_2] = 0
+        if good_trigram.midi_3 is not None:
+            digit_3 = good_trigram.handed_digit_3[1]
+            bad_fingers['+1'][digit_3] = 0
+    return bad_fingers
 
 
 def leap_is_excessive(notes, middle_i):
@@ -307,7 +400,7 @@ def articulation_features(notes, middle_i):
     We are looking for a feature to explain why finger order does not align with note order
     (where pivoting occurs without the thumb). When chords are sounding, the hand is anchored
     and is not free to perform such feats. Therefore, we look for a melodic window around the
-    note and calculate measures of separation between notes in the window.
+    note and calculate measures of separation between notes within the window.
     :param notes: List of fingered ordered offset notes.
     :param middle_i: Index of note being evaluated.
     :return: Dictionary of separation measures with following keys:
@@ -363,7 +456,7 @@ def articulation_features(notes, middle_i):
 
 def repeat_features(notes, middle_i):
     """
-    Count notes prior to anf after the note at middle_i with same pitch as the note at middle_i.
+    Count notes prior to and after the note at middle_i with same pitch as the note at middle_i.
     :param notes: List of fingered ordered offset notes.
     :param middle_i: Index of note being evaluated.
     :return: Tuple of (repeats_before, repeats_after).
@@ -393,6 +486,10 @@ def repeat_features(notes, middle_i):
 
 
 def black_key(notes, i):
+    """
+    Return True if the key sounding the note at index i is black.
+    Return False otherwise.
+    """
     midi = notes[i]['note'].pitch.midi
     is_black_key = is_black(midi_number=midi)
     return is_black_key
@@ -429,12 +526,14 @@ def lattice_distance(notes, from_i, to_i, absolute=False):
     return x_distance, y_distance
 
 
-def note2features(notes, annotations, i, staff):
-    trigram_node = get_trigram_node(notes, annotations, i)
-    features = {}
-    functions = judge.rules()
-
+def note2features(notes, i, staff):
     settings = VERSION_FEATURES[VERSION]
+    features = {}
+
+    if settings['bop'] and i == 0:
+        features['BOP'] = True
+    if settings['eop'] and i >= len(notes) - 1:
+        features['EOP'] = True
 
     # if settings['distance'] != 'none':
     #     for index_offset in range(1, settings['distance_window'] + 1):
@@ -482,13 +581,6 @@ def note2features(notes, annotations, i, staff):
     if settings['judge_chords'] and (features['left_chord'] or features['right_chord']):
         judge_as_chord_trigram = True
 
-    for tag, rule_method in functions.items():
-        if judge_as_chord_trigram and tag not in CHORD_TAG_LIST:
-            features[tag] = 0
-        else:
-            raw_cost = rule_method(trigram_node)
-            features[tag] = raw_cost
-
     if settings['staff']:
         features['staff'] = 0
         if staff == "upper":
@@ -499,8 +591,8 @@ def note2features(notes, annotations, i, staff):
     if settings['black']:
         features['black_key']: black_key(notes, i)
 
-    if settings['complex_chording']:
-        features['complex_chord'] = complex_chording(notes=notes, annotations=annotations, middle_i=i)
+    # if settings['complex_chording']:
+        # features['complex_chord'] = complex_chording(notes=notes, annotations=annotations, middle_i=i)
 
     if settings['leap']:
         # Impact of large leaps? Costs max out, no? Maybe not.
@@ -531,7 +623,12 @@ def note2features(notes, annotations, i, staff):
         features['repeats_before'] = reps_before
         features['repeats_after'] = reps_after
 
-
+    if settings['judge'] != 'none':
+        bad_fingers = judgments(notes=notes, middle_i=i, staff=staff)
+        for position in bad_fingers:
+            for digit in bad_fingers[position]:
+                k = "judge_{}:{}".format(digit, position)
+                features[k] = bad_fingers[position][digit]
     # FIXME: Lattice distance in Parncutt rules? Approximated by Jacobs.
     #        Mitigated by Balliauw (which just makes the x-distance more
     #        accurate between same-colored keys).
@@ -539,10 +636,10 @@ def note2features(notes, annotations, i, staff):
     return features
 
 
-def phrase2features(notes, annotations, staff):
+def phrase2features(notes, staff):
     feature_list = []
     for i in range(len(notes)):
-        features = note2features(notes, annotations, i, staff)
+        features = note2features(notes, i, staff)
         feature_list.append(features)
     return feature_list
 
@@ -820,11 +917,9 @@ class DExperiment:
 six_six_ruler = ImaginaryBlackKeyRuler()
 creal = Corporeal()
 judge_model_name = VERSION_FEATURES[VERSION]['judge']
-judge = creal.get_model(judge_model_name)
-# judge = creal.get_model('badball')
-# judge = creal.get_model('jacobs')
-
-# token_lists = []
+judge = None
+if judge_model_name != 'none':
+    judge = creal.get_model(judge_model_name)
 
 corpora_str = "-".join(CORPUS_NAMES)
 experiment_name = corpora_str + '__' + TEST_METHOD + '__' + VERSION
@@ -880,7 +975,7 @@ if ex is None:
                             ex.wildcarded_count += 1
                             continue
                         ex.annotated_note_count += note_len
-                        ex.x.append(phrase2features(ordered_notes, hsd_seg, staff))
+                        ex.x.append(phrase2features(ordered_notes, staff))
                         ex.y.append(phrase2labels(hsd_seg))
                         if has_preset_evaluation_defined(corpus_name=corpus_name):
                             if is_in_test_set(title=score_title, corpus_name=corpus_name):
@@ -888,13 +983,13 @@ if ex is None:
                                 if test_key not in ex.test_indices:
                                     ex.test_indices[test_key] = []
                                 ex.test_indices[test_key].append(len(ex.y_test))
-                                ex.x_test.append(phrase2features(ordered_notes, hsd_seg, staff))
+                                ex.x_test.append(phrase2features(ordered_notes, staff))
                                 ex.y_test.append(phrase2labels(hsd_seg))
                                 if staff == "upper" and annot_index == 0:
                                     ex.ordered_test_d_score_titles.append(da_score)
                                     ex.test_d_scores[score_title] = da_unannotated_score
                             else:
-                                ex.x_train.append(phrase2features(ordered_notes, hsd_seg, staff))
+                                ex.x_train.append(phrase2features(ordered_notes, staff))
                                 ex.y_train.append(phrase2labels(hsd_seg))
                         ex.good_annot_count += 1
     pickle_it(obj=ex, obj_type="DExperiment", file_name=experiment_name)
@@ -937,15 +1032,15 @@ elif TEST_METHOD == 'preset':
         evaluate_trained_model(the_model=my_crf, x_test=ex.x_test, y_test=ex.y_test)
     else:
         train_and_evaluate(the_model=my_crf, x_train=ex.x_train, y_train=ex.y_train, x_test=ex.x_test, y_test=ex.y_test)
-    total_simple_match_count, total_annot_count, simple_match_rate = ex.get_simple_match_rate(output=True)
-    result, complex_piece_results = ex.get_complex_match_rates(weight=False)
-    print("Unweighted avg M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
-    result, my_piece_results = ex.get_my_avg_m(weight=False, reuse=False)
-    print("My unweighted avg m for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
-    for key in sorted(complex_piece_results):
-        print("nak {} => {}".format (key, complex_piece_results[key]))
-        print(" my {} => {}".format(key, my_piece_results[key]))
-        print("")
+    # total_simple_match_count, total_annot_count, simple_match_rate = ex.get_simple_match_rate(output=True)
+    # result, complex_piece_results = ex.get_complex_match_rates(weight=False)
+    # print("Unweighted avg M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+    # result, my_piece_results = ex.get_my_avg_m(weight=False, reuse=False)
+    # print("My unweighted avg m for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+    # for key in sorted(complex_piece_results):
+        # print("nak {} => {}".format (key, complex_piece_results[key]))
+        # print(" my {} => {}".format(key, my_piece_results[key]))
+        # print("")
     # result, piece_results = get_complex_match_rates(ex=ex, weight=True)
     # print("Weighted avg M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
     # result, piece_results = get_my_avg_m_gen(ex=ex, weight=True, reuse=True)
