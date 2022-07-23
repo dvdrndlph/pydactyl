@@ -23,38 +23,22 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 #
-# First-order linear chain CRF piano fingering models using sklearn-crfsuite,
+# A set of four first-order linear chain CRF piano fingering models implemented using sklearn-crfsuite,
 # which does not seem to provide a way to predefine "edge-observation" functions
 # over both observations and labels.
 #
-# We retain this script because it slightly outperforms the results in crf_2,
-# even though the model logic should be identical. This seems to indicate
-# the sklearn_crfsuite is behaving in a non-deterministic way. I swear
-# I have witnessed this before, so I want to preserve code to demonstrate the issue.
-# The main difference is in moving DExperiment to a different file in crf_2.
 import copy
-import pprint
-import shutil
-import os
 import sklearn_crfsuite as crf
 from sklearn_crfsuite import metrics
-from pathlib import Path
 from sklearn.model_selection import train_test_split, cross_val_score
 from music21 import note
 from pydactyl.eval.Corporeal import Corporeal, ARPEGGIOS_DIR, SCALES_DIR, BROKEN_DIR, \
     ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, COMPLETE_LAYER_ONE_STD_PIG_DIR
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
-from pydactyl.dcorpus.DAnnotation import DAnnotation
-from pydactyl.dcorpus.ABCDHeader import ABCDHeader
-from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_STD_DIR, PIG_FILE_SUFFIX, PIG_SEGREGATED_STD_DIR
+from pydactyl.util.DExperiment import DExperiment
 import pydactyl.util.Crf as c
 
-VERSION = '0002'
-PREDICTION_DIR = '/tmp/crf' + VERSION + 'prediction/'
-TEST_DIR = '/tmp/crf' + VERSION + 'test/'
-PICKLE_BASE_DIR = '/tmp/pickle/'
-MAX_LEAP = 16
-CHORD_MS_THRESHOLD = 30
+VERSION = '0003'
 
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
@@ -74,6 +58,7 @@ STAFFS = ['upper', 'lower']
 # CORPUS_NAMES = ['pig']
 # CORPUS_NAMES = ['pig_indy']
 CORPUS_NAMES = ['pig_seg']
+
 
 #####################################################
 # FUNCTIONS
@@ -248,223 +233,6 @@ def train_and_evaluate(the_model, x_train, y_train, x_test, y_test):
     evaluate_trained_model(the_model=the_model, x_test=x_test, y_test=y_test)
 
 
-class DExperiment:
-    pig_std_dir = {
-        'pig_indy': PIG_STD_DIR,
-        'pig_seg': PIG_SEGREGATED_STD_DIR,
-        'scales': SCALES_STD_PIG_DIR,
-        'arpeggios': ARPEGGIOS_STD_PIG_DIR,
-        'broken': BROKEN_STD_PIG_DIR,
-        'complete_layer_one': COMPLETE_LAYER_ONE_STD_PIG_DIR
-    }
-
-    def __init__(self, corpus_names, x=None, y=None, model_version=VERSION,
-                 x_train=None, y_train=None, x_test=None, y_test=None):
-        self.model_version = model_version
-        self.corpus_names = corpus_names
-        self.x = x or []
-        self.y = y or []
-        self.x_train = x_train or []
-        self.y_train = y_train or []
-        self.x_test = x_test or []
-        self.y_test = y_test or []
-
-        self.bad_annot_count = 0
-        self.wildcarded_count = 0
-        self.good_annot_count = 0
-        self.annotated_note_count = 0
-        self.total_nondefault_hand_finger_count = 0
-        self.total_nondefault_hand_segment_count = 0
-        self.test_indices = {}
-        self.ordered_test_d_score_titles = []
-        self.test_d_scores = {}  # Indexed by score title.
-
-    def test_paths_by_piece(self, corpus=None):
-        test_pig_paths = dict()
-        for test_key in self.test_indices:
-            (corpus_name, score_title, annot_index) = test_key
-            if corpus is not None and corpus_name != corpus:
-                continue
-            piece_id, annot_id = str(score_title).split('-')
-            if piece_id not in test_pig_paths:
-                test_pig_paths[piece_id] = list()
-            test_pig_path = DExperiment.pig_std_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
-            test_pig_paths[piece_id].append(test_pig_path)
-        return test_pig_paths
-
-    def test_d_scores_by_piece(self, corpus=None):
-        test_d_scores = dict()
-        for test_key in self.test_indices:
-            (corpus_name, score_title, annot_index) = test_key
-            if corpus is not None and corpus_name != corpus:
-                continue
-            piece_id, annot_id = str(score_title).split('-')
-            if piece_id not in test_d_scores:
-                test_d_scores[piece_id] = list()
-            test_d_score = self.test_d_scores[score_title]
-            test_d_scores[piece_id].append(test_d_score)
-        return test_d_scores
-
-    def test_indices_by_piece(self, corpus, piece_id=None):
-        index = 0
-        done = False
-        indices_by_piece = dict()
-        if piece_id is not None:
-            while not done:
-                key = (corpus, piece_id, index)
-                if key in sorted(self.test_indices):
-                    if piece_id not in indices_by_piece:
-                        indices_by_piece[piece_id] = []
-                    indices_by_piece[piece_id].append(self.test_indices[key])
-                else:
-                    done = True
-        else:
-            for key in sorted(self.test_indices):
-                (corpus_name, score_title, annot_index) = key
-                the_piece_id, annot_id = str(score_title).split('-')
-                if corpus_name == corpus:
-                    if the_piece_id not in indices_by_piece:
-                        indices_by_piece[the_piece_id] = []
-                    indices_by_piece[the_piece_id].append(self.test_indices[key])
-        return indices_by_piece
-
-    def predict_and_persist_file(self, test_key, prediction_dir=PREDICTION_DIR):
-        (corpus_name, score_title, annot_index) = test_key
-        # base_title, annot_id = str(score_title).split('-')
-        upper_index, lower_index = self.test_indices[test_key]
-        y_pred = my_crf.predict(self.x_test)
-        pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
-        pred_annot = DAnnotation(abcdf=pred_abcdf)
-        pred_abcdh = ABCDHeader(annotations=[pred_annot])
-        pred_d_score = self.test_d_scores[score_title]
-        pred_d_score.abcd_header(abcd_header=pred_abcdh)
-        pred_pout = PigOut(d_score=pred_d_score)
-        pred_pig_path = prediction_dir + score_title + PIG_FILE_SUFFIX
-        pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
-        return pred_pig_path
-
-    def predict_and_persist(self, prediction_dir=PREDICTION_DIR):
-        PigIn.mkdir_if_missing(path_str=prediction_dir, make_missing=True)
-        last_base_title = ''
-        test_pig_paths = list()
-        for test_key in self.test_indices:
-            (corpus_name, score_title, annot_index) = test_key
-            base_title, annot_id = str(score_title).split('-')
-            if base_title != last_base_title:
-                self.predict_and_persist_file(test_key=test_key, prediction_dir=prediction_dir)
-                last_base_title = base_title
-            test_pig_path = DExperiment.pig_std_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
-            test_pig_paths.append(test_pig_path)
-        return test_pig_paths
-
-    def get_simple_match_rate(self, prediction_dir=PREDICTION_DIR, output=False):
-        """
-        Use the executable from Nakamura to calculate SimpleMatchRate.
-        """
-        pp_path = Path(prediction_dir)
-        if not pp_path.is_dir():
-            os.makedirs(prediction_dir)
-        total_simple_match_count = 0
-        total_annot_count = 0
-        test_file_count = 0
-        for test_key in self.test_indices:
-            (corpus_name, score_title, annot_index) = test_key
-            pred_pig_path = self.predict_and_persist_file(test_key=test_key, prediction_dir=prediction_dir)
-            test_pig_path = DExperiment.pig_std_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
-            match_rate = PigOut.simple_match_rate(gt_pig_path=test_pig_path, pred_pig_path=pred_pig_path)
-            total_simple_match_count += match_rate['match_count']
-            total_annot_count += match_rate['note_count']
-            test_file_count += 1
-            # print(result.stdout)
-        simple_match_rate = total_simple_match_count / total_annot_count
-        if output:
-            print("SimpleMatchRate: {}/{} = {}".format(total_simple_match_count, total_annot_count, simple_match_rate))
-            print("over {} test files.".format(test_file_count))
-        return total_simple_match_count, total_annot_count, simple_match_rate
-
-    def get_my_avg_m_gen(self, prediction_dir=PREDICTION_DIR, test_dir=TEST_DIR, reuse=False, weight=False):
-        if reuse:
-            PigIn.mkdir_if_missing(path_str=test_dir, make_missing=False)
-        else:
-            PigIn.mkdir_if_missing(path_str=test_dir, make_missing=True)
-            test_pig_paths = self.predict_and_persist(prediction_dir=prediction_dir)
-            print("There are {} PIG test paths.".format(len(test_pig_paths)))
-            for tpp in test_pig_paths:
-                shutil.copy2(tpp, test_dir)
-        avg_m_gen, piece_m_gens = PigOut.my_average_m_gen(fingering_files_dir=test_dir,
-                                                          prediction_input_dir=prediction_dir, weight=weight)
-        return avg_m_gen, piece_m_gens
-
-    def get_my_avg_m(self, prediction_dir=PREDICTION_DIR, test_dir=TEST_DIR, reuse=False, weight=False):
-        if reuse:
-            PigIn.mkdir_if_missing(path_str=test_dir, make_missing=False)
-        else:
-            PigIn.mkdir_if_missing(path_str=test_dir, make_missing=True)
-            test_pig_paths = self.predict_and_persist(prediction_dir=prediction_dir)
-            print("There are {} PIG test paths.".format(len(test_pig_paths)))
-            for tpp in test_pig_paths:
-                shutil.copy2(tpp, test_dir)
-        avg_m, piece_ms = PigOut.my_average_m(fingering_files_dir=test_dir,
-                                              prediction_input_dir=prediction_dir, weight=weight)
-        return avg_m, piece_ms
-
-    def get_complex_match_rates(self, weight=False, prediction_dir=PREDICTION_DIR, output=False):
-        PigIn.mkdir_if_missing(path_str=PREDICTION_DIR, make_missing=True)
-        y_pred = my_crf.predict(self.x_test)
-        total_note_count = 0
-        d_score_count = 0
-        pred_pig_path = ''
-        combined_match_rates = {}
-        piece_data = dict()
-        for corpus_name in CORPUS_NAMES:
-            test_indices = self.test_indices_by_piece(corpus=corpus_name)
-            test_pig_paths = self.test_paths_by_piece(corpus=corpus_name)
-            test_d_scores = self.test_d_scores_by_piece(corpus=corpus_name)
-            tested_pieces = dict()
-            for piece_id in test_pig_paths:
-                note_count = 0
-                annot_count = 0
-                if piece_id not in tested_pieces:
-                    upper_index, lower_index = test_indices[piece_id][0]
-                    pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
-                    pred_annot = DAnnotation(abcdf=pred_abcdf)
-                    pred_abcdh = ABCDHeader(annotations=[pred_annot])
-                    pred_d_score = test_d_scores[piece_id][0]
-                    d_score_count += 1
-                    pred_d_score.abcd_header(abcd_header=pred_abcdh)
-                    pred_pout = PigOut(d_score=pred_d_score)
-                    file_id = "{}-1".format(piece_id)
-                    pred_pig_path = prediction_dir + file_id + PIG_FILE_SUFFIX
-                    pred_pig_content = pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
-                    note_count = pred_d_score.note_count()
-                    annot_count = note_count * len(test_pig_paths[piece_id])
-                match_rates = PigOut.single_prediction_complex_match_rates(gt_pig_paths=test_pig_paths[piece_id],
-                                                                           pred_pig_path=pred_pig_path)
-                total_note_count += note_count
-                piece_data[piece_id] = dict()
-                for key in match_rates:
-                    match_count = round(match_rates[key] * annot_count)
-                    raw_rate = match_rates[key]
-                    piece_data[piece_id][key] = {
-                        'match_count': match_count,
-                        'note_count': note_count,
-                        'annot_count': annot_count,
-                        'raw_rate': raw_rate
-                    }
-                    if weight:
-                        match_rates[key] *= note_count
-                    if key not in combined_match_rates:
-                        combined_match_rates[key] = 0
-                    combined_match_rates[key] += match_rates[key]
-
-        for key in match_rates:
-            if weight:
-                combined_match_rates[key] /= total_note_count
-            else:
-                combined_match_rates[key] /= d_score_count
-        return combined_match_rates, piece_data
-
-
 #####################################################
 # MAIN BLOCK
 #####################################################
@@ -478,7 +246,7 @@ corpora_str = "-".join(CORPUS_NAMES)
 experiment_name = corpora_str + '__' + TEST_METHOD + '__' + VERSION
 ex = c.unpickle_it(obj_type="DExperiment", file_name=experiment_name)
 if ex is None:
-    ex = DExperiment(corpus_names=CORPUS_NAMES)
+    ex = DExperiment(corpus_names=CORPUS_NAMES, model_version=VERSION)
     for corpus_name in CORPUS_NAMES:
         da_corpus = c.unpickle_it(obj_type="DCorpus", file_name=corpus_name, use_dill=True)
         if da_corpus is None:
