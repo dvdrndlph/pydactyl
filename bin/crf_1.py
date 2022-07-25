@@ -47,9 +47,9 @@ from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dcorpus.DAnnotation import DAnnotation
 from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_STD_DIR, PIG_FILE_SUFFIX, PIG_SEGREGATED_STD_DIR
-import pydactyl.util.Crf as c
+import pydactyl.util.CrfUtil as c
 
-VERSION = '0002'
+VERSION = '0003'
 PREDICTION_DIR = '/tmp/crf' + VERSION + 'prediction/'
 TEST_DIR = '/tmp/crf' + VERSION + 'test/'
 PICKLE_BASE_DIR = '/tmp/pickle/'

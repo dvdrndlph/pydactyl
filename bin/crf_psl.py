@@ -28,9 +28,7 @@ __author__ = 'David Randolph'
 # over both observations and labels.
 #
 # from pyseqlab.utilities import SequenceStruct
-import sklearn_crfsuite as crf
 from sklearn_crfsuite import metrics
-from sklearn.model_selection import train_test_split, cross_val_score
 from pydactyl.util.DExperiment import DExperiment
 import pydactyl.util.CrfUtil as c
 

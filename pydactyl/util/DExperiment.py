@@ -24,12 +24,10 @@ __author__ = 'David Randolph'
 import shutil
 import os
 from pathlib import Path
-import Crf as c
 from pydactyl.dcorpus.DAnnotation import DAnnotation
 from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_STD_DIR, PIG_FILE_SUFFIX, PIG_SEGREGATED_STD_DIR
-from pydactyl.eval.Corporeal import Corporeal, ARPEGGIOS_DIR, SCALES_DIR, BROKEN_DIR, \
-    ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, COMPLETE_LAYER_ONE_STD_PIG_DIR
+from pydactyl.eval.Corporeal import ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, COMPLETE_LAYER_ONE_STD_PIG_DIR
 
 
 class DExperiment:
@@ -64,6 +62,18 @@ class DExperiment:
         self.test_indices = {}
         self.ordered_test_d_score_titles = []
         self.test_d_scores = {}  # Indexed by score title.
+
+    def print_summary(self, test_method):
+        print("Example count: {}".format(len(self.x)))
+        if test_method == 'preset':
+            print("Training count: {}".format(len(self.y_train)))
+            print("Test count: {}".format(len(self.y_test)))
+        print("Good examples: {}".format(self.good_annot_count))
+        print("Bad examples: {}".format(self.bad_annot_count))
+        print("Wildcarded examples: {}".format(self.wildcarded_count))
+        print("Total annotated notes: {}".format(self.annotated_note_count))
+        print("Total nondefault hand fingerings: {}".format(self.total_nondefault_hand_finger_count))
+        print("Total nondefault hand phrases: {}".format(self.total_nondefault_hand_segment_count))
 
     def test_paths_by_piece(self, corpus=None):
         test_pig_paths = dict()

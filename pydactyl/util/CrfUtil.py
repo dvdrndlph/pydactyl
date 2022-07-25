@@ -22,10 +22,18 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 import os
+import copy
 import pickle
 import dill
 from pathlib import Path
+from music21 import note
+from pydactyl.eval.Corporeal import Corporeal
+from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dactyler.Parncutt import TrigramNode, is_black, ImaginaryBlackKeyRuler, PhysicalRuler
+
+SEGREGATE_HANDS = False
+STAFFS = ['upper', 'lower']
+VERSION = '0003'
 
 VERSION_FEATURES = {
     '0000': {
@@ -481,3 +489,214 @@ def lattice_distance(notes, from_i, to_i, absolute=False):
         x_distance = abs(x_distance)
         y_distance = abs(y_distance)
     return x_distance, y_distance
+
+
+def note2features(notes, i, staff):
+    settings = VERSION_FEATURES[VERSION]
+    features = {}
+
+    if settings['bop'] and i == 0:
+        features['BOP'] = True
+    if settings['eop'] and i >= len(notes) - 1:
+        features['EOP'] = True
+
+    # if settings['distance'] != 'none':
+    #     for index_offset in range(1, settings['distance_window'] + 1):
+    #         left_i = i - index_offset
+    #         right_i = i + index_offset
+    #         if settings['distance'] == 'integral':
+    #             left_tag = "distance:{}".format(left_i)
+    #             right_tag = "distance:+{}".format(right_i)
+    #             features[left_tag] = integral_distance(notes=notes, from_i=left_i, to_i=i)
+    #             features[right_tag] = integral_distance(notes=notes, from_i=i, to_i=right_i)
+    #         elif settings['distance'] == 'lattice':
+    #             left_x_tag = "x_distance:{}".format(left_i)
+    #             right_x_tag = "x_distance:+{}".format(right_i)
+    #             left_y_tag = "y_distance:{}".format(left_i)
+    #             right_y_tag = "y_distance:+{}".format(right_i)
+    #             features[left_x_tag], features[left_y_tag] = lattice_distance(notes=notes, from_i=left_i, to_i=i)
+    #             features[right_x_tag], features[right_y_tag] = lattice_distance(notes=notes, from_i=i, to_i=right_i)
+
+    if settings['distance'] == 'integral':
+        features['distance:-4'] = integral_distance(notes=notes, from_i=i-4, to_i=i)
+        features['distance:-3'] = integral_distance(notes=notes, from_i=i-3, to_i=i)
+        features['distance:-2'] = integral_distance(notes=notes, from_i=i-2, to_i=i)
+        features['distance:-1'] = integral_distance(notes=notes, from_i=i-1, to_i=i)
+        features['distance:+1'] = integral_distance(notes=notes, from_i=i, to_i=i+1)
+        features['distance:+2'] = integral_distance(notes=notes, from_i=i, to_i=i+2)
+        features['distance:+3'] = integral_distance(notes=notes, from_i=i, to_i=i+3)
+        features['distance:+4'] = integral_distance(notes=notes, from_i=i, to_i=i+4)
+    elif settings['distance'] == 'lattice':
+        features['x_distance:-4'], features['y_distance:-4'] = lattice_distance(notes=notes, from_i=i-4, to_i=i)
+        features['x_distance:-3'], features['y_distance:-3'] = lattice_distance(notes=notes, from_i=i-3, to_i=i)
+        features['x_distance:-2'], features['y_distance:-2'] = lattice_distance(notes=notes, from_i=i-2, to_i=i)
+        features['x_distance:-1'], features['y_distance:-1'] = lattice_distance(notes=notes, from_i=i-1, to_i=i)
+        features['x_distance:+1'], features['y_distance:+1'] = lattice_distance(notes=notes, from_i=i, to_i=i+1)
+        features['x_distance:+2'], features['y_distance:+2'] = lattice_distance(notes=notes, from_i=i, to_i=i+2)
+        features['x_distance:+3'], features['y_distance:+3'] = lattice_distance(notes=notes, from_i=i, to_i=i+3)
+        features['x_distance:+4'], features['y_distance:+4'] = lattice_distance(notes=notes, from_i=i, to_i=i+4)
+
+    if settings['simple_chording']:
+        # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
+        left_chord_notes, right_chord_notes = chordings(notes=notes, middle_i=i)
+        features['left_chord'] = left_chord_notes
+        features['right_chord'] = right_chord_notes
+
+    if settings['staff']:
+        features['staff'] = 0
+        if staff == "upper":
+            features['staff'] = 1
+            # @100: [0.54495717 0.81059147 0.81998371 0.68739401 0.73993751]
+            # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
+
+    if settings['black']:
+        features['black_key']: black_key(notes, i)
+
+    # if settings['complex_chording']:
+        # features['complex_chord'] = complex_chording(notes=notes, annotations=annotations, middle_i=i)
+
+    if settings['leap']:
+        # Impact of large leaps? Costs max out, no? Maybe not.
+        features['leap'] = 0
+        if leap_is_excessive(notes, i):
+            features['leap'] = 1
+
+    if settings['velocity']:
+        oon = notes[i]
+        m21_note: note.Note = oon['note']
+        on_velocity = m21_note.volume.velocity
+        if on_velocity is None:
+            on_velocity = 64
+        features['velocity'] = on_velocity
+
+    if settings['tempo']:
+        tempi = tempo_features(notes=notes, middle_i=i)
+        for k in tempi:
+            features[k] = tempi[k]
+
+    if settings['articulation']:
+        arts = articulation_features(notes=notes, middle_i=i)
+        for k in arts:
+            features[k] = arts[k]
+
+    if settings['repeat']:
+        reps_before, reps_after = repeat_features(notes=notes, middle_i=i)
+        features['repeats_before'] = reps_before
+        features['repeats_after'] = reps_after
+
+    # FIXME: Lattice distance in Parncutt rules? Approximated by Jacobs.
+    #        Mitigated by Balliauw (which just makes the x-distance more
+    #        accurate between same-colored keys).
+
+    return features
+
+
+def phrase2features(notes, staff):
+    feature_list = []
+    for i in range(len(notes)):
+        features = note2features(notes, i, staff)
+        feature_list.append(features)
+    return feature_list
+
+
+def phrase2labels(handed_strike_digits):
+    return handed_strike_digits
+
+
+def phrase2tokens(notes):
+    tokens = []
+    for d_note in notes:
+        m21_note = d_note.m21_note()
+        nom = m21_note.nameWithOctave
+        tokens.append(nom)
+    return tokens
+
+
+def nondefault_hand_count(hsd_seq, staff="upper"):
+    nondefault_hand = '<'
+    if staff == 'lower':
+        nondefault_hand = '>'
+    bad_hand_cnt = 0
+    for fingering in hsd_seq:
+        if fingering[0] == nondefault_hand:
+            bad_hand_cnt += 1
+    return bad_hand_cnt
+
+
+def has_wildcard(hsd_seq):
+    for fingering in hsd_seq:
+        if fingering[0] == 'x':
+            return True
+    return False
+
+
+def load_data(ex, experiment_name, staffs, corpus_names):
+    creal = Corporeal()
+
+    for corpus_name in corpus_names:
+        da_corpus = unpickle_it(obj_type="DCorpus", file_name=corpus_name, use_dill=True)
+        if da_corpus is None:
+            da_corpus = creal.get_corpus(corpus_name=corpus_name)
+            pickle_it(obj=da_corpus, obj_type="DCorpus", file_name=corpus_name, use_dill=True)
+        for da_score in da_corpus.d_score_list():
+            abcdh = da_score.abcd_header()
+            annot_count = abcdh.annotation_count()
+            annot = da_score.annotation_by_index(index=0)
+            segger = ManualDSegmenter(level='.', d_annotation=annot)
+            da_score.segmenter(segger)
+            da_unannotated_score = copy.deepcopy(da_score)
+            score_title = da_score.title()
+            # if score_title != 'Sonatina 4.1':
+            # continue
+            for staff in staffs:
+                print("Processing {} staff of {} score from {} corpus.".format(staff, score_title, corpus_name))
+                ordered_offset_note_segments = da_score.ordered_offset_note_segments(staff=staff)
+                seg_count = len(ordered_offset_note_segments)
+                for annot_index in range(annot_count):
+                    annot = da_score.annotation_by_index(annot_index)
+                    authority = annot.authority()
+                    hsd_segments = segger.segment_annotation(annotation=annot, staff=staff)
+                    seg_index = 0
+                    for hsd_seg in hsd_segments:
+                        ordered_notes = ordered_offset_note_segments[seg_index]
+                        note_len = len(ordered_notes)
+                        seg_len = len(hsd_seg)
+                        seg_index += 1
+                        if note_len != seg_len:
+                            print("Bad annotation by {} for score {}. Notes: {} Fingers: {}".format(
+                                authority, score_title, note_len, seg_len))
+                            ex.bad_annot_count += 1
+                            continue
+                        nondefault_hand_finger_count = nondefault_hand_count(hsd_seq=hsd_seg, staff=staff)
+                        if nondefault_hand_finger_count:
+                            ex.total_nondefault_hand_segment_count += 1
+                            print("Non-default hand specified by annotator {} in score {}: {}".format(
+                                authority, score_title, hsd_seg))
+                            ex.total_nondefault_hand_finger_count += nondefault_hand_finger_count
+                            if SEGREGATE_HANDS:
+                                ex.bad_annot_count += 1
+                                continue
+                        if has_wildcard(hsd_seq=hsd_seg):
+                            # print("Wildcard disallowed from annotator {} in score {}: {}".format(
+                                # authority, score_title, hsd_seg))
+                            ex.wildcarded_count += 1
+                            continue
+                        ex.annotated_note_count += note_len
+                        ex.x.append(phrase2features(ordered_notes, staff))
+                        ex.y.append(phrase2labels(hsd_seg))
+                        if has_preset_evaluation_defined(corpus_name=corpus_name):
+                            if is_in_test_set(title=score_title, corpus_name=corpus_name):
+                                test_key = (corpus_name, score_title, annot_index)
+                                if test_key not in ex.test_indices:
+                                    ex.test_indices[test_key] = []
+                                ex.test_indices[test_key].append(len(ex.y_test))
+                                ex.x_test.append(phrase2features(ordered_notes, staff))
+                                ex.y_test.append(phrase2labels(hsd_seg))
+                                if staff == "upper" and annot_index == 0:
+                                    ex.ordered_test_d_score_titles.append(da_score)
+                                    ex.test_d_scores[score_title] = da_unannotated_score
+                            else:
+                                ex.x_train.append(phrase2features(ordered_notes, staff))
+                                ex.y_train.append(phrase2labels(hsd_seg))
+                        ex.good_annot_count += 1
+    pickle_it(obj=ex, obj_type="DExperiment", file_name=experiment_name)

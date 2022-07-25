@@ -36,9 +36,9 @@ from pydactyl.eval.Corporeal import Corporeal, ARPEGGIOS_DIR, SCALES_DIR, BROKEN
     ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, COMPLETE_LAYER_ONE_STD_PIG_DIR
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.util.DExperiment import DExperiment
-import pydactyl.util.Crf as c
+import pydactyl.util.CrfUtil as c
 
-VERSION = '0003'
+VERSION = '0002'
 
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
