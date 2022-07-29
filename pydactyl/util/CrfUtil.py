@@ -34,6 +34,11 @@ from pydactyl.dactyler.Parncutt import TrigramNode, is_black, ImaginaryBlackKeyR
 SEGREGATE_HANDS = False
 STAFFS = ['upper', 'lower']
 VERSION = '0003'
+# CLEAN_LIST = {}  # Reuse all pickled results.
+CLEAN_LIST = {'crf': True}
+# CLEAN_LIST = {'DCorpus': True}
+# CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
+# CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 
 VERSION_FEATURES = {
     '0000': {
@@ -105,11 +110,6 @@ VERSION_FEATURES = {
 PICKLE_BASE_DIR = '/tmp/pickle/'
 MAX_LEAP = 16
 CHORD_MS_THRESHOLD = 30
-# CLEAN_LIST = {}  # Reuse all pickled results.
-# CLEAN_LIST = {'crf': True}
-# CLEAN_LIST = {'DCorpus': True}
-CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
-# CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 CHORD_TAG_LIST = {
     'str': True,
     'sma': True,

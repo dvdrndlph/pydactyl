@@ -27,7 +27,8 @@ __author__ = 'David Randolph'
 # which does not seem to provide a way to predefine "edge-observation" functions
 # over both observations and labels.
 #
-# from pyseqlab.utilities import SequenceStruct
+from pyseqlab.utilities import SequenceStruct
+from pyseqlab.attributes_extraction import GenericAttributeExtractor
 from sklearn_crfsuite import metrics
 from pydactyl.util.DExperiment import DExperiment
 import pydactyl.util.CrfUtil as c
@@ -56,8 +57,6 @@ CORPUS_NAMES = ['pig_seg']
 #####################################################
 # FUNCTIONS
 #####################################################
-
-
 def evaluate_trained_model(the_model, x_test, y_test):
     labels = list(the_model.classes_)
     print(labels)
@@ -77,6 +76,29 @@ def train_and_evaluate(the_model, x_train, y_train, x_test, y_test):
     evaluate_trained_model(the_model=the_model, x_test=x_test, y_test=y_test)
 
 
+def get_sequence_struct_list(X, Y):
+    seqs = []
+    example_index = 0
+    for phrase in X:
+        fingers = Y[example_index]
+        seq = SequenceStruct(X=phrase, Y=fingers)
+        seqs.append(seq)
+        example_index += 1
+    return seqs
+
+
+def get_attr_desc_dict(X):
+    ad_dict = {
+        'BOP': {'description': 'beginning of phrase', 'encoding': 'categorical'},
+        'EOP': {'description': 'end of phrase', 'encoding': 'categorical'},
+    }
+    # All other attributes go in as continuous.
+    attr_names = X[0][1].keys()
+    for name in attr_names:
+        ad_dict[name] = {'encoding': 'continuous'}
+    return ad_dict
+
+
 #####################################################
 # MAIN BLOCK
 #####################################################
@@ -89,23 +111,20 @@ if ex is None:
 
 ex.print_summary(test_method=TEST_METHOD)
 
-crf_pickle_file_name = 'crf_' + experiment_name
+crf_pickle_file_name = 'crfpsl_' + experiment_name
 have_trained_model = False
-my_crf = c.unpickle_it(obj_type="crf", file_name=crf_pickle_file_name)
+my_crf = c.unpickle_it(obj_type="crfpsl", file_name=crf_pickle_file_name)
 if my_crf:
     have_trained_model = True
 else:
-    my_crf = crf.CRF(
-        algorithm='lbfgs',
-        c1=0.1,
-        c2=0.1,
-        # max_iterations=100,
-        all_possible_transitions=True
-    )
+    train_seqs = get_sequence_struct_list(X=ex.x_train, Y=ex.y_train)
+    test_seqs = get_sequence_struct_list(X=ex.x_test, Y=ex.y_test)
+
 
 if TEST_METHOD == 'cross-validate':
-    scores = cross_val_score(my_crf, ex.x, ex.y, cv=5)
+    # scores = cross_val_score(my_crf, ex.x, ex.y, cv=5)
     # scores = cross_validate(my_crf, ex.x, ex.y, cv=5, scoring="flat_precision_score")
+    scores = []
     print(scores)
     avg_score = sum(scores) / len(scores)
     print("Average cross-validation score: {}".format(avg_score))
@@ -128,11 +147,11 @@ elif TEST_METHOD == 'preset':
     # print("Weighted avg M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
     # result, piece_results = get_my_avg_m_gen(ex=ex, weight=True, reuse=True)
     # print("Weighted avg m_gen for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
-else:
-    split_x_train, split_x_test, split_y_train, split_y_test = \
-        train_test_split(ex.x, ex.y, test_size=0.4, random_state=0)
-    train_and_evaluate(the_model=my_crf, x_train=split_x_train, y_train=split_y_train,
-                       x_test=split_x_test, y_test=split_y_test)
+# else:
+#     split_x_train, split_x_test, split_y_train, split_y_test = \
+#         train_test_split(ex.x, ex.y, test_size=0.4, random_state=0)
+#     train_and_evaluate(the_model=my_crf, x_train=split_x_train, y_train=split_y_train,
+#                        x_test=split_x_test, y_test=split_y_test)
 
 if not have_trained_model:
     c.pickle_it(obj=my_crf, obj_type='crf', file_name=crf_pickle_file_name)
