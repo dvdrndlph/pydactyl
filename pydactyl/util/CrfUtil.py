@@ -33,11 +33,11 @@ from pydactyl.dactyler.Parncutt import TrigramNode, is_black, ImaginaryBlackKeyR
 
 SEGREGATE_HANDS = False
 STAFFS = ['upper', 'lower']
-VERSION = '0003'
-# CLEAN_LIST = {}  # Reuse all pickled results.
-CLEAN_LIST = {'crf': True}
+VERSION = '0004'
+CLEAN_LIST = {}  # Reuse all pickled results.
+# CLEAN_LIST = {'crf': True}
 # CLEAN_LIST = {'DCorpus': True}
-# CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
+CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 
 VERSION_FEATURES = {
@@ -101,6 +101,22 @@ VERSION_FEATURES = {
         'simple_chording': True,
         'leap': False,
         'articulation': True,
+        'tempo': False,
+        'velocity': False,
+        'repeat': False
+    },
+    '0004': {
+        'judge': 'none',
+        'judge_chords': False,
+        'bop': False,
+        'eop': False,
+        'distance': 'integral',
+        # 'distance_window': 4,
+        'staff': False,
+        'black': True,
+        'simple_chording': False,
+        'leap': False,
+        'articulation': False,
         'tempo': False,
         'velocity': False,
         'repeat': False
@@ -286,6 +302,8 @@ def chordings(notes, middle_i):
         i_offet_ms = notes[i]['second_offset'] * 1000
         if i_offet_ms < max_right_offset_ms:
             right_chord_notes += 1
+    if left_chord_notes or right_chord_notes:
+        print("We see chords at position {}.".format(middle_i))
     return left_chord_notes, right_chord_notes
 
 
@@ -491,14 +509,18 @@ def lattice_distance(notes, from_i, to_i, absolute=False):
     return x_distance, y_distance
 
 
-def note2features(notes, i, staff):
+def note2features(notes, i, staff, categorical=False):
     settings = VERSION_FEATURES[VERSION]
     features = {}
 
-    if settings['bop'] and i == 0:
-        features['BOP'] = True
-    if settings['eop'] and i >= len(notes) - 1:
-        features['EOP'] = True
+    if settings['bop']:
+        features['BOP'] = "0"
+        if i == 0:
+            features['BOP'] = "1"
+    if settings['eop']:
+        features['EOP'] = "0"
+        if i >= len(notes) - 1:
+            features['EOP'] = "1"
 
     # if settings['distance'] != 'none':
     #     for index_offset in range(1, settings['distance_window'] + 1):
@@ -584,10 +606,19 @@ def note2features(notes, i, staff):
         features['repeats_before'] = reps_before
         features['repeats_after'] = reps_after
 
+    if settings['judge'] != 'none':
+        bad_fingers = judgments(judge=settings['judge'], notes=notes, middle_i=i, staff=staff)
+        for position in bad_fingers:
+            for digit in bad_fingers[position]:
+                k = "judge_{}:{}".format(digit, position)
+                features[k] = bad_fingers[position][digit]
     # FIXME: Lattice distance in Parncutt rules? Approximated by Jacobs.
     #        Mitigated by Balliauw (which just makes the x-distance more
     #        accurate between same-colored keys).
 
+    if categorical:
+        for feature in features:
+            features[feature] = str(features[feature])
     return features
 
 

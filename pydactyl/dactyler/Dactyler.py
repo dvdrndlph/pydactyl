@@ -36,8 +36,6 @@ from pydactyl.dcorpus.DAnnotation import DAnnotation
 import os
 
 
-
-
 class Dactyler(ABC):
     """Base class for all fingering algorithms."""
 
