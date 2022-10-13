@@ -33,7 +33,8 @@ from pydactyl.dactyler.Parncutt import TrigramNode, is_black, ImaginaryBlackKeyR
 
 SEGREGATE_HANDS = False
 STAFFS = ['upper', 'lower']
-VERSION = '0004'
+VERSION = '0005'
+USE_ATTRS = True
 CLEAN_LIST = {}  # Reuse all pickled results.
 # CLEAN_LIST = {'crf': True}
 # CLEAN_LIST = {'DCorpus': True}
@@ -115,6 +116,21 @@ VERSION_FEATURES = {
         'staff': False,
         'black': True,
         'simple_chording': False,
+        'leap': False,
+        'articulation': False,
+        'tempo': False,
+        'velocity': False,
+        'repeat': False
+    },
+    '0005': {
+        'judge': 'Parncutt',
+        'judge_chords': False,
+        'bop': False,
+        'eop': False,
+        'distance': 'integral',
+        'staff': False,
+        'black': True,
+        'simple_chording': True,
         'leap': False,
         'articulation': False,
         'tempo': False,
@@ -509,6 +525,60 @@ def lattice_distance(notes, from_i, to_i, absolute=False):
     return x_distance, y_distance
 
 
+def note2attrs(notes, i, staff, categorical=False):
+    settings = VERSION_FEATURES[VERSION]
+    features = {}
+
+    features['note'] = notes[i]
+
+    if settings['simple_chording']:
+        # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
+        left_chord_notes, right_chord_notes = chordings(notes=notes, middle_i=i)
+        features['left_chord'] = left_chord_notes
+        features['right_chord'] = right_chord_notes
+
+    if settings['staff']:
+        features['staff'] = 0
+        if staff == "upper":
+            features['staff'] = 1
+            # @100: [0.54495717 0.81059147 0.81998371 0.68739401 0.73993751]
+            # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
+
+    if settings['black']:
+        features['black_key']: black_key(notes, i)
+
+    if settings['leap']:
+        # Impact of large leaps? Costs max out, no? Maybe not.
+        features['leap'] = 0
+        if leap_is_excessive(notes, i):
+            features['leap'] = 1
+
+    if settings['velocity']:
+        oon = notes[i]
+        m21_note: note.Note = oon['note']
+        on_velocity = m21_note.volume.velocity
+        if on_velocity is None:
+            on_velocity = 64
+        features['velocity'] = on_velocity
+
+    if settings['tempo']:
+        tempi = tempo_features(notes=notes, middle_i=i)
+        for k in tempi:
+            features[k] = tempi[k]
+
+    if settings['articulation']:
+        arts = articulation_features(notes=notes, middle_i=i)
+        for k in arts:
+            features[k] = arts[k]
+
+    if settings['repeat']:
+        reps_before, reps_after = repeat_features(notes=notes, middle_i=i)
+        features['repeats_before'] = reps_before
+        features['repeats_after'] = reps_after
+
+    return features
+
+
 def note2features(notes, i, staff, categorical=False):
     settings = VERSION_FEATURES[VERSION]
     features = {}
@@ -630,17 +700,16 @@ def phrase2features(notes, staff):
     return feature_list
 
 
+def phrase2attrs(notes, staff):
+    attr_list = []
+    for i in range(len(notes)):
+        attrs = note2attrs(notes, i, staff)
+        attr_list.append(attrs)
+    return attr_list
+
+
 def phrase2labels(handed_strike_digits):
     return handed_strike_digits
-
-
-def phrase2tokens(notes):
-    tokens = []
-    for d_note in notes:
-        m21_note = d_note.m21_note()
-        nom = m21_note.nameWithOctave
-        tokens.append(nom)
-    return tokens
 
 
 def nondefault_hand_count(hsd_seq, staff="upper"):
@@ -713,7 +782,10 @@ def load_data(ex, experiment_name, staffs, corpus_names):
                             ex.wildcarded_count += 1
                             continue
                         ex.annotated_note_count += note_len
-                        ex.x.append(phrase2features(ordered_notes, staff))
+                        if USE_ATTRS:
+                            ex.x.append(phrase2attrs(ordered_notes, staff))
+                        else:
+                            ex.x.append(phrase2features(ordered_notes, staff))
                         ex.y.append(phrase2labels(hsd_seg))
                         if has_preset_evaluation_defined(corpus_name=corpus_name):
                             if is_in_test_set(title=score_title, corpus_name=corpus_name):
@@ -721,13 +793,19 @@ def load_data(ex, experiment_name, staffs, corpus_names):
                                 if test_key not in ex.test_indices:
                                     ex.test_indices[test_key] = []
                                 ex.test_indices[test_key].append(len(ex.y_test))
-                                ex.x_test.append(phrase2features(ordered_notes, staff))
+                                if USE_ATTRS:
+                                    ex.x_test.append(phrase2attrs(ordered_notes, staff))
+                                else:
+                                    ex.x_test.append(phrase2features(ordered_notes, staff))
                                 ex.y_test.append(phrase2labels(hsd_seg))
                                 if staff == "upper" and annot_index == 0:
                                     ex.ordered_test_d_score_titles.append(da_score)
                                     ex.test_d_scores[score_title] = da_unannotated_score
                             else:
-                                ex.x_train.append(phrase2features(ordered_notes, staff))
+                                if USE_ATTRS:
+                                    ex.x_train.append(phrase2attrs(ordered_notes, staff))
+                                else:
+                                    ex.x_train.append(phrase2features(ordered_notes, staff))
                                 ex.y_train.append(phrase2labels(hsd_seg))
                         ex.good_annot_count += 1
     pickle_it(obj=ex, obj_type="DExperiment", file_name=experiment_name)

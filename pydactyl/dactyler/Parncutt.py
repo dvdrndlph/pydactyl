@@ -454,6 +454,7 @@ class TrigramNode(ABC):
                                                       self.handed_digit_1, self.handed_digit_2, self.handed_digit_3)
         return self_str
 
+
 class Ruler(ABC):
     def __init__(self, max_leap=16):
         # The precise semantics of max_leap are defined by derived classes.
