@@ -66,17 +66,28 @@ CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
 def get_trigram_node(notes, i, y_prev, y):
     midi_1 = None
     handed_digit_1 = '-'
-    if i > 0:
-        midi_1 = notes[i-1]['note'].pitch.midi
-        handed_digit_1 = y_prev
-    midi_2 = notes[i]['note'].pitch.midi
-    handed_digit_2 = y
-
     midi_3 = None
     handed_digit_3 = '-'
-    if i < len(notes) - 1:
-        midi_3 = notes[i+1]['note'].pitch.midi
+
+    if i <= 0 or i > len(notes) - 1:
+        return None
+    if y in (START_TAG, STOP_TAG):
+        return None
+    if y_prev in (START_TAG, STOP_TAG):
+        y_prev = '-'
+    if 'note' not in notes[i][0]:
+        return None
+
+    midi_2 = notes[i][0]['note'].pitch.midi
+    handed_digit_2 = y
+
+    if i > 1 and 'note' in notes[i-1][0]:
+        midi_1 = notes[i-1][0]['note'].pitch.midi
+        handed_digit_1 = y_prev
+    if i < len(notes) - 1 and 'note' in notes[i+1][0]:
+        midi_3 = notes[i+1][0]['note'].pitch.midi
         # We don't know the subsequent finger, but some rules don't care.
+
     trigram_node = TrigramNode(midi_1=midi_1, handed_digit_1=handed_digit_1,
                                midi_2=midi_2, handed_digit_2=handed_digit_2,
                                midi_3=midi_3, handed_digit_3=handed_digit_3)
@@ -86,64 +97,87 @@ def get_trigram_node(notes, i, y_prev, y):
 def assess_stretch(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
-    return judge.assess_stretch(trigram=trigram)
+    if trigram is None:
+        return 0
+    stretch_val = judge.assess_stretch(trigram=trigram)
+    return stretch_val
 
 
 def assess_small_span(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
+    if trigram is None:
+        return 0
     return judge.assess_small_span(trigram=trigram)
 
 
 def assess_large_span(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
+    if trigram is None:
+        return 0
     return judge.assess_large_span(trigram=trigram)
 
 
 def assess_weak_finger(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
+    if trigram is None:
+        return 0
     return judge.assess_weak_finger(trigram=trigram)
 
 
 def assess_3_to_4(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
+    if trigram is None:
+        return 0
     return judge.assess_3_to_4(trigram=trigram)
 
 
 def assess_4_on_black(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
+    if trigram is None:
+        return 0
     return judge.assess_4_on_black(trigram=trigram)
 
 
 def assess_thumb_on_black(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
+    if trigram is None:
+        return 0
     return judge.assess_thumb_on_black(trigram=trigram)
 
 
 def assess_5_on_black(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
+    if trigram is None:
+        return 0
     return judge.assess_5_on_black(trigram=trigram)
 
 
 def assess_thumb_passing(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
+    if trigram is None:
+        return 0
     return judge.assess_thumb_passing(trigram=trigram)
 
 
 def chord_notes_below(y_prev, y, x_bar, i):
-    note_count = x_bar[i]['left_chord']
+    if 'left_chord' not in x_bar[i][0]:
+        return 0
+    note_count = x_bar[i][0]['left_chord']
     return note_count
 
 
 def chord_notes_above(y_prev, y, x_bar, i):
-    note_count = x_bar[i]['right_chord']
+    if 'right_chord' not in x_bar[i][0]:
+        return 0
+    note_count = x_bar[i][0]['right_chord']
     return note_count
 
 
@@ -191,9 +225,14 @@ def get_tag_set(data):
 def get_data(x, y):
     data = list()
     for i in range(len(y)):
-        example_x: list = copy.deepcopy(x[i])
-        example_x.insert(0, {})
-        example_x.append({})
+        example_x = list()
+        example_x.insert(0, [START_TAG])
+        for knot in x[i]:
+            note_copy = copy.deepcopy(knot['note'])
+            note_copy['left_chord'] = knot['left_chord']
+            note_copy['right_chord'] = knot['right_chord']
+            example_x.append([note_copy])
+        example_x.append([STOP_TAG])
         example_y: list = copy.copy(y[i])
         example_y.insert(0, START_TAG)
         example_y.append(STOP_TAG)
@@ -296,6 +335,16 @@ tag_set = splits['train']['tag_set']
 my_crf.set_tags(tag_set=tag_set)
 add_functions(xycrf=my_crf)
 my_crf.training_data = splits['train']['data']
+print("* Number of tags: {}".format(my_crf.tag_count))
+print("* Number of features: {}".format(my_crf.feature_count))
+print("* Number of training examples: {}".format(len(my_crf.training_data)))
+
+# gradient, big_z = xycrf.gradient_for_all_training()
+epochs = 1
+learning_rate = 0.01
+attenuation = 1
+my_crf.stochastic_gradient_ascent_train(epochs=epochs, learning_rate=learning_rate, attenuation=attenuation)
+print(my_crf.weights)
 print("Boo")
 
 # if TEST_METHOD == 'cross-validate':

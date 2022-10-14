@@ -313,6 +313,7 @@ class XyCrf:
             val = func(y_prev=y_bar[i-1], y=y_bar[i], x_bar=x_bar, i=i)
             sum_total += val
         # print("Returning")
+
         return sum_total
 
     def learn_from_function(self, function_index, x_bar, y_bar, g_dicts):
@@ -407,6 +408,7 @@ class XyCrf:
                     self.weights[j] = self.weights[j] + learning_rate * ((global_feature_val - expected_val) - reg_val)
 
                 example_num += 1
+                print(f'Example {epoch_number}:{example_num} processed with learning rate {learning_rate}.')
                 if example_num % block_size == 0:
                     print(f'Example {epoch_number}:{example_num} processed with learning rate {learning_rate}.')
                     self.print_function_weights()
