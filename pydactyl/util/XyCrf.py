@@ -24,6 +24,7 @@ __author__ = 'David Randolph'
 #
 import pprint
 import random
+from datetime import datetime
 from pathlib import Path
 from pathos.multiprocessing import ProcessingPool, cpu_count
 import dill
@@ -63,7 +64,7 @@ def _gradient(params, *args):
 
 
 class XyCrf:
-    def __init__(self, optimize=True):
+    def __init__(self, optimize=True, epsilon=None):
         self.testing = False
         self.optimize = optimize
         self.training_data = None
@@ -76,6 +77,9 @@ class XyCrf:
         self.tag_index_for_name = {}
         self.tag_name_for_index = {}
         self.gradient = None
+        self.feature_tallies = {}
+        self.feature_evaluation_counts = {}
+        self.feature_max_value = {}
 
     def print_function_weights(self):
         weight_str = 'weights:'
@@ -152,10 +156,16 @@ class XyCrf:
         self.feature_count = 0
         self.weights = []
 
-    def init_weights(self):
+    def init_weights(self, weights=None):
+        if weights is not None:
+            if len(weights) != self.feature_count:
+                raise Exception("Bad weight list.")
         self.weights = []
         for j in range(len(self.feature_functions)):
-            self.weights.append(0.0)
+            if weights is not None:
+                self.weights.append(weights[j])
+            else:
+                self.weights.append(0.0)
 
     def big_u(self, k, v_tag, g_dicts, memo):
         if (k, v_tag) in memo:
@@ -309,12 +319,28 @@ class XyCrf:
         # func_name = self.function_index_name[function_index]
         sum_total = 0
         for i in range(1, n):
-            token = x_bar[i][0]
             val = func(y_prev=y_bar[i-1], y=y_bar[i], x_bar=x_bar, i=i)
             sum_total += val
-        # print("Returning")
 
         return sum_total
+
+    def little_f_tallies(self, function_index, x_bar, y_bar):
+        n = len(y_bar)
+        func = self.feature_functions[function_index]
+        func_name = self.function_index_name[function_index]
+        if func_name not in self.feature_tallies:
+            self.feature_tallies[func_name] = dict()
+            self.feature_evaluation_counts[func_name] = 0
+            self.feature_max_value[func_name] = 0
+
+        for i in range(1, n):
+            val = func(y_prev=y_bar[i-1], y=y_bar[i], x_bar=x_bar, i=i)
+            if val not in self.feature_tallies[func_name]:
+                self.feature_tallies[func_name][val] = 0
+            self.feature_tallies[func_name][val] += 1
+            if val > self.feature_max_value[func_name]:
+                self.feature_max_value[func_name] = val
+            self.feature_evaluation_counts[func_name] += 1
 
     def learn_from_function(self, function_index, x_bar, y_bar, g_dicts):
         actual_val = self.big_f(function_index=function_index, x_bar=x_bar, y_bar=y_bar)
@@ -370,16 +396,45 @@ class XyCrf:
         self.set_gradient(gradient)
         return likelihood
 
+    def tally_function_values(self):
+        self.feature_tallies = dict()
+        self.feature_max_value = dict()
+        self.feature_evaluation_counts = dict()
+        block_size = 10
+        example_num = 0
+        for example in self.training_data:
+            x_bar = example[0]
+            y_bar = example[1]
+            for j in range(self.feature_count):
+                self.little_f_tallies(function_index=j, x_bar=x_bar, y_bar=y_bar)
+            example_num += 1
+            if example_num % block_size == 0:
+                print(f'Feature function values for example {example_num} tallied.')
+        return self.feature_tallies
+
+    def normalize_value(self, function_name, value):
+        if value == 0:
+            return 0.0
+        if value > self.feature_max_value[function_name]:
+            return 1.0
+
+        epsilon = 1.0 / self.feature_max_value[function_name]
+        norm = value / (self.feature_max_value[function_name] + epsilon)
+        return norm
+
     def stochastic_gradient_ascent_train(self, regularization=0.0005,
                                          learning_rate=0.01, attenuation=1, epochs=1,
                                          seeder=lambda: 0.27):
+        start_dt = datetime.now()
+        print('[%s] Start training' % start_dt)
         function_count = len(self.feature_functions)
-        self.init_weights()
+        # self.init_weights()
         # FIXME: There must be a stopping condition other than the last training example.
         # Elkan gives us a rule of thumb that says 3-100 epochs, but with how expensive
         # the "edge-observation" functions of both x and y values are, we need to run lean.
 
-        block_size = 1000
+        self.print_function_weights()
+        block_size = 10
         epoch_number = 1
         for epoch in range(epochs):
             print(f'Starting pass number {epoch_number} (of {epochs}) through the training set.')
@@ -408,13 +463,16 @@ class XyCrf:
                     self.weights[j] = self.weights[j] + learning_rate * ((global_feature_val - expected_val) - reg_val)
 
                 example_num += 1
-                print(f'Example {epoch_number}:{example_num} processed with learning rate {learning_rate}.')
                 if example_num % block_size == 0:
                     print(f'Example {epoch_number}:{example_num} processed with learning rate {learning_rate}.')
                     self.print_function_weights()
             learning_rate *= attenuation
             epoch_number += 1
         print("The stochastic gradient has been ascended.")
+        end_dt = datetime.now()
+        execution_duration_minutes = (end_dt - start_dt)
+        print("Total training time (wall clock): {}".format(execution_duration_minutes))
+        print('* [%s] Training done' % end_dt)
 
     def train(self):
         self.init_weights()

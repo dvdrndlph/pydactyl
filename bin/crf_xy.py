@@ -2,6 +2,7 @@
 __author__ = 'David Randolph'
 
 import copy
+import pprint
 
 # Copyright (c) 2020-2022 David A. Randolph.
 #
@@ -95,90 +96,131 @@ def get_trigram_node(notes, i, y_prev, y):
 
 
 def assess_stretch(y_prev, y, x_bar, i):
+    name = 'str'
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
         return 0
     stretch_val = judge.assess_stretch(trigram=trigram)
-    return stretch_val
+    global my_crf
+    norm = my_crf.normalize_value(function_name=name, value=stretch_val)
+    return norm
 
 
 def assess_small_span(y_prev, y, x_bar, i):
+    name = 'sma'
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
         return 0
-    return judge.assess_small_span(trigram=trigram)
+    val = judge.assess_small_span(trigram=trigram)
+    global my_crf
+    norm = my_crf.normalize_value(function_name=name, value=val)
+    return norm
 
 
 def assess_large_span(y_prev, y, x_bar, i):
+    name = 'lar'
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
         return 0
-    return judge.assess_large_span(trigram=trigram)
+    val = judge.assess_large_span(trigram=trigram)
+    global my_crf
+    norm = my_crf.normalize_value(function_name=name, value=val)
+    return norm
 
 
 def assess_weak_finger(y_prev, y, x_bar, i):
+    name = 'wea'
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
         return 0
-    return judge.assess_weak_finger(trigram=trigram)
+    val = judge.assess_weak_finger(trigram=trigram)
+    global my_crf
+    norm = my_crf.normalize_value(function_name=name, value=val)
+    return norm
 
 
 def assess_3_to_4(y_prev, y, x_bar, i):
+    name = '3t4'
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
         return 0
-    return judge.assess_3_to_4(trigram=trigram)
+    val = judge.assess_3_to_4(trigram=trigram)
+    global my_crf
+    norm = my_crf.normalize_value(function_name=name, value=val)
+    return norm
 
 
 def assess_4_on_black(y_prev, y, x_bar, i):
+    name = 'bl4'
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
         return 0
-    return judge.assess_4_on_black(trigram=trigram)
+    val = judge.assess_4_on_black(trigram=trigram)
+    global my_crf
+    norm = my_crf.normalize_value(function_name=name, value=val)
+    return norm
 
 
 def assess_thumb_on_black(y_prev, y, x_bar, i):
+    name = 'bl1'
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
         return 0
-    return judge.assess_thumb_on_black(trigram=trigram)
+    val = judge.assess_thumb_on_black(trigram=trigram)
+    global my_crf
+    norm = my_crf.normalize_value(function_name=name, value=val)
+    return norm
 
 
 def assess_5_on_black(y_prev, y, x_bar, i):
+    name = 'bl5'
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
         return 0
-    return judge.assess_5_on_black(trigram=trigram)
+    val = judge.assess_5_on_black(trigram=trigram)
+    global my_crf
+    norm = my_crf.normalize_value(function_name=name, value=val)
+    return norm
 
 
 def assess_thumb_passing(y_prev, y, x_bar, i):
+    name = 'pa1'
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
         return 0
-    return judge.assess_thumb_passing(trigram=trigram)
+    val = judge.assess_thumb_passing(trigram=trigram)
+    global my_crf
+    norm = my_crf.normalize_value(function_name=name, value=val)
+    return norm
 
 
 def chord_notes_below(y_prev, y, x_bar, i):
+    name = 'CNB'
     if 'left_chord' not in x_bar[i][0]:
         return 0
-    note_count = x_bar[i][0]['left_chord']
-    return note_count
+    val = x_bar[i][0]['left_chord']
+    global my_crf
+    norm = my_crf.normalize_value(function_name=name, value=val)
+    return norm
 
 
 def chord_notes_above(y_prev, y, x_bar, i):
+    name = 'CNA'
     if 'right_chord' not in x_bar[i][0]:
         return 0
-    note_count = x_bar[i][0]['right_chord']
-    return note_count
+    val = x_bar[i][0]['right_chord']
+    global my_crf
+    norm = my_crf.normalize_value(function_name=name, value=val)
+    return norm
 
 
 def add_functions(xycrf):
@@ -335,6 +377,10 @@ tag_set = splits['train']['tag_set']
 my_crf.set_tags(tag_set=tag_set)
 add_functions(xycrf=my_crf)
 my_crf.training_data = splits['train']['data']
+tallies = my_crf.tally_function_values()
+pprint.pprint(tallies)
+# exit(0)
+# my_crf.init_weights(weights=[0.0, 0.0, 0.0, -0.7260981897107233, 0.0, 0.44699297124214055, -1.1210566316826274, -0.7513435597650349, 0.0, 0.0, 0.0])
 print("* Number of tags: {}".format(my_crf.tag_count))
 print("* Number of features: {}".format(my_crf.feature_count))
 print("* Number of training examples: {}".format(len(my_crf.training_data)))
