@@ -32,112 +32,11 @@ from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dactyler.Parncutt import TrigramNode, is_black, ImaginaryBlackKeyRuler, PhysicalRuler
 
 SEGREGATE_HANDS = False
-STAFFS = ['upper', 'lower']
-VERSION = '0005'
-USE_ATTRS = True
-CLEAN_LIST = {}  # Reuse all pickled results.
-CLEAN_LIST = {'crf': True}
+# CLEAN_LIST = {}  # Reuse all pickled results.
+CLEAN_LIST = {'crf': True, 'DExperiment': True}
 # CLEAN_LIST = {'DCorpus': True}
 # CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
-
-VERSION_FEATURES = {
-    '0000': {
-        'judge': 'none',
-        'judge_chords': False,
-        'bop': False,
-        'eop': False,
-        'distance': 'none',
-        # 'distance_window': 4,
-        'staff': True,
-        'black': False,
-        'simple_chording': True,
-        'leap': False,
-        'articulation': False,
-        'tempo': False,
-        'velocity': False,
-        'repeat': False
-    },
-    '0001': {
-        'judge': 'none',
-        'judge_chords': False,
-        'bop': False,
-        'eop': False,
-        'distance': 'lattice',
-        # 'distance_window': 4,
-        'staff': True,
-        'black': True,
-        'simple_chording': True,
-        'leap': False,
-        'articulation': True,
-        'tempo': False,
-        'velocity': False,
-        'repeat': False
-    },
-    '0002': {
-        'judge': 'parncutt',
-        'judge_chords': False,
-        'bop': False,
-        'eop': False,
-        'distance': 'lattice',
-        # 'distance_window': 4,
-        'staff': True,
-        'black': True,
-        'simple_chording': True,
-        'leap': False,
-        'articulation': True,
-        'tempo': False,
-        'velocity': False,
-        'repeat': False
-    },
-    '0003': {
-        'judge': 'parncutt',
-        'judge_chords': False,
-        'bop': True,
-        'eop': True,
-        'distance': 'lattice',
-        # 'distance_window': 4,
-        'staff': True,
-        'black': True,
-        'simple_chording': True,
-        'leap': False,
-        'articulation': True,
-        'tempo': False,
-        'velocity': False,
-        'repeat': False
-    },
-    '0004': {
-        'judge': 'none',
-        'judge_chords': False,
-        'bop': False,
-        'eop': False,
-        'distance': 'integral',
-        # 'distance_window': 4,
-        'staff': False,
-        'black': True,
-        'simple_chording': False,
-        'leap': False,
-        'articulation': False,
-        'tempo': False,
-        'velocity': False,
-        'repeat': False
-    },
-    '0005': {
-        'judge': 'Parncutt',
-        'judge_chords': False,
-        'bop': False,
-        'eop': False,
-        'distance': 'integral',
-        'staff': False,
-        'black': True,
-        'simple_chording': True,
-        'leap': False,
-        'articulation': False,
-        'tempo': False,
-        'velocity': False,
-        'repeat': False
-    },
-}
 
 PICKLE_BASE_DIR = '/tmp/pickle/'
 MAX_LEAP = 16
@@ -525,33 +424,71 @@ def lattice_distance(notes, from_i, to_i, absolute=False):
     return x_distance, y_distance
 
 
-def note2attrs(notes, i, staff, categorical=False):
-    settings = VERSION_FEATURES[VERSION]
-    features = {}
+def get_settings():
+    settings = {
+        'judge': 'Parncutt',
+        'judge_chords': False,
+        'bop': False,
+        'eop': False,
+        'distance': 'lattice',
+        'staff': True,
+        'black': True,
+        'simple_chording': True,
+        'leap': False,
+        'articulation': False,
+        'tempo': False,
+        'velocity': False,
+        'repeat': False
+    }
+    return settings
 
-    features['note'] = notes[i]
+
+def note2attrs(notes, i, staff):
+    settings = get_settings()
+    attrs = {}
+
+    attrs['note'] = notes[i]
+
+    if settings['distance'] == 'integral':
+        attrs['distance:-4'] = integral_distance(notes=notes, from_i=i-4, to_i=i)
+        attrs['distance:-3'] = integral_distance(notes=notes, from_i=i-3, to_i=i)
+        attrs['distance:-2'] = integral_distance(notes=notes, from_i=i-2, to_i=i)
+        attrs['distance:-1'] = integral_distance(notes=notes, from_i=i-1, to_i=i)
+        attrs['distance:+1'] = integral_distance(notes=notes, from_i=i, to_i=i+1)
+        attrs['distance:+2'] = integral_distance(notes=notes, from_i=i, to_i=i+2)
+        attrs['distance:+3'] = integral_distance(notes=notes, from_i=i, to_i=i+3)
+        attrs['distance:+4'] = integral_distance(notes=notes, from_i=i, to_i=i+4)
+    elif settings['distance'] == 'lattice':
+        attrs['x_distance:-4'], attrs['y_distance:-4'] = lattice_distance(notes=notes, from_i=i-4, to_i=i)
+        attrs['x_distance:-3'], attrs['y_distance:-3'] = lattice_distance(notes=notes, from_i=i-3, to_i=i)
+        attrs['x_distance:-2'], attrs['y_distance:-2'] = lattice_distance(notes=notes, from_i=i-2, to_i=i)
+        attrs['x_distance:-1'], attrs['y_distance:-1'] = lattice_distance(notes=notes, from_i=i-1, to_i=i)
+        attrs['x_distance:+1'], attrs['y_distance:+1'] = lattice_distance(notes=notes, from_i=i, to_i=i+1)
+        attrs['x_distance:+2'], attrs['y_distance:+2'] = lattice_distance(notes=notes, from_i=i, to_i=i+2)
+        attrs['x_distance:+3'], attrs['y_distance:+3'] = lattice_distance(notes=notes, from_i=i, to_i=i+3)
+        attrs['x_distance:+4'], attrs['y_distance:+4'] = lattice_distance(notes=notes, from_i=i, to_i=i+4)
 
     if settings['simple_chording']:
         # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
         left_chord_notes, right_chord_notes = chordings(notes=notes, middle_i=i)
-        features['left_chord'] = left_chord_notes
-        features['right_chord'] = right_chord_notes
+        attrs['left_chord'] = left_chord_notes
+        attrs['right_chord'] = right_chord_notes
 
     if settings['staff']:
-        features['staff'] = 0
+        attrs['staff'] = 0
         if staff == "upper":
-            features['staff'] = 1
+            attrs['staff'] = 1
             # @100: [0.54495717 0.81059147 0.81998371 0.68739401 0.73993751]
             # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
 
     if settings['black']:
-        features['black_key']: black_key(notes, i)
+        attrs['black_key']: black_key(notes, i)
 
     if settings['leap']:
         # Impact of large leaps? Costs max out, no? Maybe not.
-        features['leap'] = 0
+        attrs['leap'] = 0
         if leap_is_excessive(notes, i):
-            features['leap'] = 1
+            attrs['leap'] = 1
 
     if settings['velocity']:
         oon = notes[i]
@@ -559,28 +496,28 @@ def note2attrs(notes, i, staff, categorical=False):
         on_velocity = m21_note.volume.velocity
         if on_velocity is None:
             on_velocity = 64
-        features['velocity'] = on_velocity
+        attrs['velocity'] = on_velocity
 
     if settings['tempo']:
         tempi = tempo_features(notes=notes, middle_i=i)
         for k in tempi:
-            features[k] = tempi[k]
+            attrs[k] = tempi[k]
 
     if settings['articulation']:
         arts = articulation_features(notes=notes, middle_i=i)
         for k in arts:
-            features[k] = arts[k]
+            attrs[k] = arts[k]
 
     if settings['repeat']:
         reps_before, reps_after = repeat_features(notes=notes, middle_i=i)
-        features['repeats_before'] = reps_before
-        features['repeats_after'] = reps_after
+        attrs['repeats_before'] = reps_before
+        attrs['repeats_after'] = reps_after
 
-    return features
+    return attrs
 
 
 def note2features(notes, i, staff, categorical=False):
-    settings = VERSION_FEATURES[VERSION]
+    settings = get_settings()
     features = {}
 
     if settings['bop']:
@@ -676,12 +613,12 @@ def note2features(notes, i, staff, categorical=False):
         features['repeats_before'] = reps_before
         features['repeats_after'] = reps_after
 
-    if settings['judge'] != 'none':
-        bad_fingers = judgments(judge=settings['judge'], notes=notes, middle_i=i, staff=staff)
-        for position in bad_fingers:
-            for digit in bad_fingers[position]:
-                k = "judge_{}:{}".format(digit, position)
-                features[k] = bad_fingers[position][digit]
+    # if settings['judge'] != 'none':
+    #     bad_fingers = judgments(judge=settings['judge'], notes=notes, middle_i=i, staff=staff)
+    #     for position in bad_fingers:
+    #         for digit in bad_fingers[position]:
+    #             k = "judge_{}:{}".format(digit, position)
+    #             features[k] = bad_fingers[position][digit]
     # FIXME: Lattice distance in Parncutt rules? Approximated by Jacobs.
     #        Mitigated by Balliauw (which just makes the x-distance more
     #        accurate between same-colored keys).
@@ -690,26 +627,6 @@ def note2features(notes, i, staff, categorical=False):
         for feature in features:
             features[feature] = str(features[feature])
     return features
-
-
-def phrase2features(notes, staff):
-    feature_list = []
-    for i in range(len(notes)):
-        features = note2features(notes, i, staff)
-        feature_list.append(features)
-    return feature_list
-
-
-def phrase2attrs(notes, staff):
-    attr_list = []
-    for i in range(len(notes)):
-        attrs = note2attrs(notes, i, staff)
-        attr_list.append(attrs)
-    return attr_list
-
-
-def phrase2labels(handed_strike_digits):
-    return handed_strike_digits
 
 
 def nondefault_hand_count(hsd_seq, staff="upper"):
@@ -781,31 +698,13 @@ def load_data(ex, experiment_name, staffs, corpus_names):
                                 # authority, score_title, hsd_seg))
                             ex.wildcarded_count += 1
                             continue
-                        ex.annotated_note_count += note_len
-                        if USE_ATTRS:
-                            ex.x.append(phrase2attrs(ordered_notes, staff))
-                        else:
-                            ex.x.append(phrase2features(ordered_notes, staff))
-                        ex.y.append(phrase2labels(hsd_seg))
                         if has_preset_evaluation_defined(corpus_name=corpus_name):
                             if is_in_test_set(title=score_title, corpus_name=corpus_name):
                                 test_key = (corpus_name, score_title, annot_index)
-                                if test_key not in ex.test_indices:
-                                    ex.test_indices[test_key] = []
-                                ex.test_indices[test_key].append(len(ex.y_test))
-                                if USE_ATTRS:
-                                    ex.x_test.append(phrase2attrs(ordered_notes, staff))
-                                else:
-                                    ex.x_test.append(phrase2features(ordered_notes, staff))
-                                ex.y_test.append(phrase2labels(hsd_seg))
-                                if staff == "upper" and annot_index == 0:
-                                    ex.ordered_test_d_score_titles.append(da_score)
-                                    ex.test_d_scores[score_title] = da_unannotated_score
+                                ex.append_example(ordered_notes, staff, hsd_seg, is_test=True,
+                                                  test_key=test_key, d_score=da_unannotated_score)
                             else:
-                                if USE_ATTRS:
-                                    ex.x_train.append(phrase2attrs(ordered_notes, staff))
-                                else:
-                                    ex.x_train.append(phrase2features(ordered_notes, staff))
-                                ex.y_train.append(phrase2labels(hsd_seg))
-                        ex.good_annot_count += 1
+                                ex.append_example(ordered_notes, staff, hsd_seg, is_train=True)
+                        else:
+                            ex.append_example(ordered_notes, staff, hsd_seg)
     pickle_it(obj=ex, obj_type="DExperiment", file_name=experiment_name)

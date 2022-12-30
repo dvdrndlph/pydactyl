@@ -1,4 +1,6 @@
 __author__ = 'David Randolph'
+
+import itertools
 # Copyright (c) 2022 David A. Randolph.
 #
 # Permission is hereby granted, free of charge, to any person
@@ -68,6 +70,8 @@ class XyCrf:
         self.testing = False
         self.optimize = optimize
         self.training_data = None
+        self.test_data = None
+        self.validation_data = None
         self.feature_functions = []
         self.function_index_name = {}
         self.tag_count = 0
@@ -424,7 +428,8 @@ class XyCrf:
 
     def stochastic_gradient_ascent_train(self, regularization=0.0005,
                                          learning_rate=0.01, attenuation=1, epochs=1,
-                                         seeder=lambda: 0.27):
+                                         output_chunk_size=1000,
+                                         seeder=lambda: 0.27, minimum_delta=0.001):
         start_dt = datetime.now()
         print('[%s] Start training' % start_dt)
         function_count = len(self.feature_functions)
@@ -434,10 +439,10 @@ class XyCrf:
         # the "edge-observation" functions of both x and y values are, we need to run lean.
 
         self.print_function_weights()
-        block_size = 10
         epoch_number = 1
+        token_accuracy = 0
         for epoch in range(epochs):
-            print(f'Starting pass number {epoch_number} (of {epochs}) through the training set.')
+            print(f'Starting pass number {epoch_number} (of maximum {epochs}) through the training set.')
             example_num = 0
             if seeder is not None:
                 random.shuffle(self.training_data, seeder)
@@ -463,11 +468,28 @@ class XyCrf:
                     self.weights[j] = self.weights[j] + learning_rate * ((global_feature_val - expected_val) - reg_val)
 
                 example_num += 1
-                if example_num % block_size == 0:
+                if example_num % output_chunk_size == 0:
                     print(f'Example {epoch_number}:{example_num} processed with learning rate {learning_rate}.')
                     self.print_function_weights()
+
+            result = self.test(test_data=self.validation_data)
+            # Home-grown stopping criteria: We stop if things get worse from the prior epoch
+            # or things don't improve more than some specified delta over the validation set.
+            if minimum_delta is not None:
+                if result['token_accuracy'] > token_accuracy:
+                    if result['token_accuracy'] - token_accuracy < minimum_delta:
+                        print(f'Accuracy improved less than {minimum_delta}. Stopping after epoch {epoch_number}')
+                        break
+                    token_accuracy = result['token_accuracy']
+                else:
+                    print(f"Accuracy failed to improve. Stopping now after epoch {epoch_number}.")
+                    break
+
+            print(f"WEIGHTS AFTER EPOCH {epoch_number}:")
+            self.print_function_weights()
             learning_rate *= attenuation
             epoch_number += 1
+
         print("The stochastic gradient has been ascended.")
         end_dt = datetime.now()
         execution_duration_minutes = (end_dt - start_dt)
@@ -511,6 +533,49 @@ class XyCrf:
             print("Unpickled object from path {}.".format(path_str))
             return unpickled_obj
         return None
+
+    def test(self, test_data):
+        # FIXME: Add distance function.
+        total_example_count = 0
+        correct_example_count = 0
+        total_token_count = 0
+        correct_token_count = 0
+        for x_bar, y_bar in test_data:
+            y_hat = self.infer(x_bar)
+            flat_x_bar = list(itertools.chain(*x_bar))
+            print('PREDICTED: ', end='')
+            print("".join(y_hat))
+            print('CORRECT:   ', end='')
+            print("".join(y_bar))
+            print("")
+            good_example = True
+            for i in range(1, len(y_bar) - 1):
+                total_token_count += 1
+                if y_bar[i] == y_hat[i]:
+                    correct_token_count += 1
+                else:
+                    good_example = False
+            if good_example:
+                correct_example_count += 1
+            total_example_count += 1
+        token_accuracy = correct_token_count / total_token_count
+        example_accuracy = correct_example_count / total_example_count
+        print(f'Correctly tagged token count: {correct_token_count}')
+        print(f'Total token count:            {total_token_count}')
+        print(f"Token-level accuracy:         {token_accuracy}")
+        print("")
+        print(f'Correctly labeled example count: {correct_example_count}')
+        print(f'Total example count:             {total_example_count}')
+        print(f"Example-level accuracy:          {example_accuracy}")
+        results = {
+            'correct_tokens': correct_token_count,
+            'total_tokens': total_token_count,
+            'token_accuracy': token_accuracy,
+            'correct_examples': correct_example_count,
+            'total_examples': total_example_count,
+            'example_accuracy': token_accuracy
+        }
+        return results
 
 
 def _learn_from_function(arg, **kwarg):

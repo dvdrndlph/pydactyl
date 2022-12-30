@@ -47,8 +47,8 @@ from pydactyl.dactyler.Parncutt import TrigramNode
 # TEST_METHOD = 'cross-validate'
 TEST_METHOD = 'preset'
 # TEST_METHOD = 'random'
-STAFFS = ['upper', 'lower']
-# STAFFS = ['upper']
+# STAFFS = ['upper', 'lower']
+STAFFS = ['upper']
 # CORPUS_NAMES = ['full_american_by_annotator']
 # CORPUS_NAMES = ['complete_layer_one']
 # CORPUS_NAMES = ['scales']
@@ -79,14 +79,14 @@ def get_trigram_node(notes, i, y_prev, y):
     if 'note' not in notes[i][0]:
         return None
 
-    midi_2 = notes[i][0]['note'].pitch.midi
+    midi_2 = notes[i][0]['note']['note'].pitch.midi
     handed_digit_2 = y
 
     if i > 1 and 'note' in notes[i-1][0]:
-        midi_1 = notes[i-1][0]['note'].pitch.midi
+        midi_1 = notes[i-1][0]['note']['note'].pitch.midi
         handed_digit_1 = y_prev
     if i < len(notes) - 1 and 'note' in notes[i+1][0]:
-        midi_3 = notes[i+1][0]['note'].pitch.midi
+        midi_3 = notes[i+1][0]['note']['note'].pitch.midi
         # We don't know the subsequent finger, but some rules don't care.
 
     trigram_node = TrigramNode(midi_1=midi_1, handed_digit_1=handed_digit_1,
@@ -100,10 +100,10 @@ def assess_stretch(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
-        return 0
-    stretch_val = judge.assess_stretch(trigram=trigram)
+        return 1.0
+    val = judge.assess_stretch(trigram=trigram)
     global my_crf
-    norm = my_crf.normalize_value(function_name=name, value=stretch_val)
+    norm = my_crf.normalize_value(function_name=name, value=val)
     return norm
 
 
@@ -112,7 +112,7 @@ def assess_small_span(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
-        return 0
+        return 1.0
     val = judge.assess_small_span(trigram=trigram)
     global my_crf
     norm = my_crf.normalize_value(function_name=name, value=val)
@@ -124,7 +124,7 @@ def assess_large_span(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
-        return 0
+        return 1.0
     val = judge.assess_large_span(trigram=trigram)
     global my_crf
     norm = my_crf.normalize_value(function_name=name, value=val)
@@ -136,7 +136,7 @@ def assess_weak_finger(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
-        return 0
+        return 1.0
     val = judge.assess_weak_finger(trigram=trigram)
     global my_crf
     norm = my_crf.normalize_value(function_name=name, value=val)
@@ -148,7 +148,7 @@ def assess_3_to_4(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
-        return 0
+        return 1.0
     val = judge.assess_3_to_4(trigram=trigram)
     global my_crf
     norm = my_crf.normalize_value(function_name=name, value=val)
@@ -160,7 +160,7 @@ def assess_4_on_black(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
-        return 0
+        return 1.0
     val = judge.assess_4_on_black(trigram=trigram)
     global my_crf
     norm = my_crf.normalize_value(function_name=name, value=val)
@@ -172,7 +172,7 @@ def assess_thumb_on_black(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
-        return 0
+        return 1.0
     val = judge.assess_thumb_on_black(trigram=trigram)
     global my_crf
     norm = my_crf.normalize_value(function_name=name, value=val)
@@ -184,7 +184,7 @@ def assess_5_on_black(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
-        return 0
+        return 1.0
     val = judge.assess_5_on_black(trigram=trigram)
     global my_crf
     norm = my_crf.normalize_value(function_name=name, value=val)
@@ -196,7 +196,7 @@ def assess_thumb_passing(y_prev, y, x_bar, i):
     global judge
     trigram = get_trigram_node(notes=x_bar, i=i, y_prev=y_prev, y=y)
     if trigram is None:
-        return 0
+        return 1.0
     val = judge.assess_thumb_passing(trigram=trigram)
     global my_crf
     norm = my_crf.normalize_value(function_name=name, value=val)
@@ -208,6 +208,7 @@ def chord_notes_below(y_prev, y, x_bar, i):
     if 'left_chord' not in x_bar[i][0]:
         return 0
     val = x_bar[i][0]['left_chord']
+
     global my_crf
     norm = my_crf.normalize_value(function_name=name, value=val)
     return norm
@@ -223,7 +224,60 @@ def chord_notes_above(y_prev, y, x_bar, i):
     return norm
 
 
+def staff(y_prev, y, x_bar, i):
+    if 'staff' not in x_bar[i][0]:
+        return 0
+    return x_bar[i][0]['staff']
+
+
+def repeat_finger(y_prev, y, x_bar, i):
+    if 'note' not in x_bar[i][0]:
+        return 0
+    if 'note' not in x_bar[i-1][0]:
+        return 0
+    if y_prev == y:
+        pit = x_bar[i][0]['note']['note'].pitch.midi
+        prev_pit = x_bar[i-1][0]['note']['note'].pitch.midi
+        if pit != prev_pit:
+            return 1
+    return 0
+
+
+def distance_attr_name(location, xy=None):
+    loc_str = str(location)
+    if loc_str[0] != '-':
+        loc_str = '+' + loc_str
+    attr_name = ''
+    if xy is not None:
+        attr_name = xy + '_'
+    attr_name += 'distance:' + loc_str
+    return attr_name
+
+
+def distance_func_factory(attr_name):
+    def f(y_prev, y, x_bar, i):
+        if y == STOP_TAG and i != len(x_bar) - 1:
+            return 0
+        if y != STOP_TAG and i == len(x_bar) - 1:
+            return 0
+        if attr_name not in x_bar[i][0]:
+            return 0
+        val = x_bar[i][0][attr_name]
+        global my_crf
+        norm = my_crf.normalize_value(function_name=attr_name, value=val)
+        return norm
+
+    return f
+
+
+def valid_internal(y_prev, y, x_bar, i):
+    if 0 < i < len(x_bar) - 1 and y in (START_TAG, STOP_TAG):
+        return 1
+    return 0
+
+
 def add_functions(xycrf):
+    # xycrf.add_feature_function(func=valid_internal, name='val')
     xycrf.add_feature_function(func=assess_stretch, name='str')
     xycrf.add_feature_function(func=assess_small_span, name='sma')
     xycrf.add_feature_function(func=assess_large_span, name='lar')
@@ -235,6 +289,18 @@ def add_functions(xycrf):
     xycrf.add_feature_function(func=assess_thumb_passing, name='pa1')
     xycrf.add_feature_function(func=chord_notes_below, name='CNB')
     xycrf.add_feature_function(func=chord_notes_above, name='CNA')
+    xycrf.add_feature_function(func=repeat_finger, name='REP')
+    # xycrf.add_feature_function(func=staff, name='STAFF')
+
+    # for xy in ('x', 'y'):
+    #     for offset in (1, 2, 3, 4):
+    #         attr_name = distance_attr_name(location=offset, xy=xy)
+    #         func = distance_func_factory(attr_name=attr_name)
+    #         xycrf.add_feature_function(func=func, name=attr_name)
+    #         offset *= -1
+    #         attr_name = distance_attr_name(location=offset, xy=xy)
+    #         func = distance_func_factory(attr_name=attr_name)
+    #         xycrf.add_feature_function(func=func, name=attr_name)
 
 
 def evaluate_trained_model(the_model, x_test, y_test):
@@ -270,9 +336,7 @@ def get_data(x, y):
         example_x = list()
         example_x.insert(0, [START_TAG])
         for knot in x[i]:
-            note_copy = copy.deepcopy(knot['note'])
-            note_copy['left_chord'] = knot['left_chord']
-            note_copy['right_chord'] = knot['right_chord']
+            note_copy = copy.deepcopy(knot)
             example_x.append([note_copy])
         example_x.append([STOP_TAG])
         example_y: list = copy.copy(y[i])
@@ -377,19 +441,27 @@ tag_set = splits['train']['tag_set']
 my_crf.set_tags(tag_set=tag_set)
 add_functions(xycrf=my_crf)
 my_crf.training_data = splits['train']['data']
+my_crf.validation_data = splits['validation']['data']
+# my_crf.test_data = splits['test']['data']
 tallies = my_crf.tally_function_values()
 pprint.pprint(tallies)
-# exit(0)
-# my_crf.init_weights(weights=[0.0, 0.0, 0.0, -0.7260981897107233, 0.0, 0.44699297124214055, -1.1210566316826274, -0.7513435597650349, 0.0, 0.0, 0.0])
 print("* Number of tags: {}".format(my_crf.tag_count))
 print("* Number of features: {}".format(my_crf.feature_count))
 print("* Number of training examples: {}".format(len(my_crf.training_data)))
 
+# my_crf.init_weights(weights=[-0.33667780934953145, -0.33667780934953145, -0.33667780934953145, -1.9980138828152145, -0.33667780934953145, 0.25961073556170333, -2.981968350190955, -1.8611018709820295, -0.33667780934953145, 0.0, 0.0])
+# my_validation_data = splits['validation']['data']
+# my_crf.test(test_data=my_validation_data)
+# exit(0)
+
 # gradient, big_z = xycrf.gradient_for_all_training()
-epochs = 1
-learning_rate = 0.01
-attenuation = 1
-my_crf.stochastic_gradient_ascent_train(epochs=epochs, learning_rate=learning_rate, attenuation=attenuation)
+max_epochs = 10
+learning_rate = 0.1
+attenuation = 0.5
+min_delta = 0.0001
+my_crf.stochastic_gradient_ascent_train(epochs=max_epochs, learning_rate=learning_rate,
+                                        output_chunk_size=100,
+                                        attenuation=attenuation, minimum_delta=min_delta)
 print(my_crf.weights)
 print("Boo")
 

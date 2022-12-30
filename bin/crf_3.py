@@ -32,6 +32,7 @@ import sklearn_crfsuite as crf
 from sklearn_crfsuite import metrics
 from sklearn.model_selection import train_test_split, cross_val_score
 from pydactyl.util.DExperiment import DExperiment
+from music21 import note
 import pydactyl.util.CrfUtil as c
 
 
@@ -79,14 +80,101 @@ def train_and_evaluate(the_model, x_train, y_train, x_test, y_test):
     evaluate_trained_model(the_model=the_model, x_test=x_test, y_test=y_test)
 
 
+def my_note2features(notes, i, staff, categorical=False):
+    features = {}
+
+    features['BOP'] = "0"
+    if i == 0:
+        features['BOP'] = "1"
+    features['EOP'] = "0"
+    if i >= len(notes) - 1:
+        features['EOP'] = "1"
+
+    features['x_distance:-4'], features['y_distance:-4'] = c.lattice_distance(notes=notes, from_i=i-4, to_i=i)
+    features['x_distance:-3'], features['y_distance:-3'] = c.lattice_distance(notes=notes, from_i=i-3, to_i=i)
+    features['x_distance:-2'], features['y_distance:-2'] = c.lattice_distance(notes=notes, from_i=i-2, to_i=i)
+    features['x_distance:-1'], features['y_distance:-1'] = c.lattice_distance(notes=notes, from_i=i-1, to_i=i)
+    features['x_distance:+1'], features['y_distance:+1'] = c.lattice_distance(notes=notes, from_i=i, to_i=i+1)
+    features['x_distance:+2'], features['y_distance:+2'] = c.lattice_distance(notes=notes, from_i=i, to_i=i+2)
+    features['x_distance:+3'], features['y_distance:+3'] = c.lattice_distance(notes=notes, from_i=i, to_i=i+3)
+    features['x_distance:+4'], features['y_distance:+4'] = c.lattice_distance(notes=notes, from_i=i, to_i=i+4)
+
+    # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
+    left_chord_notes, right_chord_notes = c.chordings(notes=notes, middle_i=i)
+    features['left_chord'] = left_chord_notes
+    features['right_chord'] = right_chord_notes
+
+    features['staff'] = 0
+    if staff == "upper":
+        features['staff'] = 1
+        # @100: [0.54495717 0.81059147 0.81998371 0.68739401 0.73993751]
+        # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
+
+    features['black_key'] = c.black_key(notes, i)
+    features['black_key:+1'] = c.black_key(notes, i-1)
+    features['level_change'] = 0
+    if features['y_distance:-1'] != 0:
+        features['level_change'] = 1
+
+    features['returning'] = 0
+    if features['x_distance:-2'] == 0:
+        features['returning'] = 1  # .5486
+    features['will_return'] = 0
+    if features['x_distance:+2'] == 0:
+        features['will_return'] = 1  # .5562
+
+    # 57.12 w/both
+    features['ascending'] = 0
+    if features['x_distance:-1'] < 0 and features['x_distance:+1'] > 0:
+        features['ascending'] = 1
+
+    features['descending'] = 0
+    if features['x_distance:-1'] > 0 and features['x_distance:+1'] < 0:
+        features['descending'] = 1
+
+    # features['mediating'] = 0
+
+    # /\
+    #   \ "dive"
+    # --- "three-peat"
+    #  /\
+    # /    "
+
+    # Impact of large leaps? Costs max out, no? Maybe not.
+    features['leap'] = 0
+    if c.leap_is_excessive(notes, i):
+        features['leap'] = 1
+
+    oon = notes[i]
+    m21_note: note.Note = oon['note']
+    on_velocity = m21_note.volume.velocity
+    if on_velocity is None:
+        on_velocity = 64
+    features['velocity'] = on_velocity
+
+    tempi = c.tempo_features(notes=notes, middle_i=i)
+    for k in tempi:
+        features[k] = tempi[k]
+
+    arts = c.articulation_features(notes=notes, middle_i=i)
+    for k in arts:
+        features[k] = arts[k]
+
+    reps_before, reps_after = c.repeat_features(notes=notes, middle_i=i)
+    features['repeats_before'] = reps_before
+    features['repeats_after'] = reps_after
+
+    return features
+
+
 #####################################################
 # MAIN BLOCK
 #####################################################
 corpora_str = "-".join(CORPUS_NAMES)
-experiment_name = corpora_str + '__' + TEST_METHOD + '__' + c.VERSION
+experiment_name = corpora_str + '__' + TEST_METHOD + '__3'
 ex = c.unpickle_it(obj_type="DExperiment", file_name=experiment_name)
 if ex is None:
-    ex = DExperiment(corpus_names=CORPUS_NAMES, model_version=c.VERSION)
+    ex = DExperiment(corpus_names=CORPUS_NAMES, model_version="3", note_func=my_note2features)
     c.load_data(ex=ex, experiment_name=experiment_name, staffs=STAFFS, corpus_names=CORPUS_NAMES)
 
 ex.print_summary(test_method=TEST_METHOD)
@@ -146,5 +234,5 @@ if not have_trained_model:
 # print("Unpickled Flat F1: {}".format(flat_f1))
 
 print("Run of crf model {} against {} test set over {} corpus has completed successfully.".format(
-    c.VERSION, TEST_METHOD, corpora_str))
+    "3", TEST_METHOD, corpora_str))
 print("Clean list: {}".format(list(c.CLEAN_LIST.keys())))

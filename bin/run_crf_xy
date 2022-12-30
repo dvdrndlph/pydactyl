@@ -1,0 +1,7 @@
+#!/bin/bash
+export PYTHONUNBUFFERED=1
+export PYTHONPATH=PYTHONPATH:~/tb2/xycrf:~/tb2/pydactyl/bin:~/tb2/pydactyl
+PYTHON=~/opt/anaconda3/envs/slug/bin/python
+SCRIPT=~/tb2/pydactyl/bin/crf_xy.py
+
+$PYTHON $SCRIPT

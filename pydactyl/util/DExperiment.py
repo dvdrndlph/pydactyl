@@ -21,8 +21,10 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
+
 import shutil
 import os
+from pydactyl.util.CrfUtil import note2attrs, note2features
 from pathlib import Path
 from pydactyl.dcorpus.DAnnotation import DAnnotation
 from pydactyl.dcorpus.ABCDHeader import ABCDHeader
@@ -41,7 +43,8 @@ class DExperiment:
     }
 
     def __init__(self, corpus_names, model_version, x=None, y=None,
-                 x_train=None, y_train=None, x_test=None, y_test=None):
+                 x_train=None, y_train=None, x_test=None, y_test=None,
+                 as_features=True, note_func=note2features):
         self.model_version = model_version
         self.default_prediction_dir = '/tmp/crf' + model_version + 'prediction/'
         self.default_test_dir = '/tmp/crf' + model_version + 'test/'
@@ -60,8 +63,42 @@ class DExperiment:
         self.total_nondefault_hand_finger_count = 0
         self.total_nondefault_hand_segment_count = 0
         self.test_indices = {}
-        self.ordered_test_d_score_titles = []
         self.test_d_scores = {}  # Indexed by score title.
+
+        self.as_features = as_features
+        self.note_func = note_func
+
+    def phrase2features(self, notes, staff):
+        feature_list = []
+        for i in range(len(notes)):
+            features = self.note_func(notes, i, staff)
+            feature_list.append(features)
+        return feature_list
+
+    def phrase2attrs(self, notes, staff):
+        return self.phrase2features(notes, staff)
+
+    def phrase2labels(self, handed_strike_digits):
+        return handed_strike_digits
+
+    def append_example(self, ordered_notes, staff, hsd_seg, is_train=False,
+                       is_test=False, test_key=None, d_score=None):
+        note_len = len(ordered_notes)
+        self.annotated_note_count += note_len
+        self.x.append(self.phrase2features(ordered_notes, staff))
+        self.y.append(self.phrase2labels(hsd_seg))
+        if is_test:
+            score_title = d_score.title()
+            if test_key not in self.test_indices:
+                self.test_indices[test_key] = []
+            self.test_indices[test_key].append(len(self.y_test))
+            self.x_test.append(self.phrase2features(ordered_notes, staff))
+            self.y_test.append(self.phrase2labels(hsd_seg))
+            self.test_d_scores[score_title] = d_score
+        elif is_train:
+            self.x_train.append(self.phrase2features(ordered_notes, staff))
+            self.y_train.append(self.phrase2labels(hsd_seg))
+        self.good_annot_count += 1
 
     def print_summary(self, test_method):
         print("Example count: {}".format(len(self.x)))
