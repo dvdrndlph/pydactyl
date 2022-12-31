@@ -36,7 +36,6 @@ from music21 import note
 import pydactyl.util.CrfUtil as c
 
 
-
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
 # TEST_METHOD = 'cross-validate'
@@ -90,14 +89,27 @@ def my_note2features(notes, i, staff, categorical=False):
     if i >= len(notes) - 1:
         features['EOP'] = "1"
 
-    features['x_distance:-4'], features['y_distance:-4'] = c.lattice_distance(notes=notes, from_i=i-4, to_i=i)
-    features['x_distance:-3'], features['y_distance:-3'] = c.lattice_distance(notes=notes, from_i=i-3, to_i=i)
-    features['x_distance:-2'], features['y_distance:-2'] = c.lattice_distance(notes=notes, from_i=i-2, to_i=i)
-    features['x_distance:-1'], features['y_distance:-1'] = c.lattice_distance(notes=notes, from_i=i-1, to_i=i)
-    features['x_distance:+1'], features['y_distance:+1'] = c.lattice_distance(notes=notes, from_i=i, to_i=i+1)
-    features['x_distance:+2'], features['y_distance:+2'] = c.lattice_distance(notes=notes, from_i=i, to_i=i+2)
-    features['x_distance:+3'], features['y_distance:+3'] = c.lattice_distance(notes=notes, from_i=i, to_i=i+3)
-    features['x_distance:+4'], features['y_distance:+4'] = c.lattice_distance(notes=notes, from_i=i, to_i=i+4)
+    x_d = dict()
+    y_d = dict()
+    x_d[-4], y_d[-4] = c.lattice_distance(notes=notes, from_i=i-4, to_i=i)
+    x_d[-3], y_d[-3] = c.lattice_distance(notes=notes, from_i=i-3, to_i=i)
+    x_d[-2], y_d[-2] = c.lattice_distance(notes=notes, from_i=i-2, to_i=i)
+    x_d[-1], y_d[-1] = c.lattice_distance(notes=notes, from_i=i-1, to_i=i)
+    x_d[+1], y_d[+1] = c.lattice_distance(notes=notes, from_i=i, to_i=i+1)
+    x_d[+2], y_d[+2] = c.lattice_distance(notes=notes, from_i=i, to_i=i+2)
+    x_d[+3], y_d[+3] = c.lattice_distance(notes=notes, from_i=i, to_i=i+3)
+    x_d[+4], y_d[+4] = c.lattice_distance(notes=notes, from_i=i, to_i=i+4)
+
+    features['x_distance:-4'], features['y_distance:-4'] = x_d[-4], y_d[-4]
+    features['x_distance:-3'], features['y_distance:-3'] = x_d[-3], y_d[-3]
+    features['x_distance:-2'], features['y_distance:-2'] = x_d[-2], y_d[-2]
+    features['x_distance:-1'], features['y_distance:-1'] = x_d[-1], y_d[-1]
+    features['x_distance:+1'], features['y_distance:+1'] = x_d[+1], y_d[+1]
+    features['x_distance:+2'], features['y_distance:+2'] = x_d[+2], y_d[+2]
+    features['x_distance:+3'], features['y_distance:+3'] = x_d[+3], y_d[+3]
+    features['x_distance:+4'], features['y_distance:+4'] = x_d[+4], y_d[+4]
+
+    # features['y_gram'] = "{}|{}|{}|{}".format(y_d[-2], y_d[-1], y_d[1], y_d[2])
 
     # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
     left_chord_notes, right_chord_notes = c.chordings(notes=notes, middle_i=i)
@@ -110,35 +122,43 @@ def my_note2features(notes, i, staff, categorical=False):
         # @100: [0.54495717 0.81059147 0.81998371 0.68739401 0.73993751]
         # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
 
-    features['black_key'] = c.black_key(notes, i)
-    features['black_key:+1'] = c.black_key(notes, i-1)
+    black = dict()
+    black[0] = str(c.black_key(notes, i))
+    black[-1] = str(c.black_key(notes, i-1))
+    black[1] = str(c.black_key(notes, i+1))
+    # features['blackgram'] = "{}|{}".format(black[-1], black[0])
+
+    # 56.83
+    features['black:-1'] = black[-1]
+    features['black'] = black[0]
+    features['black:+1'] = black[1]
+
+    # 57.18
     features['level_change'] = 0
-    if features['y_distance:-1'] != 0:
+    if y_d[-1] != 0:
         features['level_change'] = 1
 
     features['returning'] = 0
-    if features['x_distance:-2'] == 0:
+    if x_d[-2] == 0:
         features['returning'] = 1  # .5486
     features['will_return'] = 0
-    if features['x_distance:+2'] == 0:
+    if x_d[+2] == 0:
         features['will_return'] = 1  # .5562
 
-    # 57.12 w/both
+    # 57.18 w/both
     features['ascending'] = 0
-    if features['x_distance:-1'] < 0 and features['x_distance:+1'] > 0:
+    if x_d[-1] < 0 and x_d[+1] > 0:
         features['ascending'] = 1
-
     features['descending'] = 0
-    if features['x_distance:-1'] > 0 and features['x_distance:+1'] < 0:
+    if x_d[-1] > 0 and x_d[+1] < 0:
         features['descending'] = 1
 
-    # features['mediating'] = 0
-
-    # /\
-    #   \ "dive"
-    # --- "three-peat"
-    #  /\
-    # /    "
+    # pit = dict()
+    # pit[-3], pit[-2], pit[-1], pit[0], pit[1], pit[2], pit[3] = c.get_pit_strings(notes, i, range=3)
+    #
+    # features['pit_-1|0'] = pit[-1] + '|' + pit[0]
+    # features['pit_0|+1'] = pit[0] + '|' + pit[1]
+    # features['pit_-1|0|+1'] = pit[-1] + '|' + pit[0] + pit[1]
 
     # Impact of large leaps? Costs max out, no? Maybe not.
     features['leap'] = 0
@@ -156,13 +176,13 @@ def my_note2features(notes, i, staff, categorical=False):
     for k in tempi:
         features[k] = tempi[k]
 
-    arts = c.articulation_features(notes=notes, middle_i=i)
-    for k in arts:
-        features[k] = arts[k]
+    # arts = c.articulation_features(notes=notes, middle_i=i)
+    # for k in arts:
+    #     features[k] = arts[k]
 
-    reps_before, reps_after = c.repeat_features(notes=notes, middle_i=i)
-    features['repeats_before'] = reps_before
-    features['repeats_after'] = reps_after
+    # reps_before, reps_after = c.repeat_features(notes=notes, middle_i=i)
+    # features['repeats_before'] = reps_before
+    # features['repeats_after'] = reps_after
 
     return features
 

@@ -193,14 +193,15 @@ def create_hocrf_model(ex, working_dir):
 #####################################################
 # MAIN BLOCK
 #####################################################
+version_str = 'psl_3'
 start_dt = datetime.now()
 corpora_str = "-".join(CORPUS_NAMES)
 staff_str = "-".join(STAFFS)
-WORKING_DIR = '/tmp/pyseqlab/' + corpora_str + '/' + staff_str + '/' + c.VERSION
-experiment_name = corpora_str + '__' + TEST_METHOD + '__' + c.VERSION
+WORKING_DIR = '/tmp/pyseqlab/' + corpora_str + '/' + staff_str + '/' + version_str
+experiment_name = corpora_str + '__' + TEST_METHOD + '__' + version_str
 ex = c.unpickle_it(obj_type="DExperiment", file_name=experiment_name)
 if ex is None:
-    ex = DExperiment(corpus_names=CORPUS_NAMES, model_version=c.VERSION)
+    ex = DExperiment(corpus_names=CORPUS_NAMES, model_version=version_str)
     c.load_data(ex=ex, experiment_name=experiment_name, staffs=STAFFS, corpus_names=CORPUS_NAMES)
 
 ex.print_summary(test_method=TEST_METHOD)

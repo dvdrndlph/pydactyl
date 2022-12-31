@@ -111,6 +111,25 @@ def is_in_test_set(title: str, corpus_name='pig_indy'):
     return False
 
 
+def get_pit_strings(notes, i, range=4):
+    target_pit_count = range * 2 + 1
+    index = i
+    pit_index = index - range
+    pit_list = []
+    while pit_index < 0:
+        pit_list.append("-1")
+        pit_index += 1
+    note_count = len(notes)
+    pit_count = len(pit_list)
+    while pit_index < note_count and pit_count < target_pit_count:
+        pit_list.append(str(notes[pit_index]['note'].pitch.midi))
+        pit_index += 1
+        pit_count += 1
+    while pit_count < target_pit_count:
+        pit_list.append("-1")
+        pit_count += 1
+    return pit_list
+
 def get_trigram_node(notes, annotations, i):
     midi_1 = None
     handed_digit_1 = '-'
@@ -388,6 +407,10 @@ def black_key(notes, i):
     Return True if the key sounding the note at index i is black.
     Return False otherwise.
     """
+    if i < 0:
+        return False
+    if i >= len(notes):
+        return False
     midi = notes[i]['note'].pitch.midi
     is_black_key = is_black(midi_number=midi)
     return is_black_key

@@ -82,11 +82,12 @@ def train_and_evaluate(the_model, x_train, y_train, x_test, y_test):
 #####################################################
 # MAIN BLOCK
 #####################################################
+version_str = 'o2_2'
 corpora_str = "-".join(CORPUS_NAMES)
-experiment_name = corpora_str + '__' + TEST_METHOD + '__' + c.VERSION
+experiment_name = corpora_str + '__' + TEST_METHOD + '__' + version_str
 ex = c.unpickle_it(obj_type="DExperiment", file_name=experiment_name)
 if ex is None:
-    ex = DExperiment(corpus_names=CORPUS_NAMES, model_version=c.VERSION)
+    ex = DExperiment(corpus_names=CORPUS_NAMES, model_version=version_str)
     c.load_data(ex=ex, experiment_name=experiment_name, staffs=STAFFS, corpus_names=CORPUS_NAMES)
 
 ex.print_summary(test_method=TEST_METHOD)
