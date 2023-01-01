@@ -43,6 +43,7 @@ TEST_METHOD = 'preset'
 # TEST_METHOD = 'random'
 STAFFS = ['upper', 'lower']
 # STAFFS = ['upper']
+# STAFFS = ['lower']
 # CORPUS_NAMES = ['full_american_by_annotator']
 # CORPUS_NAMES = ['complete_layer_one']
 # CORPUS_NAMES = ['scales']
@@ -100,16 +101,22 @@ def my_note2features(notes, i, staff, categorical=False):
     x_d[+3], y_d[+3] = c.lattice_distance(notes=notes, from_i=i, to_i=i+3)
     x_d[+4], y_d[+4] = c.lattice_distance(notes=notes, from_i=i, to_i=i+4)
 
-    # features['x_distance:-4'], features['y_distance:-4'] = x_d[-4], y_d[-4]
-    features['x_distance:-3'], features['y_distance:-3'] = x_d[-3], y_d[-3]
-    features['x_distance:-2'], features['y_distance:-2'] = x_d[-2], y_d[-2]
-    features['x_distance:-1'], features['y_distance:-1'] = x_d[-1], y_d[-1]
-    features['x_distance:+1'], features['y_distance:+1'] = x_d[+1], y_d[+1]
-    features['x_distance:+2'], features['y_distance:+2'] = x_d[+2], y_d[+2]
-    features['x_distance:+3'], features['y_distance:+3'] = x_d[+3], y_d[+3]
-    # features['x_distance:+4'], features['y_distance:+4'] = x_d[+4], y_d[+4]
+    features['x_distance:-3'] = x_d[-3]
+    features['x_distance:-2'] = x_d[-2]
+    features['x_distance:-1'] = x_d[-1]
+    features['x_distance:+1'] = x_d[+1]
+    features['x_distance:+2'] = x_d[+2]
+    features['x_distance:+3'] = x_d[+3]
+
+    features['y_distance:-3'] = y_d[-3]
+    features['y_distance:-2'] = y_d[-2]
+    features['y_distance:-1'] = y_d[-1]
+    features['y_distance:+1'] = y_d[+1]
+    features['y_distance:+2'] = y_d[+2]
+    features['y_distance:+3'] = y_d[+3]
 
     features['dxgram_-1|+1'] = "{}|{}".format(x_d[-1], x_d[1])
+    # features['dygram_-1|+1'] = "{}|{}".format(y_d[-1], y_d[1])
     features['dxgram_-2|-1|+1|+2'] = "{}|{}|{}|{}".format(x_d[-2], x_d[-1], x_d[1], x_d[2])
     features['dxgram_-3|-2|-1|+1|+2|+3'] = "{}|{}|{}|{}|{}|{}".format(x_d[-3], x_d[-2], x_d[-1], x_d[1], x_d[2], x_d[3])
 
@@ -126,20 +133,14 @@ def my_note2features(notes, i, staff, categorical=False):
         # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
 
     black = dict()
-    black[0] = str(c.black_key(notes, i))
     black[-1] = str(c.black_key(notes, i-1))
+    black[0] = str(c.black_key(notes, i))
     black[1] = str(c.black_key(notes, i+1))
-    # features['blackgram'] = "{}|{}".format(black[-1], black[0])
 
-    # 56.83
     features['black:-1'] = black[-1]
     features['black'] = black[0]
     features['black:+1'] = black[1]
-
-    # 57.18
-    features['level_change'] = "0"
-    if y_d[-1] != 0:
-        features['level_change'] = "1"
+    features['black3gram'] = "{}|{}|{}".format(black[-1], black[0], black[1])
 
     features['returning'] = "0"
     if x_d[-2] == 0:
