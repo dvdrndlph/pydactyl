@@ -47,10 +47,10 @@ import pydactyl.util.CrfUtil as c
 # TEST_METHOD = 'cross-validate'
 # TEST_METHOD = 'preset'
 TEST_METHOD = 'random'
-# STAFFS = ['upper', 'lower']
+STAFFS = ['upper', 'lower']
 # STAFFS = ['upper']
+# STAFFS = ['lower']
 
-STAFFS = ['lower']
 # CORPUS_NAMES = ['full_american_by_annotator']
 # CORPUS_NAMES = ['complete_layer_one']
 # CORPUS_NAMES = ['scales']
@@ -104,9 +104,12 @@ def get_attr_desc_dict(X):
     # All other attributes go in as continuous.
     attr_names = X[0][1].keys()
     for name in attr_names:
-        if len(STAFFS) < 2 and name == 'staff':
-            continue
-        ad_dict[name] = {'encoding': 'continuous'}
+        # if len(STAFFS) < 2 and name == 'staff':
+        #     continue
+        if name == 'staff':
+            ad_dict[name] = {'encoding': 'categorical'}
+        else:
+            ad_dict[name] = {'encoding': 'continuous'}
     return ad_dict
 
 

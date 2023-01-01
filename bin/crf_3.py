@@ -109,16 +109,19 @@ def my_note2features(notes, i, staff, categorical=False):
     features['x_distance:+3'], features['y_distance:+3'] = x_d[+3], y_d[+3]
     features['x_distance:+4'], features['y_distance:+4'] = x_d[+4], y_d[+4]
 
-    # features['y_gram'] = "{}|{}|{}|{}".format(y_d[-2], y_d[-1], y_d[1], y_d[2])
+    features['dgram_-1|+1'] = "{}|{}".format(x_d[-1], x_d[1])
+    features['dgram_-2|-1|+1|+2'] = "{}|{}|{}|{}".format(x_d[-2], x_d[-1], x_d[1], x_d[2])
+    # features['dgram_-3|-2|-1|+1|+2|+3'] = "{}|{}|{}|{}|{}|{}".format(x_d[-3], x_d[-2], x_d[-1], x_d[1], x_d[2], x_d[3])
 
     # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
     left_chord_notes, right_chord_notes = c.chordings(notes=notes, middle_i=i)
     features['left_chord'] = left_chord_notes
     features['right_chord'] = right_chord_notes
 
-    features['staff'] = 0
-    if staff == "upper":
-        features['staff'] = 1
+    features['staff'] = staff
+    # features['staff'] = 0
+    # if staff == "upper":
+    #     features['staff'] = 1
         # @100: [0.54495717 0.81059147 0.81998371 0.68739401 0.73993751]
         # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
 
@@ -134,36 +137,39 @@ def my_note2features(notes, i, staff, categorical=False):
     features['black:+1'] = black[1]
 
     # 57.18
-    features['level_change'] = 0
+    features['level_change'] = "0"
     if y_d[-1] != 0:
-        features['level_change'] = 1
+        features['level_change'] = "1"
 
-    features['returning'] = 0
+    features['returning'] = "0"
     if x_d[-2] == 0:
-        features['returning'] = 1  # .5486
-    features['will_return'] = 0
+        features['returning'] = "1"  # .5486
+    features['will_return'] = "0"
     if x_d[+2] == 0:
-        features['will_return'] = 1  # .5562
+        features['will_return'] = "1"  # .5562
 
     # 57.18 w/both
-    features['ascending'] = 0
+    features['ascending'] = "0"
     if x_d[-1] < 0 and x_d[+1] > 0:
-        features['ascending'] = 1
-    features['descending'] = 0
+        features['ascending'] = "1"
+    features['descending'] = "0"
     if x_d[-1] > 0 and x_d[+1] < 0:
-        features['descending'] = 1
+        features['descending'] = "1"
 
+    # The n-grams might be at a disadvantage against distances, as they provide less opportunities to
+    # learn from isomorphic situations.
     # pit = dict()
     # pit[-3], pit[-2], pit[-1], pit[0], pit[1], pit[2], pit[3] = c.get_pit_strings(notes, i, range=3)
-    #
+    # features['pit'] = pit[0]
     # features['pit_-1|0'] = pit[-1] + '|' + pit[0]
     # features['pit_0|+1'] = pit[0] + '|' + pit[1]
-    # features['pit_-1|0|+1'] = pit[-1] + '|' + pit[0] + pit[1]
+    # features['pit_-1|0|+1'] = pit[-1] + '|' + pit[0] + '|' + pit[1]
+    # features['pit_-2|-1|0|+1|+2'] = "{}|{}|{}|{}|{}".format(pit[-2], pit[-1], pit[0], pit[1], pit[2])
 
     # Impact of large leaps? Costs max out, no? Maybe not.
-    features['leap'] = 0
+    features['leap'] = "0"
     if c.leap_is_excessive(notes, i):
-        features['leap'] = 1
+        features['leap'] = "1"
 
     oon = notes[i]
     m21_note: note.Note = oon['note']
