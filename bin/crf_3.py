@@ -100,18 +100,18 @@ def my_note2features(notes, i, staff, categorical=False):
     x_d[+3], y_d[+3] = c.lattice_distance(notes=notes, from_i=i, to_i=i+3)
     x_d[+4], y_d[+4] = c.lattice_distance(notes=notes, from_i=i, to_i=i+4)
 
-    features['x_distance:-4'], features['y_distance:-4'] = x_d[-4], y_d[-4]
+    # features['x_distance:-4'], features['y_distance:-4'] = x_d[-4], y_d[-4]
     features['x_distance:-3'], features['y_distance:-3'] = x_d[-3], y_d[-3]
     features['x_distance:-2'], features['y_distance:-2'] = x_d[-2], y_d[-2]
     features['x_distance:-1'], features['y_distance:-1'] = x_d[-1], y_d[-1]
     features['x_distance:+1'], features['y_distance:+1'] = x_d[+1], y_d[+1]
     features['x_distance:+2'], features['y_distance:+2'] = x_d[+2], y_d[+2]
     features['x_distance:+3'], features['y_distance:+3'] = x_d[+3], y_d[+3]
-    features['x_distance:+4'], features['y_distance:+4'] = x_d[+4], y_d[+4]
+    # features['x_distance:+4'], features['y_distance:+4'] = x_d[+4], y_d[+4]
 
-    features['dgram_-1|+1'] = "{}|{}".format(x_d[-1], x_d[1])
-    features['dgram_-2|-1|+1|+2'] = "{}|{}|{}|{}".format(x_d[-2], x_d[-1], x_d[1], x_d[2])
-    # features['dgram_-3|-2|-1|+1|+2|+3'] = "{}|{}|{}|{}|{}|{}".format(x_d[-3], x_d[-2], x_d[-1], x_d[1], x_d[2], x_d[3])
+    features['dxgram_-1|+1'] = "{}|{}".format(x_d[-1], x_d[1])
+    features['dxgram_-2|-1|+1|+2'] = "{}|{}|{}|{}".format(x_d[-2], x_d[-1], x_d[1], x_d[2])
+    features['dxgram_-3|-2|-1|+1|+2|+3'] = "{}|{}|{}|{}|{}|{}".format(x_d[-3], x_d[-2], x_d[-1], x_d[1], x_d[2], x_d[3])
 
     # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
     left_chord_notes, right_chord_notes = c.chordings(notes=notes, middle_i=i)
