@@ -23,18 +23,13 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 #
-# Second-order linear chain CRF piano fingering models, implemented using PySeqLab,
-# which does not seem to provide a way to predefine "edge-observation" functions
-# over both observations and labels.
-#
-# from pyseqlab.utilities import SequenceStruct
 import sklearn_crfsuite as crf
 from sklearn_crfsuite import metrics
 from sklearn.model_selection import train_test_split, cross_val_score
 from pydactyl.util.DExperiment import DExperiment
 from music21 import note
 import pydactyl.util.CrfUtil as c
-
+import pydactyl.crf.Crf3 as Crf3;
 
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
@@ -80,128 +75,14 @@ def train_and_evaluate(the_model, x_train, y_train, x_test, y_test):
     evaluate_trained_model(the_model=the_model, x_test=x_test, y_test=y_test)
 
 
-def my_note2features(notes, i, staff, categorical=False):
-    features = {}
-
-    features['BOP'] = "0"
-    if i == 0:
-        features['BOP'] = "1"
-    features['EOP'] = "0"
-    if i >= len(notes) - 1:
-        features['EOP'] = "1"
-
-    x_d = dict()
-    y_d = dict()
-    x_d[-4], y_d[-4] = c.lattice_distance(notes=notes, from_i=i-4, to_i=i)
-    x_d[-3], y_d[-3] = c.lattice_distance(notes=notes, from_i=i-3, to_i=i)
-    x_d[-2], y_d[-2] = c.lattice_distance(notes=notes, from_i=i-2, to_i=i)
-    x_d[-1], y_d[-1] = c.lattice_distance(notes=notes, from_i=i-1, to_i=i)
-    x_d[+1], y_d[+1] = c.lattice_distance(notes=notes, from_i=i, to_i=i+1)
-    x_d[+2], y_d[+2] = c.lattice_distance(notes=notes, from_i=i, to_i=i+2)
-    x_d[+3], y_d[+3] = c.lattice_distance(notes=notes, from_i=i, to_i=i+3)
-    x_d[+4], y_d[+4] = c.lattice_distance(notes=notes, from_i=i, to_i=i+4)
-
-    features['x_distance:-3'] = x_d[-3]
-    features['x_distance:-2'] = x_d[-2]
-    features['x_distance:-1'] = x_d[-1]
-    features['x_distance:+1'] = x_d[+1]
-    features['x_distance:+2'] = x_d[+2]
-    features['x_distance:+3'] = x_d[+3]
-
-    features['y_distance:-3'] = y_d[-3]
-    features['y_distance:-2'] = y_d[-2]
-    features['y_distance:-1'] = y_d[-1]
-    features['y_distance:+1'] = y_d[+1]
-    features['y_distance:+2'] = y_d[+2]
-    features['y_distance:+3'] = y_d[+3]
-
-    features['dxgram_-1|+1'] = "{}|{}".format(x_d[-1], x_d[1])
-    # features['dygram_-1|+1'] = "{}|{}".format(y_d[-1], y_d[1])
-    features['dxgram_-2|-1|+1|+2'] = "{}|{}|{}|{}".format(x_d[-2], x_d[-1], x_d[1], x_d[2])
-    features['dxgram_-3|-2|-1|+1|+2|+3'] = "{}|{}|{}|{}|{}|{}".format(x_d[-3], x_d[-2], x_d[-1], x_d[1], x_d[2], x_d[3])
-
-    # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
-    left_chord_notes, right_chord_notes = c.chordings(notes=notes, middle_i=i)
-    features['left_chord'] = left_chord_notes
-    features['right_chord'] = right_chord_notes
-
-    features['staff'] = staff
-    # features['staff'] = 0
-    # if staff == "upper":
-    #     features['staff'] = 1
-        # @100: [0.54495717 0.81059147 0.81998371 0.68739401 0.73993751]
-        # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
-
-    black = dict()
-    black[-1] = str(c.black_key(notes, i-1))
-    black[0] = str(c.black_key(notes, i))
-    black[1] = str(c.black_key(notes, i+1))
-
-    features['black:-1'] = black[-1]
-    features['black'] = black[0]
-    features['black:+1'] = black[1]
-    features['black3gram'] = "{}|{}|{}".format(black[-1], black[0], black[1])
-
-    features['returning'] = "0"
-    if x_d[-2] == 0:
-        features['returning'] = "1"  # .5486
-    features['will_return'] = "0"
-    if x_d[+2] == 0:
-        features['will_return'] = "1"  # .5562
-
-    # 57.18 w/both
-    features['ascending'] = "0"
-    if x_d[-1] < 0 and x_d[+1] > 0:
-        features['ascending'] = "1"
-    features['descending'] = "0"
-    if x_d[-1] > 0 and x_d[+1] < 0:
-        features['descending'] = "1"
-
-    # The n-grams might be at a disadvantage against distances, as they provide less opportunities to
-    # learn from isomorphic situations.
-    # pit = dict()
-    # pit[-3], pit[-2], pit[-1], pit[0], pit[1], pit[2], pit[3] = c.get_pit_strings(notes, i, range=3)
-    # features['pit'] = pit[0]
-    # features['pit_-1|0'] = pit[-1] + '|' + pit[0]
-    # features['pit_0|+1'] = pit[0] + '|' + pit[1]
-    # features['pit_-1|0|+1'] = pit[-1] + '|' + pit[0] + '|' + pit[1]
-    # features['pit_-2|-1|0|+1|+2'] = "{}|{}|{}|{}|{}".format(pit[-2], pit[-1], pit[0], pit[1], pit[2])
-
-    # Impact of large leaps? Costs max out, no? Maybe not.
-    features['leap'] = "0"
-    if c.leap_is_excessive(notes, i):
-        features['leap'] = "1"
-
-    oon = notes[i]
-    m21_note: note.Note = oon['note']
-    on_velocity = m21_note.volume.velocity
-    if on_velocity is None:
-        on_velocity = 64
-    features['velocity'] = on_velocity
-
-    tempi = c.tempo_features(notes=notes, middle_i=i)
-    for k in tempi:
-        features[k] = tempi[k]
-
-    # arts = c.articulation_features(notes=notes, middle_i=i)
-    # for k in arts:
-    #     features[k] = arts[k]
-
-    # reps_before, reps_after = c.repeat_features(notes=notes, middle_i=i)
-    # features['repeats_before'] = reps_before
-    # features['repeats_after'] = reps_after
-
-    return features
-
-
 #####################################################
 # MAIN BLOCK
 #####################################################
 corpora_str = "-".join(CORPUS_NAMES)
-experiment_name = corpora_str + '__' + TEST_METHOD + '__3'
+experiment_name = corpora_str + '__' + TEST_METHOD + '__' + Crf3.CRF_VERSION
 ex = c.unpickle_it(obj_type="DExperiment", file_name=experiment_name)
 if ex is None:
-    ex = DExperiment(corpus_names=CORPUS_NAMES, model_version="3", note_func=my_note2features)
+    ex = DExperiment(corpus_names=CORPUS_NAMES, model_version=Crf3.CRF_VERSION, note_func=Crf3.my_note2features)
     c.load_data(ex=ex, experiment_name=experiment_name, staffs=STAFFS, corpus_names=CORPUS_NAMES)
 
 ex.print_summary(test_method=TEST_METHOD)
@@ -261,5 +142,5 @@ if not have_trained_model:
 # print("Unpickled Flat F1: {}".format(flat_f1))
 
 print("Run of crf model {} against {} test set over {} corpus has completed successfully.".format(
-    "3", TEST_METHOD, corpora_str))
+    Crf3.CRF_VERSION, TEST_METHOD, corpora_str))
 print("Clean list: {}".format(list(c.CLEAN_LIST.keys())))

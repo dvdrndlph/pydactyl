@@ -35,11 +35,13 @@ from pathlib import Path
 from pyseqlab.utilities import SequenceStruct
 from pyseqlab.attributes_extraction import GenericAttributeExtractor
 from pyseqlab.utilities import TemplateGenerator
-from pyseqlab.features_extraction import FeatureExtractor
+from pyseqlab.features_extraction import FeatureExtractor, FOFeatureExtractor
+from pyseqlab.fo_crf import FirstOrderCRF, FirstOrderCRFModelRepresentation
 from pyseqlab.workflow import GenericTrainingWorkflow
 from pyseqlab.ho_crf_ad import HOCRFAD, HOCRFADModelRepresentation
 from sklearn_crfsuite import metrics
 from pydactyl.util.DExperiment import DExperiment
+import pydactyl.crf.Crf3 as crf3
 import pydactyl.util.CrfUtil as c
 
 # CROSS_VALIDATE = False
@@ -98,65 +100,64 @@ def get_sequence_struct_list(X, Y):
 
 def get_attr_desc_dict(X):
     ad_dict = {}
-        # 'BOP': {'description': 'beginning of phrase', 'encoding': 'categorical'},
-        # 'EOP': {'description': 'end of phrase', 'encoding': 'categorical'},
-    # }
-    # All other attributes go in as continuous.
+    # 'BOP': {'description': 'beginning of phrase', 'encoding': 'categorical'},
+    # 'EOP': {'description': 'end of phrase', 'encoding': 'categorical'},
     attr_names = X[0][1].keys()
     for name in attr_names:
-        # if len(STAFFS) < 2 and name == 'staff':
-        #     continue
-        if name == 'staff':
+        if type(X[0][1][name]) is str:
             ad_dict[name] = {'encoding': 'categorical'}
         else:
             ad_dict[name] = {'encoding': 'continuous'}
+    # What's this about integers being categorical in filters?!
     return ad_dict
 
 
-def experiment_templates_XY(template_gen, track_attr_name, template_XY):
-    # combine all the previous specifications/templates
-    # template_gen.generate_template_XY(track_attr_name, ('1-gram:2-grams', range(-1,2)), '1-state', template_XY)
-    # template_gen.generate_template_XY(track_attr_name, ('3-grams', range(-1,2)), '1-state:2-states', template_XY)
-    # print("template_XY: all previous templates combined")
-    template_gen.generate_template_XY(track_attr_name, ('1-gram', range(0, 1)), '1-state:2-state', template_XY)
-    print("template_XY: current observation, current label = w[0], Y[0]")
-    print(template_XY)
-
-
-def experiment_templates_Y(template_gen):
-    # generating templates based on the current and prior labels
-    template_Y = template_gen.generate_template_Y('1-state')
-    print("template_Y: current label")
-    print(template_Y)
-    return template_Y
-
-
-def create_hocrf_model(ex, working_dir):
-    train_seqs = get_sequence_struct_list(X=ex.x, Y=ex.y)
-    # train_seqs = get_sequence_struct_list(X=ex.x_train, Y=ex.y_train)
-    # test_seqs = get_sequence_struct_list(X=ex.x_test, Y=ex.y_test)
-    attr_desc = get_attr_desc_dict(X=ex.x)
-    generic_attr_extractor = GenericAttributeExtractor(attr_desc)
-    print("attr_desc {}".format(generic_attr_extractor.attr_desc))
-    seq_0 = train_seqs[0]
-    generic_attr_extractor.generate_attributes(seq_0, seq_0.get_y_boundaries())
-    print("extracted attributes saved in seq_1.seg_attr:")
-    print(seq_0.seg_attr)
-
+def generate_templates_alltracks(attr_desc):
     tg = TemplateGenerator()
-    template_XY = {}
+    template_XY = dict()
     for track_attr_name in attr_desc:
-        experiment_templates_XY(template_gen=tg, track_attr_name=track_attr_name, template_XY=template_XY)
-    template_Y = experiment_templates_Y(template_gen=tg)
-    fx = FeatureExtractor(templateX=template_XY, templateY=template_Y, attr_desc=attr_desc)
-    extracted_features = fx.extract_seq_features_perboundary(seq_0)
+        tg.generate_template_XY(track_attr_name, ('1-gram', range(0, 1)), '1-state:2-state', template_XY)
+    template_Y = tg.generate_template_Y('1-state')
+    return template_XY, template_Y
+
+
+def generate_attributes_alltracks(attr_extractor, seq):
+    print("my_attr_extractor.attr_desc")
+    print(attr_extractor.attr_desc)
+    print("-" * 40)
+    print("sequence")
+    print(seq)
+    seq.seg_attr.clear()
+    attr_extractor.generate_attributes(seq, seq.get_y_boundaries())
+    print("extracted attributes saved in seq.seg_attr")
+    print(seq.seg_attr)
+    print("-"*40)
+
+
+def get_workflow(ex, working_dir, seqs):
+    attr_desc = get_attr_desc_dict(X=ex.x)
+    ax = GenericAttributeExtractor(attr_desc)
+    seq_1 = seqs[0]
+    template_XY, template_Y = generate_templates_alltracks(attr_desc)
+    generate_attributes_alltracks(attr_extractor=ax, seq=seq_1)
+
+    fx = FOFeatureExtractor(templateX=template_XY, templateY=template_Y, attr_desc=attr_desc)
+    extracted_features = fx.extract_seq_features_perboundary(seq_1)
     print("extracted features")
     print(extracted_features)
 
     fx_filter = None
-    workflow = GenericTrainingWorkflow(generic_attr_extractor, fx, fx_filter,
-                                       HOCRFADModelRepresentation, HOCRFAD,
+    workflow = GenericTrainingWorkflow(ax, fx, fx_filter,
+                                       FirstOrderCRFModelRepresentation, FirstOrderCRF,
                                        working_dir)
+    return workflow
+
+
+def create_focrf_model(ex, working_dir):
+    train_seqs = get_sequence_struct_list(X=ex.x, Y=ex.y)
+    # train_seqs = get_sequence_struct_list(X=ex.x_train, Y=ex.y_train)
+    # test_seqs = get_sequence_struct_list(X=ex.x_test, Y=ex.y_test)
+    workflow = get_workflow(ex, working_dir, seqs=train_seqs)
     # use all passed data as training data -- no splitting
     data_split_options = {'method': 'none'}
     data_split = workflow.seq_parsing_workflow(data_split_options, seqs=train_seqs, full_parsing=True)
@@ -164,34 +165,52 @@ def create_hocrf_model(ex, working_dir):
     print("data_split: 'none' option ")
     print(data_split)
     print()
-
-    # build and return a CRFs model
     # folder name will be f_0 as fold 0
     crf_m = workflow.build_crf_model(data_split[0]['train'], "f_0")
     print()
     print("type of built model:")
     print(type(crf_m))
     print()
-
     print("number of generated features:")
     print(len(crf_m.model.modelfeatures_codebook))
-    print("features:")
-    pprint.pprint(crf_m.model.modelfeatures)
+    # print("features:")
+    # pprint.pprint(crf_m.model.modelfeatures)
 
-    trained_models_dir = {}
     # use L-BFGS-B method for training
-    optimization_options = {"method": "L-BFGS-B",
-                            "regularization_type": "l2",
-                            "regularization_value": 0.02,
-                            # "maxiter": 20
-                            }
+    optimization_options = {
+        "method": "L-BFGS-B",
+        "regularization_type": "l2",
+        "regularization_value": 0,
+        "maxiter": 2
+    }
+    # use SGA method for training
+    optimization_options = {
+        "method": "SGA",
+        "num_epochs": 5
+    }
     # start with 0 weights
     crf_m.weights.fill(0)
     train_seqs_id = data_split[0]['train']
     model_dir = workflow.train_model(train_seqs_id, crf_m, optimization_options)
-    trained_models_dir['L-BFGS-B'] = model_dir
+    print("Trained model directory: {}".format(model_dir))
     print("*" * 50)
 
+
+def evaluate_trained_model(ex, working_dir, model_dir):
+    test_seqs = get_sequence_struct_list(X=ex.x, Y=ex.y)
+    # test_seqs = get_sequence_struct_list(X=ex.x_test, Y=ex.y_test)
+    workflow = get_workflow(ex, working_dir, seqs=test_seqs)
+    data_split_options = {'method': 'none'}
+    data_split = workflow.seq_parsing_workflow(data_split_options, seqs=test_seqs, full_parsing=True)
+
+    opts = {
+        'seqs_info': workflow.seqs_info,
+        'model_eval': True,
+        'metric': 'f1'
+    }
+    perf = workflow.use_model(model_dir, opts)
+    metric = opts['metric']
+    print("metric {}: {}".format(metric, perf[metric]))
 
 #####################################################
 # MAIN BLOCK
@@ -200,15 +219,21 @@ version_str = 'psl_3'
 start_dt = datetime.now()
 corpora_str = "-".join(CORPUS_NAMES)
 staff_str = "-".join(STAFFS)
-WORKING_DIR = '/tmp/pyseqlab/' + corpora_str + '/' + staff_str + '/' + version_str
+WORKING_DIR = '/users/dave/pyseqlab/' + corpora_str + '/' + staff_str + '/' + version_str
+model_dir = '/users/dave/pyseqlab/scales-arpeggios-broken/upper-lower/psl_3/working_dir/models/2023_1_1-23_25_9_763552'
+model_dir = '/users/dave/pyseqlab/scales-arpeggios-broken/upper-lower/psl_3/working_dir/models/2023_1_2-0_54_55_105891'
 experiment_name = corpora_str + '__' + TEST_METHOD + '__' + version_str
 ex = c.unpickle_it(obj_type="DExperiment", file_name=experiment_name)
 if ex is None:
-    ex = DExperiment(corpus_names=CORPUS_NAMES, model_version=version_str)
+    ex = DExperiment(corpus_names=CORPUS_NAMES, model_version=version_str, note_func=crf3.my_note2features)
     c.load_data(ex=ex, experiment_name=experiment_name, staffs=STAFFS, corpus_names=CORPUS_NAMES)
 
 ex.print_summary(test_method=TEST_METHOD)
-create_hocrf_model(ex=ex, working_dir=WORKING_DIR)
+evaluate_trained_model(ex=ex, working_dir=WORKING_DIR, model_dir=model_dir)
+exit(0)
+create_focrf_model(ex=ex, working_dir=WORKING_DIR)
+exit(0)
+
 #
 # # working_path = Path(WORKING_DIR)
 # # have_model = False
