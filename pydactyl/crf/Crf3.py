@@ -106,7 +106,7 @@ def my_note2features(notes, i, staff):
     if x_d[-1] > 0 and x_d[+1] < 0:
         features['descending'] = "1"
 
-    # The n-grams might be at a disadvantage against distances, as they provide less opportunities to
+    # The n-grams might be at a disadvantage against distances, as they provide fewer opportunities to
     # learn from isomorphic situations.
     # pit = dict()
     # pit[-3], pit[-2], pit[-1], pit[0], pit[1], pit[2], pit[3] = c.get_pit_strings(notes, i, range=3)
