@@ -54,8 +54,6 @@ CORPUS_NAMES = ['pig_seg']
 #####################################################
 # FUNCTIONS
 #####################################################
-
-
 def evaluate_trained_model(the_model, x_test, y_test):
     labels = list(the_model.classes_)
     print(labels)

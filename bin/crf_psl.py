@@ -49,8 +49,8 @@ import pydactyl.util.CrfUtil as c
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
 # TEST_METHOD = 'cross-validate'
-# TEST_METHOD = 'preset'
-TEST_METHOD = 'random'
+TEST_METHOD = 'preset'
+# TEST_METHOD = 'random'
 STAFFS = ['upper', 'lower']
 # STAFFS = ['upper']
 # STAFFS = ['lower']
@@ -61,29 +61,15 @@ STAFFS = ['upper', 'lower']
 # CORPUS_NAMES = ['arpeggios']
 # CORPUS_NAMES = ['broken']
 # CORPUS_NAMES = ['complete_layer_one', 'scales', 'arpeggios', 'broken']
-CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
+# CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['pig']
 # CORPUS_NAMES = ['pig_indy']
-# CORPUS_NAMES = ['pig_seg']
+CORPUS_NAMES = ['pig_seg']
 
 
 #####################################################
 # FUNCTIONS
 #####################################################
-def evaluate_trained_model(the_model, x_test, y_test):
-    labels = list(the_model.classes_)
-    print(labels)
-    y_predicted = my_crf.predict(x_test)
-    flat_weighted_f1 = metrics.flat_f1_score(y_test, y_predicted, average='weighted', labels=labels)
-    print("Flat weighted F1: {}".format(flat_weighted_f1))
-
-    sorted_labels = sorted(
-        labels,
-        key=lambda name: (name[1:], name[0])
-    )
-    print(metrics.flat_classification_report(y_test, y_predicted, labels=sorted_labels, digits=4))
-
-
 def train_and_evaluate(the_model, x_train, y_train, x_test, y_test):
     the_model.fit(x_train, y_train)
     evaluate_trained_model(the_model=the_model, x_test=x_test, y_test=y_test)
@@ -189,9 +175,9 @@ def create_crf_model(ex, working_dir, high_order=True):
     optimization_options = {
         "method": "L-BFGS-B",
         "regularization_type": "l2",
-        "regularization_value": 0
+        "regularization_value": 0,
+        "maxiter": 100
     }
-    # "maxiter": 2
     # use SGA method for training
     # optimization_options = {
     #     "method": "SGA",
@@ -214,19 +200,34 @@ def evaluate_trained_model(ex, experiment_name, model_dir):
     output_dir = '/tmp/experiment_name/' + experiment_name
     sep = '\t'
 
-    test_seqs = get_sequence_struct_list(X=ex.x, Y=ex.y)
-    # test_seqs = get_sequence_struct_list(X=ex.x_test, Y=ex.y_test)
+    # test_seqs = get_sequence_struct_list(X=ex.x, Y=ex.y)
+    test_seqs = get_sequence_struct_list(X=ex.x_test, Y=ex.y_test)
     # decoded_sequences = model.decode_seqs(decoding_method, output_dir, seqs=test_seqs,
     #                                       file_name='decoding.txt', sep=sep)
-    decoded_sequences = model.decode_seqs(decoding_method, output_dir, seqs=test_seqs, sep=sep)
+    decoded_seqs = model.decode_seqs(decoding_method, output_dir, seqs=test_seqs, sep=sep)
     print()
-    for seq_id in decoded_sequences:
+    y_predicted = list()
+    y_test = list()
+    labels = set()
+    for seq_id in decoded_seqs:
         print("seq_id ", seq_id)
         print("predicted labels:")
-        print(decoded_sequences[seq_id]['Y_pred'])
+        predicted = decoded_seqs[seq_id]['Y_pred']
+        for label in predicted:
+            labels.add(label)
+        print(predicted)
+        y_predicted.append(predicted)
         print("reference labels:")
-        print(decoded_sequences[seq_id]['seq'].flat_y)
+        truth = decoded_seqs[seq_id]['seq'].flat_y
+        print(truth)
+        y_test.append(truth)
         print("-" * 50)
+    labels = list(labels)
+    flat_weighted_f1 = metrics.flat_f1_score(y_test, y_predicted, average='weighted', labels=labels)
+    print("Flat weighted F1: {}".format(flat_weighted_f1))
+
+    sorted_labels = sorted(labels, key=lambda name: (name[1:], name[0]))
+    print(metrics.flat_classification_report(y_test, y_predicted, labels=sorted_labels, digits=4))
 
 
 #####################################################
@@ -236,8 +237,9 @@ version_str = 'psl_3'
 start_dt = datetime.now()
 corpora_str = "-".join(CORPUS_NAMES)
 staff_str = "-".join(STAFFS)
-WORKING_DIR = '/users/dave/pyseqlab/' + corpora_str + '/' + staff_str + '/' + version_str
-model_dir = '/users/dave/pyseqlab/scales-arpeggios-broken/upper-lower/psl_3/working_dir/models/2023_1_2-2_28_33_167790'
+WORKING_DIR = os.path.expanduser('~/pyseqlab/' + corpora_str + '/' + staff_str + '/' + version_str)
+model_dir = WORKING_DIR + '/working_dir/models/2023_1_2-2_28_33_167790'
+model_dir = WORKING_DIR + '/working_dir/models/2023_1_5-2_49_3_151841'
 experiment_name = corpora_str + '__' + TEST_METHOD + '__' + version_str
 ex = c.unpickle_it(obj_type="DExperiment", file_name=experiment_name)
 if ex is None:
@@ -245,8 +247,8 @@ if ex is None:
     c.load_data(ex=ex, experiment_name=experiment_name, staffs=STAFFS, corpus_names=CORPUS_NAMES)
 
 ex.print_summary(test_method=TEST_METHOD)
-# evaluate_trained_model(ex=ex, experiment_name=experiment_name, model_dir=model_dir)
-# exit(0)
+evaluate_trained_model(ex=ex, experiment_name=experiment_name, model_dir=model_dir)
+exit(0)
 create_crf_model(ex=ex, working_dir=WORKING_DIR)
 exit(0)
 
