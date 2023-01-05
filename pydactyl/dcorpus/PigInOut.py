@@ -37,7 +37,7 @@ from .DScore import DScore
 
 MICROSECONDS_PER_BEAT = 500000  # at 120 bpm
 MS_PER_BEAT = MICROSECONDS_PER_BEAT / 1000
-REPO_DIR = '/Users/dave/tb2/'
+REPO_DIR = os.path.expanduser('~/tb2/')
 PIG_BASE_DIR = REPO_DIR + 'didactyl/dd/corpora/pig/'
 PIG_RESULT_FHMM3_DIR = PIG_BASE_DIR + 'Result_FHMM3/'
 PIG_DATASET_DIR = PIG_BASE_DIR + 'PianoFingeringDataset_v1.00/'

@@ -33,10 +33,10 @@ from pydactyl.dactyler.Parncutt import TrigramNode, is_black, ImaginaryBlackKeyR
 
 SEGREGATE_HANDS = False
 # CLEAN_LIST = {}  # Reuse all pickled results.
-CLEAN_LIST = {'crf': True, 'DExperiment': True}
+# CLEAN_LIST = {'crf': True, 'DExperiment': True}
 # CLEAN_LIST = {'DCorpus': True}
 # CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
-# CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
+CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 
 PICKLE_BASE_DIR = '/tmp/pickle/'
 MAX_LEAP = 16

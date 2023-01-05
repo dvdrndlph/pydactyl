@@ -1,4 +1,6 @@
 __author__ = 'David Randolph'
+
+import os.path
 # Copyright (c) 2021-2022 David A. Randolph.
 #
 # Permission is hereby granted, free of charge, to any person
@@ -24,7 +26,7 @@ __author__ = 'David Randolph'
 from abc import ABC
 import copy
 import re
-from pydactyl.dcorpus.DCorpus import DCorpus, DScore, DAnnotation
+from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
 from pydactyl.dcorpus.PigInOut import PIG_SEGREGATED_ABCD_DIR
 from pydactyl.dcorpus.PianoFingering import PianoFingering
 from pydactyl.dcorpus.DEvaluation import DEvaluation, DEvalFunction
@@ -33,8 +35,8 @@ from pydactyl.dactyler.Parncutt import FINGER_SPANS, BALLIAUW_LARGE_FINGER_SPANS
     BALLIAUW_MEDIUM_FINGER_SPANS, BALLIAUW_SMALL_FINGER_SPANS, ImaginaryBlackKeyRuler
 from pydactyl.dactyler.Random import Random
 
-CORPORA_DIR = '/Users/dave/tb2/didactyl/dd/corpora/'
-OUTPUT_DIR = '/Users/dave/tb2/doc/data/badgerow'
+CORPORA_DIR = os.path.expanduser('~/tb2/didactyl/dd/corpora/')
+OUTPUT_DIR = os.path.expanduser('~/tb2/doc/data/badgerow')
 PIG_INDY_DIR = CORPORA_DIR + 'pig/PianoFingeringDataset_v1.00/individual_abcd/'
 PIG_DIR = CORPORA_DIR + 'pig/PianoFingeringDataset_v1.00/abcd/'
 BERINGER_DIR = CORPORA_DIR + 'beringer/'
