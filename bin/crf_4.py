@@ -27,13 +27,13 @@ import sklearn_crfsuite as crf
 from sklearn_crfsuite import metrics
 from sklearn.model_selection import train_test_split, cross_val_score
 from pydactyl.util.DExperiment import DExperiment
-from music21 import note
 import pydactyl.util.CrfUtil as c
-import pydactyl.crf.Crf3 as Crf3;
+import pydactyl.crf.Crf4 as model;
 
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
 # TEST_METHOD = 'cross-validate'
+REVERSE = False
 TEST_METHOD = 'preset'
 # TEST_METHOD = 'random'
 STAFFS = ['upper', 'lower']
@@ -78,10 +78,10 @@ def train_and_evaluate(the_model, x_train, y_train, x_test, y_test):
 # MAIN BLOCK
 #####################################################
 corpora_str = "-".join(CORPUS_NAMES)
-experiment_name = corpora_str + '__' + TEST_METHOD + '__' + Crf3.CRF_VERSION
+experiment_name = corpora_str + '__' + TEST_METHOD + '__' + model.CRF_VERSION
 ex = c.unpickle_it(obj_type="DExperiment", file_name=experiment_name)
 if ex is None:
-    ex = DExperiment(corpus_names=CORPUS_NAMES, model_version=Crf3.CRF_VERSION, note_func=Crf3.my_note2features)
+    ex = DExperiment(corpus_names=CORPUS_NAMES, model_version=model.CRF_VERSION, note_func=model.my_note2features)
     c.load_data(ex=ex, experiment_name=experiment_name, staffs=STAFFS, corpus_names=CORPUS_NAMES)
 
 ex.print_summary(test_method=TEST_METHOD)
@@ -112,20 +112,21 @@ elif TEST_METHOD == 'preset':
     else:
         predictions = train_and_evaluate(the_model=my_crf, x_train=ex.x_train,
                                          y_train=ex.y_train, x_test=ex.x_test, y_test=ex.y_test)
-    # total_simple_match_count, total_annot_count, simple_match_rate = \
-        # ex.get_simple_match_rate(predictions=predictions, output=True)
-    # result, complex_piece_results = ex.get_complex_match_rates(weight=False)
-    # print("Unweighted avg M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+    total_simple_match_count, total_annot_count, simple_match_rate = \
+        ex.get_simple_match_rate(predictions=predictions, output=True)
+    print("Simple match rate: {}".format(simple_match_rate))
+    # result, complex_piece_results = ex.get_complex_match_rates(predictions=predictions, weight=False)
+    # print("Unweighted avg M for crf{} over {}: {}".format(model.CRF_VERSION, CORPUS_NAMES, result))
     result, my_piece_results = ex.get_my_avg_m(predictions=predictions, weight=False, reuse=False)
-    print("My unweighted avg m for crf{} over {}: {}".format(3, CORPUS_NAMES, result))
+    print("My unweighted avg M for crf{} over {}: {}".format(model.CRF_VERSION, CORPUS_NAMES, result))
     # for key in sorted(complex_piece_results):
         # print("nak {} => {}".format (key, complex_piece_results[key]))
         # print(" my {} => {}".format(key, my_piece_results[key]))
         # print("")
-    # result, piece_results = get_complex_match_rates(ex=ex, weight=True)
-    # print("Weighted avg M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
-    # result, piece_results = get_my_avg_m_gen(ex=ex, weight=True, reuse=True)
-    # print("Weighted avg m_gen for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+    # result, piece_results = ex.get_complex_match_rates(weight=True)
+    # print("Weighted avg M for crf{} over {}: {}".format(model.CRF_VERSION, CORPUS_NAMES, result))
+    result, piece_results = ex.get_my_avg_m(predictions=predictions, weight=True, reuse=True)
+    print("Weighted avg m_gen for crf{} over {}: {}".format(model.CRF_VERSION, CORPUS_NAMES, result))
 else:
     split_x_train, split_x_test, split_y_train, split_y_test = \
         train_test_split(ex.x, ex.y, test_size=0.4, random_state=0)
@@ -142,5 +143,5 @@ if not have_trained_model:
 # print("Unpickled Flat F1: {}".format(flat_f1))
 
 print("Run of crf model {} against {} test set over {} corpus has completed successfully.".format(
-    Crf3.CRF_VERSION, TEST_METHOD, corpora_str))
+    model.CRF_VERSION, TEST_METHOD, corpora_str))
 print("Clean list: {}".format(list(c.CLEAN_LIST.keys())))

@@ -32,6 +32,25 @@ CRF_VERSION = "4"
 def my_note2features(notes, i, staff):
     features = dict()
 
+    # IDEA: Composer as feature.
+    # IDEA: Composer year/decade/century of birth.
+    # IDEA: Period of piece: Baroque, Classical, Romantic, Modern, Rudiment, Other.
+
+    features['staff'] = staff
+    # features['staff'] = 0
+    # if staff == "upper":
+    #     features['staff'] = 1
+    # @100: [0.54495717 0.81059147 0.81998371 0.68739401 0.73993751]
+    # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
+
+    # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
+    chording_cat = c.chording_categories(notes=notes, middle_i=i, staff=staff)
+    # if chording_cat not in ('upper00', 'lower00'):
+    #     print("Chord!")
+    features['chord_cat'] = chording_cat
+    chord_border = c.chord_border(chording_cat)
+    features['chord_border'] = chord_border
+
     features['BOP'] = "0"
     if i == 0:
         features['BOP'] = "1"
@@ -49,6 +68,14 @@ def my_note2features(notes, i, staff):
     x_d[+2], y_d[+2] = c.lattice_distance(notes=notes, from_i=i, to_i=i+2)
     x_d[+3], y_d[+3] = c.lattice_distance(notes=notes, from_i=i, to_i=i+3)
     x_d[+4], y_d[+4] = c.lattice_distance(notes=notes, from_i=i, to_i=i+4)
+    # x_d[-4], y_d[-4] = c.lattice_distance(notes=notes, from_i=i-4, to_i=i-3)
+    # x_d[-3], y_d[-3] = c.lattice_distance(notes=notes, from_i=i-3, to_i=i-2)
+    # x_d[-2], y_d[-2] = c.lattice_distance(notes=notes, from_i=i-2, to_i=i-1)
+    # x_d[-1], y_d[-1] = c.lattice_distance(notes=notes, from_i=i-1, to_i=i)
+    # x_d[+1], y_d[+1] = c.lattice_distance(notes=notes, from_i=i, to_i=i+1)
+    # x_d[+2], y_d[+2] = c.lattice_distance(notes=notes, from_i=i+1, to_i=i+2)
+    # x_d[+3], y_d[+3] = c.lattice_distance(notes=notes, from_i=i+2, to_i=i+3)
+    # x_d[+4], y_d[+4] = c.lattice_distance(notes=notes, from_i=i+3, to_i=i+4)
 
     features['x_distance:-3'] = x_d[-3]
     features['x_distance:-2'] = x_d[-2]
@@ -68,18 +95,6 @@ def my_note2features(notes, i, staff):
     # features['dygram_-1|+1'] = "{}|{}".format(y_d[-1], y_d[1])
     features['dxgram_-2|-1|+1|+2'] = "{}|{}|{}|{}".format(x_d[-2], x_d[-1], x_d[1], x_d[2])
     features['dxgram_-3|-2|-1|+1|+2|+3'] = "{}|{}|{}|{}|{}|{}".format(x_d[-3], x_d[-2], x_d[-1], x_d[1], x_d[2], x_d[3])
-
-    # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
-    left_chord_notes, right_chord_notes = c.chordings(notes=notes, middle_i=i)
-    features['left_chord'] = left_chord_notes
-    features['right_chord'] = right_chord_notes
-
-    features['staff'] = staff
-    # features['staff'] = 0
-    # if staff == "upper":
-    #     features['staff'] = 1
-        # @100: [0.54495717 0.81059147 0.81998371 0.68739401 0.73993751]
-        # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
 
     black = dict()
     black[-1] = str(c.black_key(notes, i-1))

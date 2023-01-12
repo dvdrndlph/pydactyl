@@ -25,6 +25,7 @@ import os
 import copy
 import pickle
 import dill
+import re
 from pathlib import Path
 from music21 import note
 from pydactyl.eval.Corporeal import Corporeal
@@ -33,8 +34,8 @@ from pydactyl.dactyler.Parncutt import TrigramNode, is_black, ImaginaryBlackKeyR
 
 SEGREGATE_HANDS = False
 # CLEAN_LIST = {}  # Reuse all pickled results.
-CLEAN_LIST = {'crf': True}
-# CLEAN_LIST = {'crf': True, 'DExperiment': True}
+# CLEAN_LIST = {'crf': True}
+CLEAN_LIST = {'crf': True, 'DExperiment': True}
 # CLEAN_LIST = {'DCorpus': True}
 # CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
@@ -131,6 +132,7 @@ def get_pit_strings(notes, i, range=4):
         pit_count += 1
     return pit_list
 
+
 def get_trigram_node(notes, annotations, i):
     midi_1 = None
     handed_digit_1 = '-'
@@ -219,27 +221,76 @@ def leap_is_excessive(notes, middle_i):
     return False
 
 
-def chordings(notes, middle_i):
+def chording_notes(notes, middle_i):
     middle_offset_ms = notes[middle_i]['second_offset'] * 1000
     min_left_offset_ms = middle_offset_ms - CHORD_MS_THRESHOLD
     max_right_offset_ms = middle_offset_ms + CHORD_MS_THRESHOLD
-    left_chord_notes = 0
+    left_chord_notes = list()
     for i in range(middle_i - 1, middle_i - 5, -1):
         if i < 0:
             break
         i_offet_ms = notes[i]['second_offset'] * 1000
         if i_offet_ms > min_left_offset_ms:
-            left_chord_notes += 1
-    right_chord_notes = 0
+            left_chord_notes.append(notes[i])
+    right_chord_notes = list()
     for i in range(middle_i + 1, middle_i + 5, 1):
         if i >= len(notes):
             break
         i_offet_ms = notes[i]['second_offset'] * 1000
         if i_offet_ms < max_right_offset_ms:
-            right_chord_notes += 1
-    if left_chord_notes or right_chord_notes:
-        print("We see chords at position {}.".format(middle_i))
+            right_chord_notes.append(notes[i])
+    # if left_chord_notes or right_chord_notes:
+        # print("We see chords at position {}.".format(middle_i))
     return left_chord_notes, right_chord_notes
+
+
+def chordings(notes, middle_i):
+    left_chord_notes, right_chord_notes = chording_notes(notes, middle_i)
+    left_chord_note_count = len(left_chord_notes)
+    right_chord_note_count = len(right_chord_notes)
+    return left_chord_note_count, right_chord_note_count
+
+
+def chordings_by_pitch(notes, middle_i):
+    left_notes, right_notes = chording_notes(notes=notes, middle_i=middle_i)
+    chord_notes = left_notes + right_notes
+    lower_note_count = 0
+    upper_note_count = 0
+    middle_pit = notes[middle_i]['note'].pitch.midi
+    for knot in chord_notes:
+        knot_pit = knot['note'].pitch.midi
+        if knot_pit < middle_pit:
+            lower_note_count += 1
+        elif knot_pit > middle_pit:
+            upper_note_count += 1
+    return lower_note_count, upper_note_count
+
+
+def chording_categories(notes, middle_i, staff=None):
+    lower_note_count, upper_note_count = chordings_by_pitch(notes, middle_i)
+    cat_str = "{}{}{}".format(staff, lower_note_count, upper_note_count)
+    return cat_str
+
+
+def chord_border(chord_category):
+    mats = re.search('.*(\d)(\d)$', chord_category)
+    if mats.group(0) == '0' and mats.group(1) != 0:
+        return 'left'
+    if mats.group(1) == '0' and mats.group(0) != 0:
+        return 'right'
+    return 'none'
+
+
+def chording_category_ngrams(notes, middle_i, pre_count=1, post_count=1, staff=None):
+    start_i = middle_i + pre_count
+    stop_i = middle_i + post_count + 1
+    cat_str = ''
+    if staff is not None:
+        cat_str = staff + '_'
+    for i in range(start_i, stop_i):
+        lower_note_count, upper_note_count = chordings_by_pitch(notes, middle_i)
+        cat_str += "{}{}".format(lower_note_count, upper_note_count)
+    return cat_str
 
 
 def complex_chording(notes, annotations, middle_i):
@@ -671,7 +722,7 @@ def has_wildcard(hsd_seq):
     return False
 
 
-def load_data(ex, experiment_name, staffs, corpus_names):
+def load_data(ex, experiment_name, staffs, corpus_names, reverse=False):
     creal = Corporeal()
 
     for corpus_name in corpus_names:

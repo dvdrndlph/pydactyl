@@ -70,11 +70,6 @@ CORPUS_NAMES = ['pig_seg']
 #####################################################
 # FUNCTIONS
 #####################################################
-def train_and_evaluate(the_model, x_train, y_train, x_test, y_test):
-    the_model.fit(x_train, y_train)
-    evaluate_trained_model(the_model=the_model, x_test=x_test, y_test=y_test)
-
-
 def get_sequence_struct_list(X, Y):
     seqs = []
     example_index = 0
@@ -102,8 +97,8 @@ def generate_templates_alltracks(attr_desc):
     tg = TemplateGenerator()
     template_XY = dict()
     for track_attr_name in attr_desc:
-        tg.generate_template_XY(track_attr_name, ('1-gram', range(0, 1)), '1-state:2-state', template_XY)
-    template_Y = tg.generate_template_Y('1-state')
+        tg.generate_template_XY(track_attr_name, ('1-gram', range(0, 1)), '1-state:2-states:3-states', template_XY)
+    template_Y = tg.generate_template_Y('1-state:2-states:3-states')
     return template_XY, template_Y
 
 
@@ -148,9 +143,8 @@ def get_workflow(ex, working_dir, seqs, high_order=True):
     return workflow
 
 
-def create_crf_model(ex, working_dir, high_order=True):
-    train_seqs = get_sequence_struct_list(X=ex.x, Y=ex.y)
-    # train_seqs = get_sequence_struct_list(X=ex.x_train, Y=ex.y_train)
+def create_crf_model(ex, working_dir, optimization_options, weights=None, high_order=True):
+    train_seqs = get_sequence_struct_list(X=ex.x_train, Y=ex.y_train)
     # test_seqs = get_sequence_struct_list(X=ex.x_test, Y=ex.y_test)
     workflow = get_workflow(ex, working_dir, seqs=train_seqs, high_order=high_order)
     # use all passed data as training data -- no splitting
@@ -171,28 +165,19 @@ def create_crf_model(ex, working_dir, high_order=True):
     # print("features:")
     # pprint.pprint(crf_m.model.modelfeatures)
 
-    # use L-BFGS-B method for training
-    optimization_options = {
-        "method": "L-BFGS-B",
-        "regularization_type": "l2",
-        "regularization_value": 0,
-        "maxiter": 100
-    }
-    # use SGA method for training
-    # optimization_options = {
-    #     "method": "SGA",
-    #     "num_epochs": 5
-    # }
-    # start with 0 weights
-    crf_m.weights.fill(0)
+    if weights is not None:
+        raise Exception("Cannot initialize weights yet. Seems like we might want to sometime.")
+    else:
+        # start with 0 weights
+        crf_m.weights.fill(0)
     train_seqs_id = data_split[0]['train']
     my_model_dir = workflow.train_model(train_seqs_id, crf_m, optimization_options)
     print("Trained model directory: {}".format(my_model_dir))
     print("*" * 50)
-
+    return my_model_dir
 
 def evaluate_trained_model(ex, experiment_name, model_dir):
-    attr_desc = get_attr_desc_dict(X=ex.x)
+    attr_desc = get_attr_desc_dict(X=ex.x_train)
     ax = GenericAttributeExtractor(attr_desc)
     model_parts_dir = os.path.join(model_dir, 'model_parts')
     model = generate_trained_model(model_parts_dir, ax)
@@ -209,14 +194,14 @@ def evaluate_trained_model(ex, experiment_name, model_dir):
     y_predicted = list()
     y_test = list()
     labels = set()
-    for seq_id in decoded_seqs:
+    for seq_id in sorted(decoded_seqs):
         print("seq_id ", seq_id)
         print("predicted labels:")
-        predicted = decoded_seqs[seq_id]['Y_pred']
-        for label in predicted:
+        guess = decoded_seqs[seq_id]['Y_pred']
+        for label in guess:
             labels.add(label)
-        print(predicted)
-        y_predicted.append(predicted)
+        print(guess)
+        y_predicted.append(guess)
         print("reference labels:")
         truth = decoded_seqs[seq_id]['seq'].flat_y
         print(truth)
@@ -229,6 +214,21 @@ def evaluate_trained_model(ex, experiment_name, model_dir):
     sorted_labels = sorted(labels, key=lambda name: (name[1:], name[0]))
     print(metrics.flat_classification_report(y_test, y_predicted, labels=sorted_labels, digits=4))
 
+    # total_simple_match_count, total_annot_count, simple_match_rate = \
+        # ex.get_simple_match_rate_for_predictions(predictions=y_predicted, output=True)
+    # result, complex_piece_results = ex.get_complex_match_rates(weight=False)
+    # print("Unweighted avg M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+    # result, my_piece_results = ex.get_my_avg_m(weight=False, reuse=False)
+    # print("My unweighted avg m for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+    # for key in sorted(complex_piece_results):
+        # print("nak {} => {}".format (key, complex_piece_results[key]))
+        # print(" my {} => {}".format(key, my_piece_results[key]))
+        # print("")
+    # result, piece_results = get_complex_match_rates(ex=ex, weight=True)
+    # print("Weighted avg M for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+    # result, piece_results = get_my_avg_m_gen(ex=ex, weight=True, reuse=True)
+    # print("Weighted avg m_gen for crf{} over {}: {}".format(VERSION, CORPUS_NAMES, result))
+
 
 #####################################################
 # MAIN BLOCK
@@ -240,6 +240,9 @@ staff_str = "-".join(STAFFS)
 WORKING_DIR = os.path.expanduser('~/pyseqlab/' + corpora_str + '/' + staff_str + '/' + version_str)
 model_dir = WORKING_DIR + '/working_dir/models/2023_1_2-2_28_33_167790'
 model_dir = WORKING_DIR + '/working_dir/models/2023_1_5-2_49_3_151841'
+model_dir = WORKING_DIR + '/working_dir/models/2023_1_9-2_49_34_776109'  # Crf3, lbfgs 100 iterations
+model_dir = WORKING_DIR + '/working_dir/models/2023_1_9-11_2_19_643426'  # Crf3, 1-state Y, 2-states XY, lbfgs 200 iterations
+model_dir = WORKING_DIR + '/working_dir/models/2023_1_9-21_46_28_197387'  # Crf3, 3-states (Y and XY) lbfgs 200 iterations
 experiment_name = corpora_str + '__' + TEST_METHOD + '__' + version_str
 ex = c.unpickle_it(obj_type="DExperiment", file_name=experiment_name)
 if ex is None:
@@ -249,11 +252,22 @@ if ex is None:
 ex.print_summary(test_method=TEST_METHOD)
 evaluate_trained_model(ex=ex, experiment_name=experiment_name, model_dir=model_dir)
 exit(0)
-create_crf_model(ex=ex, working_dir=WORKING_DIR)
-exit(0)
 
+# use L-BFGS-B method for training
+optimization_options = {
+    "method": "L-BFGS-B",
+    "regularization_type": "l2",
+    "regularization_value": 0,
+    "maxiter": 200
+}
+# use SGA method for training
+# optimization_options = {
+#     "method": "SGA",
+#     "num_epochs": 5
+# }
+my_model_dir = create_crf_model(ex=ex, optimization_options=optimization_options, working_dir=WORKING_DIR)
 end_dt = datetime.now()
 execution_duration_minutes = (end_dt - start_dt)
 print("Total running time (wall clock): {}".format(execution_duration_minutes))
+# FIXME: Print details about model generation to model directory.
 exit(0)
-
