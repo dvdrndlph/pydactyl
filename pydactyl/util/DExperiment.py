@@ -21,15 +21,36 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-
+import copy
+from datetime import datetime
 import shutil
 import os
-from pydactyl.util.CrfUtil import note2attrs, note2features
+from sklearn_crfsuite import metrics
+from sklearn.model_selection import train_test_split, cross_val_score
 from pathlib import Path
+import pydactyl.util.CrfUtil as c
+from pydactyl.eval.Corporeal import Corporeal
+from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dcorpus.DAnnotation import DAnnotation
 from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_STD_DIR, PIG_FILE_SUFFIX, PIG_SEGREGATED_STD_DIR
 from pydactyl.eval.Corporeal import ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, COMPLETE_LAYER_ONE_STD_PIG_DIR
+
+
+class DExperimentOpts:
+    def __init__(self, opts):
+        self.engine = opts['engine']
+        model = opts['model']
+        self.model = model
+        self.model_version = model.CRF_VERSION
+        self.note_func = model.my_note2features
+        self.reverse = model.REVERSE_NOTES
+        self.staffs = opts['staffs']
+        self.test_method = opts['test_method']
+        self.fold_count = opts['fold_count']
+        self.corpus_names = opts['corpus_names']
+        self.segregate_hands = opts['segregate_hands']
+        self.params = opts['params']
 
 
 class DExperiment:
@@ -42,13 +63,21 @@ class DExperiment:
         'complete_layer_one': COMPLETE_LAYER_ONE_STD_PIG_DIR
     }
 
-    def __init__(self, corpus_names, model_version, x=None, y=None,
-                 x_train=None, y_train=None, x_test=None, y_test=None,
-                 as_features=True, note_func=note2features):
-        self.model_version = model_version
-        self.default_prediction_dir = '/tmp/crf' + model_version + 'prediction/'
-        self.default_test_dir = '/tmp/crf' + model_version + 'test/'
-        self.corpus_names = corpus_names
+    def __init__(self, opts: DExperimentOpts,
+                 x: list = None, y: list = None,
+                 x_train: list = None, y_train: list = None,
+                 x_test: list = None, y_test: list = None,
+                 as_features=True):
+        self.opts = opts
+        self.model = opts.model
+        self.model_version = opts.model_version
+        self.test_method = opts.test_method
+        self.fold_count = opts.fold_count
+        self.corpus_names = opts.corpus_names
+        self.staffs = opts.staffs
+        self.segregate_hands = opts.segregate_hands
+        self.default_prediction_dir = '/tmp/crf' + self.model_version + 'prediction/'
+        self.default_test_dir = '/tmp/crf' + self.model_version + 'test/'
         self.x = x or []
         self.y = y or []
         self.x_train = x_train or []
@@ -69,19 +98,103 @@ class DExperiment:
         # This all seems like a big kludge.
 
         self.as_features = as_features
-        self.note_func = note_func
+        self.note_func = opts.note_func
+        self.reverse = opts.reverse
 
-    def phrase2features(self, notes, staff):
+    def corpora_name(self):
+        corpora_str = "-".join(self.corpus_names)
+        return corpora_str
+
+    def experiment_name(self):
+        corpora_str = self.corpora_name()
+        file_name = corpora_str + '__' + self.test_method + '__' + self.model_version
+        return file_name
+
+    def evaluate_trained_model(self, the_model, x_test=None, y_test=None):
+        if y_test is None:
+            x_test = self.x_test
+            y_test = self.y_test
+        labels = list(the_model.classes_)
+        print(labels)
+        y_predicted = the_model.predict(x_test)
+        flat_weighted_f1 = metrics.flat_f1_score(y_test, y_predicted, average='weighted', labels=labels)
+        print("Flat weighted F1: {}".format(flat_weighted_f1))
+
+        sorted_labels = sorted(
+            labels,
+            key=lambda name: (name[1:], name[0])
+        )
+        print(metrics.flat_classification_report(y_test, y_predicted, labels=sorted_labels, digits=4))
+        return y_predicted
+
+    def train_and_evaluate(self, the_model, x_train=None, y_train=None, x_test=None, y_test=None):
+        if y_train is None:
+            x_train = self.x_train
+            y_train = self.y_train
+        the_model.fit(x_train, y_train)
+        return self.evaluate_trained_model(the_model=the_model, x_test=x_test, y_test=y_test)
+
+    def split_and_evaluate(self, the_model, test_size=0.4, random_state=0):
+        split_x_train, split_x_test, split_y_train, split_y_test = \
+            train_test_split(self.x, self.y, test_size=0.4, random_state=0)
+        self.train_and_evaluate(the_model=the_model, x_train=split_x_train, y_train=split_y_train,
+                                x_test=split_x_test, y_test=split_y_test)
+
+    def evaluate(self, the_model, is_trained):
+        start_dt = datetime.now()
+        if self.test_method == 'cross-validate':
+            scores = cross_val_score(the_model, self.x, self.y, cv=self.fold_count)
+            # scores = cross_validate(my_crf, ex.x, ex.y, cv=5, scoring="flat_precision_score")
+            print(scores)
+            avg_score = sum(scores) / len(scores)
+            print("Average cross-validation score: {}".format(avg_score))
+        elif self.test_method == 'preset':
+            if is_trained:
+                predictions = self.evaluate_trained_model(the_model=the_model)
+            else:
+                predictions = self.train_and_evaluate(the_model=the_model)
+            # total_simple_match_count, total_annot_count, simple_match_rate = \
+            #     self.get_simple_match_rate(predictions=predictions, output=True)
+            # print("Simple match rate: {}".format(simple_match_rate))
+            # result, complex_piece_results = ex.get_complex_match_rates(predictions=predictions, weight=False)
+            # print("Unweighted avg M for crf{} over {}: {}".format(model.CRF_VERSION, CORPUS_NAMES, result))
+            result, my_piece_results = self.get_my_avg_m(predictions=predictions, weight=False, reuse=False)
+            print("My unweighted avg M for crf{} over {}: {}".format(self.model_version, self.corpus_names, result))
+            # for key in sorted(complex_piece_results):
+            # print("nak {} => {}".format (key, complex_piece_results[key]))
+            # print(" my {} => {}".format(key, my_piece_results[key]))
+            # print("")
+            # result, piece_results = ex.get_complex_match_rates(weight=True)
+            # print("Weighted avg M for crf{} over {}: {}".format(model.CRF_VERSION, CORPUS_NAMES, result))
+            result, piece_results = self.get_my_avg_m(predictions=predictions, weight=True, reuse=True)
+            print("Weighted avg m_gen for crf{} over {}: {}".format(self.model_version, self.corpus_names, result))
+        else:
+            self.split_and_evaluate(the_model=the_model, test_size=0.4, random_state=0)
+        print("Run of crf model {} against {} test set over {} corpus has completed successfully.".format(
+            self.model_version, self.test_method, self.corpora_name()))
+        end_dt = datetime.now()
+        execution_duration_minutes = (end_dt - start_dt)
+        trained_prefix = 'un'
+        if is_trained:
+            trained_prefix = ''
+        print("Total running time (wall clock) for {}trained model: {}".format(
+            trained_prefix, execution_duration_minutes))
+
+    def phrase2features(self, notes: list, staff):
         feature_list = []
         for i in range(len(notes)):
             features = self.note_func(notes, i, staff)
             feature_list.append(features)
+        if self.reverse:
+            feature_list.reverse()
         return feature_list
 
     def phrase2attrs(self, notes, staff):
         return self.phrase2features(notes, staff)
 
-    def phrase2labels(self, handed_strike_digits):
+    def phrase2labels(self, handed_strike_digits: list):
+        if self.reverse:
+            handed_strike_digits.reverse()
         return handed_strike_digits
 
     def append_example(self, ordered_notes, staff, hsd_seg, is_train=False,
@@ -105,9 +218,9 @@ class DExperiment:
             self.y_train.append(self.phrase2labels(hsd_seg))
         self.good_annot_count += 1
 
-    def print_summary(self, test_method):
+    def print_summary(self):
         print("Example count: {}".format(len(self.x)))
-        if test_method == 'preset':
+        if self.test_method == 'preset':
             print("Training count: {}".format(len(self.y_train)))
             print("Test count: {}".format(len(self.y_test)))
         print("Good examples: {}".format(self.good_annot_count))
@@ -219,7 +332,7 @@ class DExperiment:
             (corpus_name, score_title, annot_index) = test_key
             base_title, annot_id = str(score_title).split('-')
             if last_test_key and test_key != last_test_key:
-                prediction_pig_path = self.persist_prediction_to_pig_file(test_key=test_key, prediction=guesses,
+                prediction_pig_path = self.persist_prediction_to_pig_file(test_key=test_key, predictions=guesses,
                                                                           prediction_dir=prediction_dir)
                 pred_pig_paths.append(prediction_pig_path)
                 test_pig_path = DExperiment.pig_std_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
@@ -375,3 +488,69 @@ class DExperiment:
             else:
                 combined_match_rates[key] /= d_score_count
         return combined_match_rates, piece_data
+
+    def load_data(self, clean_list):
+        creal = Corporeal()
+        experiment_name = self.experiment_name()
+
+        for corpus_name in self.corpus_names:
+            da_corpus = c.unpickle_it(obj_type="DCorpus", clean_list=clean_list,
+                                      file_name=corpus_name, use_dill=True)
+            if da_corpus is None:
+                da_corpus = creal.get_corpus(corpus_name=corpus_name)
+                c.pickle_it(obj=da_corpus, obj_type="DCorpus", file_name=corpus_name, use_dill=True)
+            for da_score in da_corpus.d_score_list():
+                abcdh = da_score.abcd_header()
+                annot_count = abcdh.annotation_count()
+                annot = da_score.annotation_by_index(index=0)
+                segger = ManualDSegmenter(level='.', d_annotation=annot)
+                da_score.segmenter(segger)
+                da_unannotated_score = copy.deepcopy(da_score)
+                score_title = da_score.title()
+                # if score_title != 'Sonatina 4.1':
+                # continue
+                for staff in self.staffs:
+                    print("Processing {} staff of {} score from {} corpus.".format(staff, score_title, corpus_name))
+                    ordered_offset_note_segments = da_score.ordered_offset_note_segments(staff=staff)
+                    seg_count = len(ordered_offset_note_segments)
+                    for annot_index in range(annot_count):
+                        annot = da_score.annotation_by_index(annot_index)
+                        authority = annot.authority()
+                        hsd_segments = segger.segment_annotation(annotation=annot, staff=staff)
+                        seg_index = 0
+                        for hsd_seg in hsd_segments:
+                            ordered_notes = ordered_offset_note_segments[seg_index]
+                            note_len = len(ordered_notes)
+                            seg_len = len(hsd_seg)
+                            seg_index += 1
+                            if note_len != seg_len:
+                                print("Bad annotation by {} for score {}. Notes: {} Fingers: {}".format(
+                                    authority, score_title, note_len, seg_len))
+                                self.bad_annot_count += 1
+                                continue
+                            nondefault_hand_finger_count = c.nondefault_hand_count(hsd_seq=hsd_seg, staff=staff)
+                            if nondefault_hand_finger_count:
+                                self.total_nondefault_hand_segment_count += 1
+                                print("Non-default hand specified by annotator {} in score {}: {}".format(
+                                    authority, score_title, hsd_seg))
+                                self.total_nondefault_hand_finger_count += nondefault_hand_finger_count
+                                if self.segregate_hands:
+                                    self.bad_annot_count += 1
+                                    continue
+                            if c.has_wildcard(hsd_seq=hsd_seg):
+                                # print("Wildcard disallowed from annotator {} in score {}: {}".format(
+                                # authority, score_title, hsd_seg))
+                                self.wildcarded_count += 1
+                                continue
+                            if c.has_preset_evaluation_defined(corpus_name=corpus_name):
+                                if c.is_in_test_set(title=score_title, corpus_name=corpus_name):
+                                    test_key = (corpus_name, score_title, annot_index)
+                                    self.append_example(ordered_notes, staff, hsd_seg, is_test=True,
+                                                        test_key=test_key, d_score=da_unannotated_score)
+                                else:
+                                    self.append_example(ordered_notes, staff, hsd_seg, is_train=True)
+                            else:
+                                self.append_example(ordered_notes, staff, hsd_seg)
+        c.pickle_it(obj=self, obj_type="DExperiment", file_name=experiment_name, use_dill=True)
+        print("Data loaded. Clean list: {}".format(list(clean_list.keys())))
+        return experiment_name

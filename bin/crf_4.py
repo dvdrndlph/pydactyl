@@ -33,7 +33,6 @@ import pydactyl.crf.Crf4 as model;
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'
 # TEST_METHOD = 'cross-validate'
-REVERSE = False
 TEST_METHOD = 'preset'
 # TEST_METHOD = 'random'
 STAFFS = ['upper', 'lower']
@@ -81,7 +80,8 @@ corpora_str = "-".join(CORPUS_NAMES)
 experiment_name = corpora_str + '__' + TEST_METHOD + '__' + model.CRF_VERSION
 ex = c.unpickle_it(obj_type="DExperiment", file_name=experiment_name)
 if ex is None:
-    ex = DExperiment(corpus_names=CORPUS_NAMES, model_version=model.CRF_VERSION, note_func=model.my_note2features)
+    ex = DExperiment(corpus_names=CORPUS_NAMES, model_version=model.CRF_VERSION,
+                     note_func=model.my_note2features, reverse=model.REVERSE_NOTES)
     c.load_data(ex=ex, experiment_name=experiment_name, staffs=STAFFS, corpus_names=CORPUS_NAMES)
 
 ex.print_summary(test_method=TEST_METHOD)

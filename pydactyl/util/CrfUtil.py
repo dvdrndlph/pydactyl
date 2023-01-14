@@ -22,23 +22,13 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 import os
-import copy
 import pickle
 import dill
 import re
 from pathlib import Path
 from music21 import note
-from pydactyl.eval.Corporeal import Corporeal
-from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dactyler.Parncutt import TrigramNode, is_black, ImaginaryBlackKeyRuler, PhysicalRuler
-
-SEGREGATE_HANDS = False
-# CLEAN_LIST = {}  # Reuse all pickled results.
-# CLEAN_LIST = {'crf': True}
-CLEAN_LIST = {'crf': True, 'DExperiment': True}
-# CLEAN_LIST = {'DCorpus': True}
-# CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
-# CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
+from pydactyl.util.DExperimentOpts import DExperimentOpts
 
 PICKLE_BASE_DIR = '/tmp/pickle/'
 MAX_LEAP = 16
@@ -72,15 +62,23 @@ def pickle_it(obj, obj_type, file_name, use_dill=False):
     pickle_fh.close()
 
 
-def unpickle_it(obj_type, file_name, use_dill=False):
+def get_experiment_name(opts: DExperimentOpts):
+    corpora_str = "-".join(opts.corpus_names)
+    name = corpora_str + '__' + opts.test_method + '__' + opts.model_version
+    return name
+
+
+def unpickle_it(obj_type, clean_list, file_name=None, opts: DExperimentOpts = None, use_dill=False):
     pickle_dir = pickle_directory(obj_type)
+    if file_name is None:
+        file_name = get_experiment_name(opts=opts)
     pickle_path = pickle_dir + file_name
 
     path = Path(pickle_path)
     if path.is_file():
-        if obj_type in CLEAN_LIST:
+        if obj_type in clean_list:
             os.remove(pickle_path)
-            print("Pickle file {} removed because {} is on the CLEAN_LIST.".format(pickle_path, obj_type))
+            print("Pickle file {} removed because {} is on the clean_list.".format(pickle_path, obj_type))
             return None
         pickle_fh = open(pickle_path, 'rb')
         if use_dill:
@@ -720,66 +718,3 @@ def has_wildcard(hsd_seq):
         if fingering[0] == 'x':
             return True
     return False
-
-
-def load_data(ex, experiment_name, staffs, corpus_names, reverse=False):
-    creal = Corporeal()
-
-    for corpus_name in corpus_names:
-        da_corpus = unpickle_it(obj_type="DCorpus", file_name=corpus_name, use_dill=True)
-        if da_corpus is None:
-            da_corpus = creal.get_corpus(corpus_name=corpus_name)
-            pickle_it(obj=da_corpus, obj_type="DCorpus", file_name=corpus_name, use_dill=True)
-        for da_score in da_corpus.d_score_list():
-            abcdh = da_score.abcd_header()
-            annot_count = abcdh.annotation_count()
-            annot = da_score.annotation_by_index(index=0)
-            segger = ManualDSegmenter(level='.', d_annotation=annot)
-            da_score.segmenter(segger)
-            da_unannotated_score = copy.deepcopy(da_score)
-            score_title = da_score.title()
-            # if score_title != 'Sonatina 4.1':
-            # continue
-            for staff in staffs:
-                print("Processing {} staff of {} score from {} corpus.".format(staff, score_title, corpus_name))
-                ordered_offset_note_segments = da_score.ordered_offset_note_segments(staff=staff)
-                seg_count = len(ordered_offset_note_segments)
-                for annot_index in range(annot_count):
-                    annot = da_score.annotation_by_index(annot_index)
-                    authority = annot.authority()
-                    hsd_segments = segger.segment_annotation(annotation=annot, staff=staff)
-                    seg_index = 0
-                    for hsd_seg in hsd_segments:
-                        ordered_notes = ordered_offset_note_segments[seg_index]
-                        note_len = len(ordered_notes)
-                        seg_len = len(hsd_seg)
-                        seg_index += 1
-                        if note_len != seg_len:
-                            print("Bad annotation by {} for score {}. Notes: {} Fingers: {}".format(
-                                authority, score_title, note_len, seg_len))
-                            ex.bad_annot_count += 1
-                            continue
-                        nondefault_hand_finger_count = nondefault_hand_count(hsd_seq=hsd_seg, staff=staff)
-                        if nondefault_hand_finger_count:
-                            ex.total_nondefault_hand_segment_count += 1
-                            print("Non-default hand specified by annotator {} in score {}: {}".format(
-                                authority, score_title, hsd_seg))
-                            ex.total_nondefault_hand_finger_count += nondefault_hand_finger_count
-                            if SEGREGATE_HANDS:
-                                ex.bad_annot_count += 1
-                                continue
-                        if has_wildcard(hsd_seq=hsd_seg):
-                            # print("Wildcard disallowed from annotator {} in score {}: {}".format(
-                                # authority, score_title, hsd_seg))
-                            ex.wildcarded_count += 1
-                            continue
-                        if has_preset_evaluation_defined(corpus_name=corpus_name):
-                            if is_in_test_set(title=score_title, corpus_name=corpus_name):
-                                test_key = (corpus_name, score_title, annot_index)
-                                ex.append_example(ordered_notes, staff, hsd_seg, is_test=True,
-                                                  test_key=test_key, d_score=da_unannotated_score)
-                            else:
-                                ex.append_example(ordered_notes, staff, hsd_seg, is_train=True)
-                        else:
-                            ex.append_example(ordered_notes, staff, hsd_seg)
-    pickle_it(obj=ex, obj_type="DExperiment", file_name=experiment_name)
