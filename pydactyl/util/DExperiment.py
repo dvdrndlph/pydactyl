@@ -543,6 +543,8 @@ class DExperiment:
             total_score_match_count = total_score_upper_match_count + total_score_lower_match_count
             total_score_note_count = total_score_upper_note_count + total_score_lower_note_count
             base_title_match_rates[base_title]['combined']['gen'] = total_score_match_count / total_score_note_count
+            base_title_match_rates[base_title]['upper']['gen'] = total_score_upper_match_count / total_score_upper_note_count
+            base_title_match_rates[base_title]['lower']['gen'] = total_score_lower_match_count / total_score_lower_note_count
 
             score_soft_match_count = DExperiment.soft_match_count(score_pred_fingering['combined'],
                                                                   score_test_fingrings['combined'])
@@ -563,25 +565,65 @@ class DExperiment:
             score_lower_high_match_count = DExperiment.high_match_count(score_pred_fingering['lower'],
                                                                         score_test_fingrings['lower'])
             base_title_match_rates[base_title]['lower']['high'] = score_lower_high_match_count / lower_note_count
+
         pprint.pprint(base_title_match_rates)
-        sum_of_gen_rates = 0
-        weighted_sum_of_gen_rates = 0
+
+        sums_of_rates = {
+            'upper': {
+                'gen': 0.0,
+                'high': 0.0,
+                'soft': 0.0
+            },
+            'lower': {
+                'gen': 0.0,
+                'high': 0.0,
+                'soft': 0.0
+            },
+            'combined': {
+                'gen': 0.0,
+                'high': 0.0,
+                'soft': 0.0
+            },
+        }
+        weighted_sums_of_rates = copy.deepcopy(sums_of_rates)
+        m_rates = copy.deepcopy(sums_of_rates)
+        weighted_m_rates = copy.deepcopy(sums_of_rates)
+        total_note_counts = {
+            'upper': 0,
+            'lower': 0,
+            'combined': 0
+        }
+        total_weights = copy.deepcopy(total_note_counts)
         title_count = len(base_title_match_rates)
-        total_weight = 0
         for base_title, rates in base_title_match_rates.items():
-            sum_of_gen_rates += rates['combined']['gen']
-            weighted_sum_of_gen_rates += rates['combined']['gen'] * base_title_note_counts[base_title]['combined']
-            total_weight += base_title_note_counts[base_title]['total']
-        gmr = sum_of_gen_rates / title_count
-        weighted_gmr = weighted_sum_of_gen_rates / total_weight
-        print("M_gen = {}, Weighted_M_gen = {}".format(gmr, weighted_gmr))
+            for staff in ('upper', 'lower', 'combined'):
+                for method in ('gen', 'high', 'soft'):
+                    sums_of_rates[staff][method] += rates[staff][method]
+                    weighted_sums_of_rates[staff][method] += rates[staff][method] * base_title_note_counts[base_title][staff]
+                total_weights[staff] += base_title_note_counts[base_title][staff]
+
+        for staff in ('upper', 'lower', 'combined'):
+            for method in ('gen', 'high', 'soft'):
+                m_rates[staff][method] = sums_of_rates[staff][method] / title_count
+                weighted_m_rates[staff][method] = weighted_sums_of_rates[staff][method] / total_weights[staff]
 
         total_note_count = total_upper_note_count + total_lower_note_count
         total_match_count = total_upper_match_count + total_lower_match_count
         upper_smr = total_upper_match_count / total_upper_note_count
         lower_smr = total_lower_match_count / total_lower_note_count
         total_smr = total_match_count / total_note_count
-        print ("{} {} {}".format(upper_smr, lower_smr, total_smr))
+        m_rates['upper']['simple'] = upper_smr
+        m_rates['lower']['simple'] = lower_smr
+        m_rates['combined']['simple'] = total_smr
+        # The simple match rate is implicitly weighted, as it is just total matches over total notes.
+        weighted_m_rates['upper']['simple'] = upper_smr
+        weighted_m_rates['lower']['simple'] = lower_smr
+        weighted_m_rates['combined']['simple'] = total_smr
+
+        pprint.pprint(m_rates)
+        pprint.pprint(weighted_m_rates)
+
+        return m_rates, weighted_m_rates
 
 
 
