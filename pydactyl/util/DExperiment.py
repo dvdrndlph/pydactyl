@@ -29,28 +29,13 @@ from sklearn_crfsuite import metrics
 from sklearn.model_selection import train_test_split, cross_val_score
 from pathlib import Path
 import pydactyl.util.CrfUtil as c
+from pydactyl.util.DExperimentOpts import DExperimentOpts
 from pydactyl.eval.Corporeal import Corporeal
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dcorpus.DAnnotation import DAnnotation
 from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_STD_DIR, PIG_FILE_SUFFIX, PIG_SEGREGATED_STD_DIR
 from pydactyl.eval.Corporeal import ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, COMPLETE_LAYER_ONE_STD_PIG_DIR
-
-
-class DExperimentOpts:
-    def __init__(self, opts):
-        self.engine = opts['engine']
-        model = opts['model']
-        self.model = model
-        self.model_version = model.CRF_VERSION
-        self.note_func = model.my_note2features
-        self.reverse = model.REVERSE_NOTES
-        self.staffs = opts['staffs']
-        self.test_method = opts['test_method']
-        self.fold_count = opts['fold_count']
-        self.corpus_names = opts['corpus_names']
-        self.segregate_hands = opts['segregate_hands']
-        self.params = opts['params']
 
 
 class DExperiment:
@@ -69,7 +54,7 @@ class DExperiment:
                  x_test: list = None, y_test: list = None,
                  as_features=True):
         self.opts = opts
-        self.model = opts.model
+        self.model_features = opts.model_features
         self.model_version = opts.model_version
         self.test_method = opts.test_method
         self.fold_count = opts.fold_count
@@ -153,21 +138,25 @@ class DExperiment:
                 predictions = self.evaluate_trained_model(the_model=the_model)
             else:
                 predictions = self.train_and_evaluate(the_model=the_model)
+            self.direct_avg_m(predictions=predictions)
             # total_simple_match_count, total_annot_count, simple_match_rate = \
             #     self.get_simple_match_rate(predictions=predictions, output=True)
             # print("Simple match rate: {}".format(simple_match_rate))
             # result, complex_piece_results = ex.get_complex_match_rates(predictions=predictions, weight=False)
             # print("Unweighted avg M for crf{} over {}: {}".format(model.CRF_VERSION, CORPUS_NAMES, result))
-            result, my_piece_results = self.get_my_avg_m(predictions=predictions, weight=False, reuse=False)
-            print("My unweighted avg M for crf{} over {}: {}".format(self.model_version, self.corpus_names, result))
+
+            # result, my_piece_results = self.get_my_avg_m(predictions=predictions, weight=False, reuse=False)
+            # print("My unweighted avg M for crf{} over {}: {}".format(self.model_version, self.corpus_names, result))
+
             # for key in sorted(complex_piece_results):
             # print("nak {} => {}".format (key, complex_piece_results[key]))
             # print(" my {} => {}".format(key, my_piece_results[key]))
             # print("")
             # result, piece_results = ex.get_complex_match_rates(weight=True)
             # print("Weighted avg M for crf{} over {}: {}".format(model.CRF_VERSION, CORPUS_NAMES, result))
-            result, piece_results = self.get_my_avg_m(predictions=predictions, weight=True, reuse=True)
-            print("Weighted avg m_gen for crf{} over {}: {}".format(self.model_version, self.corpus_names, result))
+
+            # result, piece_results = self.get_my_avg_m(predictions=predictions, weight=True, reuse=True)
+            # print("Weighted avg m_gen for crf{} over {}: {}".format(self.model_version, self.corpus_names, result))
         else:
             self.split_and_evaluate(the_model=the_model, test_size=0.4, random_state=0)
         print("Run of crf model {} against {} test set over {} corpus has completed successfully.".format(
@@ -413,6 +402,155 @@ class DExperiment:
                                                           prediction_input_dir=prediction_dir, weight=weight)
         return avg_m_gen, piece_m_gens
 
+    @staticmethod
+    def match_count(predicted, ground_truth):
+        pred_len = len(predicted)
+        gt_len = len(ground_truth)
+        if gt_len == 0:
+            raise Exception("Phrase is zero length.")
+        if gt_len != pred_len:
+            raise Exception("Counts do not match.")
+        match_count = 0
+        for i in range(pred_len):
+            if predicted[i] == ground_truth[i]:
+                match_count += 1
+        return match_count
+
+    @staticmethod
+    def soft_match_count(predicted, ground_truths):
+        pred_len = len(predicted)
+        gt_len = len(ground_truths[0])
+        if gt_len == 0:
+            raise Exception("Phrase is zero length.")
+        if gt_len != pred_len:
+            raise Exception("Counts do not match.")
+        match_bits = [0 for i in range(pred_len)]
+        for ground_truth in ground_truths:
+            for i in range(pred_len):
+                if predicted[i] == ground_truth[i]:
+                    match_bits[i] = 1
+        match_count = sum(match_bits)
+        return match_count
+
+    @staticmethod
+    def high_match_count(predicted, ground_truths):
+        pred_len = len(predicted)
+        gt_len = len(ground_truths[0])
+        if gt_len == 0:
+            raise Exception("Phrase is zero length.")
+        if gt_len != pred_len:
+            raise Exception("Counts do not match.")
+        max_count = 0
+        for ground_truth in ground_truths:
+            match_bits = [0 for i in range(pred_len)]
+            for i in range(pred_len):
+                if predicted[i] == ground_truth[i]:
+                    match_bits[i] = 1
+            match_count = sum(match_bits)
+            if match_count > max_count:
+                max_count = match_count
+        return max_count
+
+    def direct_avg_m(self, predictions, weight=False):
+        # predictions contain predictions for all items in the test set.
+        # We need to pull the first "exemplar" for each score and compare
+        # it to every ground truth we have for the score.
+        last_base_title = ''
+        test_keys_for_base_title = dict()
+        prediction_key_for_base_title = dict()
+        for test_key in self.test_indices:
+            (corpus_name, score_title, annot_index) = test_key
+            base_title, annot_id = str(score_title).split('-')
+            if base_title != last_base_title:
+                prediction_key_for_base_title[base_title] = test_key
+                test_keys_for_base_title[base_title] = list()
+                # We only get to predict once per piece in Nakamura evaluation.
+                last_base_title = base_title
+            test_keys_for_base_title[base_title].append(test_key)
+        total_upper_note_count = 0
+        total_lower_note_count = 0
+        total_upper_match_count = 0
+        total_lower_match_count = 0
+        score_note_counts = dict()
+        score_gen_matches = dict()
+        base_title_match_rates = dict()
+        base_title_note_counts = dict()
+        for base_title in prediction_key_for_base_title:
+            total_score_upper_note_count = 0
+            total_score_lower_note_count = 0
+            total_score_upper_match_count = 0
+            total_score_lower_match_count = 0
+            pred_key = prediction_key_for_base_title[base_title]
+            (pred_upper_i, pred_lower_i) = self.test_indices[pred_key]
+            pred_upper = predictions[pred_upper_i]
+            pred_lower = predictions[pred_lower_i]
+            upper_note_count = len(pred_upper)
+            lower_note_count = len(pred_lower)
+            if base_title not in base_title_match_rates:
+                base_title_match_rates[base_title] = {
+                    'upper': {
+                        'gen': 0.0,
+                        'high': 0.0,
+                        'soft': 0.0
+                    },
+                    'lower': {
+                        'gen': 0.0,
+                        'high': 0.0,
+                        'soft': 0.0
+                    },
+                    'total': {
+                        'gen': 0.0,
+                        'high': 0.0,
+                        'soft': 0.0
+                    },
+                }
+                base_title_note_counts[base_title] = {
+                    'upper': upper_note_count,
+                    'lower': lower_note_count,
+                    'total': upper_note_count + lower_note_count
+                }
+            for test_key in test_keys_for_base_title[base_title]:
+                # print("Compare {} to {}".format(pred_key, test_key))
+                (test_upper_i, test_lower_i) = self.test_indices[test_key]
+                test_upper = self.y_test[test_upper_i]
+                upper_match_count = DExperiment.match_count(predicted=pred_upper, ground_truth=test_upper)
+                total_upper_match_count += upper_match_count
+                total_upper_note_count += upper_note_count
+                total_score_upper_match_count += upper_match_count
+                total_score_upper_note_count += upper_note_count
+
+                test_lower = self.y_test[test_lower_i]
+                lower_match_count = DExperiment.match_count(predicted=pred_lower, ground_truth=test_lower)
+                total_lower_match_count += lower_match_count
+                total_lower_note_count += lower_note_count
+                total_score_lower_note_count += lower_note_count
+                total_score_lower_match_count += lower_match_count
+            total_score_match_count = total_score_upper_match_count + total_score_lower_match_count
+            total_score_note_count = total_score_upper_note_count + total_score_lower_note_count
+            base_title_match_rates[base_title]['total']['gen'] = total_score_match_count / total_score_note_count
+
+        print(base_title_match_rates)
+        sum_of_gen_rates = 0
+        weighted_sum_of_gen_rates = 0
+        title_count = len(base_title_match_rates)
+        total_weight = 0
+        for base_title, rates in base_title_match_rates.items():
+            sum_of_gen_rates += rates['total']['gen']
+            weighted_sum_of_gen_rates += rates['total']['gen'] * base_title_note_counts[base_title]['total']
+            total_weight += base_title_note_counts[base_title]['total']
+        gmr = sum_of_gen_rates / title_count
+        weighted_gmr = weighted_sum_of_gen_rates / total_weight
+        print("M_gen = {}, Weighted_M_gen = {}".format(gmr, weighted_gmr))
+
+        total_note_count = total_upper_note_count + total_lower_note_count
+        total_match_count = total_upper_match_count + total_lower_match_count
+        upper_smr = total_upper_match_count / total_upper_note_count
+        lower_smr = total_lower_match_count / total_lower_note_count
+        total_smr = total_match_count / total_note_count
+        print ("{} {} {}".format(upper_smr, lower_smr, total_smr))
+
+
+
     def get_my_avg_m(self, predictions, prediction_dir=None, test_dir=None, reuse=False, weight=False):
         if prediction_dir is None:
             prediction_dir = self.default_prediction_dir
@@ -551,6 +689,5 @@ class DExperiment:
                                     self.append_example(ordered_notes, staff, hsd_seg, is_train=True)
                             else:
                                 self.append_example(ordered_notes, staff, hsd_seg)
-        c.pickle_it(obj=self, obj_type="DExperiment", file_name=experiment_name, use_dill=True)
         print("Data loaded. Clean list: {}".format(list(clean_list.keys())))
         return experiment_name

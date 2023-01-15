@@ -29,7 +29,7 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from pydactyl.util.DExperiment import DExperiment
 from music21 import note
 import pydactyl.util.CrfUtil as c
-import pydactyl.crf.Crf3 as Crf3;
+import pydactyl.crf.CrfFeatures3 as Crf3;
 
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'

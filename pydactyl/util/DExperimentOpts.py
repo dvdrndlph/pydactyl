@@ -26,11 +26,11 @@ __author__ = 'David Randolph'
 class DExperimentOpts:
     def __init__(self, opts):
         self.engine = opts['engine']
-        model = opts['model']
-        self.model = model
-        self.model_version = model.CRF_VERSION
-        self.note_func = model.my_note2features
-        self.reverse = model.REVERSE_NOTES
+        feats = opts['model_features']
+        self.model_features = feats
+        self.model_version = feats.CRF_VERSION
+        self.note_func = feats.my_note2features
+        self.reverse = feats.REVERSE_NOTES
         self.staffs = opts['staffs']
         self.test_method = opts['test_method']
         self.fold_count = opts['fold_count']

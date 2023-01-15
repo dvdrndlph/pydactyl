@@ -28,7 +28,7 @@ from sklearn_crfsuite import metrics
 from sklearn.model_selection import train_test_split, cross_val_score
 from pydactyl.util.DExperiment import DExperiment
 import pydactyl.util.CrfUtil as c
-import pydactyl.crf.Crf4 as model;
+import pydactyl.crf.CrfFeatures4 as model;
 
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'

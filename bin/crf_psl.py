@@ -43,7 +43,7 @@ from pyseqlab.workflow import GenericTrainingWorkflow
 from pyseqlab.ho_crf_ad import HOCRFAD, HOCRFADModelRepresentation
 from sklearn_crfsuite import metrics
 from pydactyl.util.DExperiment import DExperiment
-import pydactyl.crf.Crf3 as crf3
+import pydactyl.crf.CrfFeatures3 as crf3
 import pydactyl.util.CrfUtil as c
 
 # CROSS_VALIDATE = False

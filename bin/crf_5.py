@@ -26,7 +26,7 @@ __author__ = 'David Randolph'
 import sklearn_crfsuite as crf
 from pydactyl.util.DExperiment import DExperiment, DExperimentOpts
 import pydactyl.util.CrfUtil as c
-import pydactyl.crf.Crf5 as model
+import pydactyl.crf.CrfFeatures5 as feats
 
 # One of 'cross-validate', 'preset', 'random'
 # TEST_METHOD = 'cross-validate'
@@ -46,13 +46,13 @@ import pydactyl.crf.Crf5 as model
 # CORPUS_NAMES = ['pig_indy']
 # CORPUS_NAMES = ['pig_seg']
 # CLEAN_LIST = {'DCorpus': True}
-# CLEAN_LIST = {}  # Reuse all pickled results.
+CLEAN_LIST = {}  # Reuse all pickled results.
 # CLEAN_LIST = {'crf': True}
-CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
+# CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 OPTS = {
     'engine': 'sklearn-crfsuite',
-    'model': model,
+    'model_features': feats,
     'staffs': ['upper', 'lower'],
     'test_method': 'preset',
     'fold_count': 5,
@@ -70,14 +70,16 @@ opts = DExperimentOpts(opts=OPTS)
 #####################################################
 # MAIN BLOCK
 #####################################################
-ex = c.unpickle_it(obj_type="DExperiment", clean_list=CLEAN_LIST, opts=opts)
+ex = c.unpickle_it(obj_type="DExperiment", clean_list=CLEAN_LIST, opts=opts, use_dill=True)
 if ex is None:
     ex = DExperiment(opts=opts)
     experiment_name = ex.load_data(clean_list=CLEAN_LIST)
+    c.pickle_it(obj=ex, obj_type="DExperiment", file_name=experiment_name, use_dill=True)
 ex.print_summary()
 
+experiment_name = ex.experiment_name()
 have_trained_model = False
-my_crf = c.unpickle_it(obj_type="crf", clean_list=CLEAN_LIST, opts=opts)
+my_crf = c.unpickle_it(obj_type="crf", clean_list=CLEAN_LIST, opts=opts, use_dill=True)
 if my_crf:
     have_trained_model = True
 else:
@@ -90,3 +92,5 @@ else:
     )
 
 ex.evaluate(the_model=my_crf, is_trained=have_trained_model)
+if not have_trained_model:
+    c.pickle_it(obj=my_crf, obj_type="crf", file_name=experiment_name, use_dill=True)
