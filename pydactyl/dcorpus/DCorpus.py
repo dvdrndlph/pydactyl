@@ -167,7 +167,8 @@ class DCorpus:
                     print("Appending MIDI file {} to corpus.".format(file_name))
                     header_path = corpus_dir + '/' + base_name + '.' + split_header_extension
                     file_path = corpus_dir + "/" + file_name
-                    self.append(corpus_path=file_path, header_path=header_path, as_xml=as_xml, via_midi=via_midi)
+                    self.append(title=base_name, corpus_path=file_path, header_path=header_path,
+                                as_xml=as_xml, via_midi=via_midi)
             else:
                 print("Appending abcD file {} to corpus.".format(file_name))
                 file_path = corpus_dir + "/" + file_name

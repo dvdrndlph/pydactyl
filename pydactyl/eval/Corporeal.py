@@ -26,6 +26,7 @@ import os.path
 from abc import ABC
 import copy
 import re
+import csv
 from pydactyl.dcorpus.DCorpus import DCorpus, DAnnotation
 from pydactyl.dcorpus.PigInOut import PIG_SEGREGATED_ABCD_DIR
 from pydactyl.dcorpus.PianoFingering import PianoFingering
@@ -36,9 +37,10 @@ from pydactyl.dactyler.Parncutt import FINGER_SPANS, BALLIAUW_LARGE_FINGER_SPANS
 from pydactyl.dactyler.Random import Random
 
 CORPORA_DIR = os.path.expanduser('~/tb2/didactyl/dd/corpora/')
-OUTPUT_DIR = os.path.expanduser('~/tb2/doc/data/badgerow')
-PIG_INDY_DIR = CORPORA_DIR + 'pig/PianoFingeringDataset_v1.00/individual_abcd/'
-PIG_DIR = CORPORA_DIR + 'pig/PianoFingeringDataset_v1.00/abcd/'
+OUTPUT_DIR = os.path.expanduser('~/tb2/doc/data/badgerow/')
+PIG_BASE_DIR = CORPORA_DIR + 'pig/PianoFingeringDataset_v1.00/'
+PIG_INDY_DIR = PIG_BASE_DIR + 'individual_abcd/'
+PIG_DIR = PIG_BASE_DIR + 'abcd/'
 BERINGER_DIR = CORPORA_DIR + 'beringer/'
 SCALES_DIR = BERINGER_DIR + 'scales/'
 ARPEGGIOS_DIR = BERINGER_DIR + 'arpeggios/'
@@ -49,6 +51,7 @@ BROKEN_STD_PIG_DIR = BROKEN_DIR + 'std_pig/'
 COMPLETE_LAYER_ONE_DIR = CORPORA_DIR + 'clementi/complete_layer_one/'
 COMPLETE_LAYER_ONE_STD_PIG_DIR = COMPLETE_LAYER_ONE_DIR + 'std_pig/'
 
+PIG_LIST_FILE = PIG_BASE_DIR + 'List.csv'
 
 QUERY = dict()
 
@@ -148,11 +151,11 @@ LAYER_ONE_QUERY = '''
 
 BASE_HEADINGS = ['corpus', 'model', 'title', 'notes', 'ann_id', 'weight']
 RANK_METHODS = ['hmg', 'norm_hmg',
-                 'al', 'norm_al',
-                 'rho_no_d', 'rho_uni_d',
-                 'p_sat', 'tri_p_sat', 'nua_p_sat', 'rlx_p_sat',
-                 'tri_D', 'nua_D', 'rlx_D',
-                 'norm_tri_D', 'norm_nua_D', 'norm_rlx_D']
+                'al', 'norm_al',
+                'rho_no_d', 'rho_uni_d',
+                'p_sat', 'tri_p_sat', 'nua_p_sat', 'rlx_p_sat',
+                'tri_D', 'nua_D', 'rlx_D',
+                'norm_tri_D', 'norm_nua_D', 'norm_rlx_D']
 BASE_RANK_HEADINGS = copy.deepcopy(BASE_HEADINGS)
 BASE_RANK_HEADINGS.append('rank')
 RANK_HEADINGS = copy.deepcopy(BASE_RANK_HEADINGS)
@@ -179,6 +182,25 @@ class Corporeal(ABC):
         self._rank_result_cache = {}
         self._staff = staff
 
+    @staticmethod
+    def enrich_pig_corpus(the_corpus: DCorpus):
+        composer_for_prefix = dict()
+        with open(PIG_LIST_FILE) as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            line_num = 0
+            for line in csv_reader:
+                if line_num != 0:
+                    file_prefix = line[0]
+                    composer = line[1]
+                    composer_for_prefix[file_prefix] = composer
+                line_num += 1
+        for d_score in the_corpus.d_score_list():
+            title = d_score.title()
+            prefix, extension = title.split(sep='-')
+            composer = composer_for_prefix[prefix]
+            d_score.composer(composer, with_periods=True)
+
+
     def get_corpus(self, corpus_name):
         if corpus_name == 'pig':
             the_corpus = DCorpus()
@@ -193,6 +215,7 @@ class Corporeal(ABC):
         if corpus_name == 'pig_seg':
             the_corpus = DCorpus()
             the_corpus.append_dir(corpus_dir=PIG_SEGREGATED_ABCD_DIR, via_midi=True, split_header_extension='abcd')
+            Corporeal.enrich_pig_corpus(the_corpus)
             return the_corpus
 
         if corpus_name == 'scales':

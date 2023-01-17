@@ -41,6 +41,44 @@ DIRECTION_INDEX = 2
 TO_HAND_INDEX = 3
 TO_DIGIT_INDEX = 4
 
+PERIODS = {
+    'Baroque': {'start': 1580, 'end': 1750},
+    'Classical': {'start': 1750, 'end': 1820},
+    'Romantic': {'start': 1800, 'end': 1910},
+    'Modern': {'start': 1890, 'end': 1975},
+    'Contemporary': {'start': 1950, 'end': 99999},
+    'Other': {'start': 1500, 'end': 99999}
+}
+COMPOSER_PERIODS = {
+    'Bach': ['Baroque'],
+    'Mozart': ['Classical'],
+    'Chopin': ['Romantic'],
+    'Beethoven': ['Romantic', 'Classical'],
+    'Bartok': ['Romantic'],
+    'Debussy': ['Romantic'],
+    'Ravel': ['Romantic'],
+    'Schumann': ['Romantic'],
+    'Grieg': ['Romantic'],
+    'Mussorgsky': ['Romantic'],
+    'Liszt': ['Romantic'],
+    'Rachmaninoff': ['Romantic'],
+    'Schubert': ['Romantic'],
+    'Brahms': ['Romantic'],
+    'Joplin': ['Modern'],
+    'Dvorak': ['Romantic'],
+    'Mendelssohn': ['Romantic'],
+    'Faure': ['Modern'],
+    'Tchaikovsky': ['Romantic'],
+    'Scarlatti': ['Baroque'],
+    'Saint-Saens': ['Modern', 'Romantic'],
+    'Satie': ['Modern'],
+    'Scriabin': ['Modern'],
+    'Albeniz': ['Modern'],
+    'Clementi': ['Classical'],
+    'Czerny': ['Romantic'],
+    'Beringer': ['Other']
+}
+
 
 class DScore:
     _bigram_t = 1
@@ -70,6 +108,34 @@ class DScore:
             self._abcd_header = abcd_header
         return self._abcd_header
 
+    def title(self, title=None):
+        if title:
+            self._title = title
+        return self._title
+
+    def composer(self, composer=None, with_periods=False):
+        if composer:
+            self._composer = composer
+            if with_periods:
+                if composer not in COMPOSER_PERIODS:
+                    raise Exception("{} is not in the COMPOSERS list".format(composer))
+                periods = COMPOSER_PERIODS[composer]
+                self.periods(periods=periods)
+        return self._composer
+
+    def year(self, year=None):
+        if year:
+            self._year = year
+        return self._year
+
+    def period_str(self):
+        period_str = "_".join(self._periods)
+        return period_str
+
+    def periods(self, periods: list() = None):
+        if periods:
+            self._periods = periods
+
     def segmenter(self, segmenter=None):
         if segmenter:
             self._segmenter = segmenter
@@ -90,11 +156,15 @@ class DScore:
 
     def __init__(self, music21_stream=None, segmenter=None, abc_handle=None,
                  midi_file_path=None, abcd_header_path=None,
-                 voice_map=None, abcd_header=None, abc_body='', title=None):
+                 voice_map=None, abcd_header=None, abc_body='',
+                 title=None, composer=None, periods: list() = None, year=None):
         self._lower_d_part = None
         self._upper_d_part = None
         self._abc_body = abc_body
         self._title = title
+        self._composer = composer
+        self._year = year
+        self._periods = periods
 
         if midi_file_path is not None:
             music21_stream = DScore.score_via_midi(corpus_path=midi_file_path)
@@ -1023,6 +1093,3 @@ class DScore:
             else:
                 return self._abcd_header.lower_abcdf(index=index)
         return None
-
-    def title(self):
-        return self._title

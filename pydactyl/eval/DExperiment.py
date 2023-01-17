@@ -170,17 +170,17 @@ class DExperiment:
         print("Total running time (wall clock) for {}trained model: {}".format(
             trained_prefix, execution_duration_minutes))
 
-    def phrase2features(self, notes: list, staff):
+    def phrase2features(self, notes: list, staff, d_score=None):
         feature_list = []
         for i in range(len(notes)):
-            features = self.note_func(notes, i, staff)
+            features = self.note_func(notes, i, staff, d_score=d_score)
             feature_list.append(features)
         if self.reverse:
             feature_list.reverse()
         return feature_list
 
-    def phrase2attrs(self, notes, staff):
-        return self.phrase2features(notes, staff)
+    def phrase2attrs(self, notes, staff, d_score=None):
+        return self.phrase2features(notes, staff, d_score=d_score)
 
     def phrase2labels(self, handed_strike_digits: list):
         if self.reverse:
@@ -192,7 +192,7 @@ class DExperiment:
         # IMPORTANT: An example here is segregated, representing one hand (or one staff).
         note_len = len(ordered_notes)
         self.annotated_note_count += note_len
-        self.x.append(self.phrase2features(ordered_notes, staff))
+        self.x.append(self.phrase2features(ordered_notes, staff, d_score=d_score))
         self.y.append(self.phrase2labels(hsd_seg))
         if is_test:
             score_title = d_score.title()
@@ -200,11 +200,11 @@ class DExperiment:
                 self.test_indices[test_key] = []
             self.test_indices[test_key].append(self.good_annot_count)
             self.y_test_keys[self.good_annot_count] = test_key
-            self.x_test.append(self.phrase2features(ordered_notes, staff))
+            self.x_test.append(self.phrase2features(ordered_notes, staff, d_score=d_score))
             self.y_test.append(self.phrase2labels(hsd_seg))
             self.test_d_scores[score_title] = d_score
         elif is_train:
-            self.x_train.append(self.phrase2features(ordered_notes, staff))
+            self.x_train.append(self.phrase2features(ordered_notes, staff, d_score=d_score))
             self.y_train.append(self.phrase2labels(hsd_seg))
         self.good_annot_count += 1
 
@@ -269,139 +269,140 @@ class DExperiment:
                     indices_by_piece[the_piece_id].append(self.test_indices[key])
         return indices_by_piece
 
-    def persist_prediction_to_pig_file(self, test_key, predictions, prediction_dir=None):
-        if prediction_dir is None:
-            prediction_dir = self.default_prediction_dir
-        (corpus_name, score_title, annot_index) = test_key
-        # base_title, annot_id = str(score_title).split('-')
-        upper_index, lower_index = self.test_indices[test_key]
-        pred_abcdf = "".join(predictions[upper_index]) + '@' + "".join(predictions[lower_index])
-        pred_annot = DAnnotation(abcdf=pred_abcdf)
-        pred_abcdh = ABCDHeader(annotations=[pred_annot])
-        pred_d_score = self.test_d_scores[score_title]
-        pred_d_score.abcd_header(abcd_header=pred_abcdh)
-        pred_pout = PigOut(d_score=pred_d_score)
-        pred_pig_path = prediction_dir + score_title + PIG_FILE_SUFFIX
-        pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
-        return pred_pig_path
-
-    def predict_and_persist(self, predictions, prediction_dir=None):
-        if prediction_dir is None:
-            prediction_dir = self.default_prediction_dir
-        PigIn.mkdir_if_missing(path_str=prediction_dir, make_missing=True)
-        last_base_title = ''
-        test_pig_paths = list()
-        for test_key in self.test_indices:
-            (corpus_name, score_title, annot_index) = test_key
-            base_title, annot_id = str(score_title).split('-')
-            if base_title != last_base_title:
-                # We only get to predict once per piece in Nakamura evaluation.
-                self.persist_prediction_to_pig_file(test_key=test_key,
-                                                    predictions=predictions, prediction_dir=prediction_dir)
-                last_base_title = base_title
-            test_pig_path = DExperiment.pig_std_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
-            test_pig_paths.append(test_pig_path)
-        return test_pig_paths
-
-    def persist_predictions(self, predictions, prediction_dir=None):
-        # predictions is a list of lists of strike fingers, aligned with
-        # the y_test data.
-        if prediction_dir is None:
-            prediction_dir = self.default_prediction_dir
-        PigIn.mkdir_if_missing(path_str=prediction_dir, make_missing=True)
-        test_pig_paths = list()
-        pred_pig_paths = list()
-        guesses = list()
-        last_test_key = ''
-        test_index = 0
-        for guess in predictions:
-            # We have guesses about 1 or 2 staves. They are interleaved in the predictions list.
-            # If we have two, both need to make it to the PIG file.
-            guesses.append(guess)
-            test_key = self.y_test_keys[test_index]
-            (corpus_name, score_title, annot_index) = test_key
-            base_title, annot_id = str(score_title).split('-')
-            if last_test_key and test_key != last_test_key:
-                prediction_pig_path = self.persist_prediction_to_pig_file(test_key=test_key, predictions=guesses,
-                                                                          prediction_dir=prediction_dir)
-                pred_pig_paths.append(prediction_pig_path)
-                test_pig_path = DExperiment.pig_std_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
-                test_pig_paths.append(test_pig_path)
-                guesses = []
-            last_base_title = base_title
-        return test_pig_paths, pred_pig_paths
-
-    def get_simple_match_rate_for_predictions(self, predictions, prediction_dir=None, output=False):
-        """
-        Use the executable from Nakamura to calculate SimpleMatchRate.
-        """
-        test_paths, pred_paths = self.persist_predictions(predictions=predictions, prediction_dir=prediction_dir)
-        test_path_count = len(test_paths)
-        pred_path_count = len(test_paths)
-        if test_path_count != pred_path_count:
-            raise Exception("Mismatched PIG file counts.")
-
-        total_simple_match_count = 0
-        total_annot_count = 0
-        test_file_count = 0
-        for i in range(test_path_count):
-            pred_pig_path = pred_paths[i]
-            test_pig_path = test_paths[i]
-            match_rate = PigOut.simple_match_rate(gt_pig_path=test_pig_path, pred_pig_path=pred_pig_path)
-            total_simple_match_count += match_rate['match_count']
-            total_annot_count += match_rate['note_count']
-            test_file_count += 1
-            # print(result.stdout)
-        simple_match_rate = total_simple_match_count / total_annot_count
-        if output:
-            print("SimpleMatchRate: {}/{} = {}".format(total_simple_match_count, total_annot_count, simple_match_rate))
-            print("over {} test files.".format(test_file_count))
-        return total_simple_match_count, total_annot_count, simple_match_rate
-
-    def get_simple_match_rate(self, predictions, prediction_dir=None, output=False):
-        """
-        Use the executable from Nakamura to calculate SimpleMatchRate.
-        """
-        if prediction_dir is None:
-            prediction_dir = self.default_prediction_dir
-        pp_path = Path(prediction_dir)
-        if not pp_path.is_dir():
-            os.makedirs(prediction_dir)
-        total_simple_match_count = 0
-        total_annot_count = 0
-        test_file_count = 0
-        for test_key in self.test_indices:
-            (corpus_name, score_title, annot_index) = test_key
-            pred_pig_path = self.persist_prediction_to_pig_file(predictions=predictions, test_key=test_key,
-                                                                prediction_dir=prediction_dir)
-            test_pig_path = DExperiment.pig_std_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
-            match_rate = PigOut.simple_match_rate(gt_pig_path=test_pig_path, pred_pig_path=pred_pig_path)
-            total_simple_match_count += match_rate['match_count']
-            total_annot_count += match_rate['note_count']
-            test_file_count += 1
-            # print(result.stdout)
-        simple_match_rate = total_simple_match_count / total_annot_count
-        if output:
-            print("SimpleMatchRate: {}/{} = {}".format(total_simple_match_count, total_annot_count, simple_match_rate))
-            print("over {} test files.".format(test_file_count))
-        return total_simple_match_count, total_annot_count, simple_match_rate
-
-    def get_my_avg_m_gen(self, prediction_dir=None, test_dir=None, reuse=False, weight=False):
-        if prediction_dir is None:
-            prediction_dir = self.default_prediction_dir
-        if test_dir is None:
-            test_dir = self.default_test_dir
-        if reuse:
-            PigIn.mkdir_if_missing(path_str=test_dir, make_missing=False)
-        else:
-            PigIn.mkdir_if_missing(path_str=test_dir, make_missing=True)
-            test_pig_paths = self.predict_and_persist(prediction_dir=prediction_dir)
-            print("There are {} PIG test paths.".format(len(test_pig_paths)))
-            for tpp in test_pig_paths:
-                shutil.copy2(tpp, test_dir)
-        avg_m_gen, piece_m_gens = PigOut.my_average_m_gen(fingering_files_dir=test_dir,
-                                                          prediction_input_dir=prediction_dir, weight=weight)
-        return avg_m_gen, piece_m_gens
+    # THERE BE DRAGONS. I don't trust this code.
+    # def persist_prediction_to_pig_file(self, test_key, predictions, prediction_dir=None):
+    #     if prediction_dir is None:
+    #         prediction_dir = self.default_prediction_dir
+    #     (corpus_name, score_title, annot_index) = test_key
+    #     # base_title, annot_id = str(score_title).split('-')
+    #     upper_index, lower_index = self.test_indices[test_key]
+    #     pred_abcdf = "".join(predictions[upper_index]) + '@' + "".join(predictions[lower_index])
+    #     pred_annot = DAnnotation(abcdf=pred_abcdf)
+    #     pred_abcdh = ABCDHeader(annotations=[pred_annot])
+    #     pred_d_score = self.test_d_scores[score_title]
+    #     pred_d_score.abcd_header(abcd_header=pred_abcdh)
+    #     pred_pout = PigOut(d_score=pred_d_score)
+    #     pred_pig_path = prediction_dir + score_title + PIG_FILE_SUFFIX
+    #     pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
+    #     return pred_pig_path
+    #
+    # def predict_and_persist(self, predictions, prediction_dir=None):
+    #     if prediction_dir is None:
+    #         prediction_dir = self.default_prediction_dir
+    #     PigIn.mkdir_if_missing(path_str=prediction_dir, make_missing=True)
+    #     last_base_title = ''
+    #     test_pig_paths = list()
+    #     for test_key in self.test_indices:
+    #         (corpus_name, score_title, annot_index) = test_key
+    #         base_title, annot_id = str(score_title).split('-')
+    #         if base_title != last_base_title:
+    #             # We only get to predict once per piece in Nakamura evaluation.
+    #             self.persist_prediction_to_pig_file(test_key=test_key,
+    #                                                 predictions=predictions, prediction_dir=prediction_dir)
+    #             last_base_title = base_title
+    #         test_pig_path = DExperiment.pig_std_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
+    #         test_pig_paths.append(test_pig_path)
+    #     return test_pig_paths
+    #
+    # def persist_predictions(self, predictions, prediction_dir=None):
+    #     # predictions is a list of lists of strike fingers, aligned with
+    #     # the y_test data.
+    #     if prediction_dir is None:
+    #         prediction_dir = self.default_prediction_dir
+    #     PigIn.mkdir_if_missing(path_str=prediction_dir, make_missing=True)
+    #     test_pig_paths = list()
+    #     pred_pig_paths = list()
+    #     guesses = list()
+    #     last_test_key = ''
+    #     test_index = 0
+    #     for guess in predictions:
+    #         # We have guesses about 1 or 2 staves. They are interleaved in the predictions list.
+    #         # If we have two, both need to make it to the PIG file.
+    #         guesses.append(guess)
+    #         test_key = self.y_test_keys[test_index]
+    #         (corpus_name, score_title, annot_index) = test_key
+    #         base_title, annot_id = str(score_title).split('-')
+    #         if last_test_key and test_key != last_test_key:
+    #             prediction_pig_path = self.persist_prediction_to_pig_file(test_key=test_key, predictions=guesses,
+    #                                                                       prediction_dir=prediction_dir)
+    #             pred_pig_paths.append(prediction_pig_path)
+    #             test_pig_path = DExperiment.pig_std_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
+    #             test_pig_paths.append(test_pig_path)
+    #             guesses = []
+    #         last_base_title = base_title
+    #     return test_pig_paths, pred_pig_paths
+    #
+    # def get_simple_match_rate_for_predictions(self, predictions, prediction_dir=None, output=False):
+    #     """
+    #     Use the executable from Nakamura to calculate SimpleMatchRate.
+    #     """
+    #     test_paths, pred_paths = self.persist_predictions(predictions=predictions, prediction_dir=prediction_dir)
+    #     test_path_count = len(test_paths)
+    #     pred_path_count = len(test_paths)
+    #     if test_path_count != pred_path_count:
+    #         raise Exception("Mismatched PIG file counts.")
+    #
+    #     total_simple_match_count = 0
+    #     total_annot_count = 0
+    #     test_file_count = 0
+    #     for i in range(test_path_count):
+    #         pred_pig_path = pred_paths[i]
+    #         test_pig_path = test_paths[i]
+    #         match_rate = PigOut.simple_match_rate(gt_pig_path=test_pig_path, pred_pig_path=pred_pig_path)
+    #         total_simple_match_count += match_rate['match_count']
+    #         total_annot_count += match_rate['note_count']
+    #         test_file_count += 1
+    #         # print(result.stdout)
+    #     simple_match_rate = total_simple_match_count / total_annot_count
+    #     if output:
+    #         print("SimpleMatchRate: {}/{} = {}".format(total_simple_match_count, total_annot_count, simple_match_rate))
+    #         print("over {} test files.".format(test_file_count))
+    #     return total_simple_match_count, total_annot_count, simple_match_rate
+    #
+    # def get_simple_match_rate(self, predictions, prediction_dir=None, output=False):
+    #     """
+    #     Use the executable from Nakamura to calculate SimpleMatchRate.
+    #     """
+    #     if prediction_dir is None:
+    #         prediction_dir = self.default_prediction_dir
+    #     pp_path = Path(prediction_dir)
+    #     if not pp_path.is_dir():
+    #         os.makedirs(prediction_dir)
+    #     total_simple_match_count = 0
+    #     total_annot_count = 0
+    #     test_file_count = 0
+    #     for test_key in self.test_indices:
+    #         (corpus_name, score_title, annot_index) = test_key
+    #         pred_pig_path = self.persist_prediction_to_pig_file(predictions=predictions, test_key=test_key,
+    #                                                             prediction_dir=prediction_dir)
+    #         test_pig_path = DExperiment.pig_std_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
+    #         match_rate = PigOut.simple_match_rate(gt_pig_path=test_pig_path, pred_pig_path=pred_pig_path)
+    #         total_simple_match_count += match_rate['match_count']
+    #         total_annot_count += match_rate['note_count']
+    #         test_file_count += 1
+    #         # print(result.stdout)
+    #     simple_match_rate = total_simple_match_count / total_annot_count
+    #     if output:
+    #         print("SimpleMatchRate: {}/{} = {}".format(total_simple_match_count, total_annot_count, simple_match_rate))
+    #         print("over {} test files.".format(test_file_count))
+    #     return total_simple_match_count, total_annot_count, simple_match_rate
+    #
+    # def get_my_avg_m_gen(self, prediction_dir=None, test_dir=None, reuse=False, weight=False):
+    #     if prediction_dir is None:
+    #         prediction_dir = self.default_prediction_dir
+    #     if test_dir is None:
+    #         test_dir = self.default_test_dir
+    #     if reuse:
+    #         PigIn.mkdir_if_missing(path_str=test_dir, make_missing=False)
+    #     else:
+    #         PigIn.mkdir_if_missing(path_str=test_dir, make_missing=True)
+    #         test_pig_paths = self.predict_and_persist(prediction_dir=prediction_dir)
+    #         print("There are {} PIG test paths.".format(len(test_pig_paths)))
+    #         for tpp in test_pig_paths:
+    #             shutil.copy2(tpp, test_dir)
+    #     avg_m_gen, piece_m_gens = PigOut.my_average_m_gen(fingering_files_dir=test_dir,
+    #                                                       prediction_input_dir=prediction_dir, weight=weight)
+    #     return avg_m_gen, piece_m_gens
 
     @staticmethod
     def match_count(predicted, ground_truth):
@@ -643,81 +644,82 @@ class DExperiment:
 
         return m_rates, weighted_m_rates, base_title_match_rates
 
-    def get_my_avg_m(self, predictions, prediction_dir=None, test_dir=None, reuse=False, weight=False):
-        if prediction_dir is None:
-            prediction_dir = self.default_prediction_dir
-        if test_dir is None:
-            test_dir = self.default_test_dir
-        if reuse:
-            PigIn.mkdir_if_missing(path_str=test_dir, make_missing=False)
-        else:
-            PigIn.mkdir_if_missing(path_str=test_dir, make_missing=True)
-            test_pig_paths = self.predict_and_persist(predictions=predictions, prediction_dir=prediction_dir)
-            print("There are {} PIG test paths.".format(len(test_pig_paths)))
-            for tpp in test_pig_paths:
-                shutil.copy2(tpp, test_dir)
-        avg_m, piece_ms = PigOut.my_average_m(fingering_files_dir=test_dir,
-                                              prediction_input_dir=prediction_dir, weight=weight)
-        return avg_m, piece_ms
-
-    def get_complex_match_rates(self, crf, weight=False, prediction_dir=None, output=False):
-        if prediction_dir is None:
-            prediction_dir = self.default_prediction_dir
-        PigIn.mkdir_if_missing(path_str=prediction_dir, make_missing=True)
-        y_pred = crf.predict(self.x_test)
-        total_note_count = 0
-        d_score_count = 0
-        pred_pig_path = ''
-        combined_match_rates = {}
-        piece_data = dict()
-        match_rates = dict()
-        for corpus_name in self.corpus_names:
-            test_indices = self.test_indices_by_piece(corpus=corpus_name)
-            test_pig_paths = self.test_paths_by_piece(corpus=corpus_name)
-            test_d_scores = self.test_d_scores_by_piece(corpus=corpus_name)
-            tested_pieces = dict()
-            for piece_id in test_pig_paths:
-                note_count = 0
-                annot_count = 0
-                if piece_id not in tested_pieces:
-                    upper_index, lower_index = test_indices[piece_id][0]
-                    pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
-                    pred_annot = DAnnotation(abcdf=pred_abcdf)
-                    pred_abcdh = ABCDHeader(annotations=[pred_annot])
-                    pred_d_score = test_d_scores[piece_id][0]
-                    d_score_count += 1
-                    pred_d_score.abcd_header(abcd_header=pred_abcdh)
-                    pred_pout = PigOut(d_score=pred_d_score)
-                    file_id = "{}-1".format(piece_id)
-                    pred_pig_path = prediction_dir + file_id + PIG_FILE_SUFFIX
-                    pred_pig_content = pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
-                    note_count = pred_d_score.note_count()
-                    annot_count = note_count * len(test_pig_paths[piece_id])
-                match_rates = PigOut.single_prediction_complex_match_rates(gt_pig_paths=test_pig_paths[piece_id],
-                                                                           pred_pig_path=pred_pig_path)
-                total_note_count += note_count
-                piece_data[piece_id] = dict()
-                for key in match_rates:
-                    match_count = round(match_rates[key] * annot_count)
-                    raw_rate = match_rates[key]
-                    piece_data[piece_id][key] = {
-                        'match_count': match_count,
-                        'note_count': note_count,
-                        'annot_count': annot_count,
-                        'raw_rate': raw_rate
-                    }
-                    if weight:
-                        match_rates[key] *= note_count
-                    if key not in combined_match_rates:
-                        combined_match_rates[key] = 0
-                    combined_match_rates[key] += match_rates[key]
-
-        for key in match_rates:
-            if weight:
-                combined_match_rates[key] /= total_note_count
-            else:
-                combined_match_rates[key] /= d_score_count
-        return combined_match_rates, piece_data
+    # THERE BE DRAGONS:
+    # def get_my_avg_m(self, predictions, prediction_dir=None, test_dir=None, reuse=False, weight=False):
+    #     if prediction_dir is None:
+    #         prediction_dir = self.default_prediction_dir
+    #     if test_dir is None:
+    #         test_dir = self.default_test_dir
+    #     if reuse:
+    #         PigIn.mkdir_if_missing(path_str=test_dir, make_missing=False)
+    #     else:
+    #         PigIn.mkdir_if_missing(path_str=test_dir, make_missing=True)
+    #         test_pig_paths = self.predict_and_persist(predictions=predictions, prediction_dir=prediction_dir)
+    #         print("There are {} PIG test paths.".format(len(test_pig_paths)))
+    #         for tpp in test_pig_paths:
+    #             shutil.copy2(tpp, test_dir)
+    #     avg_m, piece_ms = PigOut.my_average_m(fingering_files_dir=test_dir,
+    #                                           prediction_input_dir=prediction_dir, weight=weight)
+    #     return avg_m, piece_ms
+    #
+    # def get_complex_match_rates(self, crf, weight=False, prediction_dir=None, output=False):
+    #     if prediction_dir is None:
+    #         prediction_dir = self.default_prediction_dir
+    #     PigIn.mkdir_if_missing(path_str=prediction_dir, make_missing=True)
+    #     y_pred = crf.predict(self.x_test)
+    #     total_note_count = 0
+    #     d_score_count = 0
+    #     pred_pig_path = ''
+    #     combined_match_rates = {}
+    #     piece_data = dict()
+    #     match_rates = dict()
+    #     for corpus_name in self.corpus_names:
+    #         test_indices = self.test_indices_by_piece(corpus=corpus_name)
+    #         test_pig_paths = self.test_paths_by_piece(corpus=corpus_name)
+    #         test_d_scores = self.test_d_scores_by_piece(corpus=corpus_name)
+    #         tested_pieces = dict()
+    #         for piece_id in test_pig_paths:
+    #             note_count = 0
+    #             annot_count = 0
+    #             if piece_id not in tested_pieces:
+    #                 upper_index, lower_index = test_indices[piece_id][0]
+    #                 pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
+    #                 pred_annot = DAnnotation(abcdf=pred_abcdf)
+    #                 pred_abcdh = ABCDHeader(annotations=[pred_annot])
+    #                 pred_d_score = test_d_scores[piece_id][0]
+    #                 d_score_count += 1
+    #                 pred_d_score.abcd_header(abcd_header=pred_abcdh)
+    #                 pred_pout = PigOut(d_score=pred_d_score)
+    #                 file_id = "{}-1".format(piece_id)
+    #                 pred_pig_path = prediction_dir + file_id + PIG_FILE_SUFFIX
+    #                 pred_pig_content = pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
+    #                 note_count = pred_d_score.note_count()
+    #                 annot_count = note_count * len(test_pig_paths[piece_id])
+    #             match_rates = PigOut.single_prediction_complex_match_rates(gt_pig_paths=test_pig_paths[piece_id],
+    #                                                                        pred_pig_path=pred_pig_path)
+    #             total_note_count += note_count
+    #             piece_data[piece_id] = dict()
+    #             for key in match_rates:
+    #                 match_count = round(match_rates[key] * annot_count)
+    #                 raw_rate = match_rates[key]
+    #                 piece_data[piece_id][key] = {
+    #                     'match_count': match_count,
+    #                     'note_count': note_count,
+    #                     'annot_count': annot_count,
+    #                     'raw_rate': raw_rate
+    #                 }
+    #                 if weight:
+    #                     match_rates[key] *= note_count
+    #                 if key not in combined_match_rates:
+    #                     combined_match_rates[key] = 0
+    #                 combined_match_rates[key] += match_rates[key]
+    #
+    #     for key in match_rates:
+    #         if weight:
+    #             combined_match_rates[key] /= total_note_count
+    #         else:
+    #             combined_match_rates[key] /= d_score_count
+    #     return combined_match_rates, piece_data
 
     def load_data(self, clean_list):
         creal = Corporeal()
@@ -778,8 +780,9 @@ class DExperiment:
                                     self.append_example(ordered_notes, staff, hsd_seg, is_test=True,
                                                         test_key=test_key, d_score=da_unannotated_score)
                                 else:
-                                    self.append_example(ordered_notes, staff, hsd_seg, is_train=True)
+                                    self.append_example(ordered_notes, staff, hsd_seg, is_train=True,
+                                                        d_score=da_unannotated_score)
                             else:
-                                self.append_example(ordered_notes, staff, hsd_seg)
+                                self.append_example(ordered_notes, staff, hsd_seg, d_score=da_unannotated_score)
         print("Data loaded. Clean list: {}".format(list(clean_list.keys())))
         return experiment_name

@@ -28,7 +28,7 @@ CRF_VERSION = "5"
 REVERSE_NOTES = False
 
 
-def my_note2features(notes, i, staff):
+def my_note2features(notes, i, staff, d_score=None):
     features = dict()
 
     # IDEA: Composer as feature.

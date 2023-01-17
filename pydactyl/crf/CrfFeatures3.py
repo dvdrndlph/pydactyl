@@ -29,7 +29,7 @@ import pydactyl.crf.CrfUtil as c
 CRF_VERSION = "3"
 
 
-def my_note2features(notes, i, staff):
+def my_note2features(notes, i, staff, d_score=None):
     features = dict()
 
     features['BOP'] = "0"
