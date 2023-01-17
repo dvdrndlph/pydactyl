@@ -29,10 +29,7 @@ import os
 # which does not seem to provide a way to predefine "edge-observation" functions
 # over both observations and labels.
 #
-import time
-import pprint
 from datetime import datetime
-from pathlib import Path
 from pyseqlab.utilities import generate_trained_model
 from pyseqlab.utilities import SequenceStruct
 from pyseqlab.attributes_extraction import GenericAttributeExtractor
@@ -42,9 +39,9 @@ from pyseqlab.fo_crf import FirstOrderCRF, FirstOrderCRFModelRepresentation
 from pyseqlab.workflow import GenericTrainingWorkflow
 from pyseqlab.ho_crf_ad import HOCRFAD, HOCRFADModelRepresentation
 from sklearn_crfsuite import metrics
-from pydactyl.util.DExperiment import DExperiment
+from pydactyl.eval.DExperiment import DExperiment
 import pydactyl.crf.CrfFeatures3 as crf3
-import pydactyl.util.CrfUtil as c
+import pydactyl.crf.CrfUtil as c
 
 # CROSS_VALIDATE = False
 # One of 'cross-validate', 'preset', 'random'

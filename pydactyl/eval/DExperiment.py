@@ -29,8 +29,8 @@ import os
 from sklearn_crfsuite import metrics
 from sklearn.model_selection import train_test_split, cross_val_score
 from pathlib import Path
-import pydactyl.util.CrfUtil as c
-from pydactyl.util.DExperimentOpts import DExperimentOpts
+import pydactyl.crf.CrfUtil as c
+from pydactyl.eval.DExperimentOpts import DExperimentOpts
 from pydactyl.eval.Corporeal import Corporeal
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dcorpus.DAnnotation import DAnnotation
@@ -139,7 +139,7 @@ class DExperiment:
                 predictions = self.evaluate_trained_model(the_model=the_model)
             else:
                 predictions = self.train_and_evaluate(the_model=the_model)
-            self.direct_avg_m(predictions=predictions)
+            self.my_match_rates(predictions=predictions)
             # total_simple_match_count, total_annot_count, simple_match_rate = \
             #     self.get_simple_match_rate(predictions=predictions, output=True)
             # print("Simple match rate: {}".format(simple_match_rate))
@@ -452,13 +452,14 @@ class DExperiment:
                 max_count = match_count
         return max_count
 
-    def direct_avg_m(self, predictions, weight=False):
+    def my_match_rates(self, predictions):
         # predictions contain predictions for all items in the test set.
         # We need to pull the first "exemplar" for each score and compare
         # it to every ground truth we have for the score.
         last_base_title = ''
         test_keys_for_base_title = dict()
         prediction_key_for_base_title = dict()
+        splits_are_valid = True
         for test_key in self.test_indices:
             (corpus_name, score_title, annot_index) = test_key
             base_title, annot_id = str(score_title).split('-')
@@ -468,43 +469,31 @@ class DExperiment:
                 # We only get to predict once per piece in Nakamura evaluation.
                 last_base_title = base_title
             test_keys_for_base_title[base_title].append(test_key)
-        total_upper_note_count = 0
-        total_lower_note_count = 0
-        total_upper_match_count = 0
-        total_lower_match_count = 0
-        score_note_counts = dict()
-        score_gen_matches = dict()
+        total_counts = {
+            'note': {'upper': 0, 'lower': 0, 'combined': 0},
+            'match': {'upper': 0, 'lower': 0, 'combined': 0}
+        }
         base_title_match_rates = dict()
         base_title_note_counts = dict()
+        score_splits_are_valid = True
         for base_title in prediction_key_for_base_title:
-            total_score_upper_note_count = 0
-            total_score_lower_note_count = 0
-            total_score_upper_match_count = 0
-            total_score_lower_match_count = 0
+            total_score_counts = {
+                'note': {'upper': 0, 'lower': 0, 'combined': 0},
+                'match': {'upper': 0, 'lower': 0, 'combined': 0}
+            }
             pred_key = prediction_key_for_base_title[base_title]
             (pred_upper_i, pred_lower_i) = self.test_indices[pred_key]
             pred_upper = predictions[pred_upper_i]
             pred_lower = predictions[pred_lower_i]
+            pred_combined = pred_upper + pred_lower
             upper_note_count = len(pred_upper)
             lower_note_count = len(pred_lower)
-            combined_note_count = upper_note_count + lower_note_count
+            combined_note_count = len(pred_combined)
             if base_title not in base_title_match_rates:
                 base_title_match_rates[base_title] = {
-                    'upper': {
-                        'gen': 0.0,
-                        'high': 0.0,
-                        'soft': 0.0
-                    },
-                    'lower': {
-                        'gen': 0.0,
-                        'high': 0.0,
-                        'soft': 0.0
-                    },
-                    'combined': {
-                        'gen': 0.0,
-                        'high': 0.0,
-                        'soft': 0.0
-                    },
+                    'upper': {'gen': 0.0, 'high': 0.0, 'soft': 0.0},
+                    'lower': {'gen': 0.0, 'high': 0.0, 'soft': 0.0},
+                    'combined': {'gen': 0.0, 'high': 0.0, 'soft': 0.0}
                 }
                 base_title_note_counts[base_title] = {
                     'upper': upper_note_count,
@@ -516,7 +505,7 @@ class DExperiment:
                 'lower': pred_lower,
                 'combined': pred_upper + pred_lower
             }
-            score_test_fingrings = {
+            score_test_fingerings = {
                 'upper': list(),
                 'lower': list(),
                 'combined': list()
@@ -525,46 +514,65 @@ class DExperiment:
                 # print("Compare {} to {}".format(pred_key, test_key))
                 (test_upper_i, test_lower_i) = self.test_indices[test_key]
                 test_upper = self.y_test[test_upper_i]
-                score_test_fingrings['upper'].append(test_upper)
-                upper_match_count = DExperiment.match_count(predicted=pred_upper, ground_truth=test_upper)
-                total_upper_match_count += upper_match_count
-                total_upper_note_count += upper_note_count
-                total_score_upper_match_count += upper_match_count
-                total_score_upper_note_count += upper_note_count
-
                 test_lower = self.y_test[test_lower_i]
-                score_test_fingrings['lower'].append(test_lower)
-                score_test_fingrings['combined'].append(test_upper + test_lower)
-                lower_match_count = DExperiment.match_count(predicted=pred_lower, ground_truth=test_lower)
-                total_lower_match_count += lower_match_count
-                total_lower_note_count += lower_note_count
-                total_score_lower_note_count += lower_note_count
-                total_score_lower_match_count += lower_match_count
-            total_score_match_count = total_score_upper_match_count + total_score_lower_match_count
-            total_score_note_count = total_score_upper_note_count + total_score_lower_note_count
-            base_title_match_rates[base_title]['combined']['gen'] = total_score_match_count / total_score_note_count
-            base_title_match_rates[base_title]['upper']['gen'] = total_score_upper_match_count / total_score_upper_note_count
-            base_title_match_rates[base_title]['lower']['gen'] = total_score_lower_match_count / total_score_lower_note_count
+                test_combined = test_upper + test_lower
+                score_test_fingerings['upper'].append(test_upper)
+                score_test_fingerings['lower'].append(test_lower)
+                score_test_fingerings['combined'].append(test_combined)
+                if score_splits_are_valid:
+                    try:
+                        upper_match_count = DExperiment.match_count(predicted=pred_upper, ground_truth=test_upper)
+                        total_counts['match']['upper'] += upper_match_count
+                        total_counts['note']['upper'] += upper_note_count
+                        total_score_counts['match']['upper'] += upper_match_count
+                        total_score_counts['note']['upper'] += upper_note_count
+                        lower_match_count = DExperiment.match_count(predicted=pred_lower, ground_truth=test_lower)
+                        total_counts['match']['lower'] += lower_match_count
+                        total_counts['note']['lower'] += lower_note_count
+                        total_score_counts['match']['lower'] += lower_match_count
+                        total_score_counts['note']['lower'] += lower_note_count
+                    except Exception:
+                        print("Upper/lower split metrics are invalid.")
+                        splits_are_valid = False
+                        score_splits_are_valid = False
 
+                combined_match_count = DExperiment.match_count(predicted=pred_combined, ground_truth=test_combined)
+                total_counts['match']['combined'] += combined_match_count
+                total_counts['note']['combined'] += combined_note_count
+                total_score_counts['match']['combined'] += combined_match_count
+                total_score_counts['note']['combined'] += combined_note_count
+
+            base_title_match_rates[base_title]['combined']['gen'] = \
+                total_score_counts['match']['combined'] / total_score_counts['note']['combined']
             score_soft_match_count = DExperiment.soft_match_count(score_pred_fingering['combined'],
-                                                                  score_test_fingrings['combined'])
+                                                                  score_test_fingerings['combined'])
             base_title_match_rates[base_title]['combined']['soft'] = score_soft_match_count / combined_note_count
-            score_upper_soft_match_count = DExperiment.soft_match_count(score_pred_fingering['upper'],
-                                                                        score_test_fingrings['upper'])
-            base_title_match_rates[base_title]['upper']['soft'] = score_upper_soft_match_count / upper_note_count
-            score_lower_soft_match_count = DExperiment.soft_match_count(score_pred_fingering['lower'],
-                                                                        score_test_fingrings['lower'])
-            base_title_match_rates[base_title]['lower']['soft'] = score_lower_soft_match_count / lower_note_count
-
             score_high_match_count = DExperiment.high_match_count(score_pred_fingering['combined'],
-                                                                  score_test_fingrings['combined'])
+                                                                  score_test_fingerings['combined'])
             base_title_match_rates[base_title]['combined']['high'] = score_high_match_count / combined_note_count
-            score_upper_high_match_count = DExperiment.high_match_count(score_pred_fingering['upper'],
-                                                                        score_test_fingrings['upper'])
-            base_title_match_rates[base_title]['upper']['high'] = score_upper_high_match_count / upper_note_count
-            score_lower_high_match_count = DExperiment.high_match_count(score_pred_fingering['lower'],
-                                                                        score_test_fingrings['lower'])
-            base_title_match_rates[base_title]['lower']['high'] = score_lower_high_match_count / lower_note_count
+
+            if score_splits_are_valid:
+                base_title_match_rates[base_title]['upper']['gen'] = \
+                    total_score_counts['match']['upper'] / total_score_counts['note']['upper']
+                score_upper_soft_match_count = DExperiment.soft_match_count(score_pred_fingering['upper'],
+                                                                            score_test_fingerings['upper'])
+                base_title_match_rates[base_title]['upper']['soft'] = score_upper_soft_match_count / upper_note_count
+                score_upper_high_match_count = DExperiment.high_match_count(score_pred_fingering['upper'],
+                                                                            score_test_fingerings['upper'])
+                base_title_match_rates[base_title]['upper']['high'] = score_upper_high_match_count / upper_note_count
+
+                base_title_match_rates[base_title]['lower']['gen'] = \
+                    total_score_counts['match']['lower'] / total_score_counts['note']['lower']
+                score_lower_soft_match_count = DExperiment.soft_match_count(score_pred_fingering['lower'],
+                                                                            score_test_fingerings['lower'])
+                base_title_match_rates[base_title]['lower']['soft'] = score_lower_soft_match_count / lower_note_count
+                score_lower_high_match_count = DExperiment.high_match_count(score_pred_fingering['lower'],
+                                                                            score_test_fingerings['lower'])
+                base_title_match_rates[base_title]['lower']['high'] = score_lower_high_match_count / lower_note_count
+            else:
+                for staff in ['upper', 'lower']:
+                    for method in ['gen', 'high', 'soft']:
+                        base_title_match_rates[base_title][staff][method] = None
 
         pprint.pprint(base_title_match_rates)
 
@@ -597,6 +605,8 @@ class DExperiment:
         title_count = len(base_title_match_rates)
         for base_title, rates in base_title_match_rates.items():
             for staff in ('upper', 'lower', 'combined'):
+                if not splits_are_valid and staff in ('upper', 'lower'):
+                    continue
                 for method in ('gen', 'high', 'soft'):
                     sums_of_rates[staff][method] += rates[staff][method]
                     weighted_sums_of_rates[staff][method] += rates[staff][method] * base_title_note_counts[base_title][staff]
@@ -604,28 +614,34 @@ class DExperiment:
 
         for staff in ('upper', 'lower', 'combined'):
             for method in ('gen', 'high', 'soft'):
+                if not splits_are_valid and staff in ('upper', 'lower'):
+                    continue
                 m_rates[staff][method] = sums_of_rates[staff][method] / title_count
                 weighted_m_rates[staff][method] = weighted_sums_of_rates[staff][method] / total_weights[staff]
 
-        total_note_count = total_upper_note_count + total_lower_note_count
-        total_match_count = total_upper_match_count + total_lower_match_count
-        upper_smr = total_upper_match_count / total_upper_note_count
-        lower_smr = total_lower_match_count / total_lower_note_count
-        total_smr = total_match_count / total_note_count
-        m_rates['upper']['simple'] = upper_smr
-        m_rates['lower']['simple'] = lower_smr
-        m_rates['combined']['simple'] = total_smr
+        combined_smr = total_counts['match']['combined'] / total_counts['note']['combined']
+        m_rates['combined']['simple'] = combined_smr
         # The simple match rate is implicitly weighted, as it is just total matches over total notes.
-        weighted_m_rates['upper']['simple'] = upper_smr
-        weighted_m_rates['lower']['simple'] = lower_smr
-        weighted_m_rates['combined']['simple'] = total_smr
+        weighted_m_rates['combined']['simple'] = combined_smr
 
+        if splits_are_valid:
+            upper_smr = total_counts['match']['upper'] / total_counts['note']['upper']
+            lower_smr = total_counts['match']['lower'] / total_counts['note']['lower']
+            m_rates['upper']['simple'] = upper_smr
+            m_rates['lower']['simple'] = lower_smr
+            weighted_m_rates['upper']['simple'] = upper_smr
+            weighted_m_rates['lower']['simple'] = lower_smr
+        else:
+            for staff in ['upper', 'lower']:
+                 m_rates[staff]['simple'] = None
+                 weighted_m_rates[staff]['simple'] = None
+
+        print("\nM metrics per Nakamura:")
         pprint.pprint(m_rates)
+        print("Weighted M metrics:")
         pprint.pprint(weighted_m_rates)
 
-        return m_rates, weighted_m_rates
-
-
+        return m_rates, weighted_m_rates, base_title_match_rates
 
     def get_my_avg_m(self, predictions, prediction_dir=None, test_dir=None, reuse=False, weight=False):
         if prediction_dir is None:

@@ -24,8 +24,8 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 import sklearn_crfsuite as crf
-from pydactyl.util.DExperiment import DExperiment, DExperimentOpts
-import pydactyl.util.CrfUtil as c
+from pydactyl.eval.DExperiment import DExperiment, DExperimentOpts
+import pydactyl.crf.CrfUtil as c
 import pydactyl.crf.CrfFeatures5 as feats
 
 # One of 'cross-validate', 'preset', 'random'

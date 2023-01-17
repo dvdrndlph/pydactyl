@@ -24,7 +24,7 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 
 from music21 import note
-import pydactyl.util.CrfUtil as c
+import pydactyl.crf.CrfUtil as c
 
 CRF_VERSION = "4"
 REVERSE_NOTES = False

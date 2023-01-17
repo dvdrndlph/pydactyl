@@ -27,8 +27,8 @@ import dill
 import re
 from pathlib import Path
 from music21 import note
-from pydactyl.dactyler.Parncutt import TrigramNode, is_black, ImaginaryBlackKeyRuler, PhysicalRuler
-from pydactyl.util.DExperimentOpts import DExperimentOpts
+from pydactyl.dactyler.Parncutt import TrigramNode, is_black, ImaginaryBlackKeyRuler
+from pydactyl.eval.DExperimentOpts import DExperimentOpts
 
 PICKLE_BASE_DIR = '/tmp/pickle/'
 MAX_LEAP = 16

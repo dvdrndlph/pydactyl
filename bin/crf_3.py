@@ -26,9 +26,8 @@ __author__ = 'David Randolph'
 import sklearn_crfsuite as crf
 from sklearn_crfsuite import metrics
 from sklearn.model_selection import train_test_split, cross_val_score
-from pydactyl.util.DExperiment import DExperiment
-from music21 import note
-import pydactyl.util.CrfUtil as c
+from pydactyl.eval.DExperiment import DExperiment
+import pydactyl.crf.CrfUtil as c
 import pydactyl.crf.CrfFeatures3 as Crf3;
 
 # CROSS_VALIDATE = False

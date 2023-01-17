@@ -33,7 +33,6 @@ __author__ = 'David Randolph'
 # I have witnessed this before, so I want to preserve code to demonstrate the issue.
 # The main difference is in moving DExperiment to a different file in crf_2.
 import copy
-import pprint
 import shutil
 import os
 import sklearn_crfsuite as crf
@@ -41,13 +40,12 @@ from sklearn_crfsuite import metrics
 from pathlib import Path
 from sklearn.model_selection import train_test_split, cross_val_score
 from music21 import note
-from pydactyl.eval.Corporeal import Corporeal, ARPEGGIOS_DIR, SCALES_DIR, BROKEN_DIR, \
-    ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, COMPLETE_LAYER_ONE_STD_PIG_DIR
+from pydactyl.eval.Corporeal import Corporeal, ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, COMPLETE_LAYER_ONE_STD_PIG_DIR
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dcorpus.DAnnotation import DAnnotation
 from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_STD_DIR, PIG_FILE_SUFFIX, PIG_SEGREGATED_STD_DIR
-import pydactyl.util.CrfUtil as c
+import pydactyl.crf.CrfUtil as c
 
 VERSION = '0003'
 PREDICTION_DIR = '/tmp/crf' + VERSION + 'prediction/'

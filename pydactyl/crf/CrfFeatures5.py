@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 __author__ = 'David Randolph'
 # Copyright (c) 2020-2023 David A. Randolph.
 #
@@ -23,7 +22,7 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 from music21 import note
-import pydactyl.util.CrfUtil as c
+import pydactyl.crf.CrfUtil as c
 
 CRF_VERSION = "5"
 REVERSE_NOTES = False

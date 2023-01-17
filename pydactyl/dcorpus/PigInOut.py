@@ -232,10 +232,10 @@ class PigIn:
       https://doi.org/10.1016/j.ins.2019.12.068.
 
     Note that the PIG dataset does not divide the music into upper and lower staffs (or channels
-    as expected in Type 1 MIDI files). Instead they define the channel by the hand used to play
+    as expected in Type 1 MIDI files). Instead, it defines the channel by the hand used to play
     the note. This makes it impossible in some cases to define a single MIDI file (with two tracks
     or channels) to cover all PIG fingering files for the same piece. Since we require this
-    sort of channel separation in Pydactyl, we would need to have more than one MIDI/abcdh
+    sort of channel separation in Pydactyl, we would need to have more than one MIDI/abcD header
     combination for some pieces.
 
     To correct this, we adapt the PIG source files to make the channel assignments

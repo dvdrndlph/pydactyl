@@ -32,11 +32,10 @@ import sklearn_crfsuite as crf
 from sklearn_crfsuite import metrics
 from sklearn.model_selection import train_test_split, cross_val_score
 from music21 import note
-from pydactyl.eval.Corporeal import Corporeal, ARPEGGIOS_DIR, SCALES_DIR, BROKEN_DIR, \
-    ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, COMPLETE_LAYER_ONE_STD_PIG_DIR
+from pydactyl.eval.Corporeal import Corporeal
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
-from pydactyl.util.DExperiment import DExperiment
-import pydactyl.util.CrfUtil as c
+from pydactyl.eval.DExperiment import DExperiment
+import pydactyl.crf.CrfUtil as c
 
 VERSION = '0002'
 

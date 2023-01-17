@@ -32,12 +32,11 @@ import pprint
 # over both observations and labels.
 #
 # from pyseqlab.utilities import SequenceStruct
-import sklearn_crfsuite as crf
 from sklearn_crfsuite import metrics
-from sklearn.model_selection import KFold, train_test_split, cross_val_score
-from pydactyl.util.DExperiment import DExperiment
-from pydactyl.util.XyCrf import XyCrf, START_TAG, STOP_TAG
-import pydactyl.util.CrfUtil as c
+from sklearn.model_selection import KFold, train_test_split
+from pydactyl.eval.DExperiment import DExperiment
+from pydactyl.crf.XyCrf import XyCrf, START_TAG, STOP_TAG
+import pydactyl.crf.CrfUtil as c
 from pydactyl.eval.Corporeal import Corporeal
 from pydactyl.dactyler.Parncutt import TrigramNode
 
