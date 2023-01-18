@@ -55,6 +55,7 @@ class DExperiment:
                  x_test: list = None, y_test: list = None,
                  as_features=True):
         self.opts = opts
+        self.pickling = opts.pickling
         self.model_features = opts.model_features
         self.model_version = opts.model_version
         self.test_method = opts.test_method
@@ -476,8 +477,8 @@ class DExperiment:
         }
         base_title_match_rates = dict()
         base_title_note_counts = dict()
-        score_splits_are_valid = True
         for base_title in prediction_key_for_base_title:
+            score_splits_are_valid = True
             total_score_counts = {
                 'note': {'upper': 0, 'lower': 0, 'combined': 0},
                 'match': {'upper': 0, 'lower': 0, 'combined': 0}
@@ -730,7 +731,8 @@ class DExperiment:
                                       file_name=corpus_name, use_dill=True)
             if da_corpus is None:
                 da_corpus = creal.get_corpus(corpus_name=corpus_name)
-                c.pickle_it(obj=da_corpus, obj_type="DCorpus", file_name=corpus_name, use_dill=True)
+                if self.pickling:
+                    c.pickle_it(obj=da_corpus, obj_type="DCorpus", file_name=corpus_name, use_dill=True)
             for da_score in da_corpus.d_score_list():
                 abcdh = da_score.abcd_header()
                 annot_count = abcdh.annotation_count()

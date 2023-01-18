@@ -26,6 +26,9 @@ __author__ = 'David Randolph'
 class DExperimentOpts:
     def __init__(self, opts):
         self.engine = opts['engine']
+        self.pickling = True
+        if 'pickling' in opts:
+            self.pickling = opts['pickling']
         feats = opts['model_features']
         self.model_features = feats
         self.model_version = feats.CRF_VERSION
