@@ -26,14 +26,18 @@ import pydactyl.crf.CrfUtil as c
 
 CRF_VERSION = "5"
 REVERSE_NOTES = False
+MAX_LEAP = 15
 
 
 def my_note2features(notes, i, staff, d_score=None):
     features = dict()
 
-    # IDEA: Composer as feature.
+    # features['composer'] = d_score.composer()
+    # Period of piece: Baroque, Classical, Romantic, Modern, Contemporary, Other.
+    # features['primary_period'] = d_score.periods()[0]
+    # features['period_str'] = d_score.period_str()
+
     # IDEA: Composer year/decade/century of birth.
-    # IDEA: Period of piece: Baroque, Classical, Romantic, Modern, Rudiment, Other.
 
     features['staff'] = staff
     # features['staff'] = 0
@@ -59,22 +63,22 @@ def my_note2features(notes, i, staff, d_score=None):
 
     x_d = dict()
     y_d = dict()
-    x_d[-4], y_d[-4] = c.lattice_distance(notes=notes, from_i=i-4, to_i=i)
-    x_d[-3], y_d[-3] = c.lattice_distance(notes=notes, from_i=i-3, to_i=i)
-    x_d[-2], y_d[-2] = c.lattice_distance(notes=notes, from_i=i-2, to_i=i)
-    x_d[-1], y_d[-1] = c.lattice_distance(notes=notes, from_i=i-1, to_i=i)
-    x_d[+1], y_d[+1] = c.lattice_distance(notes=notes, from_i=i, to_i=i+1)
-    x_d[+2], y_d[+2] = c.lattice_distance(notes=notes, from_i=i, to_i=i+2)
-    x_d[+3], y_d[+3] = c.lattice_distance(notes=notes, from_i=i, to_i=i+3)
-    x_d[+4], y_d[+4] = c.lattice_distance(notes=notes, from_i=i, to_i=i+4)
-    # x_d[-4], y_d[-4] = c.lattice_distance(notes=notes, from_i=i-4, to_i=i-3)
-    # x_d[-3], y_d[-3] = c.lattice_distance(notes=notes, from_i=i-3, to_i=i-2)
-    # x_d[-2], y_d[-2] = c.lattice_distance(notes=notes, from_i=i-2, to_i=i-1)
-    # x_d[-1], y_d[-1] = c.lattice_distance(notes=notes, from_i=i-1, to_i=i)
-    # x_d[+1], y_d[+1] = c.lattice_distance(notes=notes, from_i=i, to_i=i+1)
-    # x_d[+2], y_d[+2] = c.lattice_distance(notes=notes, from_i=i+1, to_i=i+2)
-    # x_d[+3], y_d[+3] = c.lattice_distance(notes=notes, from_i=i+2, to_i=i+3)
-    # x_d[+4], y_d[+4] = c.lattice_distance(notes=notes, from_i=i+3, to_i=i+4)
+    x_d[-4], y_d[-4] = c.lattice_distance(notes=notes, from_i=i-4, to_i=i, max_leap=MAX_LEAP)
+    x_d[-3], y_d[-3] = c.lattice_distance(notes=notes, from_i=i-3, to_i=i, max_leap=MAX_LEAP)
+    x_d[-2], y_d[-2] = c.lattice_distance(notes=notes, from_i=i-2, to_i=i, max_leap=MAX_LEAP)
+    x_d[-1], y_d[-1] = c.lattice_distance(notes=notes, from_i=i-1, to_i=i, max_leap=MAX_LEAP)
+    x_d[+1], y_d[+1] = c.lattice_distance(notes=notes, from_i=i, to_i=i+1, max_leap=MAX_LEAP)
+    x_d[+2], y_d[+2] = c.lattice_distance(notes=notes, from_i=i, to_i=i+2, max_leap=MAX_LEAP)
+    x_d[+3], y_d[+3] = c.lattice_distance(notes=notes, from_i=i, to_i=i+3, max_leap=MAX_LEAP)
+    x_d[+4], y_d[+4] = c.lattice_distance(notes=notes, from_i=i, to_i=i+4, max_leap=MAX_LEAP)
+    # x_d['-4-3'], y_d['-4-3'] = c.lattice_distance(notes=notes, from_i=i-4, to_i=i-3, max_leap=MAX_LEAP)
+    # x_d['-3-2'], y_d['-3-2'] = c.lattice_distance(notes=notes, from_i=i-3, to_i=i-2, max_leap=MAX_LEAP)
+    # x_d['-2-1'], y_d['-2-1'] = c.lattice_distance(notes=notes, from_i=i-2, to_i=i-1, max_leap=MAX_LEAP)
+    # x_d['-10'], y_d['-10'] = c.lattice_distance(notes=notes, from_i=i-1, to_i=i, max_leap=MAX_LEAP)
+    # x_d['0+1'], y_d['0+1'] = c.lattice_distance(notes=notes, from_i=i, to_i=i+1, max_leap=MAX_LEAP)
+    # x_d['+1+2'], y_d['+1+2'] = c.lattice_distance(notes=notes, from_i=i+1, to_i=i+2, max_leap=MAX_LEAP)
+    # x_d['+2+3'], y_d['+2+3'] = c.lattice_distance(notes=notes, from_i=i+2, to_i=i+3, max_leap=MAX_LEAP)
+    # x_d['+3+4'], y_d['+3+4'] = c.lattice_distance(notes=notes, from_i=i+3, to_i=i+4, max_leap=MAX_LEAP)
 
     features['x_distance:-3'] = x_d[-3]
     features['x_distance:-2'] = x_d[-2]
@@ -132,7 +136,7 @@ def my_note2features(notes, i, staff, d_score=None):
 
     # Impact of large leaps? Costs max out, no? Maybe not.
     features['leap'] = "0"
-    if c.leap_is_excessive(notes, i):
+    if c.leap_is_excessive(notes, i, max_leap=MAX_LEAP):
         features['leap'] = "1"
 
     oon = notes[i]

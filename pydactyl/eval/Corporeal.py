@@ -200,16 +200,35 @@ class Corporeal(ABC):
             composer = composer_for_prefix[prefix]
             d_score.composer(composer, with_periods=True)
 
+    @staticmethod
+    def enrich_beringer_corpus(the_corpus: DCorpus):
+        for d_score in the_corpus.d_score_list():
+            composer = 'Beringer'
+            d_score.composer(composer, with_periods=True)
+
+    @staticmethod
+    def enrich_clementi_corpus(the_corpus: DCorpus):
+        for d_score in the_corpus.d_score_list():
+            composer = 'Clementi'
+            d_score.composer(composer, with_periods=True)
+
+    @staticmethod
+    def enrich_czerny_corpus(the_corpus: DCorpus):
+        for d_score in the_corpus.d_score_list():
+            composer = 'Czerny'
+            d_score.composer(composer, with_periods=True)
 
     def get_corpus(self, corpus_name):
         if corpus_name == 'pig':
             the_corpus = DCorpus()
             the_corpus.append_dir(corpus_dir=PIG_DIR, via_midi=True, split_header_extension='abcd')
+            Corporeal.enrich_pig_corpus(the_corpus)
             return the_corpus
 
         if corpus_name == 'pig_indy':
             the_corpus = DCorpus()
             the_corpus.append_dir(corpus_dir=PIG_INDY_DIR, via_midi=True, split_header_extension='abcd')
+            Corporeal.enrich_pig_corpus(the_corpus)
             return the_corpus
 
         if corpus_name == 'pig_seg':
@@ -221,27 +240,32 @@ class Corporeal(ABC):
         if corpus_name == 'scales':
             the_corpus = DCorpus()
             the_corpus.append_dir(corpus_dir=SCALES_DIR)
+            Corporeal.enrich_beringer_corpus(the_corpus)
             return the_corpus
 
         if corpus_name == 'arpeggios':
             the_corpus = DCorpus()
             the_corpus.append_dir(corpus_dir=ARPEGGIOS_DIR)
+            Corporeal.enrich_beringer_corpus(the_corpus)
             return the_corpus
 
         if corpus_name == 'broken':
             the_corpus = DCorpus()
             the_corpus.append_dir(corpus_dir=BROKEN_DIR)
+            Corporeal.enrich_beringer_corpus(the_corpus)
             return the_corpus
 
         if corpus_name == 'beringer':
             the_corpus = DCorpus()
             for subdir in [SCALES_DIR, ARPEGGIOS_DIR, BROKEN_DIR]:
                 the_corpus.append_dir(corpus_dir=subdir)
+            Corporeal.enrich_beringer_corpus(the_corpus)
             return the_corpus
 
         if corpus_name == 'complete_layer_one':
             the_corpus = DCorpus()
             the_corpus.append_dir(corpus_dir=COMPLETE_LAYER_ONE_DIR)
+            Corporeal.enrich_clementi_corpus(the_corpus)
             return the_corpus
 
         if corpus_name == 'clementi':
@@ -258,6 +282,7 @@ class Corporeal(ABC):
         the_corpus = DCorpus()
         the_corpus.assemble_and_append_from_db(piece_query=piece_query,
                                                fingering_query=QUERY[corpus_name])
+        Corporeal.enrich_czerny_corpus(the_corpus)
         return the_corpus
 
     def get_model(self, model_name, weights=None):

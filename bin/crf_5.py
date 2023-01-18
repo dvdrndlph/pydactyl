@@ -46,7 +46,7 @@ import pydactyl.crf.CrfFeatures5 as feats
 # CORPUS_NAMES = ['pig_indy']
 # CORPUS_NAMES = ['pig_seg']
 # CLEAN_LIST = {'DCorpus': True}
-CLEAN_LIST = {}  # Reuse all pickled results.
+# CLEAN_LIST = {}  # Reuse all pickled results.
 # CLEAN_LIST = {'crf': True}
 CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).

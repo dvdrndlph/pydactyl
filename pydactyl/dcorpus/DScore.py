@@ -135,6 +135,7 @@ class DScore:
     def periods(self, periods: list() = None):
         if periods:
             self._periods = periods
+        return self._periods
 
     def segmenter(self, segmenter=None):
         if segmenter:

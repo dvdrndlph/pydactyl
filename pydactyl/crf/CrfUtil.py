@@ -208,11 +208,11 @@ def judgments(judge, notes, middle_i, staff):
     return bad_fingers
 
 
-def leap_is_excessive(notes, middle_i):
+def leap_is_excessive(notes, middle_i, max_leap=MAX_LEAP):
     left_i = middle_i - 1
     if left_i in notes:
         leap = notes[middle_i].pitch.midi - notes[left_i].pitch.midi
-        if abs(leap) > MAX_LEAP:
+        if abs(leap) > max_leap:
             return True
     else:
         return True  # That first step is a doozy. Infinite leap.
@@ -466,23 +466,27 @@ def black_key(notes, i):
     return is_black_key
 
 
-def integral_distance(notes, from_i, to_i, absolute=False):
+def integral_distance(notes, from_i, to_i, absolute=False, max_leap: int = None):
     if from_i < 0 or to_i >= len(notes):
         return 0
     from_midi = notes[from_i]['note'].pitch.midi
     to_midi = notes[to_i]['note'].pitch.midi
     diff = to_midi - from_midi
+    if max_leap is not None and abs(diff) > max_leap:
+        multiplier = 1 if diff > 0 else -1
+        diff = max_leap * multiplier
     if absolute:
         diff = abs(diff)
     return diff
 
 
-def lattice_distance(notes, from_i, to_i, absolute=False):
+def lattice_distance(notes, from_i, to_i, absolute=False, max_leap: int = None):
     if from_i < 0 or to_i >= len(notes):
         return 0, 0
     from_midi = notes[from_i]['note'].pitch.midi
     to_midi = notes[to_i]['note'].pitch.midi
     x_distance = SIX_SIX_RULER.distance(from_midi=from_midi, to_midi=to_midi)
+
     from_is_black = is_black(midi_number=from_midi)
     to_is_black = is_black(midi_number=to_midi)
     if from_is_black == to_is_black:
@@ -491,9 +495,14 @@ def lattice_distance(notes, from_i, to_i, absolute=False):
         y_distance = 1
     else:
         y_distance = -1
+    abs_x_distance = abs(x_distance)
+    abs_y_distance = abs(y_distance)
+    if max_leap is not None and abs_x_distance > max_leap:
+        multiplier = 1 if x_distance > 0 else -1
+        x_distance = max_leap * multiplier
+        abs_x_distance = abs(x_distance)
     if absolute:
-        x_distance = abs(x_distance)
-        y_distance = abs(y_distance)
+        return abs_x_distance, abs_y_distance
     return x_distance, y_distance
 
 
