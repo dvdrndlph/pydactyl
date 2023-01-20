@@ -1,4 +1,8 @@
 __author__ = 'David Randolph'
+
+import copy
+from fractions import Fraction
+
 # Copyright (c) 2023 David A. Randolph.
 #
 # Permission is hereby granted, free of charge, to any person
@@ -21,11 +25,13 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-from music21 import stream, note, chord, midi
+from music21 import stream, note, chord, duration
+from pydactyl.crf.CrfUtil import CHORD_MS_THRESHOLD
+import decimal
 
 
 class DNotesData:
-    def __init__(self, notes, staff, d_score=None):
+    def __init__(self, notes, staff, d_score=None, threshold_ms: int = CHORD_MS_THRESHOLD):
         self.notes = notes
         self.staff = staff
         self.d_score = d_score
@@ -34,18 +40,32 @@ class DNotesData:
         self.chordified_list = None
         self.consonant_map = list()
         # self.chordify() # PIG 108 cannot be processed
-        self.pits_sounding_at = self.my_chordify()
         # self.map_strike_consonants()
+        self.pits_sounding_at = self.my_chordify(threshold_ms=threshold_ms)
+        self.my_map_strike_consonants()
 
-    def my_chordify(self):
+    def my_chordify(self, threshold_ms):
+        # if self.d_score.title() == '078-1':
+        #     print("Hold on")
+        pits_on_at_note_index = list()
         pits_on_at = dict()
         pits_currently_on = set()
         pits_off_at = dict()
         note_index = 0
+        decimal.getcontext().rounding = decimal.ROUND_DOWN
         for note_data in self.notes:
-            pit = note_data['note'].pitch
-            onset = note_data['second_offset']
-            offset = onset + note_data['second_duration']
+            m21_note: note.Note = note_data['note']
+            pit = m21_note.pitch
+            # onset = Fraction(note_data['offset'])
+            # dur = m21_note.duration.quarterLength
+            # offset = onset + dur
+            onset_s = decimal.Decimal(note_data['second_offset'])
+            onset_ms = int(round(onset_s, 3) * 1000)
+            onset = onset_ms
+            dur_s = note_data['second_duration']
+            dur_ms = int(round(dur_s, 3) * 1000) - threshold_ms
+            dur = dur_ms
+            offset = onset + dur
 
             offsets_purged = list()
             for known_offset in pits_off_at:
@@ -54,9 +74,12 @@ class DNotesData:
                         try:
                             pits_currently_on.remove(dead_pit)
                         except Exception:
-                            print("Missing {} pitch to turn off at {} second mark, detected at note index {}.".format(
+                            # If a note is repeated while it is still sounding (presumably via pedal usage,
+                            # as seems to be in play in PIG 023), it can be purged a second time.
+                            # This is benign. But (FIXME) it probably should be tracked as another feature.
+                            # If pedals are being used, all bets are off at this point.
+                            print("Missing {} pitch to turn off at {} ms mark, detected at note index {}.".format(
                                 dead_pit, known_offset, note_index))
-
                     offsets_purged.append(known_offset)
             for purged_offset in offsets_purged:
                 pits_off_at.pop(purged_offset)
@@ -69,9 +92,10 @@ class DNotesData:
             pits_off_at[offset].add(pit)
             pits_on_at[onset].update(pits_currently_on)
 
+            pits_on_at_note_index.append(pits_on_at[onset])
             note_index += 1
 
-        return pits_on_at
+        return pits_on_at_note_index
 
     def chordify(self):
         note_stream = stream.Stream()
@@ -122,6 +146,24 @@ class DNotesData:
             higher_pits = list()
             lower_pits = list()
             for pit in current_chord.pitches:
+                if pit.midi > knot_pit.midi:
+                    higher_pits.append(pit)
+                elif pit.midi < knot_pit.midi:
+                    lower_pits.append(pit)
+            details = {
+                'pitch': knot_pit,
+                'higher_pitches': higher_pits,
+                'lower_pitches': lower_pits
+            }
+            self.consonant_map.append(details)
+
+    def my_map_strike_consonants(self):
+        for note_i in range(len(self.notes)):
+            knot = self.notes[note_i]['note']
+            knot_pit = knot.pitch
+            higher_pits = list()
+            lower_pits = list()
+            for pit in self.pits_sounding_at[note_i]:
                 if pit.midi > knot_pit.midi:
                     higher_pits.append(pit)
                 elif pit.midi < knot_pit.midi:
