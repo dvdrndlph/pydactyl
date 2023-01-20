@@ -22,6 +22,7 @@ __author__ = 'David Randolph'
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 from music21 import note
+from pydactyl.dcorpus.DNotesData import DNotesData
 import pydactyl.crf.CrfUtil as c
 
 CRF_VERSION = "5"
@@ -29,7 +30,8 @@ REVERSE_NOTES = False
 MAX_LEAP = 15
 
 
-def my_note2features(notes, i, staff, d_score=None):
+def my_note2features(notes_data: DNotesData, i, staff):
+    notes = notes_data.notes
     features = dict()
 
     # features['composer'] = d_score.composer()

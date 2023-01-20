@@ -361,6 +361,9 @@ def tempo_features(notes, middle_i):
     return result
 
 
+def consonance_features(notes, middle_i):
+    pass
+
 def articulation_features(notes, middle_i):
     """
     From a segregated fingering standpoint at least, staccato is a purely melodic phenomenon.

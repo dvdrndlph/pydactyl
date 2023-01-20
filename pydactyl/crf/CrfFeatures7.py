@@ -25,13 +25,15 @@ from music21 import note
 from pydactyl.dcorpus.DNotesData import DNotesData
 import pydactyl.crf.CrfUtil as c
 
-CRF_VERSION = "6"
+CRF_VERSION = "7"
 REVERSE_NOTES = False
 MAX_LEAP = 15
 
 
 def my_note2features(notes_data: DNotesData, i, staff):
     notes = notes_data.notes
+    d_score = notes_data.d_score
+    chordified = notes_data.chordified
     features = dict()
 
     # features['composer'] = d_score.composer()

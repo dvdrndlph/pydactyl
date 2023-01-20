@@ -31,6 +31,7 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from pathlib import Path
 import pydactyl.crf.CrfUtil as c
 from pydactyl.eval.DExperimentOpts import DExperimentOpts
+from pydactyl.dcorpus.DNotesData import DNotesData
 from pydactyl.eval.Corporeal import Corporeal
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dcorpus.DAnnotation import DAnnotation
@@ -172,9 +173,10 @@ class DExperiment:
             trained_prefix, execution_duration_minutes))
 
     def phrase2features(self, notes: list, staff, d_score=None):
+        notes_data = DNotesData(notes=notes, staff=staff, d_score=d_score)
         feature_list = []
         for i in range(len(notes)):
-            features = self.note_func(notes, i, staff, d_score=d_score)
+            features = self.note_func(notes_data, i, staff)
             feature_list.append(features)
         if self.reverse:
             feature_list.reverse()

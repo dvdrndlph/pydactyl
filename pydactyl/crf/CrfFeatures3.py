@@ -24,12 +24,14 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 
 from music21 import note
+from pydactyl.dcorpus.DNotesData import DNotesData
 import pydactyl.crf.CrfUtil as c
 
 CRF_VERSION = "3"
 
 
-def my_note2features(notes, i, staff, d_score=None):
+def my_note2features(notes_data: DNotesData, i, staff):
+    notes = notes_data.notes
     features = dict()
 
     features['BOP'] = "0"

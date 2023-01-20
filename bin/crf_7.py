@@ -26,7 +26,7 @@ __author__ = 'David Randolph'
 import sklearn_crfsuite as crf
 from pydactyl.eval.DExperiment import DExperiment, DExperimentOpts
 import pydactyl.crf.CrfUtil as c
-import pydactyl.crf.CrfFeatures4 as feats
+import pydactyl.crf.CrfFeatures7 as feats
 
 # One of 'cross-validate', 'preset', 'random'
 # TEST_METHOD = 'cross-validate'
@@ -46,7 +46,7 @@ import pydactyl.crf.CrfFeatures4 as feats
 # CORPUS_NAMES = ['pig_indy']
 # CORPUS_NAMES = ['pig_seg']
 # CLEAN_LIST = {'DCorpus': True}
-CLEAN_LIST = {}  # Reuse all pickled results.
+# CLEAN_LIST = {}  # Reuse all pickled results.
 # CLEAN_LIST = {'crf': True}
 CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
@@ -75,7 +75,8 @@ ex = c.unpickle_it(obj_type="DExperiment", clean_list=CLEAN_LIST, opts=opts, use
 if ex is None:
     ex = DExperiment(opts=opts)
     experiment_name = ex.load_data(clean_list=CLEAN_LIST)
-    c.pickle_it(obj=ex, obj_type="DExperiment", file_name=experiment_name, use_dill=True)
+    if OPTS['pickling']:
+        c.pickle_it(obj=ex, obj_type="DExperiment", file_name=experiment_name, use_dill=True)
 ex.print_summary()
 
 experiment_name = ex.experiment_name()
@@ -93,5 +94,5 @@ else:
     )
 
 ex.evaluate(the_model=my_crf, is_trained=have_trained_model)
-if not have_trained_model:
+if not have_trained_model and OPTS['pickling']:
     c.pickle_it(obj=my_crf, obj_type="crf", file_name=experiment_name, use_dill=True)
