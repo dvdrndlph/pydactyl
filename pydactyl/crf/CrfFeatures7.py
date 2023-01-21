@@ -44,19 +44,18 @@ def my_note2features(notes_data: DNotesData, i, staff):
     # IDEA: Composer year/decade/century of birth.
 
     features['staff'] = staff
-    # features['staff'] = 0
-    # if staff == "upper":
-    #     features['staff'] = 1
-    # @100: [0.54495717 0.81059147 0.81998371 0.68739401 0.73993751]
-    # @1:   [0.54408935 0.80563961 0.82079826 0.6941775  0.73534277]
 
     # Chord features. Approximate with 30 ms offset deltas a la Nakamura.
+    # These features are determined entirely from note strikes.
     chording_cat = c.chording_categories(notes=notes, middle_i=i, staff=staff)
     # if chording_cat not in ('upper00', 'lower00'):
     #     print("Chord!")
     features['chord_cat'] = chording_cat
     chord_border = c.chord_border(chording_cat)
     features['chord_border'] = chord_border
+
+    consonance_cat = notes_data.consonant_count_feature_str(i)
+    features['consonance_cat'] = consonance_cat
 
     features['BOP'] = "0"
     if i == 0:

@@ -51,7 +51,7 @@ import pydactyl.crf.CrfFeatures7 as feats
 CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 OPTS = {
-    'pickling': True,
+    'pickling': False,
     'engine': 'sklearn-crfsuite',
     'model_features': feats,
     'staffs': ['upper', 'lower'],
