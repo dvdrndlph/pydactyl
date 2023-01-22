@@ -57,7 +57,7 @@ OPTS = {
     'staffs': ['upper', 'lower'],
     'test_method': 'preset',
     'fold_count': 5,
-    'corpus_names': ['pig_indy'],
+    'corpus_names': ['pig_seg'],
     'segregate_hands': False,
     'params': {
         'algorithm': 'lbfgs',

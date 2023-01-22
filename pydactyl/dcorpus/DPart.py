@@ -21,8 +21,8 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
+import decimal
 from music21 import note, chord, stream, duration, tempo
-from music21.exceptions21 import StreamException
 from .DNote import DNote
 
 
@@ -154,7 +154,11 @@ class DPart:
                 second_offset = met_mark.durationToSeconds(o)
                 for knot in notes_at_offset[o]:
                     sec_dur = met_mark.durationToSeconds(knot.duration)
-                    offset_note = {'offset': o, 'second_offset': second_offset, 'second_duration': sec_dur, 'note': knot}
+                    decimal.getcontext().rounding = decimal.ROUND_DOWN
+                    ms_offset = int(round(second_offset, 3) * 1000)
+                    ms_duration = int(round(sec_dur, 3) * 1000)
+                    offset_note = {'offset': o, 'second_offset': second_offset, 'ms_offset': ms_offset,
+                                   'second_duration': sec_dur, 'ms_duration': ms_duration, 'note': knot}
                     ordered_notes.append(offset_note)
         return ordered_notes
 

@@ -23,6 +23,7 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 from music21 import note
 from pydactyl.dcorpus.DNotesData import DNotesData
+from pydactyl.dcorpus.DScore import DScore
 import pydactyl.crf.CrfUtil as c
 
 CRF_VERSION = "7"
@@ -32,7 +33,7 @@ MAX_LEAP = 15
 
 def my_note2features(notes_data: DNotesData, i, staff):
     notes = notes_data.notes
-    d_score = notes_data.d_score
+    d_score: DScore = notes_data.d_score
     chordified = notes_data.chordified
     features = dict()
 
@@ -40,6 +41,10 @@ def my_note2features(notes_data: DNotesData, i, staff):
     # Period of piece: Baroque, Classical, Romantic, Modern, Contemporary, Other.
     # features['primary_period'] = d_score.periods()[0]
     # features['period_str'] = d_score.period_str()
+    # is_human_performance = d_score.via_human_performance()
+    is_midi = d_score.via_midi()
+    # features['is_human'] = is_human_performance
+    features['is_midi'] = is_midi
 
     # IDEA: Composer year/decade/century of birth.
 

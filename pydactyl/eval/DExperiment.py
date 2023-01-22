@@ -57,6 +57,7 @@ class DExperiment:
                  as_features=True):
         self.opts = opts
         self.pickling = opts.pickling
+        self.consonance_threshold = opts.consonance_threshold
         self.model_features = opts.model_features
         self.model_version = opts.model_version
         self.test_method = opts.test_method
@@ -173,7 +174,7 @@ class DExperiment:
             trained_prefix, execution_duration_minutes))
 
     def phrase2features(self, notes: list, staff, d_score=None):
-        notes_data = DNotesData(notes=notes, staff=staff, d_score=d_score)
+        notes_data = DNotesData(notes=notes, staff=staff, d_score=d_score, threshold_ms=self.consonance_threshold)
         feature_list = []
         for i in range(len(notes)):
             features = self.note_func(notes_data, i, staff)

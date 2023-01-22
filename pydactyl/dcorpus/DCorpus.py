@@ -201,7 +201,7 @@ class DCorpus:
             if header_str:
                 abcd_header = ABCDHeader(abcd_str=header_str)
             da_score = DScore(music21_stream=score, segmenter=self.segmenter(),
-                              abcd_header=abcd_header, title=score_title)
+                              abcd_header=abcd_header, title=score_title, via_midi=True)
             self._d_scores.append(da_score)
 
         if d_score:

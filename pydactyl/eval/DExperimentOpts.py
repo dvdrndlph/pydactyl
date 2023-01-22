@@ -21,12 +21,16 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
+import pydactyl.crf.CrfUtil as c
 
 
 class DExperimentOpts:
     def __init__(self, opts):
         self.engine = opts['engine']
         self.pickling = True
+        self.consonance_threshold = c.CHORD_MS_THRESHOLD
+        if 'consonance_threshold' in opts:
+            self.consonance_threshold = opts['consonance_threshold']
         if 'pickling' in opts:
             self.pickling = opts['pickling']
         feats = opts['model_features']

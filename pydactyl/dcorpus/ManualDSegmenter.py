@@ -1,4 +1,7 @@
 __author__ = 'David Randolph'
+
+import decimal
+
 # Copyright (c) 2018 David A. Randolph.
 #
 # Permission is hereby granted, free of charge, to any person
@@ -110,10 +113,13 @@ class ManualDSegmenter(DSegmenter):
             # The following code needs to be validated part with >1 segment.
             ql_offset = knot['offset'] - ql_offset_adjustment
             sec_offset = knot['second_offset'] - sec_offset_adjustment
+            decimal.getcontext().rounding = decimal.ROUND_DOWN
+            ms_offset = int(round(sec_offset, 3) * 1000)
             sec_dur = knot['second_duration']
+            ms_dur = knot['ms_duration']
             old_note = knot['note']
-            new_note = {'offset': ql_offset, 'second_offset': sec_offset,
-                        'second_duration': sec_dur, 'note': old_note}
+            new_note = {'offset': ql_offset, 'second_offset': sec_offset, 'second_duration': sec_dur,
+                        'ms_offset': ms_offset, 'ms_duration': ms_dur, 'note': old_note}
             segment_note_list.append(new_note)
             seg_mark = self._d_annotation.phrase_mark_at_index(note_index, staff=d_part.staff())
             if seg_mark and \

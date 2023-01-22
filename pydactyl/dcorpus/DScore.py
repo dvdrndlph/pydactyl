@@ -23,7 +23,7 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 import re
 import numpy as np
-from music21 import abcFormat, stream, midi
+from music21 import abcFormat, stream, midi, duration
 from pydactyl.dactyler import Constant
 from nltk.metrics.distance import binary_distance
 from .DNote import DNote
@@ -158,7 +158,7 @@ class DScore:
     def __init__(self, music21_stream=None, segmenter=None, abc_handle=None,
                  midi_file_path=None, abcd_header_path=None,
                  voice_map=None, abcd_header=None, abc_body='',
-                 title=None, composer=None, periods: list() = None, year=None):
+                 title=None, composer=None, periods: list = None, year=None, via_midi=False):
         self._lower_d_part = None
         self._upper_d_part = None
         self._abc_body = abc_body
@@ -166,9 +166,12 @@ class DScore:
         self._composer = composer
         self._year = year
         self._periods = periods
+        self._via_midi = via_midi
+        self._via_human_performance = None
 
         if midi_file_path is not None:
             music21_stream = DScore.score_via_midi(corpus_path=midi_file_path)
+            self.via_midi(True)
 
         if abcd_header_path is not None:
             abcd_str = DScore.file_to_string(file_path=abcd_header_path)
@@ -224,6 +227,7 @@ class DScore:
         self._abcd_header = abcd_header
         self._segmenter = None
         self.segmenter(segmenter)
+        self.via_human_performance()
 
     def __str__(self):
         abcd_str = self._abcd_header.__str__()
@@ -250,6 +254,90 @@ class DScore:
 
     def is_monophonic(self):
         return self._combined_d_part.is_monophonic()
+
+    def via_midi(self, via_midi: bool = None):
+        if via_midi is not None:
+            self._via_midi = via_midi
+        return self._via_midi
+
+    def via_human_performance(self):
+        self._via_human_performance = True
+        if not self.via_midi():
+            self._via_human_performance = False
+        else:
+            combo = self.combined_d_part()
+            ordered_notes = combo.ordered_offset_notes()
+            offset_counts = dict()
+            duration_counts = dict()
+            note_count = 0
+            for note_info in ordered_notes:
+                note_count += 1
+                offset_ql = note_info['offset']
+                if offset_ql not in offset_counts:
+                    offset_counts[offset_ql] = 0
+                dur = note_info['second_duration']
+                if dur not in duration_counts:
+                    duration_counts[dur] = 0
+                offset_counts[offset_ql] += 1
+                duration_counts[dur] += 1
+            duration_dup_count = sum(duration_counts.values()) - len(duration_counts)
+            duration_dup_ratio = duration_dup_count / note_count
+            if duration_dup_ratio > 0.5:
+                self._via_human_performance = False
+            else:
+                offset_dup_count = sum(offset_counts.values()) - len(offset_counts)
+                offset_dup_ratio = offset_dup_count / note_count
+                if offset_dup_ratio > 0.1:
+                    self._via_human_performance = False
+        return self._via_human_performance
+
+    def broken_via_human_performance(self):
+        if self._via_human_performance is not None:
+            return self._via_human_performance
+        if not self.via_midi():
+            self._via_human_performance = False
+        else:
+            # The assumption here is that chord notes will be quantized to have identical offsets
+            # in machine-generated MIDI files. If we see a lot of such quantized notes as a percentage
+            # of notes that are close enough to be classified as chords per the Nakamura criteria,
+            # we classify the score as a non-human performance.
+            self._via_human_performance = True
+            in_range_count = 0
+            identical_count = 0
+            melodic_note_count = 0
+            too_legato_count = 0
+            for d_part in (self._upper_d_part, self._lower_d_part):
+                ordered_notes = d_part.ordered_offset_notes()
+                prior_note_info = None
+                for note_info in ordered_notes:
+                    ms_offset = note_info['ms_offset']
+                    left_ms_offset = ms_offset - 30
+                    right_ms_offset = ms_offset + 30
+                    if prior_note_info:
+                        prior_ms_offset = prior_note_info['ms_offset']
+                        prior_ms_end_offset = prior_ms_offset + prior_note_info['ms_duration']
+                        if left_ms_offset < prior_ms_offset < right_ms_offset:
+                            in_range_count += 1
+                        else:
+                            melodic_note_count += 1
+                        if prior_ms_offset == ms_offset:
+                            identical_count += 1
+                        if abs(ms_offset - prior_ms_end_offset) < 5:
+                            too_legato_count += 1
+                    prior_note_info = note_info
+            pct_chord_identical = 0
+            if in_range_count > 0:
+                pct_chord_identical = identical_count * 100 / in_range_count
+
+            # If we only have single notes to rely on, a tell-tale sign of a machine-generated
+            # performance is a too-perfect legato.
+            pct_too_legato = 0
+            if melodic_note_count > 0:
+                pct_too_legato = too_legato_count * 100 / melodic_note_count
+
+            if pct_chord_identical > 50 or pct_too_legato > 50:
+                self._via_human_performance = False
+        return self._via_human_performance
 
     def d_part(self, staff):
         if staff == "upper":
