@@ -182,6 +182,24 @@ class Corporeal(ABC):
         self._rank_result_cache = {}
         self._staff = staff
 
+    def has_preset_evaluation_defined(self, corpus_name):
+        if corpus_name in ('pig_seg', 'pig_indy', 'pig', 'complete_layer_one'):
+            return True
+        return False
+
+    def is_in_test_set(self, title: str, corpus_name='pig_indy'):
+        if corpus_name in ('pig_seg', 'pig_indy', 'pig'):
+            example, annotator_id = title.split('-')
+            example_int = int(example)
+            if example_int <= 30:
+                return True
+        elif corpus_name == 'complete_layer_one':
+            if title.startswith('Sonatina 6.1'):
+                return True
+        else:
+            raise Exception("Not implemented yet.")
+        return False
+
     @staticmethod
     def enrich_pig_corpus(the_corpus: DCorpus):
         composer_for_prefix = dict()

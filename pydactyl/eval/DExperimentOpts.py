@@ -23,16 +23,41 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 import pydactyl.crf.CrfUtil as c
 
+VALID_GROUPINGS = {
+    'example': True,
+    'section': True,
+    'piece': True
+}
+
 
 class DExperimentOpts:
     def __init__(self, opts):
-        self.engine = opts['engine']
-        self.pickling = True
+        self.random_state = 27
+        if 'random_state' in opts:
+            self.random_state = opts['random_state']
+
         self.consonance_threshold = c.CHORD_MS_THRESHOLD
         if 'consonance_threshold' in opts:
             self.consonance_threshold = opts['consonance_threshold']
+        self.pickling = True
         if 'pickling' in opts:
             self.pickling = opts['pickling']
+
+        self.engine = opts['engine']
+
+        self.group_by = 'section'
+        if 'group_by' in opts:
+            if opts['group_by'] in VALID_GROUPINGS:
+                self.group_by = opts['group_by']
+            else:
+                raise Exception("Invalid group_by setting: {}".format(opts['group_by']))
+
+        self.holdout_size = 0.30
+        if 'holdout_size' in opts:
+            self.holdout_size = opts['holdout_size']
+        self.holdout_predefined = True
+        if 'holdout_predefined' in opts:
+            self.holdout_predefined = opts['holdout_predefined']
         feats = opts['model_features']
         self.model_features = feats
         self.model_version = feats.CRF_VERSION

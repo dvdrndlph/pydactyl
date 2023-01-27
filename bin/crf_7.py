@@ -51,13 +51,16 @@ CLEAN_LIST = {}  # Reuse all pickled results.
 CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 # CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 OPTS = {
-    'pickling': True,
+    'pickling': False,
     'consonance_threshold': c.CHORD_MS_THRESHOLD,
     'engine': 'sklearn-crfsuite',
     'model_features': feats,
     'staffs': ['upper', 'lower'],
     'test_method': 'preset',
     'fold_count': 5,
+    'group_by': 'section',
+    'holdout_predefined': True,
+    'holdout_size': 0.3,
     'corpus_names': ['pig'],
     'segregate_hands': False,
     'params': {

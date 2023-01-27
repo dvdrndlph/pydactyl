@@ -91,26 +91,6 @@ def unpickle_it(obj_type, clean_list, file_name=None, opts: DExperimentOpts = No
     return None
 
 
-def has_preset_evaluation_defined(corpus_name):
-    if corpus_name in ('pig_seg', 'pig_indy', 'pig', 'complete_layer_one'):
-        return True
-    return False
-
-
-def is_in_test_set(title: str, corpus_name='pig_indy'):
-    if corpus_name in ('pig_seg', 'pig_indy', 'pig'):
-        example, annotator_id = title.split('-')
-        example_int = int(example)
-        if example_int <= 30:
-            return True
-    elif corpus_name == 'complete_layer_one':
-        if title.startswith('Sonatina 6.1'):
-            return True
-    else:
-        raise Exception("Not implemented yet.")
-    return False
-
-
 def get_pit_strings(notes, i, range=4):
     target_pit_count = range * 2 + 1
     index = i

@@ -23,19 +23,17 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 import copy
 import pprint
+import random
 from datetime import datetime
-import shutil
-import os
+
+import numpy
 from sklearn_crfsuite import metrics
-from sklearn.model_selection import train_test_split, cross_val_score
-from pathlib import Path
+from sklearn.model_selection import train_test_split, cross_val_score, GroupKFold, GroupShuffleSplit
 import pydactyl.crf.CrfUtil as c
 from pydactyl.eval.DExperimentOpts import DExperimentOpts
 from pydactyl.dcorpus.DNotesData import DNotesData
 from pydactyl.eval.Corporeal import Corporeal
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
-from pydactyl.dcorpus.DAnnotation import DAnnotation
-from pydactyl.dcorpus.ABCDHeader import ABCDHeader
 from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_STD_DIR, PIG_FILE_SUFFIX, PIG_SEGREGATED_STD_DIR
 from pydactyl.eval.Corporeal import ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, COMPLETE_LAYER_ONE_STD_PIG_DIR
 
@@ -73,6 +71,12 @@ class DExperiment:
         self.y_train = y_train or []
         self.x_test = x_test or []
         self.y_test = y_test or []
+
+        # Keep track of groups for k-fold cross-validation.
+        self.group_id = {}  # Map info tuples to integer group identifiers.
+        self.group_info = {}  # Map group identifiers to info tuples
+        self.group_assignments = []  # The group identifier assigned to each example.
+        self.train_group_assignments = []
 
         self.bad_annot_count = 0
         self.wildcarded_count = 0
@@ -123,13 +127,47 @@ class DExperiment:
         the_model.fit(x_train, y_train)
         return self.evaluate_trained_model(the_model=the_model, x_test=x_test, y_test=y_test)
 
-    def split_and_evaluate(self, the_model, test_size=0.4, random_state=0):
+    def split_and_evaluate(self, the_model, test_size=0.3, random_state=None):
+        if random_state is None:
+            random_state = self.opts.random_state
         split_x_train, split_x_test, split_y_train, split_y_test = \
-            train_test_split(self.x, self.y, test_size=0.4, random_state=0)
+            train_test_split(self.x, self.y, test_size=test_size, random_state=random_state)
         self.train_and_evaluate(the_model=the_model, x_train=split_x_train, y_train=split_y_train,
                                 x_test=split_x_test, y_test=split_y_test)
 
+    def my_k_folds(self, k=5, on_train=True, test_size: float = 0.2, random_state=None):
+        if random_state is None:
+            random_state = self.opts.random_state
+        gss = GroupShuffleSplit(n_splits=k, test_size=test_size, random_state=random_state)
+        if on_train:
+            x = self.x_train
+            y = self.y_train
+            groups = self.train_group_assignments
+            # groups = numpy.asarray(self.train_group_assignments)
+        else:
+            x = self.x
+            y = self.y
+            groups = self.group_assignments
+            # groups = numpy.asarray(self.group_assignments)
+        splits = gss.split(X=x, y=y, groups=groups)
+        for i, (train_index, test_index) in enumerate(splits):
+            print(f"Fold {i}:")
+            train_note_count = 0
+            for t_i in train_index:
+                train_note_count += groups[t_i]
+            test_note_count = 0
+            for t_i in test_index:
+                test_note_count += groups[t_i]
+            print(f"Train note count: {train_note_count}")
+            print(f"Test note count: {test_note_count}")
+            # print(f"  Train: index={train_index}, group={groups[train_index]}")
+            # print(f"  Test:  index={test_index}, group={groups[test_index]}")
+        return splits
+
     def evaluate(self, the_model, is_trained):
+        main_split = self.my_k_folds(k=1, on_train=False, test_size=self.opts.holdout_size)
+        train_splits = self.my_k_folds(k=5, on_train=True)
+        exit(0)
         start_dt = datetime.now()
         if self.test_method == 'cross-validate':
             scores = cross_val_score(the_model, self.x, self.y, cv=self.fold_count)
@@ -191,25 +229,36 @@ class DExperiment:
             handed_strike_digits.reverse()
         return handed_strike_digits
 
-    def append_example(self, ordered_notes, staff, hsd_seg, is_train=False,
-                       is_test=False, test_key=None, d_score=None):
+    def append_example(self, ordered_notes, staff, hsd_seg, example_key, is_train=False,
+                       is_test=False, d_score=None):
         # IMPORTANT: An example here is segregated, representing one hand (or one staff).
+        (corpus_name, score_title, annot_index) = example_key
+
+        piece_key = (corpus_name, score_title)
+        if piece_key not in self.group_id:
+            new_id = len(self.group_id)
+            self.group_id[piece_key] = new_id
+            self.group_info[new_id] = 0
+        group_id = self.group_id[piece_key]
         note_len = len(ordered_notes)
+        self.group_info[group_id] += note_len
         self.annotated_note_count += note_len
         self.x.append(self.phrase2features(ordered_notes, staff, d_score=d_score))
         self.y.append(self.phrase2labels(hsd_seg))
+        self.group_assignments.append(group_id)
         if is_test:
             score_title = d_score.title()
-            if test_key not in self.test_indices:
-                self.test_indices[test_key] = []
-            self.test_indices[test_key].append(self.good_annot_count)
-            self.y_test_keys[self.good_annot_count] = test_key
+            if example_key not in self.test_indices:
+                self.test_indices[example_key] = []
+            self.test_indices[example_key].append(self.good_annot_count)
+            self.y_test_keys[self.good_annot_count] = example_key
             self.x_test.append(self.phrase2features(ordered_notes, staff, d_score=d_score))
             self.y_test.append(self.phrase2labels(hsd_seg))
             self.test_d_scores[score_title] = d_score
         elif is_train:
             self.x_train.append(self.phrase2features(ordered_notes, staff, d_score=d_score))
             self.y_train.append(self.phrase2labels(hsd_seg))
+            self.train_group_assignments.append(group_id)
         self.good_annot_count += 1
 
     def print_summary(self):
@@ -728,7 +777,7 @@ class DExperiment:
     def load_data(self, clean_list):
         creal = Corporeal()
         experiment_name = self.experiment_name()
-
+        # random.seed(27)
         for corpus_name in self.corpus_names:
             da_corpus = c.unpickle_it(obj_type="DCorpus", clean_list=clean_list,
                                       file_name=corpus_name, use_dill=True)
@@ -736,6 +785,8 @@ class DExperiment:
                 da_corpus = creal.get_corpus(corpus_name=corpus_name)
                 if self.pickling:
                     c.pickle_it(obj=da_corpus, obj_type="DCorpus", file_name=corpus_name, use_dill=True)
+            # d_scores = da_corpus.d_score_list()
+            # d_random_scores = random.sample(d_scores, len(d_scores))
             for da_score in da_corpus.d_score_list():
                 abcdh = da_score.abcd_header()
                 annot_count = abcdh.annotation_count()
@@ -779,15 +830,16 @@ class DExperiment:
                                 # authority, score_title, hsd_seg))
                                 self.wildcarded_count += 1
                                 continue
-                            if c.has_preset_evaluation_defined(corpus_name=corpus_name):
-                                if c.is_in_test_set(title=score_title, corpus_name=corpus_name):
-                                    test_key = (corpus_name, score_title, annot_index)
+                            example_key = (corpus_name, score_title, annot_index)
+                            if creal.has_preset_evaluation_defined(corpus_name=corpus_name):
+                                if creal.is_in_test_set(title=score_title, corpus_name=corpus_name):
                                     self.append_example(ordered_notes, staff, hsd_seg, is_test=True,
-                                                        test_key=test_key, d_score=da_unannotated_score)
+                                                        example_key=example_key, d_score=da_unannotated_score)
                                 else:
                                     self.append_example(ordered_notes, staff, hsd_seg, is_train=True,
-                                                        d_score=da_unannotated_score)
+                                                        example_key=example_key, d_score=da_unannotated_score)
                             else:
-                                self.append_example(ordered_notes, staff, hsd_seg, d_score=da_unannotated_score)
+                                self.append_example(ordered_notes, staff, hsd_seg, example_key=example_key,
+                                                    d_score=da_unannotated_score)
         print("Data loaded. Clean list: {}".format(list(clean_list.keys())))
         return experiment_name

@@ -34,19 +34,20 @@ MAX_LEAP = 15
 def my_note2features(notes_data: DNotesData, i, staff):
     notes = notes_data.notes
     d_score: DScore = notes_data.d_score
-    chordified = notes_data.chordified
     features = dict()
 
     # features['composer'] = d_score.composer()
     # Period of piece: Baroque, Classical, Romantic, Modern, Contemporary, Other.
     # features['primary_period'] = d_score.periods()[0]
     # features['period_str'] = d_score.period_str()
+    # IDEA: Composer year/decade/century of birth.
+
     # is_human_performance = d_score.via_human_performance()
     is_midi = d_score.via_midi()
     # features['is_human'] = is_human_performance
     features['is_midi'] = is_midi
 
-    # IDEA: Composer year/decade/century of birth.
+    # IDEA: Inferred key of note sequence, staff, note windows.
 
     features['staff'] = staff
 
