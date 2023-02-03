@@ -43,9 +43,9 @@ def my_note2features(notes_data: DNotesData, i, staff):
     # IDEA: Composer year/decade/century of birth.
 
     # is_human_performance = d_score.via_human_performance()
-    is_midi = d_score.via_midi()
+    # is_midi = d_score.via_midi()
     # features['is_human'] = is_human_performance
-    features['is_midi'] = is_midi
+    # features['is_midi'] = is_midi
 
     # IDEA: Inferred key of note sequence, staff, note windows.
 
@@ -60,8 +60,8 @@ def my_note2features(notes_data: DNotesData, i, staff):
     chord_border = c.chord_border(chording_cat)
     features['chord_border'] = chord_border
 
-    consonance_cat = notes_data.consonant_count_feature_str(i)
-    features['consonance_cat'] = consonance_cat
+    concurrent_cat = notes_data.concurrent_count_feature_str(i)
+    features['concurrent_cat'] = concurrent_cat
 
     features['BOP'] = "0"
     if i == 0:
@@ -125,7 +125,6 @@ def my_note2features(notes_data: DNotesData, i, staff):
     if x_d[+2] == 0:
         features['will_return'] = "1"  # .5562
 
-    # 57.18 w/both
     features['ascending'] = "0"
     if x_d[-1] < 0 and x_d[+1] > 0:
         features['ascending'] = "1"

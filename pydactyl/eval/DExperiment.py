@@ -23,19 +23,80 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 import copy
 import pprint
-import random
+import re
 from datetime import datetime
-
-import numpy
+from dataclasses import dataclass
 from sklearn_crfsuite import metrics
-from sklearn.model_selection import train_test_split, cross_val_score, GroupKFold, GroupShuffleSplit
+from sklearn.model_selection import train_test_split, cross_val_score, GroupKFold, GroupShuffleSplit, GridSearchCV
+from sklearn.metrics import make_scorer
 import pydactyl.crf.CrfUtil as c
 from pydactyl.eval.DExperimentOpts import DExperimentOpts
 from pydactyl.dcorpus.DNotesData import DNotesData
 from pydactyl.eval.Corporeal import Corporeal
+from pydactyl.dcorpus.OneDSegmenter import OneDSegmenter
 from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_STD_DIR, PIG_FILE_SUFFIX, PIG_SEGREGATED_STD_DIR
 from pydactyl.eval.Corporeal import ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, COMPLETE_LAYER_ONE_STD_PIG_DIR
+
+
+@dataclass(frozen=True)
+class ScoreKey:
+    corpus_name: str
+    score_title: str
+
+    def __eq__(self, other):
+        if not isinstance(other, ScoreKey):
+            raise Exception("ScoreKey can only be compared to another ScoreKey.")
+        if self.corpus_name == other.corpus_name and self.score_title == other.score_title:
+            return True
+        return False
+
+
+@dataclass(frozen=True)
+class SegmentKey:
+    staff: str
+    score_key: ScoreKey
+    seg_index: int = 0
+
+    def __eq__(self, other):
+        if not isinstance(other, SegmentKey):
+            raise Exception("SegmentKey can only be compared to another SegmentKey.")
+        if (self.score_key == other.score_key and
+                self.staff == other.staff and self.seg_index == other.seg_index):
+            return True
+        return False
+
+    def score_key(self):
+        return self.score_key
+
+
+@dataclass(frozen=True)
+class ExampleKey:
+    seg_key: SegmentKey
+    annot_index: int = 0
+
+    def __eq__(self, other):
+        if not isinstance(other, ExampleKey):
+            raise Exception("ExampleKey can only be compared to another ExampleKey.")
+        if self.seg_key == other.seg_key and self.annot_index == other.annot_index:
+            return True
+        return False
+
+    def score_key(self):
+        return self.seg_key.score_key
+
+
+class AnnotatedExample:
+    def __init__(self, seg_key: SegmentKey, notes, hsd_seg, annot_index, d_score):
+        self.example_key = ExampleKey(seg_key=seg_key, annot_index=annot_index)
+        self.hsd_seg = hsd_seg
+        self.notes = notes
+        self.seg_key = seg_key
+        self.annot_index = annot_index
+        self.d_score = d_score
+
+    def score_key(self):
+        return self.seg_key.score_key()
 
 
 class DExperiment:
@@ -71,10 +132,17 @@ class DExperiment:
         self.y_train = y_train or []
         self.x_test = x_test or []
         self.y_test = y_test or []
+        self.test_note_count = 0
+        self.train_note_count = 0
+
+        self.y_staff = {}  # Map example index to associated staff.
+        self.y_score_key = {}  # Map example index to tuple of associated corpus name and DScore title.
+        self.y_test_y_index = {}  # Map the test example index back to its index in y.
 
         # Keep track of groups for k-fold cross-validation.
         self.group_id = {}  # Map info tuples to integer group identifiers.
-        self.group_info = {}  # Map group identifiers to info tuples
+        self.group_note_count = {}  # Map group identifiers to counts of notes contained therein.
+        self.group_score_key = {}  # Map group identifiers to counts of notes contained therein.
         self.group_assignments = []  # The group identifier assigned to each example.
         self.train_group_assignments = []
 
@@ -84,10 +152,15 @@ class DExperiment:
         self.annotated_note_count = 0
         self.total_nondefault_hand_finger_count = 0
         self.total_nondefault_hand_segment_count = 0
-        self.test_indices = {}  # Indexed by test_key tuple (corpus_name, score_title, annotation_index)
-        self.y_test_keys = {}  # Hash of y_test integer indices to test keys.
 
-        self.test_d_scores = {}  # Indexed by score title. Implies score titles unique across corpora. Seems bad.
+        # FIXME: marked for death?
+        self.test_indices = {}  # Indexed by test_key tuple (corpus_name, score_title, annotation_index)
+                                # Each test key tuple will be mapped to an array of 1-2 index values,
+                                # one for each staff, though single staff work is probably pretty hosed up by now.
+        self.test_key = {}  # Hash of test integer indices to test keys.
+        self.example_indices = {}  # Map (corpus_name, score_title, annot_index) tuple to 1-2 indexes in to x and y.
+        self.example_key = {}  # Map example integer of example in x and y to its corresponding tuple.
+        self.d_score = {}  # Indexed by (corpus, score_title) tuples.
         # This all seems like a big kludge.
 
         self.as_features = as_features
@@ -138,7 +211,8 @@ class DExperiment:
     def my_k_folds(self, k=5, on_train=True, test_size: float = 0.2, random_state=None):
         if random_state is None:
             random_state = self.opts.random_state
-        gss = GroupShuffleSplit(n_splits=k, test_size=test_size, random_state=random_state)
+        # splitter = GroupShuffleSplit(n_splits=k, test_size=test_size, random_state=random_state)
+        splitter = GroupKFold(n_splits=k)
         if on_train:
             x = self.x_train
             y = self.y_train
@@ -149,25 +223,33 @@ class DExperiment:
             y = self.y
             groups = self.group_assignments
             # groups = numpy.asarray(self.group_assignments)
-        splits = gss.split(X=x, y=y, groups=groups)
-        for i, (train_index, test_index) in enumerate(splits):
+        splits = splitter.split(X=x, y=y, groups=groups)
+        for i, (train_indices, test_indices) in enumerate(splits):
             print(f"Fold {i}:")
             train_note_count = 0
-            for t_i in train_index:
+            for t_i in train_indices:
                 train_note_count += groups[t_i]
             test_note_count = 0
-            for t_i in test_index:
+            for t_i in test_indices:
                 test_note_count += groups[t_i]
             print(f"Train note count: {train_note_count}")
             print(f"Test note count: {test_note_count}")
-            # print(f"  Train: index={train_index}, group={groups[train_index]}")
-            # print(f"  Test:  index={test_index}, group={groups[test_index]}")
+            # print(f"  Train: index={train_indices}, group={groups[train_indices]}")
+            # print(f"  Test:  index={test_indices}, group={groups[test_indices]}")
         return splits
 
+    def tune_parameters(self, the_model):
+        train_splits = self.my_k_folds(k=5, on_train=True, test_size=0.2)
+        f1_scorer = make_scorer(metrics.flat_f1_score, average='weighted')  # , labels=labels)
+        gs = GridSearchCV(estimator=the_model, param_grid=self.opts.param_grid, scoring=f1_scorer,
+                          cv=train_splits, verbose=1, n_jobs=-1)
+        gs.fit(self.x_train, self.y_train)
+        print('best params:', gs.best_params_)
+        print('best CV score:', gs.best_score_)
+        print('model size: {:0.2f}M'.format(gs.best_estimator_.size_ / 1000000))
+
     def evaluate(self, the_model, is_trained):
-        main_split = self.my_k_folds(k=1, on_train=False, test_size=self.opts.holdout_size)
-        train_splits = self.my_k_folds(k=5, on_train=True)
-        exit(0)
+        # main_split = self.my_k_folds(k=1, on_train=False, test_size=self.opts.holdout_size)
         start_dt = datetime.now()
         if self.test_method == 'cross-validate':
             scores = cross_val_score(the_model, self.x, self.y, cv=self.fold_count)
@@ -180,25 +262,8 @@ class DExperiment:
                 predictions = self.evaluate_trained_model(the_model=the_model)
             else:
                 predictions = self.train_and_evaluate(the_model=the_model)
-            self.my_match_rates(predictions=predictions)
-            # total_simple_match_count, total_annot_count, simple_match_rate = \
-            #     self.get_simple_match_rate(predictions=predictions, output=True)
-            # print("Simple match rate: {}".format(simple_match_rate))
-            # result, complex_piece_results = ex.get_complex_match_rates(predictions=predictions, weight=False)
-            # print("Unweighted avg M for crf{} over {}: {}".format(model.CRF_VERSION, CORPUS_NAMES, result))
-
-            # result, my_piece_results = self.get_my_avg_m(predictions=predictions, weight=False, reuse=False)
-            # print("My unweighted avg M for crf{} over {}: {}".format(self.model_version, self.corpus_names, result))
-
-            # for key in sorted(complex_piece_results):
-            # print("nak {} => {}".format (key, complex_piece_results[key]))
-            # print(" my {} => {}".format(key, my_piece_results[key]))
-            # print("")
-            # result, piece_results = ex.get_complex_match_rates(weight=True)
-            # print("Weighted avg M for crf{} over {}: {}".format(model.CRF_VERSION, CORPUS_NAMES, result))
-
-            # result, piece_results = self.get_my_avg_m(predictions=predictions, weight=True, reuse=True)
-            # print("Weighted avg m_gen for crf{} over {}: {}".format(self.model_version, self.corpus_names, result))
+            ### self.my_match_rates(predictions=predictions)
+            self.my_simplified_match_rates(predictions=predictions)
         else:
             self.split_and_evaluate(the_model=the_model, test_size=0.4, random_state=0)
         print("Run of crf model {} against {} test set over {} corpus has completed successfully.".format(
@@ -229,37 +294,103 @@ class DExperiment:
             handed_strike_digits.reverse()
         return handed_strike_digits
 
-    def append_example(self, ordered_notes, staff, hsd_seg, example_key, is_train=False,
-                       is_test=False, d_score=None):
-        # IMPORTANT: An example here is segregated, representing one hand (or one staff).
-        (corpus_name, score_title, annot_index) = example_key
+    def init_train_test(self):
+        self.x_train = []
+        self.y_train = []
+        self.x_test = []
+        self.y_test = []
+        self.y_test_y_index = {}
+        self.test_note_count = 0
+        self.train_note_count = 0
+        self.train_group_assignments = []
 
-        piece_key = (corpus_name, score_title)
-        if piece_key not in self.group_id:
+    def append_example(self, example: AnnotatedExample, is_train=False, is_test=False):
+        ordered_notes = example.notes
+        d_score = example.d_score
+        seg_key = example.seg_key
+        staff = seg_key.staff
+        score_key = seg_key.score_key
+        hsd_seg = example.hsd_seg
+        example_key = example.example_key
+
+        self.train_note_count = 0
+        self.test_note_count = 0
+
+        # (corpus_name, score_title, annot_index) = example_key
+        # score_key = (corpus_name, score_title)
+        if score_key not in self.group_id:
             new_id = len(self.group_id)
-            self.group_id[piece_key] = new_id
-            self.group_info[new_id] = 0
-        group_id = self.group_id[piece_key]
+            self.group_id[score_key] = new_id
+            self.group_score_key[new_id] = score_key
+            self.group_note_count[new_id] = 0
+            self.d_score[score_key] = d_score
+        example_index = len(self.y)
+        group_id = self.group_id[score_key]
         note_len = len(ordered_notes)
-        self.group_info[group_id] += note_len
+        self.group_note_count[group_id] += note_len
         self.annotated_note_count += note_len
-        self.x.append(self.phrase2features(ordered_notes, staff, d_score=d_score))
-        self.y.append(self.phrase2labels(hsd_seg))
+        x_features = self.phrase2features(ordered_notes, staff, d_score=d_score)
+        y_labels = self.phrase2labels(hsd_seg)
+        self.x.append(x_features)
+        self.y.append(y_labels)
+        self.y_staff[example_index] = staff
+        self.y_score_key[example_index] = score_key
         self.group_assignments.append(group_id)
+        if example_key not in self.example_indices:
+            self.example_indices[example_key] = []
+        self.example_indices[example_key].append(self.good_annot_count)
+        self.example_key[self.good_annot_count] = example_key
         if is_test:
-            score_title = d_score.title()
+            y_test_index = len(self.y_test)
             if example_key not in self.test_indices:
                 self.test_indices[example_key] = []
             self.test_indices[example_key].append(self.good_annot_count)
-            self.y_test_keys[self.good_annot_count] = example_key
-            self.x_test.append(self.phrase2features(ordered_notes, staff, d_score=d_score))
-            self.y_test.append(self.phrase2labels(hsd_seg))
-            self.test_d_scores[score_title] = d_score
+            self.test_key[self.good_annot_count] = example_key
+            self.x_test.append(x_features)
+            self.y_test.append(y_labels)
+            self.y_test_y_index[y_test_index] = example_index
+            self.test_note_count += len(y_labels)
         elif is_train:
-            self.x_train.append(self.phrase2features(ordered_notes, staff, d_score=d_score))
-            self.y_train.append(self.phrase2labels(hsd_seg))
+            self.x_train.append(x_features)
+            self.y_train.append(y_labels)
             self.train_group_assignments.append(group_id)
+            self.train_note_count += len(y_labels)
         self.good_annot_count += 1
+
+    def my_train_test_split(self):
+        self.init_train_test()
+        groups = self.group_assignments
+        splitter = GroupShuffleSplit(n_splits=1, test_size=self.opts.holdout_size,
+                                     random_state=self.opts.random_state)
+        splits = splitter.split(X=self.x, y=self.y, groups=groups)
+        for i, (train_indices, test_indices) in enumerate(splits):
+            for t_i in train_indices:
+                self.x_train.append(self.x[t_i])
+                self.y_train.append(self.y[t_i])
+                example_key: ExampleKey = self.example_key[t_i]
+                score_key: ScoreKey = example_key.score_key()
+
+                # (corpus_name, score_title, annot_index) = example_key
+                group_id = self.group_id[score_key]
+                self.train_group_assignments.append(group_id)
+                note_count = len(self.y[t_i])
+                self.train_note_count += note_count
+            for t_i in test_indices:
+                y_test_index = len(self.y_test)
+                self.y_test_y_index[y_test_index] = t_i
+                self.x_test.append(self.x[t_i])
+                self.y_test.append(self.y[t_i])
+                test_key = self.example_key[t_i]
+                if test_key not in self.test_indices:
+                    self.test_indices[test_key] = []
+                self.test_indices[test_key].append(t_i)
+                note_count = len(self.y[t_i])
+                self.test_note_count += note_count
+
+        print(f"\nTrain pieces looking less than random:\n{train_indices}")
+        print(f"\nTest pieces looking less than random:\n{test_indices}")
+        print(f"\nTrain note count: {self.train_note_count}")
+        print(f"Test note count: {self.test_note_count}")
 
     def print_summary(self):
         print("Example count: {}".format(len(self.x)))
@@ -295,7 +426,7 @@ class DExperiment:
             piece_id, annot_id = str(score_title).split('-')
             if piece_id not in test_d_scores:
                 test_d_scores[piece_id] = list()
-            test_d_score = self.test_d_scores[score_title]
+            test_d_score = self.d_score[score_title]
             test_d_scores[piece_id].append(test_d_score)
         return test_d_scores
 
@@ -321,141 +452,6 @@ class DExperiment:
                         indices_by_piece[the_piece_id] = []
                     indices_by_piece[the_piece_id].append(self.test_indices[key])
         return indices_by_piece
-
-    # THERE BE DRAGONS. I don't trust this code.
-    # def persist_prediction_to_pig_file(self, test_key, predictions, prediction_dir=None):
-    #     if prediction_dir is None:
-    #         prediction_dir = self.default_prediction_dir
-    #     (corpus_name, score_title, annot_index) = test_key
-    #     # base_title, annot_id = str(score_title).split('-')
-    #     upper_index, lower_index = self.test_indices[test_key]
-    #     pred_abcdf = "".join(predictions[upper_index]) + '@' + "".join(predictions[lower_index])
-    #     pred_annot = DAnnotation(abcdf=pred_abcdf)
-    #     pred_abcdh = ABCDHeader(annotations=[pred_annot])
-    #     pred_d_score = self.test_d_scores[score_title]
-    #     pred_d_score.abcd_header(abcd_header=pred_abcdh)
-    #     pred_pout = PigOut(d_score=pred_d_score)
-    #     pred_pig_path = prediction_dir + score_title + PIG_FILE_SUFFIX
-    #     pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
-    #     return pred_pig_path
-    #
-    # def predict_and_persist(self, predictions, prediction_dir=None):
-    #     if prediction_dir is None:
-    #         prediction_dir = self.default_prediction_dir
-    #     PigIn.mkdir_if_missing(path_str=prediction_dir, make_missing=True)
-    #     last_base_title = ''
-    #     test_pig_paths = list()
-    #     for test_key in self.test_indices:
-    #         (corpus_name, score_title, annot_index) = test_key
-    #         base_title, annot_id = str(score_title).split('-')
-    #         if base_title != last_base_title:
-    #             # We only get to predict once per piece in Nakamura evaluation.
-    #             self.persist_prediction_to_pig_file(test_key=test_key,
-    #                                                 predictions=predictions, prediction_dir=prediction_dir)
-    #             last_base_title = base_title
-    #         test_pig_path = DExperiment.pig_std_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
-    #         test_pig_paths.append(test_pig_path)
-    #     return test_pig_paths
-    #
-    # def persist_predictions(self, predictions, prediction_dir=None):
-    #     # predictions is a list of lists of strike fingers, aligned with
-    #     # the y_test data.
-    #     if prediction_dir is None:
-    #         prediction_dir = self.default_prediction_dir
-    #     PigIn.mkdir_if_missing(path_str=prediction_dir, make_missing=True)
-    #     test_pig_paths = list()
-    #     pred_pig_paths = list()
-    #     guesses = list()
-    #     last_test_key = ''
-    #     test_index = 0
-    #     for guess in predictions:
-    #         # We have guesses about 1 or 2 staves. They are interleaved in the predictions list.
-    #         # If we have two, both need to make it to the PIG file.
-    #         guesses.append(guess)
-    #         test_key = self.y_test_keys[test_index]
-    #         (corpus_name, score_title, annot_index) = test_key
-    #         base_title, annot_id = str(score_title).split('-')
-    #         if last_test_key and test_key != last_test_key:
-    #             prediction_pig_path = self.persist_prediction_to_pig_file(test_key=test_key, predictions=guesses,
-    #                                                                       prediction_dir=prediction_dir)
-    #             pred_pig_paths.append(prediction_pig_path)
-    #             test_pig_path = DExperiment.pig_std_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
-    #             test_pig_paths.append(test_pig_path)
-    #             guesses = []
-    #         last_base_title = base_title
-    #     return test_pig_paths, pred_pig_paths
-    #
-    # def get_simple_match_rate_for_predictions(self, predictions, prediction_dir=None, output=False):
-    #     """
-    #     Use the executable from Nakamura to calculate SimpleMatchRate.
-    #     """
-    #     test_paths, pred_paths = self.persist_predictions(predictions=predictions, prediction_dir=prediction_dir)
-    #     test_path_count = len(test_paths)
-    #     pred_path_count = len(test_paths)
-    #     if test_path_count != pred_path_count:
-    #         raise Exception("Mismatched PIG file counts.")
-    #
-    #     total_simple_match_count = 0
-    #     total_annot_count = 0
-    #     test_file_count = 0
-    #     for i in range(test_path_count):
-    #         pred_pig_path = pred_paths[i]
-    #         test_pig_path = test_paths[i]
-    #         match_rate = PigOut.simple_match_rate(gt_pig_path=test_pig_path, pred_pig_path=pred_pig_path)
-    #         total_simple_match_count += match_rate['match_count']
-    #         total_annot_count += match_rate['note_count']
-    #         test_file_count += 1
-    #         # print(result.stdout)
-    #     simple_match_rate = total_simple_match_count / total_annot_count
-    #     if output:
-    #         print("SimpleMatchRate: {}/{} = {}".format(total_simple_match_count, total_annot_count, simple_match_rate))
-    #         print("over {} test files.".format(test_file_count))
-    #     return total_simple_match_count, total_annot_count, simple_match_rate
-    #
-    # def get_simple_match_rate(self, predictions, prediction_dir=None, output=False):
-    #     """
-    #     Use the executable from Nakamura to calculate SimpleMatchRate.
-    #     """
-    #     if prediction_dir is None:
-    #         prediction_dir = self.default_prediction_dir
-    #     pp_path = Path(prediction_dir)
-    #     if not pp_path.is_dir():
-    #         os.makedirs(prediction_dir)
-    #     total_simple_match_count = 0
-    #     total_annot_count = 0
-    #     test_file_count = 0
-    #     for test_key in self.test_indices:
-    #         (corpus_name, score_title, annot_index) = test_key
-    #         pred_pig_path = self.persist_prediction_to_pig_file(predictions=predictions, test_key=test_key,
-    #                                                             prediction_dir=prediction_dir)
-    #         test_pig_path = DExperiment.pig_std_dir[corpus_name] + score_title + PIG_FILE_SUFFIX
-    #         match_rate = PigOut.simple_match_rate(gt_pig_path=test_pig_path, pred_pig_path=pred_pig_path)
-    #         total_simple_match_count += match_rate['match_count']
-    #         total_annot_count += match_rate['note_count']
-    #         test_file_count += 1
-    #         # print(result.stdout)
-    #     simple_match_rate = total_simple_match_count / total_annot_count
-    #     if output:
-    #         print("SimpleMatchRate: {}/{} = {}".format(total_simple_match_count, total_annot_count, simple_match_rate))
-    #         print("over {} test files.".format(test_file_count))
-    #     return total_simple_match_count, total_annot_count, simple_match_rate
-    #
-    # def get_my_avg_m_gen(self, prediction_dir=None, test_dir=None, reuse=False, weight=False):
-    #     if prediction_dir is None:
-    #         prediction_dir = self.default_prediction_dir
-    #     if test_dir is None:
-    #         test_dir = self.default_test_dir
-    #     if reuse:
-    #         PigIn.mkdir_if_missing(path_str=test_dir, make_missing=False)
-    #     else:
-    #         PigIn.mkdir_if_missing(path_str=test_dir, make_missing=True)
-    #         test_pig_paths = self.predict_and_persist(prediction_dir=prediction_dir)
-    #         print("There are {} PIG test paths.".format(len(test_pig_paths)))
-    #         for tpp in test_pig_paths:
-    #             shutil.copy2(tpp, test_dir)
-    #     avg_m_gen, piece_m_gens = PigOut.my_average_m_gen(fingering_files_dir=test_dir,
-    #                                                       prediction_input_dir=prediction_dir, weight=weight)
-    #     return avg_m_gen, piece_m_gens
 
     @staticmethod
     def match_count(predicted, ground_truth):
@@ -506,6 +502,87 @@ class DExperiment:
                 max_count = match_count
         return max_count
 
+    def my_simplified_match_rates(self, predictions):
+        # We need to know the associated staff and DScore for each prediction/y_test pair.
+        # We identify the DScore uniquely as a (corpus_name, score_title) tuple in self.y_score_key
+        # when examples are appended to self.y.
+        #
+        # IMPORTANT: If we are segmenting into phrases, we CANNOT produce combined scores, as these reflect
+        # counts of unified slices of notes across both staves. We don't have that if the staves are divided
+        # into independent phrases.
+        rate_set = {
+            'upper': {'gen': 0.0, 'high': 0.0, 'soft': 0.0},
+            'lower': {'gen': 0.0, 'high': 0.0, 'soft': 0.0},
+            'combined': {'gen': 0.0, 'high': 0.0, 'soft': 0.0},
+        }
+        count_set = {
+            'note': {'upper': 0, 'lower': 0, 'combined': 0},
+            'match': {'upper': 0, 'lower': 0, 'combined': 0}
+        }
+        total_counts = copy.deepcopy(count_set)
+        prediction_example_count = len(predictions)
+        y_test_example_count = len(self.y_test)
+        if prediction_example_count != y_test_example_count:
+            raise Exception("Prediction example counts do not match y_test")
+
+        score_splits_are_valid = True
+        total_score_counts = dict()
+        score_ground_truth_y_indices = dict()
+        for i in range(prediction_example_count):
+            y_index = self.y_test_y_index[i]
+            staff = self.y_staff[y_index]
+            score_key = self.y_score_key[y_index]
+            note_count = len(predictions[i])
+            if score_key not in total_score_counts:
+                total_score_counts[score_key] = copy.deepcopy(count_set)
+                score_ground_truth_y_indices[score_key] = list()
+            score_ground_truth_y_indices[score_key].append(y_index)  # staffs are interleaved upper, lower, upper,...
+            if score_splits_are_valid:
+                try:
+                    match_count = DExperiment.match_count(predicted=predictions[i], ground_truth=self.y_test[i])
+                    total_counts['match'][staff] += match_count
+                    total_counts['note'][staff] += note_count
+                    total_score_counts[score_key]['match'][staff] += match_count
+                    total_score_counts[score_key]['note'][staff] += note_count
+
+                    total_counts['match']['combined'] += match_count
+                    total_counts['note']['combined'] += note_count
+                    total_score_counts[score_key]['match']['combined'] += match_count
+                    total_score_counts[score_key]['note']['combined'] += note_count
+                except Exception as e:
+                    print("Upper/lower split metrics are invalid: " + str(e))
+                    splits_are_valid = False
+                    score_splits_are_valid = False
+        sums_of_rates = copy.deepcopy(rate_set)
+        weighted_sums_of_rates = copy.deepcopy(rate_set)
+        m_rates = copy.deepcopy(sums_of_rates)
+        weighted_m_rates = copy.deepcopy(rate_set)
+        combined_smr = total_counts['match']['combined'] / total_counts['note']['combined']
+        m_rates['combined']['simple'] = combined_smr
+        # The simple match rate is implicitly weighted, as it is just total matches over total notes.
+        weighted_m_rates['combined']['simple'] = combined_smr
+
+        score_match_rates = dict()
+        for score_key in score_ground_truth_y_indices:
+            if score_key not in score_match_rates:
+                score_match_rates[score_key] = copy.deepcopy(rate_set)
+            for staff in ['upper', 'lower', 'combined']:
+                total_score_note_count = total_score_counts[score_key]['note'][staff]
+                total_score_match_count = total_score_counts[score_key]['match'][staff]
+                try:
+                    if not self.opts.segmenting or not staff == 'combined':
+                        score_match_rates[score_key][staff]['gen'] = total_score_match_count / total_score_note_count
+                except Exception as e:
+                    print("What the? " + str(e))
+
+            # score_soft_match_count = DExperiment.soft_match_count(score_pred_fingering['combined'],
+            #                                                       score_test_fingerings['combined'])
+            # base_title_match_rates[base_title]['combined']['soft'] = score_soft_match_count / combined_note_count
+            # score_high_match_count = DExperiment.high_match_count(score_pred_fingering['combined'],
+            #                                                       score_test_fingerings['combined'])
+            # base_title_match_rates[base_title]['combined']['high'] = score_high_match_count / combined_note_count
+        print("Huh?")
+
     def my_match_rates(self, predictions):
         # predictions contain predictions for all items in the test set.
         # We need to pull the first "exemplar" for each score and compare
@@ -514,9 +591,11 @@ class DExperiment:
         test_keys_for_base_title = dict()
         prediction_key_for_base_title = dict()
         splits_are_valid = True
+        reggie = r'\-\d+$'
         for test_key in self.test_indices:
             (corpus_name, score_title, annot_index) = test_key
-            base_title, annot_id = str(score_title).split('-')
+            # base_title, annot_id = str(score_title).split('-')
+            base_title = re.sub(reggie, '', score_title)
             if base_title != last_base_title:
                 prediction_key_for_base_title[base_title] = test_key
                 test_keys_for_base_title[base_title] = list()
@@ -537,6 +616,13 @@ class DExperiment:
             }
             pred_key = prediction_key_for_base_title[base_title]
             (pred_upper_i, pred_lower_i) = self.test_indices[pred_key]
+            # FIXME: This is wrong. predictions line up with y_test one-to-one.
+            # This is pointing to some arbitrary positions in predictions.
+            # This will only work if the test examples are all lined up at the
+            # beginning of the total set of examples, as they are in the
+            # PIG dataset. Any random splitting of this data set breaks this
+            # whole thing. We need a simpler method for when the "exemplar" situation
+            # is not in play. Yeesh.
             pred_upper = predictions[pred_upper_i]
             pred_lower = predictions[pred_lower_i]
             pred_combined = pred_upper + pred_lower
@@ -697,87 +783,11 @@ class DExperiment:
 
         return m_rates, weighted_m_rates, base_title_match_rates
 
-    # THERE BE DRAGONS:
-    # def get_my_avg_m(self, predictions, prediction_dir=None, test_dir=None, reuse=False, weight=False):
-    #     if prediction_dir is None:
-    #         prediction_dir = self.default_prediction_dir
-    #     if test_dir is None:
-    #         test_dir = self.default_test_dir
-    #     if reuse:
-    #         PigIn.mkdir_if_missing(path_str=test_dir, make_missing=False)
-    #     else:
-    #         PigIn.mkdir_if_missing(path_str=test_dir, make_missing=True)
-    #         test_pig_paths = self.predict_and_persist(predictions=predictions, prediction_dir=prediction_dir)
-    #         print("There are {} PIG test paths.".format(len(test_pig_paths)))
-    #         for tpp in test_pig_paths:
-    #             shutil.copy2(tpp, test_dir)
-    #     avg_m, piece_ms = PigOut.my_average_m(fingering_files_dir=test_dir,
-    #                                           prediction_input_dir=prediction_dir, weight=weight)
-    #     return avg_m, piece_ms
-    #
-    # def get_complex_match_rates(self, crf, weight=False, prediction_dir=None, output=False):
-    #     if prediction_dir is None:
-    #         prediction_dir = self.default_prediction_dir
-    #     PigIn.mkdir_if_missing(path_str=prediction_dir, make_missing=True)
-    #     y_pred = crf.predict(self.x_test)
-    #     total_note_count = 0
-    #     d_score_count = 0
-    #     pred_pig_path = ''
-    #     combined_match_rates = {}
-    #     piece_data = dict()
-    #     match_rates = dict()
-    #     for corpus_name in self.corpus_names:
-    #         test_indices = self.test_indices_by_piece(corpus=corpus_name)
-    #         test_pig_paths = self.test_paths_by_piece(corpus=corpus_name)
-    #         test_d_scores = self.test_d_scores_by_piece(corpus=corpus_name)
-    #         tested_pieces = dict()
-    #         for piece_id in test_pig_paths:
-    #             note_count = 0
-    #             annot_count = 0
-    #             if piece_id not in tested_pieces:
-    #                 upper_index, lower_index = test_indices[piece_id][0]
-    #                 pred_abcdf = "".join(y_pred[upper_index]) + '@' + "".join(y_pred[lower_index])
-    #                 pred_annot = DAnnotation(abcdf=pred_abcdf)
-    #                 pred_abcdh = ABCDHeader(annotations=[pred_annot])
-    #                 pred_d_score = test_d_scores[piece_id][0]
-    #                 d_score_count += 1
-    #                 pred_d_score.abcd_header(abcd_header=pred_abcdh)
-    #                 pred_pout = PigOut(d_score=pred_d_score)
-    #                 file_id = "{}-1".format(piece_id)
-    #                 pred_pig_path = prediction_dir + file_id + PIG_FILE_SUFFIX
-    #                 pred_pig_content = pred_pout.transform(annotation_index=0, to_file=pred_pig_path)
-    #                 note_count = pred_d_score.note_count()
-    #                 annot_count = note_count * len(test_pig_paths[piece_id])
-    #             match_rates = PigOut.single_prediction_complex_match_rates(gt_pig_paths=test_pig_paths[piece_id],
-    #                                                                        pred_pig_path=pred_pig_path)
-    #             total_note_count += note_count
-    #             piece_data[piece_id] = dict()
-    #             for key in match_rates:
-    #                 match_count = round(match_rates[key] * annot_count)
-    #                 raw_rate = match_rates[key]
-    #                 piece_data[piece_id][key] = {
-    #                     'match_count': match_count,
-    #                     'note_count': note_count,
-    #                     'annot_count': annot_count,
-    #                     'raw_rate': raw_rate
-    #                 }
-    #                 if weight:
-    #                     match_rates[key] *= note_count
-    #                 if key not in combined_match_rates:
-    #                     combined_match_rates[key] = 0
-    #                 combined_match_rates[key] += match_rates[key]
-    #
-    #     for key in match_rates:
-    #         if weight:
-    #             combined_match_rates[key] /= total_note_count
-    #         else:
-    #             combined_match_rates[key] /= d_score_count
-    #     return combined_match_rates, piece_data
-
     def load_data(self, clean_list):
         creal = Corporeal()
         experiment_name = self.experiment_name()
         # random.seed(27)
+        example_index = 0
         for corpus_name in self.corpus_names:
             da_corpus = c.unpickle_it(obj_type="DCorpus", clean_list=clean_list,
                                       file_name=corpus_name, use_dill=True)
@@ -791,31 +801,42 @@ class DExperiment:
                 abcdh = da_score.abcd_header()
                 annot_count = abcdh.annotation_count()
                 annot = da_score.annotation_by_index(index=0)
-                segger = ManualDSegmenter(level='.', d_annotation=annot)
+                if self.opts.segmenting:
+                    segger = ManualDSegmenter(level='.', d_annotation=annot)
+                else:
+                    segger = OneDSegmenter(d_annotation=annot)
                 da_score.segmenter(segger)
                 da_unannotated_score = copy.deepcopy(da_score)
                 score_title = da_score.title()
+                score_key = ScoreKey(corpus_name, score_title)
+                # if score_title == 'scales_bflat_minor_melodic':
+                    # print("Hang on now.")
                 # if score_title != 'Sonatina 4.1':
                 # continue
-                for staff in self.staffs:
-                    print("Processing {} staff of {} score from {} corpus.".format(staff, score_title, corpus_name))
-                    ordered_offset_note_segments = da_score.ordered_offset_note_segments(staff=staff)
-                    seg_count = len(ordered_offset_note_segments)
-                    for annot_index in range(annot_count):
-                        annot = da_score.annotation_by_index(annot_index)
-                        authority = annot.authority()
+                for annot_index in range(annot_count):
+                    annot = da_score.annotation_by_index(annot_index)
+                    authority = annot.authority()
+                    for staff in self.staffs:
+                        # Important staff is the inner loop, so the staff annotations are next to each other
+                        # in self.y.
+                        example_index += 1
+                        ordered_offset_note_segments = da_score.ordered_offset_note_segments(staff=staff)
                         hsd_segments = segger.segment_annotation(annotation=annot, staff=staff)
                         seg_index = 0
                         for hsd_seg in hsd_segments:
                             ordered_notes = ordered_offset_note_segments[seg_index]
                             note_len = len(ordered_notes)
                             seg_len = len(hsd_seg)
-                            seg_index += 1
+                            segment_key = SegmentKey(score_key=score_key, staff=staff, seg_index=seg_index)
+                            example = AnnotatedExample(seg_key=segment_key, notes=ordered_notes, hsd_seg=hsd_seg,
+                                                       annot_index=annot_index, d_score=da_unannotated_score)
+                            print(f"Processing the {staff} staff of annotation {annot_index} " +
+                                  f"in score {score_title} segment {seg_index} " +
+                                  f"from the {corpus_name} corpus: ex. {example_index}")
                             if note_len != seg_len:
                                 print("Bad annotation by {} for score {}. Notes: {} Fingers: {}".format(
                                     authority, score_title, note_len, seg_len))
                                 self.bad_annot_count += 1
-                                continue
                             nondefault_hand_finger_count = c.nondefault_hand_count(hsd_seq=hsd_seg, staff=staff)
                             if nondefault_hand_finger_count:
                                 self.total_nondefault_hand_segment_count += 1
@@ -830,16 +851,20 @@ class DExperiment:
                                 # authority, score_title, hsd_seg))
                                 self.wildcarded_count += 1
                                 continue
-                            example_key = (corpus_name, score_title, annot_index)
-                            if creal.has_preset_evaluation_defined(corpus_name=corpus_name):
+                            if self.opts.holdout_predefined and \
+                                    creal.has_preset_evaluation_defined(corpus_names=self.corpus_names):
                                 if creal.is_in_test_set(title=score_title, corpus_name=corpus_name):
-                                    self.append_example(ordered_notes, staff, hsd_seg, is_test=True,
-                                                        example_key=example_key, d_score=da_unannotated_score)
+                                    self.append_example(example, is_test=True)
                                 else:
-                                    self.append_example(ordered_notes, staff, hsd_seg, is_train=True,
-                                                        example_key=example_key, d_score=da_unannotated_score)
+                                    self.append_example(example, is_train=True)
                             else:
-                                self.append_example(ordered_notes, staff, hsd_seg, example_key=example_key,
-                                                    d_score=da_unannotated_score)
+                                self.append_example(example)
+                        seg_index += 1
+        if self.bad_annot_count != 0:
+            raise Exception(f"{self.bad_annot_count} bad annotations found.")
+        if not self.y_test:
+            # If there be no test examples, we create our own train and test sets.
+            self.my_train_test_split()
+
         print("Data loaded. Clean list: {}".format(list(clean_list.keys())))
         return experiment_name

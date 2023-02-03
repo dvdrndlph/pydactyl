@@ -36,11 +36,11 @@ import pydactyl.crf.CrfFeatures7 as feats
 # STAFFS = ['upper']
 # STAFFS = ['lower']
 # CORPUS_NAMES = ['full_american_by_annotator']
-# CORPUS_NAMES = ['complete_layer_one']
+CORPUS_NAMES = ['complete_layer_one']
 # CORPUS_NAMES = ['scales']
 # CORPUS_NAMES = ['arpeggios']
 # CORPUS_NAMES = ['broken']
-# CORPUS_NAMES = ['complete_layer_one', 'scales', 'arpeggios', 'broken']
+CORPUS_NAMES = ['complete_layer_one', 'scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['pig']
 # CORPUS_NAMES = ['pig_indy']
@@ -52,22 +52,34 @@ CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regen
 # CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 OPTS = {
     'pickling': False,
+    'segmenting': False,
     'consonance_threshold': c.CHORD_MS_THRESHOLD,
     'engine': 'sklearn-crfsuite',
     'model_features': feats,
     'staffs': ['upper', 'lower'],
     'test_method': 'preset',
     'fold_count': 5,
-    'group_by': 'section',
+    'group_by': 'segment',
     'holdout_predefined': True,
     'holdout_size': 0.3,
-    'corpus_names': ['pig'],
+    'corpus_names': CORPUS_NAMES,
     'segregate_hands': False,
+    'param_grid': {
+        'c1': [0, 0.0001, 0.001, 0.01, 0.1],
+        'c2': [1.0, 0.5, 0.25, 0.125, 0.1],
+        'linesearch': ['MoreThuente', 'Backtracking', 'StrongBacktracking']
+    },
     'params': {
         'algorithm': 'lbfgs',
-        'c1': 0.1,
-        'c2': 0.1,
-        'all_possible_transitions': True
+        'c1': 0,  # 0.1,
+        'c2': 1.0,  # 0.1,
+        'epsilon': 0.00001,
+        'period': 10,
+        'delta': 0.00001,
+        'linesearch': 'MoreThuente',
+        'max_linesearch': 20,
+        'max_iterations': None,
+        'all_possible_transitions': False  # True
     }
 }
 opts = DExperimentOpts(opts=OPTS)
@@ -97,6 +109,7 @@ else:
         all_possible_transitions=True
     )
 
+# ex.tune_parameters(the_model=my_crf)
 ex.evaluate(the_model=my_crf, is_trained=have_trained_model)
 if not have_trained_model and OPTS['pickling']:
     c.pickle_it(obj=my_crf, obj_type="crf", file_name=experiment_name, use_dill=True)

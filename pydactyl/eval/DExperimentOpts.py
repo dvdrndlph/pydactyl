@@ -25,14 +25,18 @@ import pydactyl.crf.CrfUtil as c
 
 VALID_GROUPINGS = {
     'example': True,
-    'section': True,
+    'segment': True,
     'piece': True
 }
 
 
 class DExperimentOpts:
     def __init__(self, opts):
-        self.random_state = 27
+        self.segment = True
+        if 'segmenting' in opts:
+            self.segmenting = opts['segmenting']
+
+        self.random_state = 14
         if 'random_state' in opts:
             self.random_state = opts['random_state']
 
@@ -45,7 +49,7 @@ class DExperimentOpts:
 
         self.engine = opts['engine']
 
-        self.group_by = 'section'
+        self.group_by = 'segment'
         if 'group_by' in opts:
             if opts['group_by'] in VALID_GROUPINGS:
                 self.group_by = opts['group_by']
@@ -69,5 +73,8 @@ class DExperimentOpts:
         self.corpus_names = opts['corpus_names']
         self.segregate_hands = opts['segregate_hands']
         self.params = opts['params']
+        self.param_grid = None
+        if 'param_grid' in opts:
+            self.param_grid = opts['param_grid']
 
 

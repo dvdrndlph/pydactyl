@@ -182,10 +182,11 @@ class Corporeal(ABC):
         self._rank_result_cache = {}
         self._staff = staff
 
-    def has_preset_evaluation_defined(self, corpus_name):
-        if corpus_name in ('pig_seg', 'pig_indy', 'pig', 'complete_layer_one'):
-            return True
-        return False
+    def has_preset_evaluation_defined(self, corpus_names):
+        for corpus_name in corpus_names:
+            if corpus_name not in ('pig_seg', 'pig_indy', 'pig', 'complete_layer_one'):
+                return False
+        return True
 
     def is_in_test_set(self, title: str, corpus_name='pig_indy'):
         if corpus_name in ('pig_seg', 'pig_indy', 'pig'):

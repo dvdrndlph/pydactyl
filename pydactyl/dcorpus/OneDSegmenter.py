@@ -33,6 +33,15 @@ class OneDSegmenter(DSegmenter):
         self._d_annotation = d_annotation
         return
 
+    def d_annotation(self, d_annotation=None):
+        if d_annotation:
+            self._d_annotation = d_annotation
+        return self._d_annotation
+
+    def segment_annotation(self, annotation, staff="upper"):
+        hsds = annotation.handed_strike_digits(staff=staff)
+        return [hsds]
+
     def segment_to_orderly_streams(self, d_part, offset=0):
         orderly_stream = d_part.orderly_note_stream(offset=offset)
         new_note_stream = stream.Score()
@@ -44,3 +53,7 @@ class OneDSegmenter(DSegmenter):
             new_note_stream.append(knot)
 
         return [new_note_stream]
+
+    def segment_to_ordered_offset_notes(self, d_part, offset=0):
+        ordered_offsets = d_part.ordered_offset_notes(offset=offset)
+        return [ordered_offsets]

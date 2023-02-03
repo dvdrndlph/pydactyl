@@ -38,11 +38,11 @@ class DNotesData:
         self.chordified = None
         self.chordified_offsets = None
         self.chordified_list = None
-        self.consonant_map = list()
+        self.concurrence_map = list()
         # self.chordify() # PIG 108 cannot be processed
         # self.map_strike_consonants()
         self.pits_sounding_at = self.my_chordify(threshold_ms=threshold_ms)
-        self.my_map_strike_consonants()
+        self.my_map_strike_concurrence()
 
     def my_chordify(self, threshold_ms):
         # if self.d_score.title() == '078-1':
@@ -104,7 +104,7 @@ class DNotesData:
         self.chordified = note_stream.chordify()
         # self.chordified.show('text')
 
-    def map_strike_consonants(self):
+    def map_strike_concurrence(self):
         """
         Separately store higher pitches and lower pitches sounding at the same time
         each note is struck. The idea is capture constraints from all keys
@@ -155,9 +155,9 @@ class DNotesData:
                 'higher_pitches': higher_pits,
                 'lower_pitches': lower_pits
             }
-            self.consonant_map.append(details)
+            self.concurrence_map.append(details)
 
-    def my_map_strike_consonants(self):
+    def my_map_strike_concurrence(self):
         for note_i in range(len(self.notes)):
             knot = self.notes[note_i]['note']
             knot_pit = knot.pitch
@@ -173,19 +173,19 @@ class DNotesData:
                 'higher_pitches': higher_pits,
                 'lower_pitches': lower_pits
             }
-            self.consonant_map.append(details)
+            self.concurrence_map.append(details)
 
-    def higher_consonant_note_count(self, i):
-        note_count = len(self.consonant_map[i]['higher_pitches'])
+    def higher_concurrent_note_count(self, i):
+        note_count = len(self.concurrence_map[i]['higher_pitches'])
         return note_count
 
-    def lower_consonant_note_count(self, i):
-        note_count = len(self.consonant_map[i]['lower_pitches'])
+    def lower_concurrent_note_count(self, i):
+        note_count = len(self.concurrence_map[i]['lower_pitches'])
         return note_count
 
-    def consonant_count_feature_str(self, i):
-        higher_count = self.higher_consonant_note_count(i)
-        lower_count = self.lower_consonant_note_count(i)
+    def concurrent_count_feature_str(self, i):
+        higher_count = self.higher_concurrent_note_count(i)
+        lower_count = self.lower_concurrent_note_count(i)
         feature_str = "{}_{}".format(lower_count, higher_count)
         return feature_str
 

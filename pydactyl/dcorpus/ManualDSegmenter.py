@@ -110,7 +110,7 @@ class ManualDSegmenter(DSegmenter):
                 continue
             # FIXME: Need to insert at appropriate offset.
             # new_note_stream.append(knot)
-            # The following code needs to be validated part with >1 segment.
+            # The following code needs to be validated on DPart with >1 segment.
             ql_offset = knot['offset'] - ql_offset_adjustment
             sec_offset = knot['second_offset'] - sec_offset_adjustment
             decimal.getcontext().rounding = decimal.ROUND_DOWN
