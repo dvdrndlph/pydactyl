@@ -40,7 +40,7 @@ CORPUS_NAMES = ['complete_layer_one']
 # CORPUS_NAMES = ['scales']
 # CORPUS_NAMES = ['arpeggios']
 # CORPUS_NAMES = ['broken']
-CORPUS_NAMES = ['complete_layer_one', 'scales', 'arpeggios', 'broken']
+# CORPUS_NAMES = ['complete_layer_one', 'scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['pig']
 # CORPUS_NAMES = ['pig_indy']
@@ -52,7 +52,7 @@ CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regen
 # CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 OPTS = {
     'pickling': False,
-    'segmenting': False,
+    'segmenting': True,
     'consonance_threshold': c.CHORD_MS_THRESHOLD,
     'engine': 'sklearn-crfsuite',
     'model_features': feats,

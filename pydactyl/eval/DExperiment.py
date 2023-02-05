@@ -262,7 +262,7 @@ class DExperiment:
                 predictions = self.evaluate_trained_model(the_model=the_model)
             else:
                 predictions = self.train_and_evaluate(the_model=the_model)
-            ### self.my_match_rates(predictions=predictions)
+            # self.my_match_rates(predictions=predictions)
             self.my_simplified_match_rates(predictions=predictions)
         else:
             self.split_and_evaluate(the_model=the_model, test_size=0.4, random_state=0)
@@ -468,6 +468,23 @@ class DExperiment:
         return match_count
 
     @staticmethod
+    def gen_match_rate(predicted, ground_truths):
+        pred_len = len(predicted)
+        gt_len = len(ground_truths[0])
+        if gt_len == 0:
+            raise Exception("Phrase is zero length.")
+        if gt_len != pred_len:
+            raise Exception("Counts do not match.")
+        sequence_len = len(predicted)
+        gt_count = len(ground_truths)
+        match_rate = 0
+        for i in range(gt_count):
+            match_count = DExperiment.match_count(predicted, ground_truths[i])
+            rate_contribution = match_count / (sequence_len * gt_count)
+            match_rate += rate_contribution
+        return match_rate
+
+    @staticmethod
     def soft_match_count(predicted, ground_truths):
         pred_len = len(predicted)
         gt_len = len(ground_truths[0])
@@ -525,9 +542,10 @@ class DExperiment:
         if prediction_example_count != y_test_example_count:
             raise Exception("Prediction example counts do not match y_test")
 
-        score_splits_are_valid = True
+        score_note_counts = dict()
         total_score_counts = dict()
-        score_ground_truth_y_indices = dict()
+        score_pred_fingering = dict()
+        score_test_fingerings = dict()
         for i in range(prediction_example_count):
             y_index = self.y_test_y_index[i]
             staff = self.y_staff[y_index]
@@ -535,53 +553,83 @@ class DExperiment:
             note_count = len(predictions[i])
             if score_key not in total_score_counts:
                 total_score_counts[score_key] = copy.deepcopy(count_set)
-                score_ground_truth_y_indices[score_key] = list()
-            score_ground_truth_y_indices[score_key].append(y_index)  # staffs are interleaved upper, lower, upper,...
-            if score_splits_are_valid:
-                try:
-                    match_count = DExperiment.match_count(predicted=predictions[i], ground_truth=self.y_test[i])
-                    total_counts['match'][staff] += match_count
-                    total_counts['note'][staff] += note_count
-                    total_score_counts[score_key]['match'][staff] += match_count
-                    total_score_counts[score_key]['note'][staff] += note_count
+                score_test_fingerings[score_key] = dict()
+                score_pred_fingering[score_key] = dict()
+                score_note_counts[score_key] = note_count
+            if staff not in score_test_fingerings[score_key]:
+                score_test_fingerings[score_key][staff] = list()
+                score_pred_fingering[score_key][staff] = predictions[i]
+            score_test_fingerings[score_key][staff].append(self.y_test[i])
+            match_count = DExperiment.match_count(predicted=predictions[i], ground_truth=self.y_test[i])
+            total_counts['match'][staff] += match_count
+            total_counts['note'][staff] += note_count
+            total_score_counts[score_key]['match'][staff] += match_count
+            total_score_counts[score_key]['note'][staff] += note_count
 
-                    total_counts['match']['combined'] += match_count
-                    total_counts['note']['combined'] += note_count
-                    total_score_counts[score_key]['match']['combined'] += match_count
-                    total_score_counts[score_key]['note']['combined'] += note_count
-                except Exception as e:
-                    print("Upper/lower split metrics are invalid: " + str(e))
-                    splits_are_valid = False
-                    score_splits_are_valid = False
+            total_counts['match']['combined'] += match_count
+            total_counts['note']['combined'] += note_count
+            total_score_counts[score_key]['match']['combined'] += match_count
+            total_score_counts[score_key]['note']['combined'] += note_count
+
+        score_match_rates = dict()
         sums_of_rates = copy.deepcopy(rate_set)
         weighted_sums_of_rates = copy.deepcopy(rate_set)
+        total_weights = {'upper': 0, 'lower': 0, 'combined': 0}
+        for score_key in score_test_fingerings:
+            if score_key not in score_match_rates:
+                score_match_rates[score_key] = copy.deepcopy(rate_set)
+            for staff in ['upper', 'lower', 'combined']:
+                if staff == 'combined':
+                    if self.opts.segmenting:
+                        continue
+                    combined_pred_fingering = score_pred_fingering[score_key]['upper'] + \
+                                              score_pred_fingering[score_key]['lower']
+                    combined_test_fingerings = list()
+                    for i in range(len(score_test_fingerings[score_key]['upper'])):
+                        combined_fingering = score_test_fingerings[score_key]['upper'][i] + \
+                                             score_test_fingerings[score_key]['lower'][i]
+                        combined_test_fingerings.append(combined_fingering)
+                    pred_fingering = combined_pred_fingering
+                    note_count = len(pred_fingering)
+                    test_fingerings = combined_test_fingerings
+                    score_match_rates[score_key]['combined']['gen'] = \
+                        DExperiment.gen_match_rate(combined_pred_fingering, combined_test_fingerings)
+                else:
+                    pred_fingering = score_pred_fingering[score_key][staff]
+                    test_fingerings = score_test_fingerings[score_key][staff]
+                    note_count = len(pred_fingering)
+                total_weights[staff] += note_count
+                score_match_rates[score_key][staff]['gen'] = DExperiment.gen_match_rate(pred_fingering, test_fingerings)
+
+                score_soft_match_count = DExperiment.soft_match_count(pred_fingering, test_fingerings)
+                score_match_rates[score_key][staff]['soft'] = score_soft_match_count / note_count
+
+                score_high_match_count = DExperiment.high_match_count(pred_fingering, test_fingerings)
+                score_match_rates[score_key][staff]['high'] = score_high_match_count / note_count
+                for method in ('gen', 'high', 'soft'):
+                    sums_of_rates[staff][method] += score_match_rates[score_key][staff][method]
+                    weighted_sums_of_rates[staff][method] += note_count * score_match_rates[score_key][staff][method]
+
         m_rates = copy.deepcopy(sums_of_rates)
         weighted_m_rates = copy.deepcopy(rate_set)
         combined_smr = total_counts['match']['combined'] / total_counts['note']['combined']
         m_rates['combined']['simple'] = combined_smr
         # The simple match rate is implicitly weighted, as it is just total matches over total notes.
         weighted_m_rates['combined']['simple'] = combined_smr
+        score_count = len(score_pred_fingering)
+        for staff, rates in sums_of_rates.items():
+            for method in ('gen', 'high', 'soft'):
+                if score_count != 0 and total_weights[staff] != 0:
+                    m_rates[staff][method] = sums_of_rates[staff][method] / score_count
+                    weighted_m_rates[staff][method] = weighted_sums_of_rates[staff][method] / total_weights[staff]
+        pprint.pprint(score_match_rates)
 
-        score_match_rates = dict()
-        for score_key in score_ground_truth_y_indices:
-            if score_key not in score_match_rates:
-                score_match_rates[score_key] = copy.deepcopy(rate_set)
-            for staff in ['upper', 'lower', 'combined']:
-                total_score_note_count = total_score_counts[score_key]['note'][staff]
-                total_score_match_count = total_score_counts[score_key]['match'][staff]
-                try:
-                    if not self.opts.segmenting or not staff == 'combined':
-                        score_match_rates[score_key][staff]['gen'] = total_score_match_count / total_score_note_count
-                except Exception as e:
-                    print("What the? " + str(e))
+        print("\nM metrics per Nakamura:")
+        pprint.pprint(m_rates)
+        print("Weighted M metrics:")
+        pprint.pprint(weighted_m_rates)
 
-            # score_soft_match_count = DExperiment.soft_match_count(score_pred_fingering['combined'],
-            #                                                       score_test_fingerings['combined'])
-            # base_title_match_rates[base_title]['combined']['soft'] = score_soft_match_count / combined_note_count
-            # score_high_match_count = DExperiment.high_match_count(score_pred_fingering['combined'],
-            #                                                       score_test_fingerings['combined'])
-            # base_title_match_rates[base_title]['combined']['high'] = score_high_match_count / combined_note_count
-        print("Huh?")
+        return m_rates, weighted_m_rates, score_match_rates
 
     def my_match_rates(self, predictions):
         # predictions contain predictions for all items in the test set.
