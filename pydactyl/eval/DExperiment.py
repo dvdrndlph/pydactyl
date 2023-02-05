@@ -56,13 +56,13 @@ class ScoreKey:
 class SegmentKey:
     staff: str
     score_key: ScoreKey
-    seg_index: int = 0
+    segment_index: int = 0
 
     def __eq__(self, other):
         if not isinstance(other, SegmentKey):
             raise Exception("SegmentKey can only be compared to another SegmentKey.")
         if (self.score_key == other.score_key and
-                self.staff == other.staff and self.seg_index == other.seg_index):
+                self.staff == other.staff and self.segment_index == other.segment_index):
             return True
         return False
 
@@ -72,31 +72,31 @@ class SegmentKey:
 
 @dataclass(frozen=True)
 class ExampleKey:
-    seg_key: SegmentKey
+    segment_key: SegmentKey
     annot_index: int = 0
 
     def __eq__(self, other):
         if not isinstance(other, ExampleKey):
             raise Exception("ExampleKey can only be compared to another ExampleKey.")
-        if self.seg_key == other.seg_key and self.annot_index == other.annot_index:
+        if self.segment_key == other.segment_key and self.annot_index == other.annot_index:
             return True
         return False
 
     def score_key(self):
-        return self.seg_key.score_key
+        return self.segment_key.score_key
 
 
 class AnnotatedExample:
-    def __init__(self, seg_key: SegmentKey, notes, hsd_seg, annot_index, d_score):
-        self.example_key = ExampleKey(seg_key=seg_key, annot_index=annot_index)
+    def __init__(self, segment_key: SegmentKey, notes, hsd_seg, annot_index, d_score):
+        self.example_key = ExampleKey(segment_key=segment_key, annot_index=annot_index)
         self.hsd_seg = hsd_seg
         self.notes = notes
-        self.seg_key = seg_key
+        self.segment_key = segment_key
         self.annot_index = annot_index
         self.d_score = d_score
 
     def score_key(self):
-        return self.seg_key.score_key()
+        return self.segment_key.score_key()
 
 
 class DExperiment:
@@ -136,13 +136,15 @@ class DExperiment:
         self.train_note_count = 0
 
         self.y_staff = {}  # Map example index to associated staff.
-        self.y_score_key = {}  # Map example index to tuple of associated corpus name and DScore title.
+
+        self.y_segment_key = {} # Map example index to associated SegmentKey (corpus name, DScore title, staff, seg index)
+        self.y_score_key = {}  # Map example index to associated ScoreKey (corpus name, score title).
         self.y_test_y_index = {}  # Map the test example index back to its index in y.
 
         # Keep track of groups for k-fold cross-validation.
         self.group_id = {}  # Map info tuples to integer group identifiers.
         self.group_note_count = {}  # Map group identifiers to counts of notes contained therein.
-        self.group_score_key = {}  # Map group identifiers to counts of notes contained therein.
+        self.group_key = {}  # Map group identifiers to counts of notes contained therein.
         self.group_assignments = []  # The group identifier assigned to each example.
         self.train_group_assignments = []
 
@@ -307,25 +309,34 @@ class DExperiment:
     def append_example(self, example: AnnotatedExample, is_train=False, is_test=False):
         ordered_notes = example.notes
         d_score = example.d_score
-        seg_key = example.seg_key
-        staff = seg_key.staff
-        score_key = seg_key.score_key
+        segment_key = example.segment_key
+        score_key = segment_key.score_key
+        staff = segment_key.staff
         hsd_seg = example.hsd_seg
         example_key = example.example_key
 
+        # self.opts.segmenting indicates that examples should be based on phrases
+        # self.opts.group_by segment indicates that data splits exclude data from common segments
+        # in both the training and test sets. Here we are worried about assigning a grouping key
+        # for data splits. Note that if one is not segmenting, grouping by segments makes no sense
+        # and should raise errors.
+        if self.opts.group_by == 'segment':
+            group_key = segment_key
+        else:
+            group_key = score_key
         self.train_note_count = 0
         self.test_note_count = 0
 
         # (corpus_name, score_title, annot_index) = example_key
-        # score_key = (corpus_name, score_title)
-        if score_key not in self.group_id:
+        # segment_key = (corpus_name, score_title, segment_index)
+        if group_key not in self.group_id:
             new_id = len(self.group_id)
-            self.group_id[score_key] = new_id
-            self.group_score_key[new_id] = score_key
+            self.group_id[group_key] = new_id
+            self.group_key[new_id] = group_key
             self.group_note_count[new_id] = 0
-            self.d_score[score_key] = d_score
+            self.d_score[group_key] = d_score
         example_index = len(self.y)
-        group_id = self.group_id[score_key]
+        group_id = self.group_id[group_key]
         note_len = len(ordered_notes)
         self.group_note_count[group_id] += note_len
         self.annotated_note_count += note_len
@@ -334,6 +345,7 @@ class DExperiment:
         self.x.append(x_features)
         self.y.append(y_labels)
         self.y_staff[example_index] = staff
+        self.y_segment_key[example_index] = segment_key
         self.y_score_key[example_index] = score_key
         self.group_assignments.append(group_id)
         if example_key not in self.example_indices:
@@ -360,18 +372,23 @@ class DExperiment:
     def my_train_test_split(self):
         self.init_train_test()
         groups = self.group_assignments
+
         splitter = GroupShuffleSplit(n_splits=1, test_size=self.opts.holdout_size,
                                      random_state=self.opts.random_state)
         splits = splitter.split(X=self.x, y=self.y, groups=groups)
+        train_indices = list()
         for i, (train_indices, test_indices) in enumerate(splits):
             for t_i in train_indices:
                 self.x_train.append(self.x[t_i])
                 self.y_train.append(self.y[t_i])
                 example_key: ExampleKey = self.example_key[t_i]
-                score_key: ScoreKey = example_key.score_key()
+                if self.opts.group_by == 'segment':
+                    group_key = example_key.segment_key
+                else:
+                    group_key = example_key.score_key
 
                 # (corpus_name, score_title, annot_index) = example_key
-                group_id = self.group_id[score_key]
+                group_id = self.group_id[group_key]
                 self.train_group_assignments.append(group_id)
                 note_count = len(self.y[t_i])
                 self.train_note_count += note_count
@@ -388,7 +405,7 @@ class DExperiment:
                 self.test_note_count += note_count
 
         print(f"\nTrain pieces looking less than random:\n{train_indices}")
-        print(f"\nTest pieces looking less than random:\n{test_indices}")
+        print(f"\nTest pieces looking less than random:\n{self.test_indices}")
         print(f"\nTrain note count: {self.train_note_count}")
         print(f"Test note count: {self.test_note_count}")
 
@@ -521,7 +538,7 @@ class DExperiment:
 
     def my_simplified_match_rates(self, predictions):
         # We need to know the associated staff and DScore for each prediction/y_test pair.
-        # We identify the DScore uniquely as a (corpus_name, score_title) tuple in self.y_score_key
+        # We identify the DScore uniquely as a (corpus_name, score_title) tuple in self.y_segment_key
         # when examples are appended to self.y.
         #
         # IMPORTANT: If we are segmenting into phrases, we CANNOT produce combined scores, as these reflect
@@ -542,73 +559,82 @@ class DExperiment:
         if prediction_example_count != y_test_example_count:
             raise Exception("Prediction example counts do not match y_test")
 
-        score_note_counts = dict()
-        total_score_counts = dict()
-        score_pred_fingering = dict()
-        score_test_fingerings = dict()
+        seg_note_counts = dict()
+        total_seg_counts = dict()
+        seg_pred_fingering = dict()
+        seg_test_fingerings = dict()
         for i in range(prediction_example_count):
             y_index = self.y_test_y_index[i]
             staff = self.y_staff[y_index]
-            score_key = self.y_score_key[y_index]
+            if self.opts.segmenting:
+                segment_key = self.y_segment_key[y_index]
+            else:
+                segment_key = self.y_score_key[y_index]
             note_count = len(predictions[i])
-            if score_key not in total_score_counts:
-                total_score_counts[score_key] = copy.deepcopy(count_set)
-                score_test_fingerings[score_key] = dict()
-                score_pred_fingering[score_key] = dict()
-                score_note_counts[score_key] = note_count
-            if staff not in score_test_fingerings[score_key]:
-                score_test_fingerings[score_key][staff] = list()
-                score_pred_fingering[score_key][staff] = predictions[i]
-            score_test_fingerings[score_key][staff].append(self.y_test[i])
+            if segment_key not in total_seg_counts:
+                total_seg_counts[segment_key] = copy.deepcopy(count_set)
+                seg_test_fingerings[segment_key] = dict()
+                seg_pred_fingering[segment_key] = dict()
+                seg_note_counts[segment_key] = note_count
+            if staff not in seg_test_fingerings[segment_key]:
+                seg_test_fingerings[segment_key][staff] = list()
+                seg_pred_fingering[segment_key][staff] = predictions[i]
+            seg_test_fingerings[segment_key][staff].append(self.y_test[i])
             match_count = DExperiment.match_count(predicted=predictions[i], ground_truth=self.y_test[i])
             total_counts['match'][staff] += match_count
             total_counts['note'][staff] += note_count
-            total_score_counts[score_key]['match'][staff] += match_count
-            total_score_counts[score_key]['note'][staff] += note_count
+            total_seg_counts[segment_key]['match'][staff] += match_count
+            total_seg_counts[segment_key]['note'][staff] += note_count
 
             total_counts['match']['combined'] += match_count
             total_counts['note']['combined'] += note_count
-            total_score_counts[score_key]['match']['combined'] += match_count
-            total_score_counts[score_key]['note']['combined'] += note_count
+            total_seg_counts[segment_key]['match']['combined'] += match_count
+            total_seg_counts[segment_key]['note']['combined'] += note_count
 
-        score_match_rates = dict()
+        seg_match_rates = dict()
         sums_of_rates = copy.deepcopy(rate_set)
         weighted_sums_of_rates = copy.deepcopy(rate_set)
         total_weights = {'upper': 0, 'lower': 0, 'combined': 0}
-        for score_key in score_test_fingerings:
-            if score_key not in score_match_rates:
-                score_match_rates[score_key] = copy.deepcopy(rate_set)
+        seg_counts = copy.deepcopy(total_weights)
+        for segment_key in seg_test_fingerings:
+            if segment_key not in seg_match_rates:
+                seg_match_rates[segment_key] = copy.deepcopy(rate_set)
             for staff in ['upper', 'lower', 'combined']:
                 if staff == 'combined':
                     if self.opts.segmenting:
                         continue
-                    combined_pred_fingering = score_pred_fingering[score_key]['upper'] + \
-                                              score_pred_fingering[score_key]['lower']
+                    if 'lower' not in seg_pred_fingering[segment_key]:
+                        print("Hold on there.")
+                    combined_pred_fingering = seg_pred_fingering[segment_key]['upper'] + \
+                                              seg_pred_fingering[segment_key]['lower']
                     combined_test_fingerings = list()
-                    for i in range(len(score_test_fingerings[score_key]['upper'])):
-                        combined_fingering = score_test_fingerings[score_key]['upper'][i] + \
-                                             score_test_fingerings[score_key]['lower'][i]
+                    for i in range(len(seg_test_fingerings[segment_key]['upper'])):
+                        combined_fingering = seg_test_fingerings[segment_key]['upper'][i] + \
+                                             seg_test_fingerings[segment_key]['lower'][i]
                         combined_test_fingerings.append(combined_fingering)
                     pred_fingering = combined_pred_fingering
                     note_count = len(pred_fingering)
                     test_fingerings = combined_test_fingerings
-                    score_match_rates[score_key]['combined']['gen'] = \
+                    seg_match_rates[segment_key]['combined']['gen'] = \
                         DExperiment.gen_match_rate(combined_pred_fingering, combined_test_fingerings)
-                else:
-                    pred_fingering = score_pred_fingering[score_key][staff]
-                    test_fingerings = score_test_fingerings[score_key][staff]
+                elif staff in seg_pred_fingering[segment_key]:
+                    pred_fingering = seg_pred_fingering[segment_key][staff]
+                    test_fingerings = seg_test_fingerings[segment_key][staff]
                     note_count = len(pred_fingering)
+                else:
+                    continue
+                seg_counts[staff] += 1
                 total_weights[staff] += note_count
-                score_match_rates[score_key][staff]['gen'] = DExperiment.gen_match_rate(pred_fingering, test_fingerings)
+                seg_match_rates[segment_key][staff]['gen'] = DExperiment.gen_match_rate(pred_fingering, test_fingerings)
 
-                score_soft_match_count = DExperiment.soft_match_count(pred_fingering, test_fingerings)
-                score_match_rates[score_key][staff]['soft'] = score_soft_match_count / note_count
+                seg_soft_match_count = DExperiment.soft_match_count(pred_fingering, test_fingerings)
+                seg_match_rates[segment_key][staff]['soft'] = seg_soft_match_count / note_count
 
-                score_high_match_count = DExperiment.high_match_count(pred_fingering, test_fingerings)
-                score_match_rates[score_key][staff]['high'] = score_high_match_count / note_count
+                seg_high_match_count = DExperiment.high_match_count(pred_fingering, test_fingerings)
+                seg_match_rates[segment_key][staff]['high'] = seg_high_match_count / note_count
                 for method in ('gen', 'high', 'soft'):
-                    sums_of_rates[staff][method] += score_match_rates[score_key][staff][method]
-                    weighted_sums_of_rates[staff][method] += note_count * score_match_rates[score_key][staff][method]
+                    sums_of_rates[staff][method] += seg_match_rates[segment_key][staff][method]
+                    weighted_sums_of_rates[staff][method] += note_count * seg_match_rates[segment_key][staff][method]
 
         m_rates = copy.deepcopy(sums_of_rates)
         weighted_m_rates = copy.deepcopy(rate_set)
@@ -616,20 +642,20 @@ class DExperiment:
         m_rates['combined']['simple'] = combined_smr
         # The simple match rate is implicitly weighted, as it is just total matches over total notes.
         weighted_m_rates['combined']['simple'] = combined_smr
-        score_count = len(score_pred_fingering)
+        seg_count = len(seg_pred_fingering)
         for staff, rates in sums_of_rates.items():
             for method in ('gen', 'high', 'soft'):
-                if score_count != 0 and total_weights[staff] != 0:
-                    m_rates[staff][method] = sums_of_rates[staff][method] / score_count
+                if seg_count != 0 and total_weights[staff] != 0:
+                    m_rates[staff][method] = sums_of_rates[staff][method] / seg_counts[staff]
                     weighted_m_rates[staff][method] = weighted_sums_of_rates[staff][method] / total_weights[staff]
-        pprint.pprint(score_match_rates)
+        pprint.pprint(seg_match_rates)
 
         print("\nM metrics per Nakamura:")
         pprint.pprint(m_rates)
         print("Weighted M metrics:")
         pprint.pprint(weighted_m_rates)
 
-        return m_rates, weighted_m_rates, score_match_rates
+        return m_rates, weighted_m_rates, seg_match_rates
 
     def my_match_rates(self, predictions):
         # predictions contain predictions for all items in the test set.
@@ -870,16 +896,16 @@ class DExperiment:
                         example_index += 1
                         ordered_offset_note_segments = da_score.ordered_offset_note_segments(staff=staff)
                         hsd_segments = segger.segment_annotation(annotation=annot, staff=staff)
-                        seg_index = 0
+                        segment_index = 0
                         for hsd_seg in hsd_segments:
-                            ordered_notes = ordered_offset_note_segments[seg_index]
+                            ordered_notes = ordered_offset_note_segments[segment_index]
                             note_len = len(ordered_notes)
                             seg_len = len(hsd_seg)
-                            segment_key = SegmentKey(score_key=score_key, staff=staff, seg_index=seg_index)
-                            example = AnnotatedExample(seg_key=segment_key, notes=ordered_notes, hsd_seg=hsd_seg,
+                            segment_key = SegmentKey(score_key=score_key, staff=staff, segment_index=segment_index)
+                            example = AnnotatedExample(segment_key=segment_key, notes=ordered_notes, hsd_seg=hsd_seg,
                                                        annot_index=annot_index, d_score=da_unannotated_score)
                             print(f"Processing the {staff} staff of annotation {annot_index} " +
-                                  f"in score {score_title} segment {seg_index} " +
+                                  f"in score {score_title} segment {segment_index} " +
                                   f"from the {corpus_name} corpus: ex. {example_index}")
                             if note_len != seg_len:
                                 print("Bad annotation by {} for score {}. Notes: {} Fingers: {}".format(
@@ -907,7 +933,7 @@ class DExperiment:
                                     self.append_example(example, is_train=True)
                             else:
                                 self.append_example(example)
-                        seg_index += 1
+                            segment_index += 1
         if self.bad_annot_count != 0:
             raise Exception(f"{self.bad_annot_count} bad annotations found.")
         if not self.y_test:

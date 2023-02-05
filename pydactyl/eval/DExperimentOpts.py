@@ -26,7 +26,7 @@ import pydactyl.crf.CrfUtil as c
 VALID_GROUPINGS = {
     'example': True,
     'segment': True,
-    'piece': True
+    'score': True
 }
 
 
