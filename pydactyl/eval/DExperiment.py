@@ -327,15 +327,37 @@ class DExperiment:
                 pprint.pp(fold_results)
         return fold_results
 
-    def summarize_fold_results(self.results):
-        weighted_mean_of_weighted_m_rates = copy.deepcopy(RATE_SET)
-        weighted_mean_of_unweighted_m_rates = copy.deepcopy(RATE_SET)
-        unweighted_mean_of_unweighted_m_rates = copy.deepcopy(RATE_SET)
-        unweighted_mean_of_weighted_m_rates = copy.deepcopy(RATE_SET)
-        header_str = '\textbf{Data Set} & \teextbf{Segments} & \textbf{Annotations} & 
+    def summarize_fold_results(self, results):
+        precision = 4  # decimal places
+        header_str = "Data Set & Segments & Annotations & Accuracy & Mgen & Mhigh & WMgen WMhigh & WMsoft\n"
+        set_name = self.corpora_name()
+        seg_count = results[0]['counts']['train']['example']['combined'] + \
+                    results['counts']['test']['example']['combined']
+        annot_count = results[0]['counts']['train']['note']['combined'] + \
+                      results['counts']['test']['note']['combined']
+        accuracy = 0.0
+        f1 = 0.0
+        m = copy.deepcopy(RATE_SET)
+        wm = copy.deepcopy(RATE_SET)
         for result in results:
+            test_annot_count = result['counts']['test']['note']['combined']
+            proportion = test_annot_count / annot_count
+            accuracy += result['flat_accuracy'] * proportion
+            f1 += result['flat_weighted_f1'] * proportion
+            for method in ('gen', 'high', 'soft'):
+                m[method] += result['m_rates']['combined'] * proportion
+                wm[method] += result['weighted_m_rates']['combined'] * proportion
 
-        pass
+        accuracy = round(results['flat_accuracy'], precision)
+        f1 = round(results['flat_weighted_f1'], precision)
+        m_gen = round(m['gen'], precision)
+        m_high = round(m['high'], precision)
+        m_soft = round(m['soft'], precision)
+        wm_gen = round(wm['gen'], precision)
+        wm_high = round(wm['high'], precision)
+        wm_soft = round(wm['soft'], precision)
+        data_str = f"{set_name}&{seg_count}&{annot_count}&{accuracy}&{f1}&{m_gen}&{m_high}&{m_soft}&{wm_gen}&{wm_high}&{wm_soft}"
+        print(header_str + data_str)
 
     def tune_parameters(self, the_model):
         train_splits = self.my_k_folds(k=5, on_train=True, test_size=0.2)

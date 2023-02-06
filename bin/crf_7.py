@@ -52,7 +52,7 @@ CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regen
 # CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 OPTS = {
     'pickling': False,
-    'segmenting': True,
+    'segmenting': False,
     'consonance_threshold': c.CHORD_MS_THRESHOLD,
     'engine': 'sklearn-crfsuite',
     'model_features': feats,
