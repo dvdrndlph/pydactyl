@@ -26,6 +26,8 @@ import pprint
 import re
 from datetime import datetime
 from dataclasses import dataclass
+
+import numpy
 from sklearn_crfsuite import metrics
 from sklearn.model_selection import train_test_split, cross_val_score, GroupKFold, GroupShuffleSplit, GridSearchCV
 from sklearn.metrics import make_scorer
@@ -193,13 +195,17 @@ class DExperiment:
             key=lambda name: (name[1:], name[0])
         )
         print(metrics.flat_classification_report(y_test, y_predicted, labels=sorted_labels, digits=4))
+
         return y_predicted
 
-    def train_and_evaluate(self, the_model, x_train=None, y_train=None, x_test=None, y_test=None):
+    def train(self, the_model, x_train=None, y_train=None):
         if y_train is None:
             x_train = self.x_train
             y_train = self.y_train
         the_model.fit(x_train, y_train)
+
+    def train_and_evaluate(self, the_model, x_train=None, y_train=None, x_test=None, y_test=None):
+        self.train(the_model, x_train=x_train, y_train=y_train)
         return self.evaluate_trained_model(the_model=the_model, x_test=x_test, y_test=y_test)
 
     def split_and_evaluate(self, the_model, test_size=0.3, random_state=None):
@@ -213,8 +219,10 @@ class DExperiment:
     def my_k_folds(self, k=5, on_train=True, test_size: float = 0.2, random_state=None):
         if random_state is None:
             random_state = self.opts.random_state
-        # splitter = GroupShuffleSplit(n_splits=k, test_size=test_size, random_state=random_state)
-        splitter = GroupKFold(n_splits=k)
+        splitter = GroupShuffleSplit(n_splits=1, test_size=self.opts.holdout_size,
+                                     random_state=self.opts.random_state)
+        # splitter = GroupKFold(n_splits=k)
+        splitter = GroupShuffleSplit(n_splits=k, test_size=test_size, random_state=random_state)
         if on_train:
             x = self.x_train
             y = self.y_train
@@ -226,19 +234,83 @@ class DExperiment:
             groups = self.group_assignments
             # groups = numpy.asarray(self.group_assignments)
         splits = splitter.split(X=x, y=y, groups=groups)
-        for i, (train_indices, test_indices) in enumerate(splits):
-            print(f"Fold {i}:")
-            train_note_count = 0
-            for t_i in train_indices:
-                train_note_count += groups[t_i]
-            test_note_count = 0
-            for t_i in test_indices:
-                test_note_count += groups[t_i]
-            print(f"Train note count: {train_note_count}")
-            print(f"Test note count: {test_note_count}")
-            # print(f"  Train: index={train_indices}, group={groups[train_indices]}")
-            # print(f"  Test:  index={test_indices}, group={groups[test_indices]}")
+        # test_group_map = dict()
+        # train_group_map = dict()
+        # for i, (train_indices, test_indices) in enumerate(splits):
+        #     print(f"Fold {i}:")
+        #     train_note_count = 0
+        #     for t_i in train_indices:
+        #         note_count = len(self.y[t_i])
+        #         train_note_count += note_count
+        #         train_group_map[t_i] = groups[t_i]
+        #     test_note_count = 0
+        #     for t_i in test_indices:
+        #         note_count = len(self.y[t_i])
+        #         test_note_count += note_count
+        #         test_group_map[t_i] = groups[t_i]
+        #     print(f"Train note count: {train_note_count}")
+        #     print(f"Test note count: {test_note_count}")
+        #     print("Train example index to group index mapping:")
+        #     print(train_group_map)
+        #     print("Test example index to group index mapping:")
+        #     print(test_group_map)
+        #     # print(f"  Train:\nindex={train_indices},\ngroup={groups[train_indices]}")
+        #     # print(f"  Test:\nindex={test_indices},\ngroup={groups[test_indices]}")
         return splits
+
+    def train_and_evaluate_folds(self, the_model, on_train=True, output_results=False):
+        splits = self.my_k_folds(on_train=on_train)
+
+        fold_results = list()
+        for i, (train_indices, test_indices) in enumerate(splits):
+            x_train = list()
+            y_train = list()
+            y_test = list()
+            x_test = list()
+            train_example_count = 0
+            train_note_count = 0
+            test_example_count = 0
+            test_note_count = 0
+            for t_i in train_indices:
+                train_example_count += 1
+                note_count = len(self.y[t_i])
+                train_note_count += note_count
+                x_train.append(self.x[t_i])
+                y_train.append(self.y[t_i])
+            for t_i in test_indices:
+                test_example_count += 1
+                note_count = len(self.y[t_i])
+                test_note_count += note_count
+                x_test.append(self.x[t_i])
+                y_test.append(self.y[t_i])
+            self.train(the_model, x_train=x_train, y_train=y_train)
+            if output_results:
+                print("===================================================================================")
+                print(f"Fold {i}")
+                print("===================================================================================")
+            predictions = self.evaluate_trained_model(the_model=the_model, x_test=x_test, y_test=y_test)
+            labels = list(the_model.classes_)
+            flat_weighted_f1 = metrics.flat_f1_score(y_test, predictions, average='weighted', labels=labels)
+            m_rates, weighted_m_rates, seg_match_rates = self.my_match_rates(predictions, y_test=y_test)
+            fold_result = {
+                'flat_weighted_f1': flat_weighted_f1,
+                'm_rates': m_rates,
+                'weighted_m_rates': weighted_m_rates,
+                'seg_match_rates': seg_match_rates,
+                'test_example_count': test_example_count,
+                'test_note_count': test_note_count,
+                'train_example_count': train_example_count,
+                'train_note_count': train_note_count
+            }
+            fold_results.append(fold_result)
+            if output_results:
+                pprint.pp(fold_results)
+        return fold_results
+
+    @staticmethod
+    def summarize_fold_results(results):
+        weighted_mean_of_m_rates
+        pass
 
     def tune_parameters(self, the_model):
         train_splits = self.my_k_folds(k=5, on_train=True, test_size=0.2)
@@ -264,8 +336,7 @@ class DExperiment:
                 predictions = self.evaluate_trained_model(the_model=the_model)
             else:
                 predictions = self.train_and_evaluate(the_model=the_model)
-            # self.my_match_rates(predictions=predictions)
-            self.my_simplified_match_rates(predictions=predictions)
+            self.my_match_rates(predictions=predictions)
         else:
             self.split_and_evaluate(the_model=the_model, test_size=0.4, random_state=0)
         print("Run of crf model {} against {} test set over {} corpus has completed successfully.".format(
@@ -377,6 +448,7 @@ class DExperiment:
                                      random_state=self.opts.random_state)
         splits = splitter.split(X=self.x, y=self.y, groups=groups)
         train_indices = list()
+        test_indices = list()
         for i, (train_indices, test_indices) in enumerate(splits):
             for t_i in train_indices:
                 self.x_train.append(self.x[t_i])
@@ -385,7 +457,7 @@ class DExperiment:
                 if self.opts.group_by == 'segment':
                     group_key = example_key.segment_key
                 else:
-                    group_key = example_key.score_key
+                    group_key = example_key.score_key()
 
                 # (corpus_name, score_title, annot_index) = example_key
                 group_id = self.group_id[group_key]
@@ -404,8 +476,8 @@ class DExperiment:
                 note_count = len(self.y[t_i])
                 self.test_note_count += note_count
 
-        print(f"\nTrain pieces looking less than random:\n{train_indices}")
-        print(f"\nTest pieces looking less than random:\n{self.test_indices}")
+        print(f"\nTrain pieces:\n{train_indices}")
+        print(f"\nTest pieces:\n{test_indices}")
         print(f"\nTrain note count: {self.train_note_count}")
         print(f"Test note count: {self.test_note_count}")
 
@@ -536,7 +608,7 @@ class DExperiment:
                 max_count = match_count
         return max_count
 
-    def my_simplified_match_rates(self, predictions):
+    def my_match_rates(self, predictions, y_test=None, output_results=False):
         # We need to know the associated staff and DScore for each prediction/y_test pair.
         # We identify the DScore uniquely as a (corpus_name, score_title) tuple in self.y_segment_key
         # when examples are appended to self.y.
@@ -544,6 +616,9 @@ class DExperiment:
         # IMPORTANT: If we are segmenting into phrases, we CANNOT produce combined scores, as these reflect
         # counts of unified slices of notes across both staves. We don't have that if the staves are divided
         # into independent phrases.
+        if y_test is None:
+            y_test = self.y_test
+
         rate_set = {
             'upper': {'gen': 0.0, 'high': 0.0, 'soft': 0.0},
             'lower': {'gen': 0.0, 'high': 0.0, 'soft': 0.0},
@@ -555,7 +630,7 @@ class DExperiment:
         }
         total_counts = copy.deepcopy(count_set)
         prediction_example_count = len(predictions)
-        y_test_example_count = len(self.y_test)
+        y_test_example_count = len(y_test)
         if prediction_example_count != y_test_example_count:
             raise Exception("Prediction example counts do not match y_test")
 
@@ -579,8 +654,8 @@ class DExperiment:
             if staff not in seg_test_fingerings[segment_key]:
                 seg_test_fingerings[segment_key][staff] = list()
                 seg_pred_fingering[segment_key][staff] = predictions[i]
-            seg_test_fingerings[segment_key][staff].append(self.y_test[i])
-            match_count = DExperiment.match_count(predicted=predictions[i], ground_truth=self.y_test[i])
+            seg_test_fingerings[segment_key][staff].append(y_test[i])
+            match_count = DExperiment.match_count(predicted=predictions[i], ground_truth=y_test[i])
             total_counts['match'][staff] += match_count
             total_counts['note'][staff] += note_count
             total_seg_counts[segment_key]['match'][staff] += match_count
@@ -648,214 +723,15 @@ class DExperiment:
                 if seg_count != 0 and total_weights[staff] != 0:
                     m_rates[staff][method] = sums_of_rates[staff][method] / seg_counts[staff]
                     weighted_m_rates[staff][method] = weighted_sums_of_rates[staff][method] / total_weights[staff]
-        pprint.pprint(seg_match_rates)
 
-        print("\nM metrics per Nakamura:")
-        pprint.pprint(m_rates)
-        print("Weighted M metrics:")
-        pprint.pprint(weighted_m_rates)
+        if output_results:
+            pprint.pprint(seg_match_rates)
+            print("\nM metrics per Nakamura:")
+            pprint.pprint(m_rates)
+            print("Weighted M metrics:")
+            pprint.pprint(weighted_m_rates)
 
         return m_rates, weighted_m_rates, seg_match_rates
-
-    def my_match_rates(self, predictions):
-        # predictions contain predictions for all items in the test set.
-        # We need to pull the first "exemplar" for each score and compare
-        # it to every ground truth we have for the score.
-        last_base_title = ''
-        test_keys_for_base_title = dict()
-        prediction_key_for_base_title = dict()
-        splits_are_valid = True
-        reggie = r'\-\d+$'
-        for test_key in self.test_indices:
-            (corpus_name, score_title, annot_index) = test_key
-            # base_title, annot_id = str(score_title).split('-')
-            base_title = re.sub(reggie, '', score_title)
-            if base_title != last_base_title:
-                prediction_key_for_base_title[base_title] = test_key
-                test_keys_for_base_title[base_title] = list()
-                # We only get to predict once per piece in Nakamura evaluation.
-                last_base_title = base_title
-            test_keys_for_base_title[base_title].append(test_key)
-        total_counts = {
-            'note': {'upper': 0, 'lower': 0, 'combined': 0},
-            'match': {'upper': 0, 'lower': 0, 'combined': 0}
-        }
-        base_title_match_rates = dict()
-        base_title_note_counts = dict()
-        for base_title in prediction_key_for_base_title:
-            score_splits_are_valid = True
-            total_score_counts = {
-                'note': {'upper': 0, 'lower': 0, 'combined': 0},
-                'match': {'upper': 0, 'lower': 0, 'combined': 0}
-            }
-            pred_key = prediction_key_for_base_title[base_title]
-            (pred_upper_i, pred_lower_i) = self.test_indices[pred_key]
-            # FIXME: This is wrong. predictions line up with y_test one-to-one.
-            # This is pointing to some arbitrary positions in predictions.
-            # This will only work if the test examples are all lined up at the
-            # beginning of the total set of examples, as they are in the
-            # PIG dataset. Any random splitting of this data set breaks this
-            # whole thing. We need a simpler method for when the "exemplar" situation
-            # is not in play. Yeesh.
-            pred_upper = predictions[pred_upper_i]
-            pred_lower = predictions[pred_lower_i]
-            pred_combined = pred_upper + pred_lower
-            upper_note_count = len(pred_upper)
-            lower_note_count = len(pred_lower)
-            combined_note_count = len(pred_combined)
-            if base_title not in base_title_match_rates:
-                base_title_match_rates[base_title] = {
-                    'upper': {'gen': 0.0, 'high': 0.0, 'soft': 0.0},
-                    'lower': {'gen': 0.0, 'high': 0.0, 'soft': 0.0},
-                    'combined': {'gen': 0.0, 'high': 0.0, 'soft': 0.0}
-                }
-                base_title_note_counts[base_title] = {
-                    'upper': upper_note_count,
-                    'lower': lower_note_count,
-                    'combined': combined_note_count
-                }
-            score_pred_fingering = {
-                'upper': pred_upper,
-                'lower': pred_lower,
-                'combined': pred_upper + pred_lower
-            }
-            score_test_fingerings = {
-                'upper': list(),
-                'lower': list(),
-                'combined': list()
-            }
-            for test_key in test_keys_for_base_title[base_title]:
-                # print("Compare {} to {}".format(pred_key, test_key))
-                (test_upper_i, test_lower_i) = self.test_indices[test_key]
-                test_upper = self.y_test[test_upper_i]
-                test_lower = self.y_test[test_lower_i]
-                test_combined = test_upper + test_lower
-                score_test_fingerings['upper'].append(test_upper)
-                score_test_fingerings['lower'].append(test_lower)
-                score_test_fingerings['combined'].append(test_combined)
-                if score_splits_are_valid:
-                    try:
-                        upper_match_count = DExperiment.match_count(predicted=pred_upper, ground_truth=test_upper)
-                        total_counts['match']['upper'] += upper_match_count
-                        total_counts['note']['upper'] += upper_note_count
-                        total_score_counts['match']['upper'] += upper_match_count
-                        total_score_counts['note']['upper'] += upper_note_count
-                        lower_match_count = DExperiment.match_count(predicted=pred_lower, ground_truth=test_lower)
-                        total_counts['match']['lower'] += lower_match_count
-                        total_counts['note']['lower'] += lower_note_count
-                        total_score_counts['match']['lower'] += lower_match_count
-                        total_score_counts['note']['lower'] += lower_note_count
-                    except Exception:
-                        print("Upper/lower split metrics are invalid.")
-                        splits_are_valid = False
-                        score_splits_are_valid = False
-
-                combined_match_count = DExperiment.match_count(predicted=pred_combined, ground_truth=test_combined)
-                total_counts['match']['combined'] += combined_match_count
-                total_counts['note']['combined'] += combined_note_count
-                total_score_counts['match']['combined'] += combined_match_count
-                total_score_counts['note']['combined'] += combined_note_count
-
-            base_title_match_rates[base_title]['combined']['gen'] = \
-                total_score_counts['match']['combined'] / total_score_counts['note']['combined']
-            score_soft_match_count = DExperiment.soft_match_count(score_pred_fingering['combined'],
-                                                                  score_test_fingerings['combined'])
-            base_title_match_rates[base_title]['combined']['soft'] = score_soft_match_count / combined_note_count
-            score_high_match_count = DExperiment.high_match_count(score_pred_fingering['combined'],
-                                                                  score_test_fingerings['combined'])
-            base_title_match_rates[base_title]['combined']['high'] = score_high_match_count / combined_note_count
-
-            if score_splits_are_valid:
-                base_title_match_rates[base_title]['upper']['gen'] = \
-                    total_score_counts['match']['upper'] / total_score_counts['note']['upper']
-                score_upper_soft_match_count = DExperiment.soft_match_count(score_pred_fingering['upper'],
-                                                                            score_test_fingerings['upper'])
-                base_title_match_rates[base_title]['upper']['soft'] = score_upper_soft_match_count / upper_note_count
-                score_upper_high_match_count = DExperiment.high_match_count(score_pred_fingering['upper'],
-                                                                            score_test_fingerings['upper'])
-                base_title_match_rates[base_title]['upper']['high'] = score_upper_high_match_count / upper_note_count
-
-                base_title_match_rates[base_title]['lower']['gen'] = \
-                    total_score_counts['match']['lower'] / total_score_counts['note']['lower']
-                score_lower_soft_match_count = DExperiment.soft_match_count(score_pred_fingering['lower'],
-                                                                            score_test_fingerings['lower'])
-                base_title_match_rates[base_title]['lower']['soft'] = score_lower_soft_match_count / lower_note_count
-                score_lower_high_match_count = DExperiment.high_match_count(score_pred_fingering['lower'],
-                                                                            score_test_fingerings['lower'])
-                base_title_match_rates[base_title]['lower']['high'] = score_lower_high_match_count / lower_note_count
-            else:
-                for staff in ['upper', 'lower']:
-                    for method in ['gen', 'high', 'soft']:
-                        base_title_match_rates[base_title][staff][method] = None
-
-        pprint.pprint(base_title_match_rates)
-
-        sums_of_rates = {
-            'upper': {
-                'gen': 0.0,
-                'high': 0.0,
-                'soft': 0.0
-            },
-            'lower': {
-                'gen': 0.0,
-                'high': 0.0,
-                'soft': 0.0
-            },
-            'combined': {
-                'gen': 0.0,
-                'high': 0.0,
-                'soft': 0.0
-            },
-        }
-        weighted_sums_of_rates = copy.deepcopy(sums_of_rates)
-        m_rates = copy.deepcopy(sums_of_rates)
-        weighted_m_rates = copy.deepcopy(sums_of_rates)
-        total_note_counts = {
-            'upper': 0,
-            'lower': 0,
-            'combined': 0
-        }
-        total_weights = copy.deepcopy(total_note_counts)
-        title_count = len(base_title_match_rates)
-        for base_title, rates in base_title_match_rates.items():
-            for staff in ('upper', 'lower', 'combined'):
-                if not splits_are_valid and staff in ('upper', 'lower'):
-                    continue
-                for method in ('gen', 'high', 'soft'):
-                    sums_of_rates[staff][method] += rates[staff][method]
-                    weighted_sums_of_rates[staff][method] += rates[staff][method] * base_title_note_counts[base_title][staff]
-                total_weights[staff] += base_title_note_counts[base_title][staff]
-
-        for staff in ('upper', 'lower', 'combined'):
-            for method in ('gen', 'high', 'soft'):
-                if not splits_are_valid and staff in ('upper', 'lower'):
-                    continue
-                m_rates[staff][method] = sums_of_rates[staff][method] / title_count
-                weighted_m_rates[staff][method] = weighted_sums_of_rates[staff][method] / total_weights[staff]
-
-        combined_smr = total_counts['match']['combined'] / total_counts['note']['combined']
-        m_rates['combined']['simple'] = combined_smr
-        # The simple match rate is implicitly weighted, as it is just total matches over total notes.
-        weighted_m_rates['combined']['simple'] = combined_smr
-
-        if splits_are_valid:
-            upper_smr = total_counts['match']['upper'] / total_counts['note']['upper']
-            lower_smr = total_counts['match']['lower'] / total_counts['note']['lower']
-            m_rates['upper']['simple'] = upper_smr
-            m_rates['lower']['simple'] = lower_smr
-            weighted_m_rates['upper']['simple'] = upper_smr
-            weighted_m_rates['lower']['simple'] = lower_smr
-        else:
-            for staff in ['upper', 'lower']:
-                 m_rates[staff]['simple'] = None
-                 weighted_m_rates[staff]['simple'] = None
-
-        print("\nM metrics per Nakamura:")
-        pprint.pprint(m_rates)
-        print("Weighted M metrics:")
-        pprint.pprint(weighted_m_rates)
-
-        return m_rates, weighted_m_rates, base_title_match_rates
 
     def load_data(self, clean_list):
         creal = Corporeal()
