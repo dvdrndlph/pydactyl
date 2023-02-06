@@ -40,6 +40,17 @@ from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_STD_DIR, PIG_FILE_SUFFIX, PIG_SEGREGATED_STD_DIR
 from pydactyl.eval.Corporeal import ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, COMPLETE_LAYER_ONE_STD_PIG_DIR
 
+RATE_SET = {
+    'upper': {'gen': 0.0, 'high': 0.0, 'soft': 0.0},
+    'lower': {'gen': 0.0, 'high': 0.0, 'soft': 0.0},
+    'combined': {'gen': 0.0, 'high': 0.0, 'soft': 0.0},
+}
+COUNT_SET = {
+    'note': {'upper': 0, 'lower': 0, 'combined': 0},
+    'match': {'upper': 0, 'lower': 0, 'combined': 0}
+}
+STAFF_COUNT_SET = {'upper': 0, 'lower': 0, 'combined': 0}
+
 
 @dataclass(frozen=True)
 class ScoreKey:
@@ -258,6 +269,14 @@ class DExperiment:
         #     # print(f"  Test:\nindex={test_indices},\ngroup={groups[test_indices]}")
         return splits
 
+    def update_fold_counts(self, counts, cohort, y_index):
+        staff = self.y_staff[y_index]
+        note_count = len(self.y[y_index])
+        counts[cohort]['example']['combined'] += 1
+        counts[cohort]['note']['combined'] += note_count
+        counts[cohort]['example'][staff] += 1
+        counts[cohort]['note'][staff] += note_count
+
     def train_and_evaluate_folds(self, the_model, on_train=True, output_results=False):
         splits = self.my_k_folds(on_train=on_train)
 
@@ -267,20 +286,22 @@ class DExperiment:
             y_train = list()
             y_test = list()
             x_test = list()
-            train_example_count = 0
-            train_note_count = 0
-            test_example_count = 0
-            test_note_count = 0
+            counts = {
+                'train': {
+                    'example': copy.deepcopy(STAFF_COUNT_SET),
+                    'note': copy.deepcopy(STAFF_COUNT_SET)
+                },
+                'test': {
+                    'example': copy.deepcopy(STAFF_COUNT_SET),
+                    'note': copy.deepcopy(STAFF_COUNT_SET)
+                },
+            }
             for t_i in train_indices:
-                train_example_count += 1
-                note_count = len(self.y[t_i])
-                train_note_count += note_count
+                self.update_fold_counts(counts, cohort='train', y_index=t_i)
                 x_train.append(self.x[t_i])
                 y_train.append(self.y[t_i])
             for t_i in test_indices:
-                test_example_count += 1
-                note_count = len(self.y[t_i])
-                test_note_count += note_count
+                self.update_fold_counts(counts, cohort='test', y_index=t_i)
                 x_test.append(self.x[t_i])
                 y_test.append(self.y[t_i])
             self.train(the_model, x_train=x_train, y_train=y_train)
@@ -288,28 +309,32 @@ class DExperiment:
                 print("===================================================================================")
                 print(f"Fold {i}")
                 print("===================================================================================")
-            predictions = self.evaluate_trained_model(the_model=the_model, x_test=x_test, y_test=y_test)
+            predictions = the_model.predict(x_test)
             labels = list(the_model.classes_)
             flat_weighted_f1 = metrics.flat_f1_score(y_test, predictions, average='weighted', labels=labels)
+            flat_accuracy = metrics.flat_accuracy_score(y_test, predictions)
             m_rates, weighted_m_rates, seg_match_rates = self.my_match_rates(predictions, y_test=y_test)
             fold_result = {
                 'flat_weighted_f1': flat_weighted_f1,
+                'flat_accuracy': flat_accuracy,
                 'm_rates': m_rates,
                 'weighted_m_rates': weighted_m_rates,
-                'seg_match_rates': seg_match_rates,
-                'test_example_count': test_example_count,
-                'test_note_count': test_note_count,
-                'train_example_count': train_example_count,
-                'train_note_count': train_note_count
+                # 'seg_match_rates': seg_match_rates,
+                'counts': counts
             }
             fold_results.append(fold_result)
             if output_results:
                 pprint.pp(fold_results)
         return fold_results
 
-    @staticmethod
-    def summarize_fold_results(results):
-        weighted_mean_of_m_rates
+    def summarize_fold_results(self.results):
+        weighted_mean_of_weighted_m_rates = copy.deepcopy(RATE_SET)
+        weighted_mean_of_unweighted_m_rates = copy.deepcopy(RATE_SET)
+        unweighted_mean_of_unweighted_m_rates = copy.deepcopy(RATE_SET)
+        unweighted_mean_of_weighted_m_rates = copy.deepcopy(RATE_SET)
+        header_str = '\textbf{Data Set} & \teextbf{Segments} & \textbf{Annotations} & 
+        for result in results:
+
         pass
 
     def tune_parameters(self, the_model):
@@ -619,16 +644,7 @@ class DExperiment:
         if y_test is None:
             y_test = self.y_test
 
-        rate_set = {
-            'upper': {'gen': 0.0, 'high': 0.0, 'soft': 0.0},
-            'lower': {'gen': 0.0, 'high': 0.0, 'soft': 0.0},
-            'combined': {'gen': 0.0, 'high': 0.0, 'soft': 0.0},
-        }
-        count_set = {
-            'note': {'upper': 0, 'lower': 0, 'combined': 0},
-            'match': {'upper': 0, 'lower': 0, 'combined': 0}
-        }
-        total_counts = copy.deepcopy(count_set)
+        total_counts = copy.deepcopy(COUNT_SET)
         prediction_example_count = len(predictions)
         y_test_example_count = len(y_test)
         if prediction_example_count != y_test_example_count:
@@ -647,7 +663,7 @@ class DExperiment:
                 segment_key = self.y_score_key[y_index]
             note_count = len(predictions[i])
             if segment_key not in total_seg_counts:
-                total_seg_counts[segment_key] = copy.deepcopy(count_set)
+                total_seg_counts[segment_key] = copy.deepcopy(COUNT_SET)
                 seg_test_fingerings[segment_key] = dict()
                 seg_pred_fingering[segment_key] = dict()
                 seg_note_counts[segment_key] = note_count
@@ -667,13 +683,13 @@ class DExperiment:
             total_seg_counts[segment_key]['note']['combined'] += note_count
 
         seg_match_rates = dict()
-        sums_of_rates = copy.deepcopy(rate_set)
-        weighted_sums_of_rates = copy.deepcopy(rate_set)
+        sums_of_rates = copy.deepcopy(RATE_SET)
+        weighted_sums_of_rates = copy.deepcopy(RATE_SET)
         total_weights = {'upper': 0, 'lower': 0, 'combined': 0}
         seg_counts = copy.deepcopy(total_weights)
         for segment_key in seg_test_fingerings:
             if segment_key not in seg_match_rates:
-                seg_match_rates[segment_key] = copy.deepcopy(rate_set)
+                seg_match_rates[segment_key] = copy.deepcopy(RATE_SET)
             for staff in ['upper', 'lower', 'combined']:
                 if staff == 'combined':
                     if self.opts.segmenting:
@@ -712,7 +728,7 @@ class DExperiment:
                     weighted_sums_of_rates[staff][method] += note_count * seg_match_rates[segment_key][staff][method]
 
         m_rates = copy.deepcopy(sums_of_rates)
-        weighted_m_rates = copy.deepcopy(rate_set)
+        weighted_m_rates = copy.deepcopy(RATE_SET)
         combined_smr = total_counts['match']['combined'] / total_counts['note']['combined']
         m_rates['combined']['simple'] = combined_smr
         # The simple match rate is implicitly weighted, as it is just total matches over total notes.
