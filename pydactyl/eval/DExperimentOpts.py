@@ -40,6 +40,10 @@ class DExperimentOpts:
         if 'random_state' in opts:
             self.random_state = opts['random_state']
 
+        self.randomize_corpora = False
+        if 'randomize_corpora' in opts:
+            self.randomize_corpora = opts['randomize_corpora']
+
         self.consonance_threshold = c.CHORD_MS_THRESHOLD
         if 'consonance_threshold' in opts:
             self.consonance_threshold = opts['consonance_threshold']

@@ -275,10 +275,9 @@ class DExperiment:
     def my_k_folds(self, k=5, on_train=True, test_size: float = 0.2, random_state=None):
         if random_state is None:
             random_state = self.opts.random_state
-        splitter = GroupShuffleSplit(n_splits=1, test_size=self.opts.holdout_size,
-                                     random_state=self.opts.random_state)
-        # splitter = GroupKFold(n_splits=k)
-        splitter = GroupShuffleSplit(n_splits=k, test_size=test_size, random_state=random_state)
+        splitter = GroupKFold(n_splits=k)
+        # splitter = GroupShuffleSplit(n_splits=k, test_size=test_size, random_state=random_state)
+        # splitter = GroupShuffleSplit(n_splits=k, random_state=random_state)
         if on_train:
             x = self.x_train
             y = self.y_train
@@ -774,6 +773,8 @@ class DExperiment:
                         continue
                     if 'lower' not in seg_pred_fingering[segment_key]:
                         print("Hold on there.")
+                    if 'upper' not in seg_pred_fingering[segment_key]:
+                        print("Hold on here now.")
                     combined_pred_fingering = seg_pred_fingering[segment_key]['upper'] + \
                                               seg_pred_fingering[segment_key]['lower']
                     combined_test_fingerings = list()
@@ -839,7 +840,11 @@ class DExperiment:
             da_corpus = c.unpickle_it(obj_type="DCorpus", clean_list=clean_list,
                                       file_name=corpus_name, use_dill=True)
             if da_corpus is None:
-                da_corpus = creal.get_corpus(corpus_name=corpus_name)
+                if self.opts.randomize_corpora:
+                    corpus_seed = self.opts.random_state
+                else:
+                    corpus_seed = None
+                da_corpus = creal.get_corpus(corpus_name=corpus_name, random_state=corpus_seed)
                 if self.pickling:
                     c.pickle_it(obj=da_corpus, obj_type="DCorpus", file_name=corpus_name, use_dill=True)
             # d_scores = da_corpus.d_score_list()

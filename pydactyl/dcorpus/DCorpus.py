@@ -1,4 +1,6 @@
 __author__ = 'David Randolph'
+
+import random
 # Copyright (c) 2014-2018 David A. Randolph.
 #
 # Permission is hereby granted, free of charge, to any person
@@ -152,9 +154,16 @@ class DCorpus:
         return Constant.CORPUS_ABC
         # FIXME: Support xml, and mxl
 
-    def append_dir(self, corpus_dir, as_xml=True, via_midi=False, split_header_extension=""):
+    def append_dir(self, corpus_dir, as_xml=True, via_midi=False, split_header_extension="", random_state=None):
         print("Appending directory {} to corpus.".format(corpus_dir))
-        for file_name in sorted(os.listdir(corpus_dir)):
+        raw_dir_listing = os.listdir(corpus_dir)
+        if random_state is not None:
+            random.seed(random_state)
+            dir_listing = random.sample(raw_dir_listing, len(raw_dir_listing))
+        else:
+            dir_listing = sorted(raw_dir_listing)
+
+        for file_name in dir_listing:
             if file_name == '.DS_Store':
                 continue
             if '.' not in file_name:

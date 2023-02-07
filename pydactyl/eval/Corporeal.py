@@ -237,53 +237,56 @@ class Corporeal(ABC):
             composer = 'Czerny'
             d_score.composer(composer, with_periods=True)
 
-    def get_corpus(self, corpus_name):
+    def get_corpus(self, corpus_name, random_state=None):
         if corpus_name == 'pig':
             the_corpus = DCorpus()
-            the_corpus.append_dir(corpus_dir=PIG_DIR, via_midi=True, split_header_extension='abcd')
+            the_corpus.append_dir(corpus_dir=PIG_DIR, via_midi=True,
+                                  split_header_extension='abcd', random_state=random_state)
             Corporeal.enrich_pig_corpus(the_corpus)
             return the_corpus
 
         if corpus_name == 'pig_indy':
             the_corpus = DCorpus()
-            the_corpus.append_dir(corpus_dir=PIG_INDY_DIR, via_midi=True, split_header_extension='abcd')
+            the_corpus.append_dir(corpus_dir=PIG_INDY_DIR, via_midi=True,
+                                  split_header_extension='abcd', random_state=random_state)
             Corporeal.enrich_pig_corpus(the_corpus)
             return the_corpus
 
         if corpus_name == 'pig_seg':
             the_corpus = DCorpus()
-            the_corpus.append_dir(corpus_dir=PIG_SEGREGATED_ABCD_DIR, via_midi=True, split_header_extension='abcd')
+            the_corpus.append_dir(corpus_dir=PIG_SEGREGATED_ABCD_DIR, via_midi=True,
+                                  split_header_extension='abcd', random_state=random_state)
             Corporeal.enrich_pig_corpus(the_corpus)
             return the_corpus
 
         if corpus_name == 'scales':
             the_corpus = DCorpus()
-            the_corpus.append_dir(corpus_dir=SCALES_DIR)
+            the_corpus.append_dir(corpus_dir=SCALES_DIR, random_state=random_state)
             Corporeal.enrich_beringer_corpus(the_corpus)
             return the_corpus
 
         if corpus_name == 'arpeggios':
             the_corpus = DCorpus()
-            the_corpus.append_dir(corpus_dir=ARPEGGIOS_DIR)
+            the_corpus.append_dir(corpus_dir=ARPEGGIOS_DIR, random_state=random_state)
             Corporeal.enrich_beringer_corpus(the_corpus)
             return the_corpus
 
         if corpus_name == 'broken':
             the_corpus = DCorpus()
-            the_corpus.append_dir(corpus_dir=BROKEN_DIR)
+            the_corpus.append_dir(corpus_dir=BROKEN_DIR, random_state=random_state)
             Corporeal.enrich_beringer_corpus(the_corpus)
             return the_corpus
 
         if corpus_name == 'beringer':
             the_corpus = DCorpus()
             for subdir in [SCALES_DIR, ARPEGGIOS_DIR, BROKEN_DIR]:
-                the_corpus.append_dir(corpus_dir=subdir)
+                the_corpus.append_dir(corpus_dir=subdir, random_state=random_state)
             Corporeal.enrich_beringer_corpus(the_corpus)
             return the_corpus
 
         if corpus_name == 'complete_layer_one':
             the_corpus = DCorpus()
-            the_corpus.append_dir(corpus_dir=COMPLETE_LAYER_ONE_DIR)
+            the_corpus.append_dir(corpus_dir=COMPLETE_LAYER_ONE_DIR, random_state=random_state)
             Corporeal.enrich_clementi_corpus(the_corpus)
             return the_corpus
 

@@ -37,8 +37,8 @@ import pydactyl.crf.CrfFeatures7 as feats
 # STAFFS = ['lower']
 # CORPUS_NAMES = ['full_american_by_annotator']
 CORPUS_NAMES = ['complete_layer_one']
-CORPUS_NAMES = ['scales']
-CORPUS_NAMES = ['arpeggios']
+# CORPUS_NAMES = ['scales']
+# CORPUS_NAMES = ['arpeggios']
 CORPUS_NAMES = ['broken']
 # CORPUS_NAMES = ['complete_layer_one', 'scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
@@ -49,20 +49,22 @@ CORPUS_NAMES = ['broken']
 CLEAN_LIST = {}  # Reuse all pickled results.
 # CLEAN_LIST = {'crf': True}
 CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
-# CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
+CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 OPTS = {
     'pickling': False,
-    'segmenting': False,
+    'segmenting': True,
     'consonance_threshold': c.CHORD_MS_THRESHOLD,
     'engine': 'sklearn-crfsuite',
     'model_features': feats,
+    'corpus_names': CORPUS_NAMES,
+    'randomize_corpora': True,  # Must set to False for preset evaluation.
     'staffs': ['upper', 'lower'],
-    'test_method': 'preset',
+    'test_method': 'preset',  # FIXME: What is this really doing? It does the preset eval up front if possible, no?
+                              # Otherwise is evaluates a random split upfront. Is this setting really needed?
     'fold_count': 5,
     'group_by': 'score',  # score, segment, or example (none)
     'holdout_predefined': True,
     'holdout_size': 0.3,
-    'corpus_names': CORPUS_NAMES,
     'segregate_hands': False,
     'param_grid': {
         'c1': [0, 0.0001, 0.001, 0.01, 0.1],
