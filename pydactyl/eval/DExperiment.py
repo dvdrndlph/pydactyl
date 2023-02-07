@@ -325,6 +325,7 @@ class DExperiment:
     def train_and_evaluate_folds(self, the_model, on_train=True, output_results=False):
         splits = self.my_k_folds(on_train=on_train)
 
+        y_test_y_index = dict()
         fold_results = list()
         for i, (train_indices, test_indices) in enumerate(splits):
             x_train = list()
@@ -348,7 +349,10 @@ class DExperiment:
             for t_i in test_indices:
                 self.update_fold_counts(counts, cohort='test', y_index=t_i)
                 x_test.append(self.x[t_i])
+                test_example_index = len(y_test)
+                y_test_y_index[test_example_index] = t_i
                 y_test.append(self.y[t_i])
+
             self.train(the_model, x_train=x_train, y_train=y_train)
             if output_results:
                 print("===================================================================================")
@@ -358,7 +362,8 @@ class DExperiment:
             labels = list(the_model.classes_)
             flat_weighted_f1 = metrics.flat_f1_score(y_test, predictions, average='weighted', labels=labels)
             flat_accuracy = metrics.flat_accuracy_score(y_test, predictions)
-            m_rates, weighted_m_rates, seg_match_rates = self.my_match_rates(predictions, y_test=y_test)
+            m_rates, weighted_m_rates, seg_match_rates = self.my_match_rates(predictions, y_test=y_test,
+                                                                             y_test_y_index=y_test_y_index)
             fold_result = {
                 'flat_weighted_f1': flat_weighted_f1,
                 'flat_accuracy': flat_accuracy,
@@ -401,7 +406,7 @@ class DExperiment:
         wm_gen = round(wm['gen'], precision)
         wm_high = round(wm['high'], precision)
         wm_soft = round(wm['soft'], precision)
-        data_str = f"{set_name} & {seg_count} & {annot_count} & {accuracy} & {f1} & {m_gen} & {m_high} &{m_soft} & {wm_gen} & {wm_high} & {wm_soft}"
+        data_str = f"{set_name} & {seg_count} & {annot_count} & {accuracy} & {f1} & {m_gen} & {m_high} & {m_soft} & {wm_gen} & {wm_high} & {wm_soft} \\\\"
         print(header_str + data_str)
 
     def tune_parameters(self, the_model):
@@ -700,7 +705,7 @@ class DExperiment:
                 max_count = match_count
         return max_count
 
-    def my_match_rates(self, predictions, y_test=None, output_results=False):
+    def my_match_rates(self, predictions, y_test=None, y_test_y_index=None, output_results=False):
         # We need to know the associated staff and DScore for each prediction/y_test pair.
         # We identify the DScore uniquely as a (corpus_name, score_title) tuple in self.y_segment_key
         # when examples are appended to self.y.
@@ -710,6 +715,10 @@ class DExperiment:
         # into independent phrases.
         if y_test is None:
             y_test = self.y_test
+            y_test_y_index = self.y_test_y_index
+
+        if y_test_y_index is None:
+            raise Exception("We need a mapping of test examples back to their origins (indices) in y.")
 
         total_counts = copy.deepcopy(COUNT_SET)
         prediction_example_count = len(predictions)
@@ -722,7 +731,7 @@ class DExperiment:
         seg_pred_fingering = dict()
         seg_test_fingerings = dict()
         for i in range(prediction_example_count):
-            y_index = self.y_test_y_index[i]
+            y_index = y_test_y_index[i]
             staff = self.y_staff[y_index]
             example_key = self.y_example_key[y_index]
             annot_index = example_key.annot_index

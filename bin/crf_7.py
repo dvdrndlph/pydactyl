@@ -38,7 +38,7 @@ import pydactyl.crf.CrfFeatures7 as feats
 # CORPUS_NAMES = ['full_american_by_annotator']
 CORPUS_NAMES = ['complete_layer_one']
 CORPUS_NAMES = ['scales']
-# CORPUS_NAMES = ['arpeggios']
+CORPUS_NAMES = ['arpeggios']
 CORPUS_NAMES = ['broken']
 # CORPUS_NAMES = ['complete_layer_one', 'scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
