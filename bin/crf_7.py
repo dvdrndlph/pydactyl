@@ -39,7 +39,7 @@ import pydactyl.crf.CrfFeatures7 as feats
 CORPUS_NAMES = ['complete_layer_one']
 CORPUS_NAMES = ['scales']
 # CORPUS_NAMES = ['arpeggios']
-# CORPUS_NAMES = ['broken']
+CORPUS_NAMES = ['broken']
 # CORPUS_NAMES = ['complete_layer_one', 'scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['pig']
