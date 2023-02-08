@@ -36,10 +36,10 @@ import pydactyl.crf.CrfFeatures7 as feats
 # STAFFS = ['upper']
 # STAFFS = ['lower']
 # CORPUS_NAMES = ['full_american_by_annotator']
-CORPUS_NAMES = ['complete_layer_one']
-# CORPUS_NAMES = ['scales']
+# CORPUS_NAMES = ['complete_layer_one']
+CORPUS_NAMES = ['scales']
 # CORPUS_NAMES = ['arpeggios']
-CORPUS_NAMES = ['broken']
+# CORPUS_NAMES = ['broken']
 # CORPUS_NAMES = ['complete_layer_one', 'scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['pig']
@@ -52,12 +52,12 @@ CLEAN_LIST = {'crf': True, 'DExperiment': True}  # Pickles to discard (and regen
 CLEAN_LIST = {'crf': True, 'DCorpus': True, 'DExperiment': True}  # Pickles to discard (and regenerate).
 OPTS = {
     'pickling': False,
-    'segmenting': True,
+    'segmenting': False,
     'consonance_threshold': c.CHORD_MS_THRESHOLD,
     'engine': 'sklearn-crfsuite',
     'model_features': feats,
     'corpus_names': CORPUS_NAMES,
-    'randomize_corpora': True,  # Must set to False for preset evaluation.
+    'randomize_corpora': False,  # Must set to False for preset evaluation.
     'staffs': ['upper', 'lower'],
     'test_method': 'preset',  # FIXME: What is this really doing? It does the preset eval up front if possible, no?
                               # Otherwise is evaluates a random split upfront. Is this setting really needed?
@@ -114,6 +114,6 @@ else:
 # ex.tune_parameters(the_model=my_crf)
 ex.evaluate(the_model=my_crf, is_trained=have_trained_model)
 fold_results = ex.train_and_evaluate_folds(the_model=my_crf, on_train=False, output_results=True)
-ex.summarize_fold_results(results=fold_results)
+ex.summarize_more_fold_results(results=fold_results)
 if not have_trained_model and OPTS['pickling']:
     c.pickle_it(obj=my_crf, obj_type="crf", file_name=experiment_name, use_dill=True)

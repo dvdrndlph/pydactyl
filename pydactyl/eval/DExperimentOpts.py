@@ -21,6 +21,7 @@ __author__ = 'David Randolph'
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
+import pprint
 import pydactyl.crf.CrfUtil as c
 
 VALID_GROUPINGS = {
@@ -32,6 +33,8 @@ VALID_GROUPINGS = {
 
 class DExperimentOpts:
     def __init__(self, opts):
+        self.opts = opts
+
         self.segment = True
         if 'segmenting' in opts:
             self.segmenting = opts['segmenting']
@@ -81,4 +84,7 @@ class DExperimentOpts:
         if 'param_grid' in opts:
             self.param_grid = opts['param_grid']
 
+    def __repr__(self):
+        stringy = pprint.pformat(self.opts)
+        return stringy
 

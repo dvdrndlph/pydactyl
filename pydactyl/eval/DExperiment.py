@@ -378,7 +378,7 @@ class DExperiment:
 
     def summarize_fold_results(self, results):
         precision = 4  # decimal places
-        header_str = "Data Set & Segments & Annotations & Accuracy & Mgen & Mhigh & WMgen WMhigh & WMsoft\n"
+        header_str = "Data Set & Segments & Annotations & Accuracy & F1 & Mgen & Mhigh & Msoft & WMgen & WMhigh & WMsoft\n"
         set_name = self.corpora_name()
         seg_count = results[0]['counts']['train']['example']['combined'] + \
                     results[0]['counts']['test']['example']['combined']
@@ -407,6 +407,68 @@ class DExperiment:
         wm_soft = round(wm['soft'], precision)
         data_str = f"{set_name} & {seg_count} & {annot_count} & {accuracy} & {f1} & {m_gen} & {m_high} & {m_soft} & {wm_gen} & {wm_high} & {wm_soft} \\\\"
         print(header_str + data_str)
+
+    def summarize_more_fold_results(self, results):
+        precision = 4  # decimal places
+        nombre = self.corpora_name()
+        seg_counts = copy.deepcopy(STAFF_COUNT_SET)
+        annot_counts = copy.deepcopy(STAFF_COUNT_SET)
+        accuracy = 0.0
+        f1 = 0.0
+        m = copy.deepcopy(RATE_SET)
+        wm = copy.deepcopy(RATE_SET)
+        for result in results:
+            for staff in ('combined', 'upper', 'lower'):
+                seg_counts[staff] = result['counts']['train']['example'][staff] + \
+                                    result['counts']['test']['example'][staff]
+                annot_counts[staff] = result['counts']['train']['note'][staff] + \
+                                      result['counts']['test']['note'][staff]
+
+                test_annot_count = result['counts']['test']['note'][staff]
+                proportion = test_annot_count / annot_counts[staff]
+                if staff == 'combined':
+                    accuracy += result['flat_accuracy'] * proportion
+                    f1 += result['flat_weighted_f1'] * proportion
+                for method in ('gen', 'high', 'soft'):
+                    m[staff][method] += result['m_rates'][staff][method] * proportion
+                    wm[staff][method] += result['weighted_m_rates'][staff][method] * proportion
+
+        print("")
+        print(self.opts)
+        print("")
+        nombre_map = {
+            'complete_layer_one': 'Layer One',
+            'scales': 'Scale',
+            'arpeggios': 'Arpeggio',
+            'broken': 'Broken_Chord',
+            'scales-arpeggios-broken': 'Beringer',
+            'complete_layer_one-scales-arpeggios-broken': 'Didactyl',
+            'pig': 'PIG Training',
+            'complete_layer_one-scales-arpeggios-broken-pig': 'All',
+        }
+
+        header_str = "Data Set & Segments & Annotations & Comb Accuracy & Comb F1 & Mgen & Mhigh & Msoft & WMgen & WMhigh & WMsoft"
+        print(header_str)
+        for staff in ('combined', 'upper', 'lower'):
+            set_name = nombre_map[nombre]
+            accuracy = round(accuracy, precision)
+            f1 = round(f1, precision)
+            m_gen = round(m[staff]['gen'], precision)
+            m_high = round(m[staff]['high'], precision)
+            m_soft = round(m[staff]['soft'], precision)
+            wm_gen = round(wm[staff]['gen'], precision)
+            wm_high = round(wm[staff]['high'], precision)
+            wm_soft = round(wm[staff]['soft'], precision)
+            seg_count = seg_counts[staff]
+            annot_count = annot_counts[staff]
+            if staff == 'combined':
+                data_str = f"{set_name} & {seg_count} & {annot_count} & {accuracy} & {f1} & {m_gen} & {m_high} & {m_soft} & {wm_gen} & {wm_high} & {wm_soft} \\\\"
+                print(data_str)
+                header_str = "\nData Set & Staff & Segments & Annotations & Mgen & Mhigh & Msoft & WMgen & WMhigh & WMsoft"
+                print(header_str)
+            else:
+                data_str = f"{set_name} & {staff} & {seg_count} & {annot_count} & {m_gen} & {m_high} & {m_soft} & {wm_gen} & {wm_high} & {wm_soft} \\\\"
+                print(data_str)
 
     def tune_parameters(self, the_model):
         train_splits = self.my_k_folds(k=5, on_train=True, test_size=0.2)
