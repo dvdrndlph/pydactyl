@@ -37,12 +37,13 @@ import pydactyl.crf.CrfFeatures7 as feats
 # STAFFS = ['lower']
 # CORPUS_NAMES = ['full_american_by_annotator']
 # CORPUS_NAMES = ['complete_layer_one']
-CORPUS_NAMES = ['scales']
+# CORPUS_NAMES = ['scales']
 # CORPUS_NAMES = ['arpeggios']
 # CORPUS_NAMES = ['broken']
-# CORPUS_NAMES = ['complete_layer_one', 'scales', 'arpeggios', 'broken']
 # CORPUS_NAMES = ['scales', 'arpeggios', 'broken']
-# CORPUS_NAMES = ['pig']
+# CORPUS_NAMES = ['complete_layer_one', 'scales', 'arpeggios', 'broken']
+CORPUS_NAMES = ['pig_training']
+CORPUS_NAMES = ['pig']
 # CORPUS_NAMES = ['pig_indy']
 # CORPUS_NAMES = ['pig_seg']
 # CLEAN_LIST = {'DCorpus': True}
@@ -113,7 +114,7 @@ else:
 
 # ex.tune_parameters(the_model=my_crf)
 ex.evaluate(the_model=my_crf, is_trained=have_trained_model)
-fold_results = ex.train_and_evaluate_folds(the_model=my_crf, on_train=False, output_results=True)
+fold_results = ex.train_and_evaluate_folds(the_model=my_crf, on_train=True, output_results=True)
 ex.summarize_more_fold_results(results=fold_results)
 if not have_trained_model and OPTS['pickling']:
     c.pickle_it(obj=my_crf, obj_type="crf", file_name=experiment_name, use_dill=True)

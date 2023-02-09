@@ -39,6 +39,7 @@ from pydactyl.dactyler.Random import Random
 CORPORA_DIR = os.path.expanduser('~/tb2/didactyl/dd/corpora/')
 OUTPUT_DIR = os.path.expanduser('~/tb2/doc/data/badgerow/')
 PIG_BASE_DIR = CORPORA_DIR + 'pig/PianoFingeringDataset_v1.00/'
+PIG_TRAINING_DIR = PIG_BASE_DIR + 'training_abcd'
 PIG_INDY_DIR = PIG_BASE_DIR + 'individual_abcd/'
 PIG_DIR = PIG_BASE_DIR + 'abcd/'
 BERINGER_DIR = CORPORA_DIR + 'beringer/'
@@ -241,6 +242,13 @@ class Corporeal(ABC):
         if corpus_name == 'pig':
             the_corpus = DCorpus()
             the_corpus.append_dir(corpus_dir=PIG_DIR, via_midi=True,
+                                  split_header_extension='abcd', random_state=random_state)
+            Corporeal.enrich_pig_corpus(the_corpus)
+            return the_corpus
+
+        if corpus_name == 'pig_training':
+            the_corpus = DCorpus()
+            the_corpus.append_dir(corpus_dir=PIG_TRAINING_DIR, via_midi=True,
                                   split_header_extension='abcd', random_state=random_state)
             Corporeal.enrich_pig_corpus(the_corpus)
             return the_corpus

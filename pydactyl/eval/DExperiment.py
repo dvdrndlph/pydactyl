@@ -417,7 +417,9 @@ class DExperiment:
         f1 = 0.0
         m = copy.deepcopy(RATE_SET)
         wm = copy.deepcopy(RATE_SET)
+        proportion_total = 0.0
         for result in results:
+            proportion = 0.0
             for staff in ('combined', 'upper', 'lower'):
                 seg_counts[staff] = result['counts']['train']['example'][staff] + \
                                     result['counts']['test']['example'][staff]
@@ -432,7 +434,9 @@ class DExperiment:
                 for method in ('gen', 'high', 'soft'):
                     m[staff][method] += result['m_rates'][staff][method] * proportion
                     wm[staff][method] += result['weighted_m_rates'][staff][method] * proportion
-
+            proportion_total += proportion
+        print("")
+        print(f"Proportion total: {proportion_total}")
         print("")
         print(self.opts)
         print("")
@@ -440,11 +444,12 @@ class DExperiment:
             'complete_layer_one': 'Layer One',
             'scales': 'Scale',
             'arpeggios': 'Arpeggio',
-            'broken': 'Broken_Chord',
+            'broken': 'Broken Chord',
             'scales-arpeggios-broken': 'Beringer',
             'complete_layer_one-scales-arpeggios-broken': 'Didactyl',
-            'pig': 'PIG Training',
-            'complete_layer_one-scales-arpeggios-broken-pig': 'All',
+            'pig': 'PIG',
+            'pig_training': 'PIG Training',
+            'complete_layer_one-scales-arpeggios-broken-pig_training': 'All',
         }
 
         header_str = "Data Set & Segments & Annotations & Comb Accuracy & Comb F1 & Mgen & Mhigh & Msoft & WMgen & WMhigh & WMsoft"
@@ -494,7 +499,7 @@ class DExperiment:
                 predictions = self.evaluate_trained_model(the_model=the_model)
             else:
                 predictions = self.train_and_evaluate(the_model=the_model)
-            self.my_match_rates(predictions=predictions)
+            self.my_match_rates(predictions=predictions, output_results=True)
         else:
             self.split_and_evaluate(the_model=the_model, test_size=0.4, random_state=0)
         print("Run of crf model {} against {} test set over {} corpus has completed successfully.".format(
@@ -923,8 +928,8 @@ class DExperiment:
                 da_unannotated_score = copy.deepcopy(da_score)
                 score_title = da_score.title()
                 score_key = ScoreKey(corpus_name, score_title)
-                # if score_title == 'scales_bflat_minor_melodic':
-                    # print("Hang on now.")
+                # if score_title == 'scales_bflat_major':
+                #     print("Hang on now.")
                 # if score_title != 'Sonatina 4.1':
                 # continue
                 for annot_index in range(annot_count):
