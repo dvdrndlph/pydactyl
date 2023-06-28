@@ -63,6 +63,10 @@ class DExperimentOpts:
             else:
                 raise Exception("Invalid group_by setting: {}".format(opts['group_by']))
 
+        self.test_set = None
+        if 'test_set' in opts:
+            self.test_set = opts['test_set']
+
         self.holdout_size = 0.30
         if 'holdout_size' in opts:
             self.holdout_size = opts['holdout_size']

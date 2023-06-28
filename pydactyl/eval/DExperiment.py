@@ -23,11 +23,11 @@ __author__ = 'David Randolph'
 # OTHER DEALINGS IN THE SOFTWARE.
 import copy
 import pprint
-import re
+import statistics
 from datetime import datetime
 from dataclasses import dataclass
 
-import numpy
+from statsmodels.stats.weightstats import DescrStatsW
 from sklearn_crfsuite import metrics
 from sklearn.model_selection import train_test_split, cross_val_score, GroupKFold, GroupShuffleSplit, GridSearchCV
 from sklearn.metrics import make_scorer
@@ -40,6 +40,11 @@ from pydactyl.dcorpus.ManualDSegmenter import ManualDSegmenter
 from pydactyl.dcorpus.PigInOut import PigIn, PigOut, PIG_STD_DIR, PIG_FILE_SUFFIX, PIG_SEGREGATED_STD_DIR
 from pydactyl.eval.Corporeal import ARPEGGIOS_STD_PIG_DIR, SCALES_STD_PIG_DIR, BROKEN_STD_PIG_DIR, COMPLETE_LAYER_ONE_STD_PIG_DIR
 
+DATA_SET = {
+    'upper': {'gen': [], 'high': [], 'soft': []},
+    'lower': {'gen': [], 'high': [], 'soft': []},
+    'combined': {'gen': [], 'high': [], 'soft': []},
+}
 RATE_SET = {
     'upper': {'gen': 0.0, 'high': 0.0, 'soft': 0.0},
     'lower': {'gen': 0.0, 'high': 0.0, 'soft': 0.0},
@@ -361,16 +366,10 @@ class DExperiment:
             labels = list(the_model.classes_)
             flat_weighted_f1 = metrics.flat_f1_score(y_test, predictions, average='weighted', labels=labels)
             flat_accuracy = metrics.flat_accuracy_score(y_test, predictions)
-            m_rates, weighted_m_rates, seg_match_rates = self.my_match_rates(predictions, y_test=y_test,
-                                                                             y_test_y_index=y_test_y_index)
-            fold_result = {
-                'flat_weighted_f1': flat_weighted_f1,
-                'flat_accuracy': flat_accuracy,
-                'm_rates': m_rates,
-                'weighted_m_rates': weighted_m_rates,
-                # 'seg_match_rates': seg_match_rates,
-                'counts': counts
-            }
+            fold_result = self.my_match_rates(predictions, y_test=y_test, y_test_y_index=y_test_y_index)
+            fold_result['flat_weighted_f1'] = flat_weighted_f1
+            fold_result['flat_accuracy'] = flat_accuracy
+            fold_result['counts'] = counts
             if output_results:
                 pprint.pp(fold_result)
             fold_results.append(fold_result)
@@ -449,7 +448,8 @@ class DExperiment:
             'complete_layer_one-scales-arpeggios-broken': 'Didactyl',
             'pig': 'PIG',
             'pig_training': 'PIG Training',
-            'complete_layer_one-scales-arpeggios-broken-pig_training': 'All',
+            'complete_layer_one-scales-arpeggios-broken-pig_training': 'L1_full-B-PIG_Train',
+            'complete_layer_one-scales-arpeggios-broken-pig': 'All',
         }
 
         header_str = "Data Set & Segments & Annotations & Comb Accuracy & Comb F1 & Mgen & Mhigh & Msoft & WMgen & WMhigh & WMsoft"
@@ -487,6 +487,7 @@ class DExperiment:
 
     def evaluate(self, the_model, is_trained):
         # main_split = self.my_k_folds(k=1, on_train=False, test_size=self.opts.holdout_size)
+        results = dict()
         start_dt = datetime.now()
         if self.test_method == 'cross-validate':
             scores = cross_val_score(the_model, self.x, self.y, cv=self.fold_count)
@@ -499,7 +500,7 @@ class DExperiment:
                 predictions = self.evaluate_trained_model(the_model=the_model)
             else:
                 predictions = self.train_and_evaluate(the_model=the_model)
-            self.my_match_rates(predictions=predictions, output_results=True)
+            results = self.my_match_rates(predictions=predictions, output_results=True)
         else:
             self.split_and_evaluate(the_model=the_model, test_size=0.4, random_state=0)
         print("Run of crf model {} against {} test set over {} corpus has completed successfully.".format(
@@ -511,6 +512,7 @@ class DExperiment:
             trained_prefix = ''
         print("Total running time (wall clock) for {}trained model: {}".format(
             trained_prefix, execution_duration_minutes))
+        return results
 
     def phrase2features(self, notes: list, staff, d_score=None):
         notes_data = DNotesData(notes=notes, staff=staff, d_score=d_score, threshold_ms=self.consonance_threshold)
@@ -791,8 +793,7 @@ class DExperiment:
         y_test_example_count = len(y_test)
         if prediction_example_count != y_test_example_count:
             raise Exception("Prediction example counts do not match y_test")
-
-        seg_note_counts = dict()
+        staff_seg_note_counts = {'upper': {}, 'lower': {}, 'combined': {}}
         total_seg_counts = dict()
         seg_pred_fingering = dict()
         seg_test_fingerings = dict()
@@ -810,7 +811,13 @@ class DExperiment:
                 total_seg_counts[segment_key] = copy.deepcopy(COUNT_SET)
                 seg_test_fingerings[segment_key] = dict()
                 seg_pred_fingering[segment_key] = dict()
-                seg_note_counts[segment_key] = note_count
+                staff_seg_note_counts['combined'][segment_key] = 0
+                staff_seg_note_counts['upper'][segment_key] = 0
+                staff_seg_note_counts['lower'][segment_key] = 0
+            staff_seg_note_counts[staff][segment_key] = note_count
+            staff_seg_note_counts['combined'][segment_key] = staff_seg_note_counts['upper'][segment_key] + \
+                                                             staff_seg_note_counts['lower'][segment_key]
+
             if staff not in seg_test_fingerings[segment_key]:
                 seg_test_fingerings[segment_key][staff] = dict()
                 seg_pred_fingering[segment_key][staff] = predictions[i]
@@ -877,6 +884,8 @@ class DExperiment:
                     weighted_sums_of_rates[staff][method] += note_count * seg_match_rates[segment_key][staff][method]
 
         m_rates = copy.deepcopy(sums_of_rates)
+        std_devs = copy.deepcopy(RATE_SET)
+        weighted_std_devs = copy.deepcopy(RATE_SET)
         weighted_m_rates = copy.deepcopy(RATE_SET)
         combined_smr = total_counts['match']['combined'] / total_counts['note']['combined']
         m_rates['combined']['simple'] = combined_smr
@@ -889,14 +898,43 @@ class DExperiment:
                     m_rates[staff][method] = sums_of_rates[staff][method] / seg_counts[staff]
                     weighted_m_rates[staff][method] = weighted_sums_of_rates[staff][method] / total_weights[staff]
 
+        staff_seg_weight_lists = {'upper': [], 'lower': [], 'combined': []}
+        staff_seg_m_rate_lists = copy.deepcopy(DATA_SET)
+        staff_note_totals = dict()
+        for staff in ['upper', 'lower', 'combined']:
+            staff_note_totals[staff] = sum(staff_seg_note_counts[staff].values())
+        for staff in ['upper', 'lower', 'combined']:
+            for sk in sorted(seg_match_rates):
+                staff_seg_weight_lists[staff].append(staff_seg_note_counts[staff][sk] / staff_note_totals[staff])
+                for method in ('gen', 'high', 'soft'):
+                    staff_seg_m_rate_lists[staff][method].append(seg_match_rates[sk][staff][method])
+
+        for staff in ['upper', 'lower', 'combined']:
+            for method in ('gen', 'high', 'soft'):
+                vals = staff_seg_m_rate_lists[staff][method]
+                std_devs[staff][method] = statistics.stdev(vals)
+                weights = staff_seg_weight_lists[staff]
+                weighted_std_devs[staff][method] = DescrStatsW(vals, weights=weights).std
+
         if output_results:
             pprint.pprint(seg_match_rates)
             print("\nM metrics per Nakamura:")
             pprint.pprint(m_rates)
+            print("\nStandard deviations:")
+            pprint.pprint(std_devs)
             print("Weighted M metrics:")
             pprint.pprint(weighted_m_rates)
+            print("Weighted standard deviations:")
+            pprint.pprint(weighted_std_devs)
 
-        return m_rates, weighted_m_rates, seg_match_rates
+        results = {
+            'seg_match_rates': seg_match_rates,
+            'm_rates': m_rates,
+            'std_devs': std_devs,
+            'weighted_m_rates': weighted_m_rates,
+            'weighted_std_devs': weighted_std_devs
+        }
+        return results
 
     def load_data(self, clean_list):
         creal = Corporeal()
@@ -971,8 +1009,8 @@ class DExperiment:
                                 # authority, score_title, hsd_seg))
                                 self.wildcarded_count += 1
                                 continue
-                            if self.opts.holdout_predefined and \
-                                    creal.has_preset_evaluation_defined(corpus_names=self.corpus_names):
+                            if self.opts.test_set or (self.opts.holdout_predefined and
+                                                      creal.has_preset_evaluation_defined(corpus_names=self.corpus_names)):
                                 if creal.is_in_test_set(title=score_title, corpus_name=corpus_name):
                                     self.append_example(example, is_test=True)
                                 else:
